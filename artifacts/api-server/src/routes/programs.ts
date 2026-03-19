@@ -296,21 +296,38 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
   }
 
   try {
+    const programId = String(req.params["programId"]);
     const sessionId = String(req.params["sessionId"]);
 
-    const updateData: Partial<{
-      name: string;
-      weekNumber: number;
-      dayNumber: number;
-      type: string;
-      estimatedDurationMin: number;
-      coachNotes: string;
-    }> = {};
-    if (parsed.data.name) updateData.name = parsed.data.name;
-    if (parsed.data.weekNumber) updateData.weekNumber = parsed.data.weekNumber;
-    if (parsed.data.dayNumber) updateData.dayNumber = parsed.data.dayNumber;
-    if (parsed.data.type) updateData.type = parsed.data.type;
-    if (parsed.data.estimatedDurationMin) updateData.estimatedDurationMin = parsed.data.estimatedDurationMin;
+    // Verify program belongs to authenticated coach
+    const [program] = await db.select({ id: programsTable.id }).from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
+    if (!program) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Program not found or not authorized" } });
+      return;
+    }
+
+    // Verify session belongs to this program
+    const [session] = await db.select({ id: sessionsTable.id }).from(sessionsTable)
+      .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.programId, programId)));
+    if (!session) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found in this program" } });
+      return;
+    }
+
+    const updateData: {
+      name?: string;
+      weekNumber?: number;
+      dayNumber?: number;
+      type?: string;
+      estimatedDurationMin?: number;
+      coachNotes?: string;
+    } = {};
+    if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
+    if (parsed.data.weekNumber !== undefined) updateData.weekNumber = parsed.data.weekNumber;
+    if (parsed.data.dayNumber !== undefined) updateData.dayNumber = parsed.data.dayNumber;
+    if (parsed.data.type !== undefined) updateData.type = parsed.data.type;
+    if (parsed.data.estimatedDurationMin !== undefined) updateData.estimatedDurationMin = parsed.data.estimatedDurationMin;
     if (parsed.data.coachNotes !== undefined) updateData.coachNotes = parsed.data.coachNotes;
 
     await db.update(sessionsTable).set(updateData).where(eq(sessionsTable.id, sessionId));

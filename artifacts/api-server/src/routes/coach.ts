@@ -262,13 +262,32 @@ router.get("/coach/invite-code", authenticate, requireRole("coach"), async (req,
 });
 
 router.post("/coach/clients/link", authenticate, requireRole("coach"), async (req, res) => {
-  const { inviteCode } = req.body as { inviteCode?: string };
-  if (!inviteCode) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invite code required" } });
+  const { athleteEmail } = req.body as { athleteEmail?: string };
+  if (!athleteEmail) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "athleteEmail required" } });
     return;
   }
 
-  res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Use /athlete/link for athlete linking" } });
+  try {
+    const [athlete] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, coachId: usersTable.coachId })
+      .from(usersTable)
+      .where(and(eq(usersTable.email, athleteEmail.toLowerCase()), eq(usersTable.role, "athlete")));
+
+    if (!athlete) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Athlete not found" } });
+      return;
+    }
+
+    if (athlete.coachId && athlete.coachId !== req.user!.userId) {
+      res.status(409).json({ error: { code: "ATHLETE_ALREADY_LINKED", message: "Athlete is already linked to a different coach" } });
+      return;
+    }
+
+    await db.update(usersTable).set({ coachId: req.user!.userId }).where(eq(usersTable.id, athlete.id));
+    res.json({ success: true, message: `${athlete.firstName} is now linked to your roster` });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
 });
 
 router.post("/athlete/link", authenticate, requireRole("athlete"), async (req, res) => {

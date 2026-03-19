@@ -23,9 +23,23 @@ Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
+- **API codegen**: Orval (from OpenAPI spec — generates 795-line Zod + 3057-line React Query client)
 - **Mobile**: Expo (React Native) — Task #2
 - **Coach dashboard**: React + Vite — Task #3
+
+## Key Implementation Notes
+
+- Express 5 `req.params` returns `string | string[]` — always use `String(req.params["x"])` pattern
+- JWT secrets throw loudly in production if `JWT_SECRET` / `JWT_REFRESH_SECRET` are not set
+- ADAPT engine is server-side only — never recalculate on the client
+- Check-in window closes at 14:00 UTC → 422 `CHECKIN_WINDOW_CLOSED`
+- Pain in check-in → forces RECOVERY mode + P1 alert
+- `POST /coach/clients/link` links an athlete by email to the coach's roster
+- `POST /athlete/link` links an athlete to a coach by invite code
+- `POST /sessions/:sessionId/feedback` allows an athlete to submit RPE + perceived difficulty for a completed session log
+- `PUT /programs/:programId/sessions/:sessionId` verifies both program ownership (coach) AND session belongs to that program before updating (IDOR-safe)
+- All UUID params are validated via regex before DB queries to avoid Postgres type errors
+- Seed: 4-week program × 3 sessions/week = 12 sessions; each session × 4 variants; load progression +5%/week
 
 ## Structure
 

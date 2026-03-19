@@ -5,7 +5,8 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { OverrideRequestMode } from "./overrideRequestMode";
 
-export interface HealthStatus {
-  status: string;
+export interface OverrideRequest {
+  mode: OverrideRequestMode;
 }

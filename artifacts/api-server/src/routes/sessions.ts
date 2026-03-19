@@ -290,6 +290,50 @@ router.post("/sessions/:sessionId/complete", authenticate, async (req, res) => {
   }
 });
 
+const feedbackSchema = z.object({
+  rpe: z.number().int().min(1).max(10),
+  perceivedDifficulty: z.enum(["too_easy", "well_calibrated", "too_hard"]),
+  athleteNotes: z.string().nullable().optional(),
+});
+
+router.post("/sessions/:sessionId/feedback", authenticate, async (req, res) => {
+  const parsed = feedbackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+
+  const sessionId = String(req.params["sessionId"]);
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(sessionId)) {
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "Session log not found" } });
+    return;
+  }
+
+  try {
+    const [updated] = await db.update(sessionLogsTable)
+      .set({
+        rpe: parsed.data.rpe,
+        perceivedDifficulty: parsed.data.perceivedDifficulty,
+        athleteNotes: parsed.data.athleteNotes ?? null,
+      })
+      .where(and(
+        eq(sessionLogsTable.id, sessionId),
+        eq(sessionLogsTable.athleteId, req.user!.userId)
+      ))
+      .returning({ id: sessionLogsTable.id });
+
+    if (!updated) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session log not found" } });
+      return;
+    }
+
+    res.json({ success: true, message: "Feedback submitted" });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 router.get("/sessions/history", authenticate, async (req, res) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
