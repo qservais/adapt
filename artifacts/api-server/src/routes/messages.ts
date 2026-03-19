@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { messagesTable, usersTable } from "@workspace/db";
-import { eq, or, and, desc, sql } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -22,8 +22,14 @@ router.get("/messages", authenticate, async (req, res) => {
       .where(or(eq(messagesTable.senderId, userId), eq(messagesTable.recipientId, userId)))
       .orderBy(desc(messagesTable.createdAt));
 
-    // Group into threads
-    const threadMap = new Map<string, any>();
+    // Group into threads by other-party user ID
+    const threadMap = new Map<string, {
+      userId: string;
+      lastMessage: string;
+      lastMessageAt: Date | null;
+      unreadCount: number;
+    }>();
+
     for (const msg of allMessages) {
       const otherId = msg.senderId === userId ? msg.recipientId : msg.senderId;
       if (!threadMap.has(otherId)) {
@@ -35,18 +41,17 @@ router.get("/messages", authenticate, async (req, res) => {
         });
       }
       if (msg.recipientId === userId && !msg.isRead) {
-        threadMap.get(otherId).unreadCount += 1;
+        threadMap.get(otherId)!.unreadCount += 1;
       }
     }
 
-    // Fetch user info for each thread
     const threads = [];
     for (const [otherId, thread] of threadMap.entries()) {
       const [user] = await db.select({ firstName: usersTable.firstName, lastName: usersTable.lastName })
         .from(usersTable).where(eq(usersTable.id, otherId));
       threads.push({
         userId: otherId,
-        userFirstName: user?.firstName || "Unknown",
+        userFirstName: user?.firstName ?? "Unknown",
         userLastName: user?.lastName ?? null,
         lastMessage: thread.lastMessage,
         lastMessageAt: thread.lastMessageAt?.toISOString() ?? null,
@@ -63,7 +68,7 @@ router.get("/messages", authenticate, async (req, res) => {
 router.get("/messages/:userId", authenticate, async (req, res) => {
   try {
     const myId = req.user!.userId;
-    const otherId = req.params.userId;
+    const otherId = String(req.params["userId"]);
 
     const messages = await db.select().from(messagesTable)
       .where(or(
@@ -105,9 +110,10 @@ router.post("/messages", authenticate, async (req, res) => {
 
 router.put("/messages/:userId/read", authenticate, async (req, res) => {
   try {
+    const otherId = String(req.params["userId"]);
     await db.update(messagesTable).set({ isRead: true })
       .where(and(
-        eq(messagesTable.senderId, req.params.userId),
+        eq(messagesTable.senderId, otherId),
         eq(messagesTable.recipientId, req.user!.userId)
       ));
     res.json({ success: true, message: "Marked as read" });

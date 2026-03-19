@@ -9,8 +9,17 @@ import { z } from "zod";
 
 const router = Router();
 
-const JWT_SECRET = process.env["JWT_SECRET"] || "adapt_jwt_secret_dev";
-const JWT_REFRESH_SECRET = process.env["JWT_REFRESH_SECRET"] || "adapt_refresh_secret_dev";
+const isProduction = process.env["NODE_ENV"] === "production";
+
+if (isProduction && !process.env["JWT_SECRET"]) {
+  throw new Error("JWT_SECRET environment variable is required in production");
+}
+if (isProduction && !process.env["JWT_REFRESH_SECRET"]) {
+  throw new Error("JWT_REFRESH_SECRET environment variable is required in production");
+}
+
+const JWT_SECRET = process.env["JWT_SECRET"] ?? "adapt_jwt_secret_dev_only";
+const JWT_REFRESH_SECRET = process.env["JWT_REFRESH_SECRET"] ?? "adapt_refresh_secret_dev_only";
 
 function generateTokens(userId: string, role: string, email: string) {
   const accessToken = jwt.sign({ userId, role, email }, JWT_SECRET, { expiresIn: "1h" });

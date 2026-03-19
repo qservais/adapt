@@ -1,13 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, checkinsTable, sessionLogsTable, alertsTable, programsTable } from "@workspace/db";
-import { eq, and, desc, gte, sql } from "drizzle-orm";
+import { eq, and, desc, gte } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
-import { z } from "zod";
 
 const router = Router();
 
-// GET /coach/clients
 router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const athletes = await db.select().from(usersTable)
@@ -58,11 +56,12 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
   }
 });
 
-// GET /coach/clients/:clientId
 router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async (req, res) => {
   try {
+    const clientId = String(req.params["clientId"]);
+
     const [athlete] = await db.select().from(usersTable)
-      .where(and(eq(usersTable.id, req.params.clientId), eq(usersTable.coachId, req.user!.userId)));
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
 
     if (!athlete) {
       res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client not found or not linked" } });
@@ -105,7 +104,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       activeAlerts: activeAlerts.map(a => ({
         id: a.id,
         athleteId: a.athleteId,
-        athleteName: `${athlete.firstName} ${athlete.lastName || ""}`.trim(),
+        athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
         type: a.type,
         priority: a.priority,
         message: a.message,
@@ -120,29 +119,31 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
   }
 });
 
-// DELETE /coach/clients/:clientId
 router.delete("/coach/clients/:clientId", authenticate, requireRole("coach"), async (req, res) => {
   try {
-    const [athlete] = await db.select().from(usersTable)
-      .where(and(eq(usersTable.id, req.params.clientId), eq(usersTable.coachId, req.user!.userId)));
+    const clientId = String(req.params["clientId"]);
+
+    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
 
     if (!athlete) {
       res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client not found or not linked" } });
       return;
     }
 
-    await db.update(usersTable).set({ coachId: null }).where(eq(usersTable.id, req.params.clientId));
+    await db.update(usersTable).set({ coachId: null }).where(eq(usersTable.id, clientId));
     res.json({ success: true, message: "Client unlinked" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
 
-// GET /coach/clients/:clientId/checkins
 router.get("/coach/clients/:clientId/checkins", authenticate, requireRole("coach"), async (req, res) => {
   try {
+    const clientId = String(req.params["clientId"]);
+
     const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
-      .where(and(eq(usersTable.id, req.params.clientId), eq(usersTable.coachId, req.user!.userId)));
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
 
     if (!athlete) {
       res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client not found or not linked" } });
@@ -151,7 +152,7 @@ router.get("/coach/clients/:clientId/checkins", authenticate, requireRole("coach
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
     const checkins = await db.select().from(checkinsTable)
-      .where(and(eq(checkinsTable.athleteId, req.params.clientId), gte(checkinsTable.date, thirtyDaysAgo)))
+      .where(and(eq(checkinsTable.athleteId, clientId), gte(checkinsTable.date, thirtyDaysAgo)))
       .orderBy(desc(checkinsTable.date));
 
     res.json(checkins);
@@ -160,27 +161,27 @@ router.get("/coach/clients/:clientId/checkins", authenticate, requireRole("coach
   }
 });
 
-// POST /coach/clients/:clientId/override
 router.post("/coach/clients/:clientId/override", authenticate, requireRole("coach"), async (req, res) => {
-  const { mode } = req.body;
+  const clientId = String(req.params["clientId"]);
+  const { mode } = req.body as { mode: string };
+
   if (!["performance", "normal", "adapt", "recovery"].includes(mode)) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid mode" } });
     return;
   }
 
   try {
-    const [athlete] = await db.select().from(usersTable)
-      .where(and(eq(usersTable.id, req.params.clientId), eq(usersTable.coachId, req.user!.userId)));
+    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
 
     if (!athlete) {
       res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client not found or not linked" } });
       return;
     }
 
-    // Update today's check-in mode
     const today = new Date().toISOString().split("T")[0];
     await db.update(checkinsTable).set({ sessionMode: mode })
-      .where(and(eq(checkinsTable.athleteId, req.params.clientId), eq(checkinsTable.date, today)));
+      .where(and(eq(checkinsTable.athleteId, clientId), eq(checkinsTable.date, today)));
 
     res.json({ success: true, message: `Session mode overridden to ${mode}` });
   } catch (err) {
@@ -188,7 +189,6 @@ router.post("/coach/clients/:clientId/override", authenticate, requireRole("coac
   }
 });
 
-// GET /coach/alerts
 router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const alerts = await db.select({
@@ -212,7 +212,7 @@ router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res)
     res.json(alerts.map(a => ({
       id: a.id,
       athleteId: a.athleteId,
-      athleteName: `${a.athleteFirstName} ${a.athleteLastName || ""}`.trim(),
+      athleteName: `${a.athleteFirstName} ${a.athleteLastName ?? ""}`.trim(),
       type: a.type,
       priority: a.priority,
       message: a.message,
@@ -226,13 +226,13 @@ router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res)
   }
 });
 
-// PUT /coach/alerts/:alertId/resolve
 router.put("/coach/alerts/:alertId/resolve", authenticate, requireRole("coach"), async (req, res) => {
-  const { resolutionNote } = req.body;
+  const alertId = String(req.params["alertId"]);
+  const { resolutionNote } = req.body as { resolutionNote?: string };
 
   try {
-    const [alert] = await db.select().from(alertsTable)
-      .where(and(eq(alertsTable.id, req.params.alertId), eq(alertsTable.coachId, req.user!.userId)));
+    const [alert] = await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(eq(alertsTable.id, alertId), eq(alertsTable.coachId, req.user!.userId)));
 
     if (!alert) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Alert not found" } });
@@ -243,7 +243,7 @@ router.put("/coach/alerts/:alertId/resolve", authenticate, requireRole("coach"),
       isResolved: true,
       resolutionNote: resolutionNote ?? null,
       resolvedAt: new Date(),
-    }).where(eq(alertsTable.id, req.params.alertId));
+    }).where(eq(alertsTable.id, alertId));
 
     res.json({ success: true, message: "Alert resolved" });
   } catch (err) {
@@ -251,52 +251,28 @@ router.put("/coach/alerts/:alertId/resolve", authenticate, requireRole("coach"),
   }
 });
 
-// GET /coach/invite-code
 router.get("/coach/invite-code", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const [coach] = await db.select({ inviteCode: usersTable.inviteCode }).from(usersTable)
       .where(eq(usersTable.id, req.user!.userId));
-    res.json({ inviteCode: coach?.inviteCode });
+    res.json({ inviteCode: coach?.inviteCode ?? null });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
 
-// POST /coach/clients/link
 router.post("/coach/clients/link", authenticate, requireRole("coach"), async (req, res) => {
-  const { inviteCode } = req.body;
+  const { inviteCode } = req.body as { inviteCode?: string };
   if (!inviteCode) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invite code required" } });
     return;
   }
 
-  try {
-    const [coach] = await db.select({ inviteCode: usersTable.inviteCode }).from(usersTable)
-      .where(eq(usersTable.id, req.user!.userId));
-
-    if (!coach || coach.inviteCode !== inviteCode.toUpperCase()) {
-      // Athlete uses the coach's invite code to link
-      const [coachByCode] = await db.select({ id: usersTable.id }).from(usersTable)
-        .where(eq(usersTable.inviteCode, inviteCode.toUpperCase()));
-
-      if (!coachByCode) {
-        res.status(400).json({ error: { code: "INVITE_CODE_INVALID", message: "Invalid invite code" } });
-        return;
-      }
-      // This is an athlete using a coach's code — but this endpoint is for coaches
-      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Use /athlete/link for athlete linking" } });
-      return;
-    }
-
-    res.json({ success: true, message: "Link handled" });
-  } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
-  }
+  res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Use /athlete/link for athlete linking" } });
 });
 
-// POST /athlete/link (athlete uses coach's invite code)
 router.post("/athlete/link", authenticate, requireRole("athlete"), async (req, res) => {
-  const { inviteCode } = req.body;
+  const { inviteCode } = req.body as { inviteCode?: string };
   if (!inviteCode) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invite code required" } });
     return;
@@ -312,7 +288,7 @@ router.post("/athlete/link", authenticate, requireRole("athlete"), async (req, r
     }
 
     await db.update(usersTable).set({ coachId: coachWithCode.id }).where(eq(usersTable.id, req.user!.userId));
-    res.json({ success: true, message: "Linked to coach" });
+    res.json({ success: true, message: "Linked to coach successfully" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

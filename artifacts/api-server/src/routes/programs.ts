@@ -28,7 +28,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       id: p.id,
       name: p.name,
       athleteId: p.athleteId,
-      athleteName: `${p.athleteFirstName} ${p.athleteLastName || ""}`.trim(),
+      athleteName: `${p.athleteFirstName} ${p.athleteLastName ?? ""}`.trim(),
       durationWeeks: p.durationWeeks,
       startDate: p.startDate,
       isActive: p.isActive,
@@ -55,7 +55,6 @@ router.post("/programs", authenticate, requireRole("coach"), async (req, res) =>
   }
 
   try {
-    // Verify athlete belongs to coach
     const [athlete] = await db.select().from(usersTable)
       .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
@@ -72,12 +71,11 @@ router.post("/programs", authenticate, requireRole("coach"), async (req, res) =>
       startDate: parsed.data.startDate,
     }).returning();
 
-    const user = athlete;
     res.status(201).json({
       id: program.id,
       name: program.name,
       athleteId: program.athleteId,
-      athleteName: `${user.firstName} ${user.lastName || ""}`.trim(),
+      athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
       durationWeeks: program.durationWeeks,
       startDate: program.startDate,
       isActive: program.isActive,
@@ -90,8 +88,10 @@ router.post("/programs", authenticate, requireRole("coach"), async (req, res) =>
 
 router.get("/programs/:programId", authenticate, requireRole("coach"), async (req, res) => {
   try {
+    const programId = String(req.params["programId"]);
+
     const [program] = await db.select().from(programsTable)
-      .where(and(eq(programsTable.id, req.params.programId), eq(programsTable.coachId, req.user!.userId)));
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
 
     if (!program) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Program not found" } });
@@ -126,8 +126,8 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
         return {
           id: variant.id,
           mode: variant.mode,
-          volumeModifier: parseFloat(variant.volumeModifier || "1.0"),
-          intensityModifier: parseFloat(variant.intensityModifier || "1.0"),
+          volumeModifier: parseFloat(variant.volumeModifier ?? "1.0"),
+          intensityModifier: parseFloat(variant.intensityModifier ?? "1.0"),
           notes: variant.notes,
           exercises: exercises.map(ex => ({
             id: ex.id,
@@ -137,7 +137,6 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
             sets: ex.sets,
             reps: ex.reps,
             nominalLoadKg: ex.loadKg ? parseFloat(ex.loadKg) : null,
-            adaptedLoadKg: ex.loadKg ? parseFloat(ex.loadKg) : null,
             restSeconds: ex.restSeconds,
             coachCue: ex.coachCue,
           })),
@@ -179,9 +178,11 @@ router.put("/programs/:programId", authenticate, requireRole("coach"), async (re
   }
 
   try {
+    const programId = String(req.params["programId"]);
+
     const [program] = await db.update(programsTable)
       .set({ ...parsed.data, updatedAt: new Date() })
-      .where(and(eq(programsTable.id, req.params.programId), eq(programsTable.coachId, req.user!.userId)))
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)))
       .returning();
 
     if (!program) {
@@ -196,7 +197,7 @@ router.put("/programs/:programId", authenticate, requireRole("coach"), async (re
       id: program.id,
       name: program.name,
       athleteId: program.athleteId,
-      athleteName: `${athlete?.firstName || ""} ${athlete?.lastName || ""}`.trim(),
+      athleteName: `${athlete?.firstName ?? ""} ${athlete?.lastName ?? ""}`.trim(),
       durationWeeks: program.durationWeeks,
       startDate: program.startDate,
       isActive: program.isActive,
@@ -237,15 +238,17 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
   }
 
   try {
+    const programId = String(req.params["programId"]);
+
     const [program] = await db.select().from(programsTable)
-      .where(and(eq(programsTable.id, req.params.programId), eq(programsTable.coachId, req.user!.userId)));
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
     if (!program) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Program not found" } });
       return;
     }
 
     const [session] = await db.insert(sessionsTable).values({
-      programId: req.params.programId,
+      programId,
       weekNumber: parsed.data.weekNumber,
       dayNumber: parsed.data.dayNumber,
       name: parsed.data.name,
@@ -270,7 +273,7 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
               orderIndex: ex.orderIndex,
               sets: ex.sets,
               reps: ex.reps,
-              loadKg: ex.loadKg?.toString(),
+              loadKg: ex.loadKg != null ? ex.loadKg.toString() : undefined,
               restSeconds: ex.restSeconds,
               coachCue: ex.coachCue,
             });
@@ -279,7 +282,7 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
       }
     }
 
-    res.status(201).json({ success: true, message: "Session added" });
+    res.status(201).json({ success: true, sessionId: session.id, message: "Session added" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
@@ -293,15 +296,24 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
   }
 
   try {
-    const updates: Record<string, any> = {};
-    if (parsed.data.name) updates.name = parsed.data.name;
-    if (parsed.data.weekNumber) updates.weekNumber = parsed.data.weekNumber;
-    if (parsed.data.dayNumber) updates.dayNumber = parsed.data.dayNumber;
-    if (parsed.data.type) updates.type = parsed.data.type;
-    if (parsed.data.estimatedDurationMin) updates.estimatedDurationMin = parsed.data.estimatedDurationMin;
-    if (parsed.data.coachNotes !== undefined) updates.coachNotes = parsed.data.coachNotes;
+    const sessionId = String(req.params["sessionId"]);
 
-    await db.update(sessionsTable).set(updates).where(eq(sessionsTable.id, req.params.sessionId));
+    const updateData: Partial<{
+      name: string;
+      weekNumber: number;
+      dayNumber: number;
+      type: string;
+      estimatedDurationMin: number;
+      coachNotes: string;
+    }> = {};
+    if (parsed.data.name) updateData.name = parsed.data.name;
+    if (parsed.data.weekNumber) updateData.weekNumber = parsed.data.weekNumber;
+    if (parsed.data.dayNumber) updateData.dayNumber = parsed.data.dayNumber;
+    if (parsed.data.type) updateData.type = parsed.data.type;
+    if (parsed.data.estimatedDurationMin) updateData.estimatedDurationMin = parsed.data.estimatedDurationMin;
+    if (parsed.data.coachNotes !== undefined) updateData.coachNotes = parsed.data.coachNotes;
+
+    await db.update(sessionsTable).set(updateData).where(eq(sessionsTable.id, sessionId));
     res.json({ success: true, message: "Session updated" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });

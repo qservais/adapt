@@ -1,21 +1,20 @@
 import cron from "node-cron";
 import { db } from "@workspace/db";
-import { checkinsTable, sessionLogsTable, alertsTable, usersTable, exerciseLogsTable } from "@workspace/db";
-import { eq, and, desc, gte, lte, lt, isNull, not, inArray, sql } from "drizzle-orm";
+import { checkinsTable, sessionLogsTable, alertsTable, usersTable, exerciseLogsTable, sessionExercisesTable, sessionVariantsTable } from "@workspace/db";
+import { eq, and, desc, gte, isNull, not, lt, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
 async function createAlertIfNotExists(
-  coachId: string | null,
+  coachId: string,
   athleteId: string,
   type: string,
   priority: string,
   message: string
-) {
-  // Check if same type of unresolved alert already exists
+): Promise<void> {
   const existing = await db.select({ id: alertsTable.id }).from(alertsTable)
     .where(and(
       eq(alertsTable.athleteId, athleteId),
-      eq(alertsTable.type, type as any),
+      eq(alertsTable.type, type as "pain" | "inactivity" | "low_score" | "high_rpe" | "missed_checkins" | "load_progression"),
       eq(alertsTable.isResolved, false)
     ));
 
@@ -23,32 +22,36 @@ async function createAlertIfNotExists(
     await db.insert(alertsTable).values({
       coachId,
       athleteId,
-      type: type as any,
-      priority: priority as any,
+      type: type as "pain" | "inactivity" | "low_score" | "high_rpe" | "missed_checkins" | "load_progression",
+      priority: priority as "p1" | "p2" | "p3",
       message,
     });
+    logger.info({ athleteId, type, priority }, "Alert created");
   }
 }
 
-async function runAlertChecks() {
-  logger.info("Running alert checks...");
+async function runAlertChecks(): Promise<void> {
+  logger.info("Running daily alert checks...");
 
   const now = new Date();
   const threeDaysAgo = new Date(now.getTime() - 3 * 86400000);
   const twoDaysAgo = new Date(now.getTime() - 2 * 86400000);
   const twentyEightDaysAgo = new Date(now.getTime() - 28 * 86400000);
 
-  // Get all athletes
-  const athletes = await db.select({ id: usersTable.id, coachId: usersTable.coachId, firstName: usersTable.firstName })
+  const athletes = await db.select({
+    id: usersTable.id,
+    coachId: usersTable.coachId,
+    firstName: usersTable.firstName,
+  })
     .from(usersTable)
-    .where(eq(usersTable.role, "athlete"));
+    .where(and(eq(usersTable.role, "athlete"), not(isNull(usersTable.coachId))));
 
   for (const athlete of athletes) {
     const coachId = athlete.coachId;
-    if (!coachId) continue; // Only alert if athlete has a coach
+    if (!coachId) continue;
 
-    // P2: Inactivity — no check-in in 3 days
-    const recentCheckins = await db.select({ date: checkinsTable.date }).from(checkinsTable)
+    // ─── P2: Inactivity — no check-in in 3 days ──────────────────────────────
+    const recentCheckins = await db.select({ id: checkinsTable.id }).from(checkinsTable)
       .where(and(
         eq(checkinsTable.athleteId, athlete.id),
         gte(checkinsTable.createdAt, threeDaysAgo)
@@ -60,12 +63,14 @@ async function runAlertChecks() {
         athlete.id,
         "inactivity",
         "p2",
-        `${athlete.firstName} n'a pas fait de check-in depuis plus de 3 jours`
+        `${athlete.firstName} n'a pas effectué de check-in depuis plus de 3 jours`
       );
     }
 
-    // P1: Consecutive low scores (< 25 for 2 days)
-    const recentScores = await db.select({ adaptScore: checkinsTable.adaptScore, date: checkinsTable.date })
+    // ─── P1: Consecutive low ADAPT scores (< 25 for 2 consecutive days) ──────
+    const recentScores = await db.select({
+      adaptScore: checkinsTable.adaptScore,
+    })
       .from(checkinsTable)
       .where(and(
         eq(checkinsTable.athleteId, athlete.id),
@@ -74,7 +79,7 @@ async function runAlertChecks() {
       .orderBy(desc(checkinsTable.createdAt))
       .limit(2);
 
-    if (recentScores.length >= 2 && recentScores.every(s => s.adaptScore !== null && s.adaptScore < 25)) {
+    if (recentScores.length >= 2 && recentScores.every(s => s.adaptScore < 25)) {
       await createAlertIfNotExists(
         coachId,
         athlete.id,
@@ -84,8 +89,12 @@ async function runAlertChecks() {
       );
     }
 
-    // P2: High RPE — >= 9.5 on 2 consecutive sessions
-    const recentRpe = await db.select({ rpe: sessionLogsTable.rpe }).from(sessionLogsTable)
+    // ─── P2: High RPE — >= 9.5 on 2 consecutive sessions ────────────────────
+    // RPE is stored as smallint (integer), so 9.5 means stored >= 10 after rounding
+    // but we allow the full scale 1-10; threshold is "reported RPE" >= 9 or 10
+    // Per spec: RPE >= 9.5 — since we store integers, we match >= 10
+    const recentRpe = await db.select({ rpe: sessionLogsTable.rpe })
+      .from(sessionLogsTable)
       .where(and(
         eq(sessionLogsTable.athleteId, athlete.id),
         not(isNull(sessionLogsTable.rpe)),
@@ -94,39 +103,62 @@ async function runAlertChecks() {
       .orderBy(desc(sessionLogsTable.createdAt))
       .limit(2);
 
-    if (recentRpe.length >= 2 && recentRpe.every(s => s.rpe !== null && s.rpe >= 9)) {
+    // RPE stored as 1-10 integer; spec says >= 9.5 means we check >= 10
+    if (recentRpe.length >= 2 && recentRpe.every(s => s.rpe !== null && s.rpe >= 10)) {
       await createAlertIfNotExists(
         coachId,
         athlete.id,
         "high_rpe",
         "p2",
-        `${athlete.firstName} a un RPE très élevé (≥ 9) sur 2 séances consécutives`
+        `${athlete.firstName} a un RPE maximal (10/10) sur 2 séances consécutives`
       );
     }
 
-    // P2: Missed check-ins — 3 consecutive days
-    const missedCount = await db.select({ date: checkinsTable.date }).from(checkinsTable)
+    // ─── P3: Load progression stalled — no increase over 4 weeks ─────────────
+    // Check if the athlete has sessions and compare avg load this week vs 4 weeks ago
+    const fourWeeksAgoStart = new Date(now.getTime() - 28 * 86400000);
+    const threeWeeksAgoStart = new Date(now.getTime() - 21 * 86400000);
+    const oneWeekAgo = new Date(now.getTime() - 7 * 86400000);
+
+    const oldLogs = await db.select({ loadKgUsed: exerciseLogsTable.loadKgUsed })
+      .from(exerciseLogsTable)
+      .innerJoin(sessionLogsTable, eq(exerciseLogsTable.sessionLogId, sessionLogsTable.id))
       .where(and(
-        eq(checkinsTable.athleteId, athlete.id),
-        gte(checkinsTable.createdAt, threeDaysAgo)
+        eq(sessionLogsTable.athleteId, athlete.id),
+        gte(sessionLogsTable.createdAt, fourWeeksAgoStart),
+        lt(sessionLogsTable.createdAt, threeWeeksAgoStart),
+        not(isNull(exerciseLogsTable.loadKgUsed))
       ));
 
-    if (missedCount.length === 0) {
-      await createAlertIfNotExists(
-        coachId,
-        athlete.id,
-        "missed_checkins",
-        "p2",
-        `${athlete.firstName} a manqué 3 check-ins consécutifs`
-      );
+    const newLogs = await db.select({ loadKgUsed: exerciseLogsTable.loadKgUsed })
+      .from(exerciseLogsTable)
+      .innerJoin(sessionLogsTable, eq(exerciseLogsTable.sessionLogId, sessionLogsTable.id))
+      .where(and(
+        eq(sessionLogsTable.athleteId, athlete.id),
+        gte(sessionLogsTable.createdAt, oneWeekAgo),
+        not(isNull(exerciseLogsTable.loadKgUsed))
+      ));
+
+    if (oldLogs.length >= 3 && newLogs.length >= 3) {
+      const avgOld = oldLogs.reduce((sum, l) => sum + parseFloat(l.loadKgUsed!), 0) / oldLogs.length;
+      const avgNew = newLogs.reduce((sum, l) => sum + parseFloat(l.loadKgUsed!), 0) / newLogs.length;
+
+      if (avgNew <= avgOld) {
+        await createAlertIfNotExists(
+          coachId,
+          athlete.id,
+          "load_progression",
+          "p3",
+          `${athlete.firstName} n'a pas progressé en charge sur les 4 dernières semaines (moy. ${avgOld.toFixed(1)} kg → ${avgNew.toFixed(1)} kg)`
+        );
+      }
     }
   }
 
-  logger.info("Alert checks complete");
+  logger.info("Daily alert checks complete");
 }
 
-export function startAlertJob() {
-  // Run daily at 09:00
+export function startAlertJob(): void {
   cron.schedule("0 9 * * *", async () => {
     try {
       await runAlertChecks();
