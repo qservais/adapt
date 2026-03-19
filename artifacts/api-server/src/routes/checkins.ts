@@ -28,9 +28,10 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Enforce check-in window (before 14:00 local - using UTC for simplicity)
-  const hour = new Date().getUTCHours();
-  if (hour >= 14) {
+  // Enforce check-in window: closed after 14:00 in the app's configured timezone
+  const tz = process.env["APP_TIMEZONE"] ?? "Europe/Paris";
+  const localHour = parseInt(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: tz }), 10);
+  if (localHour >= 14) {
     res.status(422).json({ error: { code: "CHECKIN_WINDOW_CLOSED", message: "Check-in window closed after 14:00" } });
     return;
   }

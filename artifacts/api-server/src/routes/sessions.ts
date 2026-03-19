@@ -142,12 +142,33 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
     }[] = [];
 
     if (program) {
-      const dayOfWeek = new Date().getDay();
+      // Derive current training week from program start date
+      const startDate = program.startDate ? new Date(program.startDate) : new Date();
+      const now = new Date();
+      const daysSinceStart = Math.floor((now.getTime() - startDate.getTime()) / 86400000);
+      const trainingWeek = Math.min(
+        Math.max(1, Math.floor(daysSinceStart / 7) + 1),
+        program.durationWeeks ?? 1
+      );
+
+      // Map JS day-of-week (0=Sun … 6=Sat) to program dayNumber convention (1=Mon … 7=Sun)
+      const dayOfWeek = now.getDay();
       const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
       const dayNum = dayMap[dayOfWeek] ?? 1;
 
-      const [session] = await db.select().from(sessionsTable)
-        .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
+      // First look for a session matching the current week AND day
+      let [session] = await db.select().from(sessionsTable)
+        .where(and(
+          eq(sessionsTable.programId, program.id),
+          eq(sessionsTable.weekNumber, trainingWeek),
+          eq(sessionsTable.dayNumber, dayNum)
+        ));
+
+      // Fall back to any session for this day number (handles single-week templates)
+      if (!session) {
+        [session] = await db.select().from(sessionsTable)
+          .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
+      }
 
       if (session) {
         sessionId = session.id;

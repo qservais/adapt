@@ -179,9 +179,20 @@ router.put("/programs/:programId", authenticate, requireRole("coach"), async (re
 
   try {
     const programId = String(req.params["programId"]);
+    const data = parsed.data;
+
+    // If reassigning athleteId, validate the new athlete is linked to this coach
+    if (data.athleteId) {
+      const [linkedAthlete] = await db.select({ id: usersTable.id }).from(usersTable)
+        .where(and(eq(usersTable.id, data.athleteId), eq(usersTable.coachId, req.user!.userId)));
+      if (!linkedAthlete) {
+        res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlete is not linked to this coach" } });
+        return;
+      }
+    }
 
     const [program] = await db.update(programsTable)
-      .set({ ...parsed.data, updatedAt: new Date() })
+      .set({ ...data, updatedAt: new Date() })
       .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)))
       .returning();
 
