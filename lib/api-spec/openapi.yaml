@@ -3,20 +3,40 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ADAPT by LMJ API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User profile
+  - name: checkins
+    description: Daily check-ins
+  - name: sessions
+    description: Training sessions
+  - name: programs
+    description: Training programs (coach)
+  - name: coach
+    description: Coach dashboard
+  - name: exercises
+    description: Exercise library
+  - name: messages
+    description: Messaging
+
+security:
+  - bearerAuth: []
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
+      security: []
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +44,721 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      security: []
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      security: []
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      security: []
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # USERS
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    put:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  # CHECK-INS
+  /checkins:
+    post:
+      operationId: submitCheckin
+      tags: [checkins]
+      summary: Submit daily check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckinRequest"
+      responses:
+        "201":
+          description: Check-in submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinResponse"
+        "409":
+          description: Already checked in today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Check-in window closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkins/today:
+    get:
+      operationId: getTodayCheckin
+      tags: [checkins]
+      summary: Get today's check-in
+      responses:
+        "200":
+          description: Today's check-in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinData"
+        "404":
+          description: No check-in today
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /checkins/history:
+    get:
+      operationId: getCheckinHistory
+      tags: [checkins]
+      summary: Get check-in history (30 days)
+      responses:
+        "200":
+          description: Check-in history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CheckinData"
+
+  # SESSIONS
+  /sessions/today:
+    get:
+      operationId: getTodaySession
+      tags: [sessions]
+      summary: Get today's adapted session
+      responses:
+        "200":
+          description: Today's adapted session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+        "403":
+          description: Session not unlocked (check-in required)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sessions/history:
+    get:
+      operationId: getSessionHistory
+      tags: [sessions]
+      summary: Get session history (30 days)
+      responses:
+        "200":
+          description: Session history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionLogSummary"
+
+  /sessions/{sessionId}/start:
+    put:
+      operationId: startSession
+      tags: [sessions]
+      summary: Start a session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /sessions/{sessionId}/complete:
+    post:
+      operationId: completeSession
+      tags: [sessions]
+      summary: Complete a session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteSessionRequest"
+      responses:
+        "200":
+          description: Session completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /sessions/{sessionId}/feedback:
+    post:
+      operationId: submitSessionFeedback
+      tags: [sessions]
+      summary: Submit session feedback
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionFeedbackRequest"
+      responses:
+        "200":
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # PROGRAMS
+  /programs:
+    get:
+      operationId: getPrograms
+      tags: [programs]
+      summary: Get coach programs
+      responses:
+        "200":
+          description: Programs list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProgramSummary"
+    post:
+      operationId: createProgram
+      tags: [programs]
+      summary: Create a program
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProgramRequest"
+      responses:
+        "201":
+          description: Program created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramSummary"
+
+  /programs/{programId}:
+    get:
+      operationId: getProgram
+      tags: [programs]
+      summary: Get program detail
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Program detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramDetail"
+    put:
+      operationId: updateProgram
+      tags: [programs]
+      summary: Update a program
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProgramRequest"
+      responses:
+        "200":
+          description: Program updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramSummary"
+
+  /programs/{programId}/sessions:
+    post:
+      operationId: addProgramSession
+      tags: [programs]
+      summary: Add session to program
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "201":
+          description: Session added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /programs/{programId}/sessions/{sessionId}:
+    put:
+      operationId: updateProgramSession
+      tags: [programs]
+      summary: Update program session
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "200":
+          description: Session updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # COACH
+  /coach/clients:
+    get:
+      operationId: getClients
+      tags: [coach]
+      summary: Get coach clients with today's status
+      responses:
+        "200":
+          description: Clients list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientSummary"
+
+  /coach/clients/{clientId}:
+    get:
+      operationId: getClientDetail
+      tags: [coach]
+      summary: Get client detail
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientDetail"
+    delete:
+      operationId: unlinkClient
+      tags: [coach]
+      summary: Unlink client from coach
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client unlinked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/clients/{clientId}/checkins:
+    get:
+      operationId: getClientCheckins
+      tags: [coach]
+      summary: Get client check-in history
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client check-in history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CheckinData"
+
+  /coach/clients/{clientId}/override:
+    post:
+      operationId: overrideClientSession
+      tags: [coach]
+      summary: Override client session mode
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OverrideRequest"
+      responses:
+        "200":
+          description: Override applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/alerts:
+    get:
+      operationId: getAlerts
+      tags: [coach]
+      summary: Get coach alerts
+      responses:
+        "200":
+          description: Alerts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertData"
+
+  /coach/alerts/{alertId}/resolve:
+    put:
+      operationId: resolveAlert
+      tags: [coach]
+      summary: Resolve an alert
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveAlertRequest"
+      responses:
+        "200":
+          description: Alert resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/invite-code:
+    get:
+      operationId: getInviteCode
+      tags: [coach]
+      summary: Get coach invite code
+      responses:
+        "200":
+          description: Invite code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteCodeResponse"
+
+  /coach/clients/link:
+    post:
+      operationId: linkClient
+      tags: [coach]
+      summary: Link athlete to coach via invite code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinkClientRequest"
+      responses:
+        "200":
+          description: Client linked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # EXERCISES
+  /exercises:
+    get:
+      operationId: getExercises
+      tags: [exercises]
+      summary: Get exercise library
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Exercise list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExerciseData"
+    post:
+      operationId: createExercise
+      tags: [exercises]
+      summary: Create exercise (coach only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExerciseRequest"
+      responses:
+        "201":
+          description: Exercise created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseData"
+
+  # MESSAGES
+  /messages:
+    get:
+      operationId: getMessageThreads
+      tags: [messages]
+      summary: Get message threads
+      responses:
+        "200":
+          description: Message threads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageThread"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageData"
+
+  /messages/{userId}:
+    get:
+      operationId: getThreadMessages
+      tags: [messages]
+      summary: Get messages with a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageData"
+
+  /messages/{userId}/read:
+    put:
+      operationId: markMessagesRead
+      tags: [messages]
+      summary: Mark messages as read
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +768,815 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required:
+            - code
+            - message
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [athlete, coach]
+      required:
+        - email
+        - password
+        - firstName
+        - role
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required:
+        - refreshToken
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserProfile"
+      required:
+        - accessToken
+        - refreshToken
+        - user
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          nullable: true
+        weightKg:
+          type: number
+          nullable: true
+        heightCm:
+          type: integer
+          nullable: true
+        fitnessLevel:
+          type: string
+          nullable: true
+        primaryGoal:
+          type: string
+          nullable: true
+        cycleTracking:
+          type: boolean
+        coachId:
+          type: string
+          nullable: true
+        inviteCode:
+          type: string
+          nullable: true
+      required:
+        - id
+        - email
+        - role
+        - firstName
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        age:
+          type: integer
+        weightKg:
+          type: number
+        heightCm:
+          type: integer
+        fitnessLevel:
+          type: string
+        primaryGoal:
+          type: string
+        cycleTracking:
+          type: boolean
+
+    CheckinRequest:
+      type: object
+      properties:
+        sleep:
+          type: integer
+          minimum: 1
+          maximum: 5
+        energy:
+          type: integer
+          minimum: 1
+          maximum: 5
+        stress:
+          type: integer
+          minimum: 1
+          maximum: 5
+        soreness:
+          type: integer
+          minimum: 1
+          maximum: 5
+        motivation:
+          type: integer
+          minimum: 1
+          maximum: 5
+        hasPain:
+          type: boolean
+        painNotes:
+          type: string
+          nullable: true
+        cyclePhase:
+          type: string
+          nullable: true
+          enum: [menstrual, follicular, ovulatory, luteal]
+      required:
+        - sleep
+        - energy
+        - stress
+        - soreness
+        - motivation
+
+    CheckinData:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+        sleep:
+          type: integer
+          nullable: true
+        energy:
+          type: integer
+          nullable: true
+        stress:
+          type: integer
+          nullable: true
+        soreness:
+          type: integer
+          nullable: true
+        motivation:
+          type: integer
+          nullable: true
+        hasPain:
+          type: boolean
+        painNotes:
+          type: string
+          nullable: true
+        cyclePhase:
+          type: string
+          nullable: true
+        adaptScore:
+          type: integer
+        sessionMode:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - date
+        - adaptScore
+        - sessionMode
+
+    CheckinResponse:
+      type: object
+      properties:
+        checkin:
+          $ref: "#/components/schemas/CheckinData"
+        sessionPreview:
+          type: object
+          properties:
+            name:
+              type: string
+            estimatedDurationMin:
+              type: integer
+              nullable: true
+            exerciseCount:
+              type: integer
+          nullable: true
+      required:
+        - checkin
+
+    SessionExerciseItem:
+      type: object
+      properties:
+        id:
+          type: string
+        exerciseId:
+          type: string
+        exerciseName:
+          type: string
+        orderIndex:
+          type: integer
+        sets:
+          type: integer
+        reps:
+          type: string
+          nullable: true
+        nominalLoadKg:
+          type: number
+          nullable: true
+        adaptedLoadKg:
+          type: number
+          nullable: true
+        restSeconds:
+          type: integer
+          nullable: true
+        coachCue:
+          type: string
+          nullable: true
+      required:
+        - id
+        - exerciseId
+        - exerciseName
+        - orderIndex
+        - sets
+
+    SessionDetail:
+      type: object
+      properties:
+        sessionLogId:
+          type: string
+        sessionId:
+          type: string
+          nullable: true
+        name:
+          type: string
+        mode:
+          type: string
+        estimatedDurationMin:
+          type: integer
+          nullable: true
+        coachNotes:
+          type: string
+          nullable: true
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionExerciseItem"
+        adaptScore:
+          type: integer
+        overriddenByCoach:
+          type: boolean
+      required:
+        - sessionLogId
+        - name
+        - mode
+        - exercises
+        - adaptScore
+
+    SessionLogSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+          nullable: true
+        variantMode:
+          type: string
+        startedAt:
+          type: string
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+        rpe:
+          type: integer
+          nullable: true
+        perceivedDifficulty:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - variantMode
+
+    CompleteSessionRequest:
+      type: object
+      properties:
+        exercises:
+          type: array
+          items:
+            type: object
+            properties:
+              exerciseId:
+                type: string
+              setsCompleted:
+                type: integer
+              repsPerSet:
+                type: array
+                items:
+                  type: integer
+              loadKgUsed:
+                type: number
+      required:
+        - exercises
+
+    SessionFeedbackRequest:
+      type: object
+      properties:
+        rpe:
+          type: integer
+          minimum: 1
+          maximum: 10
+        perceivedDifficulty:
+          type: string
+          enum: [too_easy, well_calibrated, too_hard]
+        athleteNotes:
+          type: string
+          nullable: true
+      required:
+        - rpe
+        - perceivedDifficulty
+
+    ProgramSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        athleteId:
+          type: string
+        athleteName:
+          type: string
+        durationWeeks:
+          type: integer
+        startDate:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - athleteId
+        - athleteName
+        - durationWeeks
+        - isActive
+
+    ProgramDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        athleteId:
+          type: string
+        durationWeeks:
+          type: integer
+        startDate:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionWithVariants"
+      required:
+        - id
+        - name
+        - athleteId
+        - durationWeeks
+        - isActive
+        - sessions
+
+    SessionWithVariants:
+      type: object
+      properties:
+        id:
+          type: string
+        weekNumber:
+          type: integer
+        dayNumber:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        estimatedDurationMin:
+          type: integer
+          nullable: true
+        coachNotes:
+          type: string
+          nullable: true
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/VariantWithExercises"
+      required:
+        - id
+        - weekNumber
+        - dayNumber
+        - name
+        - type
+        - variants
+
+    VariantWithExercises:
+      type: object
+      properties:
+        id:
+          type: string
+        mode:
+          type: string
+        volumeModifier:
+          type: number
+        intensityModifier:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionExerciseItem"
+      required:
+        - id
+        - mode
+        - exercises
+
+    CreateProgramRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        athleteId:
+          type: string
+        durationWeeks:
+          type: integer
+        startDate:
+          type: string
+      required:
+        - name
+        - athleteId
+        - durationWeeks
+
+    CreateSessionRequest:
+      type: object
+      properties:
+        weekNumber:
+          type: integer
+        dayNumber:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [strength, cardio, hybrid, mobility]
+        estimatedDurationMin:
+          type: integer
+        coachNotes:
+          type: string
+        variants:
+          type: array
+          items:
+            type: object
+            properties:
+              mode:
+                type: string
+                enum: [performance, normal, adapt, recovery]
+              exercises:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    exerciseId:
+                      type: string
+                    orderIndex:
+                      type: integer
+                    sets:
+                      type: integer
+                    reps:
+                      type: string
+                    loadKg:
+                      type: number
+                    restSeconds:
+                      type: integer
+                    coachCue:
+                      type: string
+      required:
+        - weekNumber
+        - dayNumber
+        - name
+        - type
+
+    ClientSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        email:
+          type: string
+        fitnessLevel:
+          type: string
+          nullable: true
+        primaryGoal:
+          type: string
+          nullable: true
+        todayCheckin:
+          $ref: "#/components/schemas/CheckinData"
+          nullable: true
+        activeAlerts:
+          type: integer
+        lastSessionDate:
+          type: string
+          nullable: true
+      required:
+        - id
+        - firstName
+        - email
+        - activeAlerts
+
+    ClientDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        email:
+          type: string
+        age:
+          type: integer
+          nullable: true
+        weightKg:
+          type: number
+          nullable: true
+        heightCm:
+          type: integer
+          nullable: true
+        fitnessLevel:
+          type: string
+          nullable: true
+        primaryGoal:
+          type: string
+          nullable: true
+        cycleTracking:
+          type: boolean
+        todayCheckin:
+          $ref: "#/components/schemas/CheckinData"
+          nullable: true
+        recentCheckins:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckinData"
+        recentSessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionLogSummary"
+        activeAlerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlertData"
+      required:
+        - id
+        - firstName
+        - email
+        - activeAlerts
+        - recentCheckins
+        - recentSessions
+
+    AlertData:
+      type: object
+      properties:
+        id:
+          type: string
+        athleteId:
+          type: string
+        athleteName:
+          type: string
+        type:
+          type: string
+        priority:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        isResolved:
+          type: boolean
+        resolvedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - athleteId
+        - athleteName
+        - type
+        - priority
+        - message
+        - isRead
+        - isResolved
+
+    ResolveAlertRequest:
+      type: object
+      properties:
+        resolutionNote:
+          type: string
+
+    OverrideRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [performance, normal, adapt, recovery]
+      required:
+        - mode
+
+    InviteCodeResponse:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+      required:
+        - inviteCode
+
+    LinkClientRequest:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+      required:
+        - inviteCode
+
+    ExerciseData:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          nullable: true
+        muscleGroups:
+          type: array
+          items:
+            type: string
+          nullable: true
+        equipment:
+          type: array
+          items:
+            type: string
+          nullable: true
+        demoUrl:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+
+    CreateExerciseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [compound, isolation, cardio, mobility]
+        muscleGroups:
+          type: array
+          items:
+            type: string
+        equipment:
+          type: array
+          items:
+            type: string
+        demoUrl:
+          type: string
+      required:
+        - name
+
+    MessageThread:
+      type: object
+      properties:
+        userId:
+          type: string
+        userFirstName:
+          type: string
+        userLastName:
+          type: string
+          nullable: true
+        lastMessage:
+          type: string
+          nullable: true
+        lastMessageAt:
+          type: string
+          nullable: true
+        unreadCount:
+          type: integer
+      required:
+        - userId
+        - userFirstName
+        - unreadCount
+
+    MessageData:
+      type: object
+      properties:
+        id:
+          type: string
+        senderId:
+          type: string
+        recipientId:
+          type: string
+        content:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - senderId
+        - recipientId
+        - content
+        - isRead
+        - createdAt
+
+    SendMessageRequest:
+      type: object
+      properties:
+        recipientId:
+          type: string
+        content:
+          type: string
+      required:
+        - recipientId
+        - content

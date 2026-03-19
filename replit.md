@@ -1,8 +1,18 @@
-# Workspace
+# ADAPT by LMJ — Workspace
 
-## Overview
+## Project Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/stress/soreness/motivation sliders) that generates an **ADAPT Score** (0-100), which determines their session mode (performance/normal/adapt/recovery) and adapts training loads accordingly. Coaches monitor athletes, manage training programs with 4 variant modes, handle alerts, and message athletes.
+
+## Design System (NON-NEGOTIABLE)
+
+- Background: `#0A0A0A` (dark electric)
+- Neon green accent: `#00F5A0` (performance/normal)
+- Cyan: `#00D9FF`
+- Amber: `#FFB800` (ADAPT mode)
+- Red: `#FF3B5C` (RECOVERY mode)
+- Violet: `#7B61FF` (PERFORMANCE mode overlay)
+- Fonts: Bebas Neue (titles) + DM Sans (body) + Space Mono (scores/numbers)
 
 ## Stack
 
@@ -14,83 +24,113 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Mobile**: Expo (React Native) — Task #2
+- **Coach dashboard**: React + Vite — Task #3
 
 ## Structure
 
 ```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
+adapt-monorepo/
+├── artifacts/
+│   ├── api-server/         # Express 5 API server (COMPLETE)
+│   ├── athlete-app/        # Expo mobile app (Task #2 pending)
+│   └── coach-dashboard/    # React+Vite coach web app (Task #3 pending)
+├── lib/
+│   ├── api-spec/           # OpenAPI 3.1 spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── scripts/
+│   └── src/
+│       └── seed.ts         # DB seed script (demo data)
+├── pnpm-workspace.yaml
+├── tsconfig.base.json
+├── tsconfig.json
+└── package.json
 ```
+
+## Backend (Task #1 — COMPLETE)
+
+### API Server (`artifacts/api-server`)
+
+Express 5 API with helmet, pino logging, rate-limiting (200 req/min general, 20/min auth).
+
+**Routes mounted at `/api`:**
+- `GET /api/healthz` — health check
+- `POST /api/auth/register` — register coach or athlete
+- `POST /api/auth/login` — login → returns accessToken + refreshToken
+- `POST /api/auth/refresh` — refresh access token
+- `POST /api/auth/logout` — invalidate refresh token
+- `GET /api/users/me` — get own profile
+- `PATCH /api/users/me` — update profile
+- `POST /api/checkins` — submit daily check-in (closes at 14:00 UTC → 422)
+- `GET /api/checkins/today` — get today's check-in
+- `GET /api/checkins/history` — check-in history (athlete)
+- `GET /api/sessions/today` — get today's adapted session (requires check-in)
+- `POST /api/sessions/:sessionId/complete` — log completed session
+- `GET /api/programs` — list athlete's programs
+- `GET /api/programs/:id` — get program detail
+- `POST /api/programs` — create program (coach only)
+- `PATCH /api/programs/:id` — update program (coach only)
+- `GET /api/coach/clients` — list coach's athletes with today's status
+- `GET /api/coach/clients/:clientId` — single athlete detail
+- `DELETE /api/coach/clients/:clientId` — remove athlete
+- `GET /api/coach/clients/:clientId/checkins` — athlete check-in history
+- `POST /api/coach/clients/:clientId/override` — override athlete mode
+- `GET /api/coach/alerts` — get all active alerts
+- `PUT /api/coach/alerts/:alertId/resolve` — resolve alert
+- `GET /api/coach/invite-code` — get coach's invite code
+- `POST /api/coach/clients/link` — link athlete by invite code (coach flow)
+- `POST /api/athlete/link` — link to coach by invite code (athlete flow)
+- `GET /api/exercises` — list exercises
+- `POST /api/exercises` — create exercise (coach only)
+- `GET /api/messages` — list message threads
+- `GET /api/messages/:userId` — get conversation
+- `POST /api/messages` — send message
+- `PUT /api/messages/:userId/read` — mark messages as read
+
+**Services:**
+- `adapt-engine.ts` — `calculateAdaptScore()` + `calculateAdaptedLoad()` (server-side only)
+- `alert-job.ts` — daily cron at 09:00 checking for: inactivity (3 days), low scores (<25 for 2 days), high RPE
+
+### Database Schema (`lib/db`)
+
+Tables: users, programs, sessions, session_variants, exercises, session_exercises, checkins, session_logs, exercise_logs, alerts, messages, notifications
+
+**Push schema:** `pnpm --filter @workspace/db run push`
+
+### ADAPT Engine Logic
+
+- **Score**: sleep×0.25 + energy×0.20 + (1-stress)×0.15 + (1-soreness)×0.20 + motivation×0.20 → ×100
+- **≥80** → PERFORMANCE (violet, +2.5% loads)
+- **60-79** → NORMAL (green, baseline)
+- **40-59** → ADAPT (amber, -22.5% loads, -20% volume)
+- **<40** → RECOVERY (red, -50% loads/volume)
+- Pain → forces RECOVERY + P1 alert immediately
+- RPE modifier: yesterday RPE ≥9 → -5pts; <5 → +3pts
+- Cycle phase modifier: luteal → -5pts
+
+### Seed Script
+
+```bash
+pnpm --filter @workspace/scripts run seed
+```
+
+Demo accounts (all password: `Demo1234!`):
+- Coach: `coach@adapt.demo` (invite code: MARC01)
+- Julien: `julien@adapt.demo` (scores 60-82, normal/performance)
+- Sara: `sara@adapt.demo` (scores 80-100, performance)
+- Tom: `tom@adapt.demo` — P1 pain alert (knee, RECOVERY forced)
+- Marie: `marie@adapt.demo` — P2 inactivity alert (3 days no check-in)
 
 ## TypeScript & Composite Projects
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+Every package extends `tsconfig.base.json` with `composite: true`. Use `pnpm run typecheck` from root to build all project references. Always use `tsx` for running scripts in dev.
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## Important Notes
 
-## Root Scripts
-
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
-
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- **Zod imports**: route files use `"zod"` (v3 via catalog); DB schema uses `"zod/v4"` 
+- **UUID defaults**: `sql\`gen_random_uuid()\`` in schema (not `.defaultRandom()`)
+- **JWT secrets**: `JWT_SECRET` and `JWT_REFRESH_SECRET` env vars (defaults to dev values if missing)
+- **ADAPT Engine**: server-side ONLY, never recalculate on client
+- **Check-in window**: closes at 14:00 UTC (returns 422 `CHECKIN_WINDOW_CLOSED`)

@@ -1,5 +1,6 @@
-import app from "./app";
-import { logger } from "./lib/logger";
+import app from "./app.js";
+import { logger } from "./lib/logger.js";
+import { startAlertJob } from "./services/alert-job.js";
 
 const rawPort = process.env["PORT"];
 
@@ -17,4 +18,5 @@ if (Number.isNaN(port) || port <= 0) {
 
 app.listen(port, () => {
   logger.info({ port }, "Server listening");
+  startAlertJob();
 });
