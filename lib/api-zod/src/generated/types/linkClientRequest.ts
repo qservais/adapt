@@ -7,5 +7,6 @@
  */
 
 export interface LinkClientRequest {
-  inviteCode: string;
+  /** Email address of the athlete to link to this coach's roster */
+  athleteEmail: string;
 }

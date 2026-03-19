@@ -622,7 +622,7 @@ paths:
     post:
       operationId: linkClient
       tags: [coach]
-      summary: Link athlete to coach via invite code
+      summary: Link athlete to coach roster by athlete email
       requestBody:
         required: true
         content:
@@ -1471,10 +1471,12 @@ components:
     LinkClientRequest:
       type: object
       properties:
-        inviteCode:
+        athleteEmail:
           type: string
+          format: email
+          description: Email address of the athlete to link to this coach's roster
       required:
-        - inviteCode
+        - athleteEmail
 
     ExerciseData:
       type: object

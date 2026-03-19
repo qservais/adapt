@@ -698,10 +698,13 @@ export const GetInviteCodeResponse = zod.object({
 });
 
 /**
- * @summary Link athlete to coach via invite code
+ * @summary Link athlete to coach roster by athlete email
  */
 export const LinkClientBody = zod.object({
-  inviteCode: zod.string(),
+  athleteEmail: zod
+    .string()
+    .email()
+    .describe("Email address of the athlete to link to this coach's roster"),
 });
 
 export const LinkClientResponse = zod.object({

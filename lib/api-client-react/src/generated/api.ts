@@ -2458,7 +2458,7 @@ export function useGetInviteCode<
 }
 
 /**
- * @summary Link athlete to coach via invite code
+ * @summary Link athlete to coach roster by athlete email
  */
 export const getLinkClientUrl = () => {
   return `/api/coach/clients/link`;
@@ -2521,7 +2521,7 @@ export type LinkClientMutationBody = BodyType<LinkClientRequest>;
 export type LinkClientMutationError = ErrorType<unknown>;
 
 /**
- * @summary Link athlete to coach via invite code
+ * @summary Link athlete to coach roster by athlete email
  */
 export const useLinkClient = <
   TError = ErrorType<unknown>,
