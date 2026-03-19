@@ -1,0 +1,939 @@
+# ADAPT by LMJ — Prompt Complet pour Replit AI Agent
+
+> Copie-colle ce prompt intégralement dans Replit AI pour démarrer le projet.
+
+-----
+
+## 🎯 MISSION
+
+Tu es un développeur full-stack senior. Tu vas construire **ADAPT by LMJ**, une application de coaching sportif adaptatif. Le cœur du produit est l’**ADAPT ENGINE** : un algorithme qui calcule chaque matin un score composite (0–100) à partir d’un check-in de l’athlète, puis adapte automatiquement sa séance du jour (charge, volume, intensité).
+
+L’application a **deux interfaces** :
+
+- **App mobile-first** pour l’athlète (React responsive, expérience mobile)
+- **Dashboard web** pour le coach
+
+-----
+
+## 🛠️ STACK TECHNIQUE — OPTIMISÉ POUR REPLIT
+
+Choisis le stack le mieux adapté à l’environnement Replit pour un hébergement final sur Replit :
+
+- **Frontend** : React + Vite + TailwindCSS (responsive mobile-first, simulant une app mobile dans le navigateur)
+- **Backend** : Node.js + Express (API REST)
+- **Base de données** : PostgreSQL via `pg` (Replit Database ou Neon.tech)
+- **Auth** : JWT (access token 1h + refresh token 30 jours) + Google OAuth 2.0 + Apple Sign-In
+- **Push notifications** : Firebase FCM (configuration initiale, logique côté serveur)
+- **Stockage fichiers** : Cloudflare R2 ou AWS S3 (URLs externes en V1)
+- **Hébergement** : Replit Deployments (tout-en-un)
+- **Seed data** : Script de peuplement automatique avec données fictives
+
+### Structure des dossiers
+
+```
+/adapt-lmj
+  /client          → React + Vite (frontend)
+    /src
+      /components
+      /pages
+      /hooks
+      /context
+      /utils
+  /server          → Node.js + Express (API)
+    /routes
+    /controllers
+    /middleware
+    /services
+      adapt-engine.js   ← FICHIER CRITIQUE
+    /db
+      schema.sql
+      seed.js
+  .replit
+  replit.nix
+```
+
+-----
+
+## 🎨 DESIGN SYSTEM — IDENTITÉ VISUELLE
+
+### Inspiration
+
+Style inspiré de Mouvup.be : **sombre, électrique, premium fitness**. L’app doit donner l’impression d’être dans une salle de sport haut de gamme — pas d’une app médicale ou corporate.
+
+### Palette de couleurs (CSS variables obligatoires)
+
+```css
+:root {
+  --bg-primary: #0A0A0A;         /* Fond principal noir profond */
+  --bg-secondary: #111111;       /* Cards, panels */
+  --bg-elevated: #1A1A1A;        /* Éléments surélevés */
+  --accent-primary: #00F5A0;     /* Vert néon électrique — actions principales */
+  --accent-secondary: #00D9FF;   /* Cyan électrique — infos, scores */
+  --accent-warning: #FFB800;     /* Ambre — mode ADAPT */
+  --accent-danger: #FF3B5C;      /* Rouge vif — RECOVERY, alertes P1 */
+  --accent-performance: #7B61FF; /* Violet électrique — mode PERFORMANCE */
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0A0;
+  --text-muted: #555555;
+  --border: #222222;
+  --border-active: #333333;
+  --shadow-glow-green: 0 0 20px rgba(0, 245, 160, 0.15);
+  --shadow-glow-cyan: 0 0 20px rgba(0, 217, 255, 0.15);
+}
+```
+
+### Couleurs par mode ADAPT
+
+|Mode       |Couleur  |Hex      |
+|-----------|---------|---------|
+|PERFORMANCE|Violet   |`#7B61FF`|
+|NORMAL     |Vert néon|`#00F5A0`|
+|ADAPT      |Ambre    |`#FFB800`|
+|RECOVERY   |Rouge    |`#FF3B5C`|
+
+### Typographie
+
+- **Display / Titres** : `Bebas Neue` ou `Barlow Condensed Bold` (Google Fonts) — impact, énergie
+- **Corps / UI** : `DM Sans` ou `Outfit` — lisibilité, modernité
+- **Chiffres / Scores** : `JetBrains Mono` ou `Space Mono` — données numériques
+
+### Principes UI obligatoires
+
+- Fond très sombre (`#0A0A0A`) pour lisibilité en salle
+- Boutons touchables minimum 48×48px
+- Feedback visuel (glow, pulse) sur toutes les actions principales
+- Sliders custom (pas les sliders HTML natifs) — grands, tactiles
+- Toutes les cartes ont un border subtil `#222` + légère élévation via shadow
+- Badges de mode avec glow coloré correspondant
+- Animations : transitions 200ms ease, pas de transitions saccadées
+- Jamais de page blanche : états vides toujours explicites avec icône + message
+- Contraste texte minimum WCAG AA (4.5:1)
+
+-----
+
+## 🗄️ DATA MODEL — SCHÉMA POSTGRESQL COMPLET
+
+Crée ce schéma dans `/server/db/schema.sql` et l’exécute au démarrage :
+
+```sql
+-- Extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- USERS (athlètes + coaches)
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255),           -- null si OAuth uniquement
+  auth_provider VARCHAR(20) DEFAULT 'email', -- 'email' | 'google' | 'apple'
+  provider_id VARCHAR(255),             -- ID Google/Apple
+  role VARCHAR(10) NOT NULL CHECK (role IN ('athlete', 'coach')),
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100),
+  age INTEGER,
+  weight_kg DECIMAL(5,2),
+  height_cm INTEGER,
+  fitness_level VARCHAR(20) CHECK (fitness_level IN ('beginner','intermediate','advanced')),
+  primary_goal VARCHAR(20) CHECK (primary_goal IN ('performance','health','aesthetic','fitness')),
+  cycle_tracking BOOLEAN DEFAULT false,
+  coach_id UUID REFERENCES users(id),
+  invite_code VARCHAR(6) UNIQUE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- PROGRAMS
+CREATE TABLE programs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  coach_id UUID REFERENCES users(id),
+  athlete_id UUID REFERENCES users(id) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  duration_weeks INTEGER NOT NULL,
+  start_date DATE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SESSIONS
+CREATE TABLE sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  program_id UUID REFERENCES programs(id) NOT NULL,
+  week_number INTEGER NOT NULL,
+  day_number INTEGER NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(20) NOT NULL CHECK (type IN ('strength','cardio','hybrid','mobility')),
+  estimated_duration_min INTEGER,
+  coach_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SESSION VARIANTS (Performance / Normal / Adapt / Recovery)
+CREATE TABLE session_variants (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_id UUID REFERENCES sessions(id) NOT NULL,
+  mode VARCHAR(20) NOT NULL CHECK (mode IN ('performance','normal','adapt','recovery')),
+  volume_modifier DECIMAL(3,2) DEFAULT 1.0,
+  intensity_modifier DECIMAL(3,2) DEFAULT 1.0,
+  notes TEXT
+);
+
+-- EXERCISES (bibliothèque)
+CREATE TABLE exercises (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(20) CHECK (category IN ('compound','isolation','cardio','mobility')),
+  muscle_groups JSONB,
+  equipment JSONB,
+  demo_url VARCHAR(500),
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SESSION EXERCISES (exercices d'une variante)
+CREATE TABLE session_exercises (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  variant_id UUID REFERENCES session_variants(id) NOT NULL,
+  exercise_id UUID REFERENCES exercises(id) NOT NULL,
+  order_index INTEGER NOT NULL,
+  sets INTEGER NOT NULL,
+  reps VARCHAR(20),
+  load_kg DECIMAL(6,2),
+  rest_seconds INTEGER,
+  coach_cue TEXT
+);
+
+-- CHECKINS (check-in quotidien)
+CREATE TABLE checkins (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  athlete_id UUID REFERENCES users(id) NOT NULL,
+  date DATE NOT NULL,
+  sleep SMALLINT CHECK (sleep BETWEEN 1 AND 5),
+  energy SMALLINT CHECK (energy BETWEEN 1 AND 5),
+  stress SMALLINT CHECK (stress BETWEEN 1 AND 5),
+  soreness SMALLINT CHECK (soreness BETWEEN 1 AND 5),
+  motivation SMALLINT CHECK (motivation BETWEEN 1 AND 5),
+  has_pain BOOLEAN DEFAULT false,
+  pain_notes TEXT,
+  cycle_phase VARCHAR(20) CHECK (cycle_phase IN ('menstrual','follicular','ovulatory','luteal')),
+  adapt_score SMALLINT NOT NULL,
+  session_mode VARCHAR(20) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(athlete_id, date)
+);
+
+-- SESSION LOGS (historique séances réalisées)
+CREATE TABLE session_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  athlete_id UUID REFERENCES users(id) NOT NULL,
+  session_id UUID REFERENCES sessions(id),
+  variant_mode VARCHAR(20) NOT NULL,
+  checkin_id UUID REFERENCES checkins(id),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  rpe SMALLINT CHECK (rpe BETWEEN 1 AND 10),
+  perceived_difficulty VARCHAR(20) CHECK (perceived_difficulty IN ('too_easy','well_calibrated','too_hard')),
+  athlete_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- EXERCISE LOGS (détail exercices réalisés)
+CREATE TABLE exercise_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_log_id UUID REFERENCES session_logs(id) NOT NULL,
+  exercise_id UUID REFERENCES exercises(id) NOT NULL,
+  sets_completed INTEGER,
+  reps_per_set JSONB,
+  load_kg_used DECIMAL(6,2),
+  notes TEXT
+);
+
+-- ALERTS
+CREATE TABLE alerts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  coach_id UUID REFERENCES users(id),
+  athlete_id UUID REFERENCES users(id) NOT NULL,
+  type VARCHAR(30) NOT NULL CHECK (type IN ('pain','low_score','inactivity','high_rpe','missed_checkins','stagnation')),
+  priority VARCHAR(3) NOT NULL CHECK (priority IN ('p1','p2','p3')),
+  message TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  is_resolved BOOLEAN DEFAULT false,
+  resolution_note TEXT,
+  resolved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- MESSAGES
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sender_id UUID REFERENCES users(id) NOT NULL,
+  recipient_id UUID REFERENCES users(id) NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- NOTIFICATIONS LOG
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  body TEXT,
+  is_sent BOOLEAN DEFAULT false,
+  sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes pour performance
+CREATE INDEX idx_checkins_athlete_date ON checkins(athlete_id, date);
+CREATE INDEX idx_session_logs_athlete ON session_logs(athlete_id);
+CREATE INDEX idx_alerts_coach_unresolved ON alerts(coach_id, is_resolved);
+CREATE INDEX idx_messages_thread ON messages(sender_id, recipient_id);
+```
+
+-----
+
+## 🧠 ADAPT ENGINE — ALGORITHME COMPLET
+
+Crée `/server/services/adapt-engine.js` avec cette logique EXACTE :
+
+```javascript
+/**
+ * ADAPT ENGINE — Moteur de décision central
+ * Calcule le score adaptatif (0–100) et détermine le mode de séance
+ * Ce fichier est le cœur du produit — ne pas modifier sans tests
+ */
+
+function calculateAdaptScore({ sleep, energy, stress, soreness, motivation, rpe_yesterday = null, cycle_phase = null }) {
+  
+  // ÉTAPE 1 — Normalisation (0.0 à 1.0)
+  const sleep_n      = (sleep - 1) / 4;
+  const energy_n     = (energy - 1) / 4;
+  const stress_n     = (stress - 1) / 4;      // inversé : stress élevé = mauvais
+  const soreness_n   = (soreness - 1) / 4;    // inversé : courbatures élevées = mauvais
+  const motivation_n = (motivation - 1) / 4;
+
+  // ÉTAPE 2 — Score de base pondéré
+  let score_base = 
+    (sleep_n      * 0.25) +
+    (energy_n     * 0.20) +
+    ((1 - stress_n)   * 0.15) +
+    ((1 - soreness_n) * 0.20) +
+    (motivation_n * 0.20);
+  // score_base entre 0.0 et 1.0
+
+  // ÉTAPE 3 — Modificateur RPE de la veille
+  if (rpe_yesterday !== null) {
+    if (rpe_yesterday >= 9)      score_base *= 0.85;  // séance très dure hier
+    else if (rpe_yesterday >= 8) score_base *= 0.90;  // séance dure hier
+    else if (rpe_yesterday <= 4) score_base *= 1.05;  // séance facile hier → bonus
+  }
+
+  // ÉTAPE 4 — Modificateur cycle menstruel (si activé)
+  if (cycle_phase) {
+    const cycle_modifiers = {
+      menstrual:   0.85,  // fatigue accrue
+      follicular:  1.00,  // neutre
+      ovulatory:   1.05,  // pic d'énergie
+      luteal:      0.95,  // légère fatigue
+    };
+    score_base *= (cycle_modifiers[cycle_phase] || 1.00);
+  }
+
+  // ÉTAPE 5 — Score final (0–100, arrondi)
+  const adapt_score = Math.round(Math.min(100, Math.max(0, score_base * 100)));
+
+  // ÉTAPE 6 — Détermination du mode
+  let session_mode;
+  if      (adapt_score >= 80) session_mode = 'performance';
+  else if (adapt_score >= 60) session_mode = 'normal';
+  else if (adapt_score >= 40) session_mode = 'adapt';
+  else                         session_mode = 'recovery';
+
+  return { adapt_score, session_mode };
+}
+
+/**
+ * Calcule la charge adaptée selon le mode
+ * @param {number} nominal_kg - Charge nominale du programme
+ * @param {string} mode - Mode ADAPT
+ * @returns {number} Charge suggérée en kg
+ */
+function calculateAdaptedLoad(nominal_kg, mode) {
+  if (!nominal_kg) return null;
+  const ratios = {
+    performance: 1.025,   // +2.5% (milieu de la plage 100-105%)
+    normal:      1.00,
+    adapt:       0.775,   // milieu de la plage 75-80%
+    recovery:    0.20,    // 0-40%, on prend 20% ou poids de corps
+  };
+  const ratio = ratios[mode] || 1.0;
+  return Math.round(nominal_kg * ratio * 4) / 4; // arrondi au 0.25kg
+}
+
+module.exports = { calculateAdaptScore, calculateAdaptedLoad };
+```
+
+-----
+
+## 🔐 AUTHENTIFICATION
+
+### Stratégie
+
+- **Email/password** : hash bcrypt (rounds: 12), JWT access (1h) + refresh (30 jours)
+- **Google OAuth 2.0** : via passport.js + passport-google-oauth20
+- **Apple Sign-In** : via passport-apple ou apple-signin-auth
+- **Middleware auth** : vérifier le JWT sur chaque route protégée, retourner 401 si expiré
+- **RBAC** : middleware `requireRole('coach')` pour les routes /coach/*
+
+### Format JWT payload
+
+```json
+{ "userId": "uuid", "role": "athlete|coach", "email": "..." }
+```
+
+### Codes d’erreur API standards
+
+```json
+{ "error": { "code": "AUTH_TOKEN_EXPIRED", "message": "..." } }
+```
+
+Codes métier : `AUTH_INVALID_CREDENTIALS`, `AUTH_TOKEN_EXPIRED`, `AUTH_FORBIDDEN`, `CHECKIN_ALREADY_EXISTS`, `CHECKIN_WINDOW_CLOSED`, `SESSION_NOT_UNLOCKED`, `PAIN_OVERRIDE_ACTIVE`, `COACH_CLIENT_LIMIT`, `INVITE_CODE_INVALID`
+
+-----
+
+## 📡 API REST — ENDPOINTS COMPLETS
+
+Tous les endpoints retournent `Content-Type: application/json`. Auth via header `Authorization: Bearer <token>` sauf `/auth/*`.
+
+### AUTH
+
+```
+POST /api/auth/register        → { email, password, first_name, role }
+POST /api/auth/login           → { email, password }
+POST /api/auth/refresh         → { refresh_token }
+GET  /api/auth/google          → Redirect OAuth Google
+GET  /api/auth/google/callback → Callback Google
+POST /api/auth/apple           → Apple Sign-In token
+POST /api/auth/logout
+```
+
+### UTILISATEUR
+
+```
+GET  /api/users/me             → Profil complet
+PUT  /api/users/me             → Modifier profil
+```
+
+### CHECK-IN
+
+```
+POST /api/checkins             → Soumettre check-in (déclenche ADAPT ENGINE)
+GET  /api/checkins/today       → Check-in du jour
+GET  /api/checkins/history     → 30 derniers jours
+```
+
+**POST /api/checkins — payload**
+
+```json
+{
+  "sleep": 3, "energy": 4, "stress": 2,
+  "soreness": 2, "motivation": 4,
+  "has_pain": false, "pain_notes": null,
+  "cycle_phase": null
+}
+```
+
+**Réponse**
+
+```json
+{
+  "checkin": { "id": "...", "adapt_score": 74, "session_mode": "normal" },
+  "session_preview": { "name": "Force Haut du Corps", "estimated_duration_min": 55, "exercise_count": 8 }
+}
+```
+
+⚠️ Règles : erreur 409 si check-in déjà fait, erreur 422 si après 14h00 (heure locale athlète).
+
+### SÉANCES
+
+```
+GET  /api/sessions/today            → Séance adaptée (requiert check-in) [403 SESSION_NOT_UNLOCKED sinon]
+PUT  /api/sessions/:id/start        → Démarrer la séance
+POST /api/sessions/:id/complete     → Terminer + logger exercices
+POST /api/sessions/:id/feedback     → RPE + ressenti + note
+GET  /api/sessions/history          → Historique séances (30 jours)
+```
+
+**GET /api/sessions/today — réponse**
+Retourner la variante correspondant au `session_mode` du check-in du jour, avec charges adaptées via `calculateAdaptedLoad()`.
+
+### PROGRAMMES (coach uniquement)
+
+```
+GET  /api/programs                  → Programmes du coach
+POST /api/programs                  → Créer programme
+GET  /api/programs/:id              → Détail programme
+PUT  /api/programs/:id              → Modifier programme
+POST /api/programs/:id/sessions     → Ajouter séance avec variants
+PUT  /api/programs/:id/sessions/:sid → Modifier séance
+```
+
+### DASHBOARD COACH
+
+```
+GET  /api/coach/clients             → Liste clients + statut du jour
+GET  /api/coach/clients/:id         → Fiche client détaillée
+GET  /api/coach/alerts              → Alertes actives (triées P1→P3)
+PUT  /api/coach/alerts/:id/resolve  → Résoudre alerte (P1 déverrouille séance)
+POST /api/coach/clients/:id/override → Forcer mode séance
+GET  /api/coach/clients/:id/checkins → Historique check-ins client
+```
+
+### MESSAGERIE
+
+```
+GET  /api/messages                  → Liste threads
+GET  /api/messages/:userId          → Messages d'un thread
+POST /api/messages                  → Envoyer message
+PUT  /api/messages/:userId/read     → Marquer comme lu
+```
+
+### EXERCICES
+
+```
+GET  /api/exercises                 → Bibliothèque (avec filtres)
+POST /api/exercises                 → Créer exercice (coach)
+```
+
+### COACH — GESTION CLIENTS
+
+```
+GET  /api/coach/invite-code         → Code d'invitation du coach
+POST /api/coach/clients/link        → Lier un athlète (via code)
+DELETE /api/coach/clients/:id       → Délier client
+```
+
+-----
+
+## 📱 INTERFACES UTILISATEUR — SPEC ÉCRAN PAR ÉCRAN
+
+### NAVIGATION GLOBALE (mobile-first)
+
+- Tab bar en bas : **Home · Séance · Stats · Messages**
+- Header minimal avec logo ADAPT + avatar profil
+- Vue coach : sidebar fixe à gauche (desktop) / drawer mobile
+
+-----
+
+### MODULE 1 — ONBOARDING ATHLÈTE (8 écrans)
+
+**Écran 1 — Splash**
+
+- Logo ADAPT by LMJ centré, fond noir
+- Baseline : *“Le plan qui s’adapte à toi”*
+- Bouton principal : “Commencer” (vert néon, large)
+- Bouton secondaire : “J’ai déjà un compte” (texte, muted)
+
+**Écran 2 — Création de compte**
+
+- 3 options en haut : Email / Google / Apple (boutons avec logo)
+- Si Email : champs Email + Password + Prénom
+- Validation email en temps réel (checkmark vert)
+- Choix du rôle : Athlète ou Coach (2 cards cliquables)
+
+**Écrans 3-5 — Profil**
+
+- Âge, poids, taille (inputs numériques avec unités)
+- Niveau : 3 cards (Débutant / Intermédiaire / Avancé)
+- Objectif : 4 cards avec icône (Performance / Santé / Esthétique / Remise en forme)
+- Fréquence d’entraînement + blessures (champ texte optionnel)
+
+**Écran 6 — Code coach**
+
+- Champ 6 caractères (input large, centré)
+- Option “Continuer sans coach” (texte sous le champ)
+
+**Écrans 7-8 — Tutoriel + Premier check-in**
+
+- 3 slides animées expliquant le concept ADAPT
+- Premier check-in guidé avec tooltips
+
+-----
+
+### MODULE 2 — HOME DASHBOARD
+
+**État A — Check-in à faire (CTA proéminent)**
+
+```
+┌─────────────────────────────────────┐
+│ ADAPT          [avatar]             │
+├─────────────────────────────────────┤
+│ Bonjour [Prénom]  ·  Mer. 19 mars  │
+├─────────────────────────────────────┤
+│ ╔═══════════════════════════════╗   │
+│ ║  TON CHECK-IN DU MATIN       ║   │
+│ ║  30 sec pour adapter          ║   │
+│ ║  ta séance d'aujourd'hui      ║   │
+│ ║                               ║   │
+│ ║  [ FAIRE MON CHECK-IN → ]     ║   │  ← bouton vert néon pleine largeur
+│ ╚═══════════════════════════════╝   │
+├─────────────────────────────────────┤
+│ 🔒 Séance disponible après check-in │
+│ Streak : 6 jours — ne brise pas !  │
+└─────────────────────────────────────┘
+```
+
+**État B — Check-in fait, séance débloquée**
+
+- Badge score ADAPT : grand chiffre + badge mode coloré (glow)
+- Card séance : titre mode + durée + nb exercices + bouton DÉMARRER
+- Streak + dernière séance (RPE + date)
+
+-----
+
+### MODULE 3 — CHECK-IN FLOW (7-9 étapes)
+
+**Design des sliders :**
+
+- Slider custom large (hauteur 56px, thumb 32px)
+- Couleur de remplissage : dégradé rouge→ambre→vert selon valeur
+- Labels aux extrémités (ex: “Très mal” / “Parfait”)
+- Valeur numérique affichée sous le slider en grand
+- Haptic feedback simulé via animation CSS au relâchement
+
+**Étapes :**
+
+1. Message de bienvenue personnalisé + date
+1. Sommeil (slider 1-5) — “Comment tu as dormi ?”
+1. Énergie (slider 1-5) — “Ton niveau d’énergie ?”
+1. Stress (slider 1-5) — “Ton niveau de stress ?”
+1. Courbatures (slider 1-5) — “Douleurs musculaires ?”
+1. Motivation (slider 1-5) — “Ton envie de t’entraîner ?”
+1. Douleur (toggle) — Si oui : champ texte + message d’alerte coach
+1. Cycle (toggle, si activé) — 4 phases en cards
+1. Résultat — Score ADAPT en grand, badge mode, bouton “Voir ma séance”
+
+**Écran résultat :**
+
+- Score en très grand (police monospace, couleur selon mode)
+- Badge mode avec glow correspondant : PERFORMANCE (violet) / NORMAL (vert) / ADAPT (ambre) / RECOVERY (rouge)
+- Description courte du mode
+- Bouton “Voir ma séance →”
+
+-----
+
+### MODULE 4 — SÉANCE DU JOUR
+
+**Écran d’intro séance :**
+
+- Header : badge mode + titre séance + durée + nb exercices
+- Section échauffement (collapsible)
+- Bouton “DÉMARRER LA SÉANCE”
+
+**Écran exercice en cours :**
+
+```
+┌─────────────────────────────────────┐
+│ ✕ Quitter          Exercice 3 / 8  │
+│ ████████████░░░░░░░░░░░░  37%      │  ← barre de progression
+├─────────────────────────────────────┤
+│ DÉVELOPPÉ COUCHÉ BARRE             │  ← nom en grand
+│ Série 2 sur 4                      │
+├─────────────────────────────────────┤
+│   [ 10 ]          [ 80 kg ]        │  ← reps | charge nominale
+│    REPS             CHARGE          │
+├─────────────────────────────────────┤
+│ Charge utilisée :                   │
+│ [ − ]  [ 80.0 kg ]  [ + ]          │  ← input par paliers de 2.5kg
+├─────────────────────────────────────┤
+│ 💬 "Contrôle la descente 3 sec"    │  ← note coach
+├─────────────────────────────────────┤
+│ REPOS : 90s  ████████░░  [PASSER]  │  ← timer visuel
+│                                     │
+│ [ SÉRIE TERMINÉE ✓ ]               │  ← bouton large vert
+└─────────────────────────────────────┘
+```
+
+**Écran fin de séance :**
+
+- Durée totale, résumé exercices complétés
+- Animation de célébration (confetti léger ou glow pulse)
+- Bouton “Donner mon feedback”
+
+-----
+
+### MODULE 5 — FEEDBACK POST-SÉANCE
+
+- RPE slider 1-10 (couleur rouge→vert)
+- 3 boutons : “Trop facile” / “Bien calibrée” / “Trop difficile”
+- Champ texte note libre (optionnel)
+- Confirmation avec streak affiché
+
+-----
+
+### MODULE 6 — HISTORIQUE & PROGRESSION
+
+- Calendrier mensuel (carré par jour : vert/orange/rouge/gris selon mode)
+- Graphe linéaire ADAPT Score sur 30 jours (Recharts ou Chart.js)
+- Progression par exercice (charge max dans le temps)
+- Résumé hebdo : séances complétées, RPE moyen, score moyen
+
+-----
+
+### MODULE 7 — MESSAGERIE
+
+- Liste des threads (avatar + prénom + dernier message + badge non lu)
+- Thread de conversation (bulles style iMessage, fond sombre)
+- Input message en bas avec bouton envoi
+- Indicateur “lu” côté coach
+
+-----
+
+### MODULE 8 — DASHBOARD COACH (WEB)
+
+**Vue d’ensemble — tableau clients**
+Colonnes : Nom · Score ADAPT · Mode séance · Statut séance · Alertes
+
+- Ligne verte : tout OK
+- Ligne ambre : check-in manqué ou score ADAPT
+- Ligne rouge : alerte P1 active
+- Filtre : Tous / Actifs aujourd’hui / Avec alertes
+
+**Fiche client**
+
+- Graphe ADAPT Score 7 jours + 30 jours
+- Détail du check-in du jour (grille 5 métriques avec valeurs visuelles)
+- Historique 10 dernières séances (tableau : date, mode, RPE)
+- Bouton “Modifier la séance du jour” (override manuel)
+- Panel alertes actives avec action directe
+- Lien messagerie directe
+
+**Éditeur de programme**
+
+- Interface tableau : colonnes = semaines, lignes = jours
+- Click sur une case → modal d’ajout/édition de séance
+- Pour chaque séance : 4 onglets variants (Performance / Normal / Adapt / Recovery)
+- Pour chaque variant : liste d’exercices avec séries/reps/charges
+- Ajout d’exercice depuis bibliothèque (searchable)
+- Duplication semaine/séance
+
+**Feed d’alertes (temps réel)**
+
+- Trié P1 → P3 → P2 (P1 toujours en haut)
+- Carte alerte : icône priorité + prénom athlète + message + heure
+- Actions inline : “Voir fiche” / “Envoyer message” / “Valider reprise” (P1)
+- Badge rouge dans la navigation pour les alertes non lues
+
+-----
+
+## 🔔 SYSTÈME D’ALERTES — LOGIQUE COMPLÈTE
+
+Implémente un **job de vérification** qui tourne côté serveur :
+
+### Déclencheurs automatiques
+
+|Priorité|Nom              |Condition                                          |Action                                                      |
+|--------|-----------------|---------------------------------------------------|------------------------------------------------------------|
+|P1      |DOULEUR          |`has_pain = true` dans check-in                    |Alerte immédiate + séance forcée RECOVERY + notif push coach|
+|P1      |SCORE CRITIQUE   |Score < 25 pendant 2 jours consécutifs             |Alerte + message suggéré coach                              |
+|P2      |INACTIVITÉ       |Aucun check-in depuis 3 jours (vérifié à 09h00)    |Alerte coach + reminder auto athlète                        |
+|P2      |RPE ÉLEVÉ        |RPE >= 9.5 sur 2 séances consécutives              |Alerte dashboard                                            |
+|P2      |CHECK-INS MANQUÉS|3 check-ins manqués consécutifs                    |Alerte coach                                                |
+|P3      |STAGNATION       |Aucune progression charge sur 4 semaines (même exo)|Info fiche client                                           |
+
+### Règles de verrouillage
+
+- **Douleur P1** → Mode RECOVERY forcé jusqu’à validation coach (`PUT /api/coach/alerts/:id/resolve`)
+- **Pas de check-in** → Séance inaccessible (`SESSION_NOT_UNLOCKED`)
+- **Check-in modifiable** jusqu’à 14h00 heure locale
+
+-----
+
+## 🌱 SEED DATA — DONNÉES DE DÉMO
+
+Crée `/server/db/seed.js` avec ces données fictives :
+
+### Coach
+
+```json
+{
+  "email": "coach@adapt.demo",
+  "password": "Demo1234!",
+  "role": "coach",
+  "first_name": "Marc",
+  "last_name": "Dupont",
+  "invite_code": "MARC01"
+}
+```
+
+### 4 Athlètes fictifs (liés à Marc)
+
+```json
+[
+  { "email": "julien@adapt.demo", "password": "Demo1234!", "first_name": "Julien", "last_name": "Martin", "fitness_level": "intermediate", "primary_goal": "performance", "age": 28, "weight_kg": 82 },
+  { "email": "sara@adapt.demo",   "password": "Demo1234!", "first_name": "Sara",   "last_name": "Khelil",  "fitness_level": "advanced",      "primary_goal": "performance", "age": 25, "weight_kg": 62, "cycle_tracking": true },
+  { "email": "tom@adapt.demo",    "password": "Demo1234!", "first_name": "Tom",    "last_name": "Bernard", "fitness_level": "beginner",      "primary_goal": "fitness",     "age": 35, "weight_kg": 95 },
+  { "email": "marie@adapt.demo",  "password": "Demo1234!", "first_name": "Marie",  "last_name": "Leclerc", "fitness_level": "intermediate",  "primary_goal": "aesthetic",   "age": 31, "weight_kg": 58 }
+]
+```
+
+### Exercices bibliothèque (minimum 15)
+
+Inclure : Développé couché barre, Squat barre, Soulevé de terre, Tractions, Rowing barre, Développé militaire, Leg press, Curl biceps, Triceps poulie, Gainage planche, Fentes marchées, Hip thrust, Rowing TRX, Sprint 200m, Mobilité hanches.
+
+### Programme de démo
+
+- Programme “Force & Conditionnement — 4 semaines” pour Julien
+- 3 séances/semaine (Lundi/Mercredi/Vendredi)
+- Séance type avec 4 variantes (performance/normal/adapt/recovery)
+- Exercices avec charges nominales réalistes
+
+### Check-ins des 7 derniers jours
+
+- Pour chaque athlète : 5-6 check-ins sur 7 jours avec scores variés
+- Tom : un check-in avec `has_pain: true` (genou droit, 6/10) → alerte P1 active
+- Marie : aucun check-in depuis 3 jours → alerte P2 inactivité
+- Sara : scores élevés (75-88)
+- Julien : scores normaux (60-75)
+
+-----
+
+## 🔒 SÉCURITÉ & PERFORMANCE
+
+```javascript
+// Rate limiting (express-rate-limit)
+const limiter = rateLimit({ windowMs: 60 * 1000, max: 100 });  // 100 req/min par IP
+const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 500 }); // 500/min par user auth
+
+// CORS
+app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+
+// Helmet (headers sécurité)
+app.use(helmet());
+
+// Validation inputs (joi ou zod sur chaque route)
+```
+
+Règles de sécurité à respecter :
+
+- Un athlète ne voit QUE ses propres données
+- Un coach ne voit QUE les données de SES athlètes liés
+- Les mots de passe : bcrypt rounds 12
+- HTTPS obligatoire (Replit gère en production)
+- JWT secrets dans variables d’environnement (`.env`)
+- Les P1 (douleur) ne peuvent pas être désactivées
+
+-----
+
+## ⚙️ VARIABLES D’ENVIRONNEMENT (.env)
+
+```env
+# Base de données
+DATABASE_URL=postgresql://...
+
+# JWT
+JWT_SECRET=your_jwt_secret_here
+JWT_REFRESH_SECRET=your_refresh_secret_here
+
+# OAuth Google
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_CALLBACK_URL=https://your-replit-url/api/auth/google/callback
+
+# Apple Sign-In
+APPLE_CLIENT_ID=...
+APPLE_TEAM_ID=...
+APPLE_KEY_ID=...
+APPLE_PRIVATE_KEY=...
+
+# Firebase FCM (push notifications)
+FIREBASE_PROJECT_ID=...
+FIREBASE_PRIVATE_KEY=...
+FIREBASE_CLIENT_EMAIL=...
+
+# App
+CLIENT_URL=https://your-replit-url
+NODE_ENV=production
+PORT=3000
+```
+
+-----
+
+## ✅ CRITÈRES D’ACCEPTANCE — CE QUI DOIT FONCTIONNER
+
+### ADAPT ENGINE
+
+- Score max (sommeil=5, énergie=5, stress=1, courbatures=1, motivation=5) → score >= 85, mode “performance”
+- Score min (tout à 1 sauf stress et courbatures à 5) → score <= 15, mode “recovery”
+- `has_pain = true` → mode forcé “recovery” + alerte P1 créée, quelle que soit le score
+- RPE veille = 9 + score base 75 → score final ~64 (mode “normal”)
+- Phase menstruelle + score base 70 → score final ~60
+
+### Check-in
+
+- Impossible de soumettre 2 check-ins le même jour (erreur 409)
+- Check-in après 14h → erreur 422 `CHECKIN_WINDOW_CLOSED`
+- Sans check-in → séance inaccessible (erreur 403 `SESSION_NOT_UNLOCKED`)
+
+### Séances
+
+- Mode ADAPT (score ~45) + charge nominale 100kg → charge affichée 75-80kg
+- Mode RECOVERY → aucun exercice avec charge > 40% du nominal
+- Coach modifie séance → athlète voit version modifiée avec mention “Mis à jour par ton coach”
+
+### Alertes
+
+- Douleur signalée → alerte P1 dans dashboard coach en < 5 secondes
+- Validation P1 par coach → séance déverrouillée pour l’athlète
+- 3 jours sans activité → alerte P2 générée au job de 09h00
+
+### Sécurité
+
+- Token athlète sur `/api/coach/clients` → 403 `AUTH_FORBIDDEN`
+- Athlète sur profil d’un autre athlète → 403
+- Coach sur données d’un athlète non lié → 403
+
+-----
+
+## 🚀 ORDRE DE CONSTRUCTION RECOMMANDÉ
+
+Construis dans cet ordre pour valider le cœur du produit au plus tôt :
+
+1. **Setup Replit** : projet, `.replit`, variables d’env, structure dossiers
+1. **Database** : schéma SQL complet + connexion PostgreSQL
+1. **Seed data** : script de peuplement + données fictives
+1. **ADAPT ENGINE** : fonction pure `adapt-engine.js` avec tests unitaires
+1. **Auth** : register/login (email), JWT, middleware, Google OAuth, Apple Sign-In
+1. **API Check-in** : POST /checkins (déclenche ADAPT ENGINE)
+1. **API Séances** : GET /sessions/today (avec charges adaptées)
+1. **Frontend mobile — Onboarding** : splash, création compte, profil
+1. **Frontend mobile — Home + Check-in flow** : sliders custom, résultat score
+1. **Frontend mobile — Séance** : exercice par exercice, timer, log charges
+1. **Frontend mobile — Feedback** : RPE, ressenti, confirmation
+1. **Dashboard coach — Vue clients** : liste, statuts, filtres
+1. **Dashboard coach — Fiche client** : graphes, historique, alertes
+1. **Dashboard coach — Éditeur de programme** : création, variantes, exercices
+1. **Système d’alertes** : jobs, déclencheurs, feed temps réel
+1. **Messagerie** : threads, messages, notifications
+1. **Historique athlète** : calendrier, graphes, progression
+1. **Notifications push** : Firebase FCM, templates, règles horaires
+1. **Polish UX** : animations, transitions, états vides, edge cases
+1. **Tests d’acceptance** : vérifier tous les critères listés ci-dessus
+
+-----
+
+## 📋 NOTES FINALES POUR L’IA
+
+- Le **design sombre électrique** est NON-NÉGOCIABLE : fond #0A0A0A, accents néon, pas de blanc cassé, pas de gris pastel
+- L’**ADAPT ENGINE tourne CÔTÉ SERVEUR uniquement** — jamais recalculé côté client
+- Les **4 modes** ont chacun leur couleur distinctive cohérente partout dans l’UI
+- La **règle douleur est absolue** : `has_pain = true` → RECOVERY forcé, alerte P1, validation coach requise pour déverrouiller
+- **Maximum 3 push notifications/jour/utilisateur** (sauf alertes P1)
+- Le check-in doit être **< 60 secondes** : aucune saisie clavier, tout en sliders/toggles
+- **États vides explicites** sur tous les écrans (jamais de page blanche)
+- Utilise des **Google Fonts** pour la typographie (Bebas Neue + DM Sans)
+- **Mobile-first** : l’app athlète est conçue pour téléphone, testable dans le navigateur
+- Installe et configure les packages nécessaires : `bcrypt`, `jsonwebtoken`, `passport`, `passport-google-oauth20`, `passport-apple`, `express-rate-limit`, `helmet`, `cors`, `pg`, `joi` ou `zod`, `firebase-admin`, `recharts` ou `chart.js`, `node-cron` (pour les jobs d’alertes)
