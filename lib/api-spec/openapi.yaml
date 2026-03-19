@@ -412,6 +412,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProgramSummary"
+    delete:
+      operationId: deleteProgram
+      tags: [programs]
+      summary: Delete a program (coach only, owns program)
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Program deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Program not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /programs/{programId}/sessions:
     post:
@@ -439,6 +468,40 @@ paths:
                 $ref: "#/components/schemas/SuccessResponse"
 
   /programs/{programId}/sessions/{sessionId}:
+    delete:
+      operationId: deleteProgramSession
+      tags: [programs]
+      summary: Delete a session from a program (coach only, owns program)
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       operationId: updateProgramSession
       tags: [programs]

@@ -410,6 +410,18 @@ export const UpdateProgramResponse = zod.object({
 });
 
 /**
+ * @summary Delete a program (coach only, owns program)
+ */
+export const DeleteProgramParams = zod.object({
+  programId: zod.coerce.string(),
+});
+
+export const DeleteProgramResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Add session to program
  */
 export const AddProgramSessionParams = zod.object({
@@ -445,6 +457,19 @@ export const AddProgramSessionBody = zod.object({
       }),
     )
     .optional(),
+});
+
+/**
+ * @summary Delete a session from a program (coach only, owns program)
+ */
+export const DeleteProgramSessionParams = zod.object({
+  programId: zod.coerce.string(),
+  sessionId: zod.coerce.string(),
+});
+
+export const DeleteProgramSessionResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
 });
 
 /**

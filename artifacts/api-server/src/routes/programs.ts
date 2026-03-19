@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, exercisesTable, usersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -337,4 +337,80 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
   }
 });
 
+router.delete("/programs/:programId", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const programId = String(req.params["programId"]);
+
+    // Verify ownership before deleting
+    const [program] = await db.select({ id: programsTable.id }).from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
+    if (!program) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Program not found or not authorized" } });
+      return;
+    }
+
+    // Cascade: delete session exercises, variants, sessions, then program
+    const sessions = await db.select({ id: sessionsTable.id }).from(sessionsTable)
+      .where(eq(sessionsTable.programId, programId));
+    const sessionIds = sessions.map(s => s.id);
+
+    if (sessionIds.length > 0) {
+      const variants = await db.select({ id: sessionVariantsTable.id }).from(sessionVariantsTable)
+        .where(inArray(sessionVariantsTable.sessionId, sessionIds));
+      const variantIds = variants.map(v => v.id);
+
+      if (variantIds.length > 0) {
+        await db.delete(sessionExercisesTable).where(inArray(sessionExercisesTable.variantId, variantIds));
+        await db.delete(sessionVariantsTable).where(inArray(sessionVariantsTable.id, variantIds));
+      }
+      await db.delete(sessionsTable).where(inArray(sessionsTable.id, sessionIds));
+    }
+
+    await db.delete(programsTable).where(eq(programsTable.id, programId));
+    res.json({ success: true, message: "Program deleted" });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.delete("/programs/:programId/sessions/:sessionId", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const programId = String(req.params["programId"]);
+    const sessionId = String(req.params["sessionId"]);
+
+    // Verify program belongs to coach
+    const [program] = await db.select({ id: programsTable.id }).from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
+    if (!program) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Program not found or not authorized" } });
+      return;
+    }
+
+    // Verify session belongs to this program
+    const [session] = await db.select({ id: sessionsTable.id }).from(sessionsTable)
+      .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.programId, programId)));
+    if (!session) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found in this program" } });
+      return;
+    }
+
+    // Delete exercises for all variants of this session, then variants, then session
+    const variants = await db.select({ id: sessionVariantsTable.id }).from(sessionVariantsTable)
+      .where(eq(sessionVariantsTable.sessionId, sessionId));
+
+    for (const variant of variants) {
+      await db.delete(sessionExercisesTable).where(eq(sessionExercisesTable.variantId, variant.id));
+    }
+    for (const variant of variants) {
+      await db.delete(sessionVariantsTable).where(eq(sessionVariantsTable.id, variant.id));
+    }
+    await db.delete(sessionsTable).where(eq(sessionsTable.id, sessionId));
+
+    res.json({ success: true, message: "Session deleted" });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 export default router;
+

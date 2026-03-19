@@ -1605,6 +1605,90 @@ export const useUpdateProgram = <
 };
 
 /**
+ * @summary Delete a program (coach only, owns program)
+ */
+export const getDeleteProgramUrl = (programId: string) => {
+  return `/api/programs/${programId}`;
+};
+
+export const deleteProgram = async (
+  programId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteProgramUrl(programId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteProgramMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProgram>>,
+    TError,
+    { programId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteProgram>>,
+  TError,
+  { programId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteProgram"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteProgram>>,
+    { programId: string }
+  > = (props) => {
+    const { programId } = props ?? {};
+
+    return deleteProgram(programId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteProgramMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteProgram>>
+>;
+
+export type DeleteProgramMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a program (coach only, owns program)
+ */
+export const useDeleteProgram = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProgram>>,
+    TError,
+    { programId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteProgram>>,
+  TError,
+  { programId: string },
+  TContext
+> => {
+  return useMutation(getDeleteProgramMutationOptions(options));
+};
+
+/**
  * @summary Add session to program
  */
 export const getAddProgramSessionUrl = (programId: string) => {
@@ -1689,6 +1773,97 @@ export const useAddProgramSession = <
   TContext
 > => {
   return useMutation(getAddProgramSessionMutationOptions(options));
+};
+
+/**
+ * @summary Delete a session from a program (coach only, owns program)
+ */
+export const getDeleteProgramSessionUrl = (
+  programId: string,
+  sessionId: string,
+) => {
+  return `/api/programs/${programId}/sessions/${sessionId}`;
+};
+
+export const deleteProgramSession = async (
+  programId: string,
+  sessionId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(
+    getDeleteProgramSessionUrl(programId, sessionId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteProgramSessionMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProgramSession>>,
+    TError,
+    { programId: string; sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteProgramSession>>,
+  TError,
+  { programId: string; sessionId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteProgramSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteProgramSession>>,
+    { programId: string; sessionId: string }
+  > = (props) => {
+    const { programId, sessionId } = props ?? {};
+
+    return deleteProgramSession(programId, sessionId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteProgramSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteProgramSession>>
+>;
+
+export type DeleteProgramSessionMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a session from a program (coach only, owns program)
+ */
+export const useDeleteProgramSession = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteProgramSession>>,
+    TError,
+    { programId: string; sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteProgramSession>>,
+  TError,
+  { programId: string; sessionId: string },
+  TContext
+> => {
+  return useMutation(getDeleteProgramSessionMutationOptions(options));
 };
 
 /**
