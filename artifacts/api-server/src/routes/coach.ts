@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { usersTable, checkinsTable, sessionLogsTable, alertsTable, programsTable } from "@workspace/db";
 import { eq, and, desc, gte } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
+import { z } from "zod";
 
 const router = Router();
 
@@ -161,14 +162,18 @@ router.get("/coach/clients/:clientId/checkins", authenticate, requireRole("coach
   }
 });
 
+const overrideSchema = z.object({
+  mode: z.enum(["performance", "normal", "adapt", "recovery"]),
+});
+
 router.post("/coach/clients/:clientId/override", authenticate, requireRole("coach"), async (req, res) => {
   const clientId = String(req.params["clientId"]);
-  const { mode } = req.body as { mode: string };
-
-  if (!["performance", "normal", "adapt", "recovery"].includes(mode)) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid mode" } });
+  const parsed = overrideSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
     return;
   }
+  const { mode } = parsed.data;
 
   try {
     const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
@@ -226,9 +231,18 @@ router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res)
   }
 });
 
+const resolveAlertSchema = z.object({
+  resolutionNote: z.string().min(1).optional(),
+});
+
 router.put("/coach/alerts/:alertId/resolve", authenticate, requireRole("coach"), async (req, res) => {
   const alertId = String(req.params["alertId"]);
-  const { resolutionNote } = req.body as { resolutionNote?: string };
+  const parsed = resolveAlertSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  const { resolutionNote } = parsed.data;
 
   try {
     const [alert] = await db.select({ id: alertsTable.id }).from(alertsTable)
@@ -261,12 +275,17 @@ router.get("/coach/invite-code", authenticate, requireRole("coach"), async (req,
   }
 });
 
+const linkClientSchema = z.object({
+  athleteEmail: z.string().email(),
+});
+
 router.post("/coach/clients/link", authenticate, requireRole("coach"), async (req, res) => {
-  const { athleteEmail } = req.body as { athleteEmail?: string };
-  if (!athleteEmail) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "athleteEmail required" } });
+  const parsed = linkClientSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
     return;
   }
+  const { athleteEmail } = parsed.data;
 
   try {
     const [athlete] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, coachId: usersTable.coachId })
@@ -290,12 +309,17 @@ router.post("/coach/clients/link", authenticate, requireRole("coach"), async (re
   }
 });
 
+const athleteLinkSchema = z.object({
+  inviteCode: z.string().min(1).max(10).toUpperCase(),
+});
+
 router.post("/athlete/link", authenticate, requireRole("athlete"), async (req, res) => {
-  const { inviteCode } = req.body as { inviteCode?: string };
-  if (!inviteCode) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invite code required" } });
+  const parsed = athleteLinkSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
     return;
   }
+  const { inviteCode } = parsed.data;
 
   try {
     const [coachWithCode] = await db.select({ id: usersTable.id }).from(usersTable)

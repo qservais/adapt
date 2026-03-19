@@ -109,12 +109,18 @@ router.post("/auth/register", async (req, res) => {
   }
 });
 
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
 router.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Email and password required" } });
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
     return;
   }
+  const { email, password } = parsed.data;
 
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
@@ -157,12 +163,17 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
+const refreshSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
 router.post("/auth/refresh", async (req, res) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Refresh token required" } });
+  const parsed = refreshSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
     return;
   }
+  const { refreshToken } = parsed.data;
 
   try {
     const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as { userId: string; role: string; email: string };

@@ -225,7 +225,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
   }
 });
 
-router.put("/sessions/:sessionId/start", authenticate, async (req, res) => {
+router.put("/sessions/:sessionId/start", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const sessionId = String(req.params["sessionId"]);
     await db.update(sessionLogsTable)
@@ -252,7 +252,7 @@ const completeSchema = z.object({
   })).optional().default([]),
 });
 
-router.post("/sessions/:sessionId/complete", authenticate, async (req, res) => {
+router.post("/sessions/:sessionId/complete", authenticate, requireRole("athlete"), async (req, res) => {
   const parsed = completeSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
@@ -296,7 +296,7 @@ const feedbackSchema = z.object({
   athleteNotes: z.string().nullable().optional(),
 });
 
-router.post("/sessions/:sessionId/feedback", authenticate, async (req, res) => {
+router.post("/sessions/:sessionId/feedback", authenticate, requireRole("athlete"), async (req, res) => {
   const parsed = feedbackSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
@@ -334,7 +334,7 @@ router.post("/sessions/:sessionId/feedback", authenticate, async (req, res) => {
   }
 });
 
-router.get("/sessions/history", authenticate, async (req, res) => {
+router.get("/sessions/history", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
     const logs = await db.select().from(sessionLogsTable)
