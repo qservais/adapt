@@ -58,7 +58,7 @@ export default function TutorialScreen() {
     if (index < SLIDES.length - 1) {
       listRef.current?.scrollToIndex({ index: index + 1, animated: true });
     } else {
-      router.replace("/");
+      router.replace("/checkin");
     }
   };
 
@@ -123,7 +123,7 @@ export default function TutorialScreen() {
         />
         {index < SLIDES.length - 1 && (
           <TouchableOpacity
-            onPress={() => router.replace("/")}
+            onPress={() => router.replace("/checkin")}
             style={styles.skip}
           >
             <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Skip</Text>

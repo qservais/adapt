@@ -42,15 +42,21 @@ export default function GoalScreen() {
   const insets = useSafeAreaInsets();
   const updateMutation = useUpdateMe();
   const [selected, setSelected] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   const handleNext = async () => {
+    setError("");
     if (selected) {
       try {
         await updateMutation.mutateAsync({ data: { primaryGoal: selected } });
-      } catch {
+        router.push("/onboarding/invite");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to save goal";
+        setError(msg);
       }
+    } else {
+      router.push("/onboarding/invite");
     }
-    router.push("/onboarding/invite");
   };
 
   return (
@@ -106,8 +112,11 @@ export default function GoalScreen() {
         })}
       </View>
 
+      {error ? (
+        <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
+      ) : null}
       <View style={styles.actions}>
-        <Button label="Continue" onPress={handleNext} />
+        <Button label="Continue" onPress={handleNext} loading={updateMutation.isPending} />
         <Button
           label="Skip"
           onPress={() => router.push("/onboarding/invite")}
@@ -140,4 +149,5 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, color: COLORS.white },
   cardDesc: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17 },
   actions: { gap: 12 },
+  error: { color: COLORS.red, fontSize: 13, textAlign: "center", marginBottom: 8 },
 });

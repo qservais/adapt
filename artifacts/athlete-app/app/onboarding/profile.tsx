@@ -39,9 +39,11 @@ export default function ProfileSetupScreen() {
           heightCm: isNaN(heightN) ? undefined : heightN,
         },
       });
-    } catch {
+      router.push("/onboarding/fitness");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save profile";
+      setError(msg);
     }
-    router.push("/onboarding/fitness");
   };
 
   return (

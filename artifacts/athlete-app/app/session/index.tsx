@@ -39,12 +39,17 @@ export default function SessionIntroScreen() {
     );
   }
 
+  const [startError, setStartError] = React.useState("");
+
   const handleStart = async () => {
+    setStartError("");
     try {
       await startMutation.mutateAsync({ sessionId: session.sessionLogId });
-    } catch {
+      router.push("/session/exercise");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Could not start session";
+      setStartError(msg);
     }
-    router.push("/session/exercise");
   };
 
   return (
@@ -135,13 +140,17 @@ export default function SessionIntroScreen() {
         ))}
       </View>
 
+      {startError ? (
+        <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{startError}</Text>
+      ) : null}
       <TouchableOpacity
         onPress={handleStart}
-        style={[styles.startBtn, { backgroundColor: cfg.color }]}
+        disabled={startMutation.isPending}
+        style={[styles.startBtn, { backgroundColor: cfg.color, opacity: startMutation.isPending ? 0.6 : 1 }]}
       >
         <Feather name="play" size={20} color={COLORS.bg} />
         <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-          DÉMARRER LA SÉANCE
+          {startMutation.isPending ? "STARTING…" : "DÉMARRER LA SÉANCE"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -212,4 +221,5 @@ const styles = StyleSheet.create({
   startBtnText: { fontSize: 16, color: COLORS.bg, letterSpacing: 1.5 },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
   emptyText: { fontSize: 16, color: COLORS.textSecondary },
+  errorText: { color: COLORS.red, fontSize: 13, textAlign: "center", marginHorizontal: 20, marginBottom: 8 },
 });

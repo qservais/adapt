@@ -20,7 +20,7 @@ import { GlowCard } from "@/components/ui/GlowCard";
 
 const { width } = Dimensions.get("window");
 const CHART_WIDTH = width - 80;
-const CHART_HEIGHT = 120;
+const CHART_HEIGHT = 110;
 
 type Period = "7" | "14" | "30";
 
@@ -33,6 +33,14 @@ interface CheckinItem {
   soreness: number;
   motivation: number;
   sessionMode: string;
+}
+
+interface SessionLogItem {
+  id: string;
+  variantMode: string;
+  completedAt?: string | null;
+  rpe?: number | null;
+  perceivedDifficulty?: string | null;
 }
 
 function ScoreBar({
@@ -51,16 +59,9 @@ function ScoreBar({
     <View style={barStyles.row}>
       <Text style={[barStyles.label, { fontFamily: FONTS.body }]}>{label}</Text>
       <View style={barStyles.track}>
-        <View
-          style={[
-            barStyles.fill,
-            { width: `${pct}%`, backgroundColor: color },
-          ]}
-        />
+        <View style={[barStyles.fill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
-      <Text style={[barStyles.val, { fontFamily: FONTS.mono }]}>
-        {value.toFixed(1)}
-      </Text>
+      <Text style={[barStyles.val, { fontFamily: FONTS.mono }]}>{value.toFixed(1)}</Text>
     </View>
   );
 }
@@ -79,30 +80,36 @@ const barStyles = StyleSheet.create({
   val: { fontSize: 12, color: COLORS.textMuted, width: 32, textAlign: "right" },
 });
 
-function MiniChart({ data, color }: { data: number[]; color: string }) {
+function ScoreTrendChart({ data, color }: { data: number[]; color: string }) {
   if (data.length < 2) {
     return (
-      <View
-        style={{ height: CHART_HEIGHT, alignItems: "center", justifyContent: "center" }}
-      >
+      <View style={{ height: CHART_HEIGHT, alignItems: "center", justifyContent: "center" }}>
         <Text style={{ fontFamily: FONTS.body, color: COLORS.textMuted, fontSize: 13 }}>
-          Not enough data
+          Not enough data yet
         </Text>
       </View>
     );
   }
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
+  const minV = Math.min(...data);
+  const maxV = Math.max(...data);
+  const range = maxV - minV || 1;
   const stepX = CHART_WIDTH / (data.length - 1);
 
   const points = data.map((v, i) => ({
     x: i * stepX,
-    y: CHART_HEIGHT - ((v - min) / range) * (CHART_HEIGHT - 16),
+    y: CHART_HEIGHT - ((v - minV) / range) * (CHART_HEIGHT - 16) - 8,
   }));
 
   return (
-    <View style={{ height: CHART_HEIGHT + 16, paddingTop: 8 }}>
+    <View style={{ height: CHART_HEIGHT + 24 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+        <Text style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textMuted }}>
+          {data[0]}
+        </Text>
+        <Text style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textMuted }}>
+          {data[data.length - 1]}
+        </Text>
+      </View>
       <View
         style={{
           height: CHART_HEIGHT,
@@ -112,16 +119,17 @@ function MiniChart({ data, color }: { data: number[]; color: string }) {
           position: "relative",
         }}
       >
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 25, 50, 75, 100].map((pct) => (
           <View
-            key={i}
+            key={pct}
             style={{
               position: "absolute",
               left: 0,
               right: 0,
-              top: (CHART_HEIGHT / 4) * i,
+              top: CHART_HEIGHT * (1 - pct / 100) - 0.5,
               height: 1,
               backgroundColor: COLORS.border,
+              opacity: 0.5,
             }}
           />
         ))}
@@ -140,11 +148,12 @@ function MiniChart({ data, color }: { data: number[]; color: string }) {
               style={{
                 position: "absolute",
                 left: cx - len / 2,
-                top: cy - 1,
+                top: cy - 1.5,
                 width: len,
-                height: 2,
+                height: 3,
                 backgroundColor: color,
                 transform: [{ rotate: `${angle}deg` }],
+                borderRadius: 2,
               }}
             />
           );
@@ -154,11 +163,11 @@ function MiniChart({ data, color }: { data: number[]; color: string }) {
             key={i}
             style={{
               position: "absolute",
-              left: p.x - 4,
-              top: p.y - 4,
-              width: 8,
-              height: 8,
-              borderRadius: 4,
+              left: p.x - 5,
+              top: p.y - 5,
+              width: 10,
+              height: 10,
+              borderRadius: 5,
               backgroundColor: color,
               borderWidth: 2,
               borderColor: COLORS.bg,
@@ -170,10 +179,108 @@ function MiniChart({ data, color }: { data: number[]; color: string }) {
   );
 }
 
+function MonthCalendar({
+  checkins,
+  year,
+  month,
+}: {
+  checkins: CheckinItem[];
+  year: number;
+  month: number;
+}) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+
+  const checkinByDay: Record<number, CheckinItem> = {};
+  for (const c of checkins) {
+    const d = new Date(c.date);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      checkinByDay[d.getDate()] = c;
+    }
+  }
+
+  const monthName = new Date(year, month).toLocaleString("en-US", { month: "long" });
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const rows: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+
+  return (
+    <View>
+      <Text style={[styles.calMonthTitle, { fontFamily: FONTS.mono }]}>
+        {monthName.toUpperCase()} {year}
+      </Text>
+      <View style={styles.calDayRow}>
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+          <Text key={i} style={[styles.calDayLabel, { fontFamily: FONTS.mono }]}>
+            {d}
+          </Text>
+        ))}
+      </View>
+      {rows.map((row, ri) => (
+        <View key={ri} style={styles.calRow}>
+          {row.map((day, di) => {
+            if (day == null) {
+              return <View key={di} style={styles.calCell} />;
+            }
+            const checkin = checkinByDay[day];
+            const isToday =
+              today.getFullYear() === year &&
+              today.getMonth() === month &&
+              today.getDate() === day;
+            const modeColor = checkin
+              ? (MODE_CONFIG[checkin.sessionMode as SessionMode]?.color ?? COLORS.border)
+              : null;
+
+            return (
+              <View
+                key={di}
+                style={[
+                  styles.calCell,
+                  checkin != null && {
+                    backgroundColor: `${modeColor}30`,
+                    borderColor: modeColor ?? COLORS.border,
+                    borderWidth: 1,
+                  },
+                  isToday && styles.calToday,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.calDayNum,
+                    { fontFamily: checkin ? FONTS.monoBold : FONTS.mono },
+                    checkin != null && { color: modeColor ?? COLORS.white },
+                    isToday && !checkin && { color: COLORS.green },
+                  ]}
+                >
+                  {day}
+                </Text>
+                {checkin != null && (
+                  <View
+                    style={[styles.calDot, { backgroundColor: modeColor ?? COLORS.border }]}
+                  />
+                )}
+              </View>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
-  const [period, setPeriod] = useState<Period>("14");
+  const [period, setPeriod] = useState<Period>("30");
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
 
   const checkinQuery = useGetCheckinHistory();
   const sessionQuery = useGetSessionHistory();
@@ -181,12 +288,13 @@ export default function StatsScreen() {
   const days = parseInt(period);
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
+  cutoff.setHours(0, 0, 0, 0);
 
-  const checkins: CheckinItem[] = ((checkinQuery.data ?? []) as CheckinItem[]).filter(
-    (c) => new Date(c.date) >= cutoff
-  );
+  const allCheckins = (checkinQuery.data ?? []) as CheckinItem[];
+  const checkins = allCheckins.filter((c) => new Date(c.date) >= cutoff);
 
-  const sessions = (sessionQuery.data ?? []).filter(
+  const allSessions = (sessionQuery.data ?? []) as SessionLogItem[];
+  const sessions = allSessions.filter(
     (s) => s.completedAt != null && new Date(s.completedAt) >= cutoff
   );
 
@@ -196,6 +304,12 @@ export default function StatsScreen() {
   const avg = (key: keyof Pick<CheckinItem, "sleep" | "energy" | "stress" | "soreness" | "motivation">) =>
     checkins.length > 0 ? checkins.reduce((a, c) => a + c[key], 0) / checkins.length : 0;
 
+  const avgRpe =
+    sessions.filter((s) => s.rpe != null).length > 0
+      ? sessions.filter((s) => s.rpe != null).reduce((a, s) => a + (s.rpe ?? 0), 0) /
+        sessions.filter((s) => s.rpe != null).length
+      : 0;
+
   const modeCounts: Record<string, number> = {};
   for (const c of checkins) {
     modeCounts[c.sessionMode] = (modeCounts[c.sessionMode] ?? 0) + 1;
@@ -204,6 +318,22 @@ export default function StatsScreen() {
   const sortedScores = [...checkins]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((c) => c.adaptScore);
+
+  const prevMonth = () => {
+    setCalMonth((prev) => {
+      if (prev.month === 0) return { year: prev.year - 1, month: 11 };
+      return { year: prev.year, month: prev.month - 1 };
+    });
+  };
+
+  const nextMonth = () => {
+    setCalMonth((prev) => {
+      const now = new Date();
+      if (prev.year === now.getFullYear() && prev.month === now.getMonth()) return prev;
+      if (prev.month === 11) return { year: prev.year + 1, month: 0 };
+      return { year: prev.year, month: prev.month + 1 };
+    });
+  };
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
@@ -220,10 +350,7 @@ export default function StatsScreen() {
             <TouchableOpacity
               key={p}
               onPress={() => setPeriod(p)}
-              style={[
-                styles.periodBtn,
-                period === p && styles.periodActive,
-              ]}
+              style={[styles.periodBtn, period === p && styles.periodActive]}
             >
               <Text
                 style={[
@@ -263,19 +390,79 @@ export default function StatsScreen() {
       </View>
 
       <View style={styles.section}>
+        <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>WEEKLY SUMMARY</Text>
+          <View style={styles.weeklyRow}>
+            <View style={styles.weeklyItem}>
+              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
+                {sessions.filter((s) => {
+                  const d = new Date(s.completedAt ?? "");
+                  const weekAgo = new Date();
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  return d >= weekAgo;
+                }).length}
+              </Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Sessions done</Text>
+            </View>
+            <View style={styles.weeklyDivider} />
+            <View style={styles.weeklyItem}>
+              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.amber }]}>
+                {avgRpe > 0 ? avgRpe.toFixed(1) : "—"}
+              </Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Avg RPE</Text>
+            </View>
+            <View style={styles.weeklyDivider} />
+            <View style={styles.weeklyItem}>
+              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
+                {avgScore.toFixed(0)}
+              </Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Avg Score</Text>
+            </View>
+          </View>
+        </GlowCard>
+      </View>
+
+      <View style={styles.section}>
         <GlowCard glowColor={COLORS.green} style={styles.chartCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>
-            ADAPT SCORE TREND
-          </Text>
-          <MiniChart data={sortedScores} color={COLORS.green} />
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>30-DAY ADAPT SCORE</Text>
+          <ScoreTrendChart data={sortedScores} color={COLORS.green} />
+        </GlowCard>
+      </View>
+
+      <View style={styles.section}>
+        <GlowCard glowColor={COLORS.border} style={styles.calCard}>
+          <View style={styles.calHeader}>
+            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>CALENDAR</Text>
+            <View style={styles.calNav}>
+              <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
+                <Feather name="chevron-left" size={18} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={nextMonth} style={styles.calNavBtn}>
+                <Feather name="chevron-right" size={18} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <MonthCalendar
+            checkins={allCheckins}
+            year={calMonth.year}
+            month={calMonth.month}
+          />
+          <View style={styles.calLegend}>
+            {Object.entries(MODE_CONFIG).map(([key, cfg]) => (
+              <View key={key} style={styles.calLegendItem}>
+                <View style={[styles.calLegendDot, { backgroundColor: cfg.color }]} />
+                <Text style={[styles.calLegendText, { fontFamily: FONTS.mono, color: cfg.color }]}>
+                  {cfg.label}
+                </Text>
+              </View>
+            ))}
+          </View>
         </GlowCard>
       </View>
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>
-            DAILY AVERAGES
-          </Text>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>DAILY AVERAGES</Text>
           <View style={styles.barList}>
             <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sleep" />
             <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Energy" />
@@ -304,54 +491,10 @@ export default function StatsScreen() {
                     </Text>
                     <View style={styles.modeBar}>
                       <View
-                        style={[
-                          styles.modeBarFill,
-                          { width: `${pct}%`, backgroundColor: cfg.color },
-                        ]}
+                        style={[styles.modeBarFill, { width: `${pct}%`, backgroundColor: cfg.color }]}
                       />
                     </View>
-                    <Text style={[styles.modeCount, { fontFamily: FONTS.mono }]}>
-                      {count}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </GlowCard>
-        </View>
-      )}
-
-      {sessions.length > 0 && (
-        <View style={styles.section}>
-          <GlowCard glowColor={COLORS.border}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>
-              RECENT SESSIONS
-            </Text>
-            <View style={styles.sessionList}>
-              {sessions.slice(0, 5).map((s) => {
-                const mode = s.variantMode as SessionMode;
-                const cfg = MODE_CONFIG[mode] ?? MODE_CONFIG.normal;
-                return (
-                  <View key={s.id} style={styles.sessionRow}>
-                    <View style={[styles.modeDot, { backgroundColor: cfg.color }]} />
-                    <Text style={[styles.sessionDate, { fontFamily: FONTS.mono }]}>
-                      {s.completedAt != null
-                        ? new Date(s.completedAt).toLocaleDateString("fr-FR", {
-                            day: "2-digit",
-                            month: "short",
-                          })
-                        : "—"}
-                    </Text>
-                    <Text style={[styles.sessionMode, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}>
-                      {cfg.label}
-                    </Text>
-                    {s.rpe != null && (
-                      <View style={styles.rpePill}>
-                        <Text style={[styles.rpeText, { fontFamily: FONTS.mono }]}>
-                          RPE {s.rpe}
-                        </Text>
-                      </View>
-                    )}
+                    <Text style={[styles.modeCount, { fontFamily: FONTS.mono }]}>{count}</Text>
                   </View>
                 );
               })}
@@ -398,15 +541,79 @@ const styles = StyleSheet.create({
   kpiCard: { flex: 1, alignItems: "center", padding: 16 },
   kpiVal: { fontSize: 32, marginBottom: 4 },
   kpiLabel: { fontSize: 12, color: COLORS.textSecondary },
+  weeklyCard: { gap: 16 },
+  weeklyRow: {
+    flexDirection: "row",
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  weeklyItem: { flex: 1, alignItems: "center", paddingVertical: 16, gap: 4 },
+  weeklyDivider: { width: 1, backgroundColor: COLORS.border },
+  weeklyVal: { fontSize: 26 },
+  weeklyLabel: { fontSize: 11, color: COLORS.textSecondary, textAlign: "center" },
   chartCard: { gap: 12 },
   averagesCard: { gap: 16 },
   modesCard: { gap: 14 },
-  cardTitle: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2, marginBottom: 4 },
+  calCard: { gap: 16 },
+  calHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  calNav: { flexDirection: "row", gap: 4 },
+  calNavBtn: { padding: 6 },
+  calMonthTitle: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  calDayRow: { flexDirection: "row", marginBottom: 6 },
+  calDayLabel: {
+    flex: 1,
+    fontSize: 10,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  calRow: { flexDirection: "row", marginBottom: 4 },
+  calCell: {
+    flex: 1,
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "transparent",
+    marginHorizontal: 1.5,
+    gap: 2,
+    padding: 2,
+  },
+  calToday: {
+    borderColor: COLORS.green,
+    borderWidth: 1.5,
+  },
+  calDayNum: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  calDot: { width: 4, height: 4, borderRadius: 2 },
+  calLegend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 4,
+  },
+  calLegendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  calLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  calLegendText: { fontSize: 10, letterSpacing: 1 },
+  cardTitle: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
   barList: { gap: 12 },
   modesList: { gap: 10 },
   modeRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   modeDot: { width: 8, height: 8, borderRadius: 4 },
-  modeLabel: { fontSize: 13, width: 80 },
+  modeLabel: { fontSize: 13, width: 90 },
   modeBar: {
     flex: 1,
     height: 6,
@@ -416,24 +623,6 @@ const styles = StyleSheet.create({
   },
   modeBarFill: { height: "100%", borderRadius: 3 },
   modeCount: { fontSize: 12, color: COLORS.textMuted, minWidth: 20, textAlign: "right" },
-  sessionList: { gap: 2 },
-  sessionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  sessionDate: { fontSize: 11, color: COLORS.textMuted, width: 60 },
-  sessionMode: { flex: 1, fontSize: 14 },
-  rpePill: {
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  rpeText: { fontSize: 11, color: COLORS.textSecondary },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 16, paddingHorizontal: 40 },
   emptyText: { fontSize: 15, color: COLORS.textMuted, textAlign: "center", lineHeight: 22 },
 });

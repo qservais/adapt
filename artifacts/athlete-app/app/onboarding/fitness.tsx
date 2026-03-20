@@ -32,15 +32,20 @@ export default function FitnessLevelScreen() {
   const insets = useSafeAreaInsets();
   const updateMutation = useUpdateMe();
   const [selected, setSelected] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   const handleNext = async () => {
     if (selected) {
       try {
         await updateMutation.mutateAsync({ data: { fitnessLevel: selected } });
-      } catch {
+        router.push("/onboarding/goal");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to save fitness level";
+        setError(msg);
       }
+    } else {
+      router.push("/onboarding/goal");
     }
-    router.push("/onboarding/goal");
   };
 
   return (
@@ -108,8 +113,11 @@ export default function FitnessLevelScreen() {
         })}
       </View>
 
+      {error ? (
+        <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
+      ) : null}
       <View style={styles.actions}>
-        <Button label="Continue" onPress={handleNext} />
+        <Button label="Continue" onPress={handleNext} loading={updateMutation.isPending} />
         <Button
           label="Skip"
           onPress={() => router.push("/onboarding/goal")}
@@ -150,4 +158,5 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, color: COLORS.white, marginBottom: 3 },
   cardDesc: { fontSize: 13, color: COLORS.textSecondary },
   actions: { gap: 12 },
+  error: { color: COLORS.red, fontSize: 13, textAlign: "center", marginBottom: 8 },
 });

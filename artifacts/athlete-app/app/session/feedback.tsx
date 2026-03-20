@@ -43,10 +43,12 @@ export default function FeedbackScreen() {
   const [rpe, setRpe] = useState(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
   const [notes, setNotes] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
   const rpeColor = rpe <= 4 ? COLORS.cyan : rpe <= 7 ? COLORS.green : rpe <= 9 ? COLORS.amber : COLORS.red;
 
   const handleSubmit = async () => {
+    setSubmitError("");
     if (session?.sessionLogId == null) {
       router.replace("/");
       return;
@@ -60,9 +62,11 @@ export default function FeedbackScreen() {
           athleteNotes: notes.trim() || null,
         },
       });
-    } catch {
+      router.replace("/");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to submit feedback";
+      setSubmitError(msg);
     }
-    router.replace("/");
   };
 
   return (
@@ -176,6 +180,9 @@ export default function FeedbackScreen() {
           />
         </GlowCard>
 
+        {submitError ? (
+          <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{submitError}</Text>
+        ) : null}
         <Button
           label="Submit Feedback"
           onPress={handleSubmit}
@@ -247,4 +254,5 @@ const styles = StyleSheet.create({
     minHeight: 90,
     textAlignVertical: "top",
   },
+  errorText: { color: COLORS.red, fontSize: 13, textAlign: "center" },
 });

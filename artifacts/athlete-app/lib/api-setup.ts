@@ -4,7 +4,58 @@ import { tokenStore } from "./auth";
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 const baseUrl = domain ? `https://${domain}` : "";
 
+let _isRefreshing = false;
+let _refreshQueue: Array<(token: string | null) => void> = [];
+
+async function doRawRefresh(refreshTokenValue: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+  const url = baseUrl
+    ? `${baseUrl}/api/auth/refresh`
+    : "/api/auth/refresh";
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: refreshTokenValue }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as { accessToken: string; refreshToken: string };
+  } catch {
+    return null;
+  }
+}
+
+async function getValidToken(): Promise<string | null> {
+  const token = await tokenStore.getAccess();
+  if (token) return token;
+
+  if (_isRefreshing) {
+    return new Promise<string | null>((resolve) => {
+      _refreshQueue.push(resolve);
+    });
+  }
+
+  const rt = await tokenStore.getRefresh();
+  if (!rt) return null;
+
+  _isRefreshing = true;
+  try {
+    const result = await doRawRefresh(rt);
+    if (!result) {
+      await tokenStore.clear();
+      _refreshQueue.forEach((cb) => cb(null));
+      _refreshQueue = [];
+      return null;
+    }
+    await tokenStore.setTokens(result.accessToken, result.refreshToken);
+    _refreshQueue.forEach((cb) => cb(result.accessToken));
+    _refreshQueue = [];
+    return result.accessToken;
+  } finally {
+    _isRefreshing = false;
+  }
+}
+
 export function setupApiClient() {
   setBaseUrl(baseUrl || null);
-  setAuthTokenGetter(() => tokenStore.getAccess());
+  setAuthTokenGetter(getValidToken);
 }
