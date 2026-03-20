@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/coach-dashboard/"
+title = "ADAPT Coach Dashboard"
+version = "1.0.0"
+id = "artifacts/coach-dashboard"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/coach-dashboard/" ]
+localPort = 23134
+
+[services.development]
+run = "pnpm --filter @workspace/coach-dashboard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/coach-dashboard", "run", "build" ]
+publicDir = "artifacts/coach-dashboard/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23134"
+BASE_PATH = "/coach-dashboard/"

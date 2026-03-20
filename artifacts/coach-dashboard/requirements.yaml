@@ -1,0 +1,19 @@
+packages:
+  "recharts": "Charts for ADAPT score history"
+  "date-fns": "Date formatting and grid calculations"
+  "framer-motion": "Animations and page transitions"
+  "lucide-react": "Icons"
+  "clsx": "Class merging"
+  "tailwind-merge": "Class merging"
+  "react-hook-form": "Form state management"
+  "@hookform/resolvers": "Zod validation for forms"
+  "zod": "Schema validation"
+
+images:
+  - path: "artifacts/coach-dashboard/public/images/login-bg.png"
+    description: "Abstract deep black background with glowing neon green, cyan, and violet light streaks, high tech athletic dashboard aesthetic"
+    aspect_ratio: "16:9"
+
+notes:
+  - using atob for JWT decoding natively
+  - assuming @workspace/api-client-react is installed in the monorepo workspace
