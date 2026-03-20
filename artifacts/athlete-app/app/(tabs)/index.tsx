@@ -139,10 +139,10 @@ function StateNoPending({ onCheckin }: { onCheckin: () => void }) {
             <Feather name="sun" size={36} color={COLORS.green} />
           </View>
           <Text style={[styles.checkinTitle, { fontFamily: FONTS.title }]}>
-            MORNING CHECK-IN
+            CHECK-IN MATINAL
           </Text>
           <Text style={[styles.checkinDesc, { fontFamily: FONTS.body }]}>
-            Rate your body today so ADAPT can build the perfect session for you.
+            Évalue ton corps aujourd'hui pour qu'ADAPT construise la séance parfaite.
           </Text>
           <Pressable
             onPress={() => {
@@ -155,7 +155,7 @@ function StateNoPending({ onCheckin }: { onCheckin: () => void }) {
             ]}
           >
             <Text style={[styles.checkinBtnText, { fontFamily: FONTS.bodyBold }]}>
-              Start Check-in
+              Commencer le check-in
             </Text>
             <Feather name="arrow-right" size={20} color={COLORS.bg} />
           </Pressable>

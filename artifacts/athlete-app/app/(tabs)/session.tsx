@@ -40,7 +40,7 @@ export default function SessionTab() {
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: tabBarHeight + 24 }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>SESSION</Text>
+      <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>SÉANCE</Text>
 
       {!hasCheckin ? (
         <View style={styles.section}>
@@ -48,17 +48,17 @@ export default function SessionTab() {
             <View style={styles.lockState}>
               <Feather name="lock" size={32} color={COLORS.textMuted} />
               <Text style={[styles.lockTitle, { fontFamily: FONTS.bodyBold }]}>
-                Check-in required
+                Check-in requis
               </Text>
               <Text style={[styles.lockDesc, { fontFamily: FONTS.body }]}>
-                Complete your morning check-in to unlock today's session.
+                Effectue ton check-in matinal pour débloquer la séance du jour.
               </Text>
               <TouchableOpacity
                 onPress={() => router.push("/checkin")}
                 style={styles.lockBtn}
               >
                 <Text style={[styles.lockBtnText, { fontFamily: FONTS.bodyBold }]}>
-                  Do Check-in
+                  Faire le check-in
                 </Text>
               </TouchableOpacity>
             </View>
@@ -104,7 +104,7 @@ export default function SessionTab() {
               ))}
               {(session.exercises?.length ?? 0) > 4 && (
                 <Text style={[styles.moreEx, { fontFamily: FONTS.body }]}>
-                  +{session.exercises!.length - 4} more
+                  +{session.exercises!.length - 4} de plus
                 </Text>
               )}
             </View>
@@ -114,7 +114,7 @@ export default function SessionTab() {
               style={[styles.startBtn, { backgroundColor: cfg.color }]}
             >
               <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                START SESSION
+                DÉMARRER LA SÉANCE
               </Text>
               <Feather name="arrow-right" size={18} color={COLORS.bg} />
             </TouchableOpacity>
@@ -126,10 +126,10 @@ export default function SessionTab() {
             <View style={styles.lockState}>
               <Feather name="calendar" size={32} color={COLORS.textMuted} />
               <Text style={[styles.lockTitle, { fontFamily: FONTS.bodyBold }]}>
-                Rest Day
+                Jour de repos
               </Text>
               <Text style={[styles.lockDesc, { fontFamily: FONTS.body }]}>
-                No session planned for today. Recovery is training too.
+                Aucune séance prévue aujourd'hui. La récupération fait partie de l'entraînement.
               </Text>
             </View>
           </GlowCard>
@@ -139,7 +139,7 @@ export default function SessionTab() {
       {(historyQuery.data?.length ?? 0) > 0 && (
         <View style={styles.historySection}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-            RECENT SESSIONS
+            SÉANCES RÉCENTES
           </Text>
           {historyQuery.data?.slice(0, 5).map((log) => {
             const mode = log.variantMode as SessionMode;
@@ -154,7 +154,7 @@ export default function SessionTab() {
                   <Text style={[styles.historyDate, { fontFamily: FONTS.mono }]}>
                     {log.completedAt != null
                       ? new Date(log.completedAt).toLocaleDateString("fr-FR")
-                      : "In progress"}
+                      : "En cours"}
                   </Text>
                 </View>
                 {log.rpe != null && (

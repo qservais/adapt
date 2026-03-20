@@ -18,10 +18,26 @@ export default function SessionIntroScreen() {
   const insets = useSafeAreaInsets();
   const sessionQuery = useGetTodaySession();
   const startMutation = useStartSession();
+  const [startError, setStartError] = React.useState("");
 
   const session = sessionQuery.data;
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+
+  if (sessionQuery.isPending) {
+    return (
+      <View style={[styles.flex, { backgroundColor: COLORS.bg, paddingTop: insets.top + 20 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={22} color={COLORS.white} />
+        </TouchableOpacity>
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
+            Chargement...
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   if (!session) {
     return (
@@ -30,16 +46,25 @@ export default function SessionIntroScreen() {
           <Feather name="arrow-left" size={22} color={COLORS.white} />
         </TouchableOpacity>
         <View style={styles.emptyState}>
-          <Feather name="lock" size={40} color={COLORS.textMuted} />
-          <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
-            Complete your check-in first
+          <Feather name="calendar" size={40} color={COLORS.textMuted} />
+          <Text style={[styles.emptyTitle, { fontFamily: FONTS.title }]}>
+            AUCUNE SÉANCE
           </Text>
+          <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
+            Aucune séance n'est programmée pour aujourd'hui. Ton coach n'a pas encore attribué de programme.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace("/")}
+            style={styles.homeBtn}
+          >
+            <Text style={[styles.homeBtnText, { fontFamily: FONTS.bodyMedium }]}>
+              Retour à l'accueil
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
   }
-
-  const [startError, setStartError] = React.useState("");
 
   const handleStart = async () => {
     setStartError("");
@@ -47,7 +72,7 @@ export default function SessionIntroScreen() {
       await startMutation.mutateAsync({ sessionId: session.sessionLogId });
       router.push("/session/exercise");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Could not start session";
+      const msg = err instanceof Error ? err.message : "Impossible de démarrer la séance";
       setStartError(msg);
     }
   };
@@ -103,7 +128,7 @@ export default function SessionIntroScreen() {
           <View style={styles.coachHeader}>
             <Feather name="message-square" size={16} color={COLORS.cyan} />
             <Text style={[styles.coachLabel, { fontFamily: FONTS.mono }]}>
-              COACH NOTES
+              NOTES DU COACH
             </Text>
           </View>
           <Text style={[styles.coachText, { fontFamily: FONTS.body }]}>
@@ -128,7 +153,7 @@ export default function SessionIntroScreen() {
               <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
                 {ex.sets}×{ex.reps}
                 {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
-                {ex.restSeconds != null ? ` · ${ex.restSeconds}s rest` : ""}
+                {ex.restSeconds != null ? ` · ${ex.restSeconds}s récup` : ""}
               </Text>
               {ex.coachCue != null && (
                 <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>
@@ -150,7 +175,7 @@ export default function SessionIntroScreen() {
       >
         <Feather name="play" size={20} color={COLORS.bg} />
         <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-          {startMutation.isPending ? "STARTING…" : "DÉMARRER LA SÉANCE"}
+          {startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -219,7 +244,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   startBtnText: { fontSize: 16, color: COLORS.bg, letterSpacing: 1.5 },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
-  emptyText: { fontSize: 16, color: COLORS.textSecondary },
+  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 28 },
+  emptyTitle: { fontSize: 36, color: COLORS.white, letterSpacing: 4 },
+  emptyText: { fontSize: 15, color: COLORS.textSecondary, textAlign: "center", lineHeight: 22 },
+  homeBtn: {
+    marginTop: 8,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  homeBtnText: { fontSize: 15, color: COLORS.white },
   errorText: { color: COLORS.red, fontSize: 13, textAlign: "center", marginHorizontal: 20, marginBottom: 8 },
 });

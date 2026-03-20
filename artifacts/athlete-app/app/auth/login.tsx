@@ -28,7 +28,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setError("");
     if (!email.trim() || !password) {
-      setError("Email and password are required");
+      setError("L'email et le mot de passe sont requis");
       return;
     }
     try {
@@ -38,7 +38,7 @@ export default function LoginScreen() {
       await login(res.accessToken, res.refreshToken, res.user);
       router.replace("/");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Invalid credentials";
+      const msg = err instanceof Error ? err.message : "Identifiants invalides";
       setError(msg);
     }
   };
@@ -62,7 +62,7 @@ export default function LoginScreen() {
             by LMJ
           </Text>
           <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
-            Training that adapts to you.
+            L'entraînement qui s'adapte à toi.
           </Text>
         </View>
 
@@ -71,13 +71,13 @@ export default function LoginScreen() {
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="your@email.com"
+            placeholder="ton@email.com"
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
           />
           <InputField
-            label="Password"
+            label="Mot de passe"
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
@@ -89,7 +89,7 @@ export default function LoginScreen() {
             </Text>
           ) : null}
           <Button
-            label="Sign In"
+            label="Se connecter"
             onPress={handleLogin}
             loading={loginMutation.isPending}
           />
@@ -100,9 +100,9 @@ export default function LoginScreen() {
           style={styles.registerLink}
         >
           <Text style={[styles.registerText, { fontFamily: FONTS.body }]}>
-            No account?{" "}
+            Pas encore de compte ?{" "}
             <Text style={{ color: COLORS.green, fontFamily: FONTS.bodySemiBold }}>
-              Create one
+              Créer un compte
             </Text>
           </Text>
         </Pressable>

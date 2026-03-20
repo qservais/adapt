@@ -16,7 +16,6 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useSubmitCheckin, useGetMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
-import { CustomSlider } from "@/components/ui/CustomSlider";
 import { Button } from "@/components/ui/Button";
 
 type IconName = "sun" | "zap" | "activity" | "thermometer" | "target" | "alert-triangle";
@@ -27,8 +26,7 @@ interface SliderStep {
   title: string;
   subtitle: string;
   icon: IconName;
-  lowLabel: string;
-  highLabel: string;
+  labels: [string, string, string, string, string];
 }
 
 interface PainStep {
@@ -62,78 +60,166 @@ const ALL_STEPS: Step[] = [
     kind: "welcome",
     key: "welcome",
     title: "BONJOUR",
-    subtitle: "Let's calibrate today's session. This takes less than a minute.",
+    subtitle: "Calibrons ta séance d'aujourd'hui. Ça prend moins d'une minute.",
     icon: "sun",
   },
   {
     kind: "slider",
     key: "sleep",
     title: "SOMMEIL",
-    subtitle: "How did you sleep last night?",
+    subtitle: "Comment as-tu dormi cette nuit ?",
     icon: "sun",
-    lowLabel: "Terrible",
-    highLabel: "Amazing",
+    labels: ["Très mal", "Mal", "Correct", "Bien", "Excellent"],
   },
   {
     kind: "slider",
     key: "energy",
     title: "ÉNERGIE",
-    subtitle: "How energized do you feel right now?",
+    subtitle: "Quel est ton niveau d'énergie en ce moment ?",
     icon: "zap",
-    lowLabel: "Exhausted",
-    highLabel: "Energized",
+    labels: ["Épuisé", "Fatigué", "Neutre", "Bien", "Au top"],
   },
   {
     kind: "slider",
     key: "stress",
     title: "STRESS",
-    subtitle: "Rate your current stress level",
+    subtitle: "Quel est ton niveau de stress actuel ?",
     icon: "activity",
-    lowLabel: "Very stressed",
-    highLabel: "Relaxed",
+    labels: ["Très stressé", "Stressé", "Neutre", "Calme", "Très calme"],
   },
   {
     kind: "slider",
     key: "soreness",
     title: "COURBATURES",
-    subtitle: "How sore are your muscles?",
+    subtitle: "As-tu des douleurs ou courbatures musculaires ?",
     icon: "thermometer",
-    lowLabel: "Very sore",
-    highLabel: "No soreness",
+    labels: ["Très douloureux", "Douloureux", "Moyen", "Peu", "Aucun"],
   },
   {
     kind: "slider",
     key: "motivation",
     title: "MOTIVATION",
-    subtitle: "How motivated are you to train?",
+    subtitle: "À quel point es-tu motivé(e) pour t'entraîner ?",
     icon: "target",
-    lowLabel: "Not at all",
-    highLabel: "Pumped",
+    labels: ["Aucune", "Faible", "Correcte", "Élevée", "Extrême"],
   },
   {
     kind: "cycle",
     key: "cycle",
     title: "CYCLE",
-    subtitle: "Where are you in your cycle today? (optional)",
+    subtitle: "Où en es-tu dans ton cycle ? (optionnel)",
     icon: "activity",
   },
   {
     kind: "pain",
     key: "pain",
     title: "DOULEUR",
-    subtitle: "Any pain or discomfort today?",
+    subtitle: "As-tu une douleur ou gêne particulière aujourd'hui ?",
     icon: "alert-triangle",
   },
 ];
 
+const SCORE_COLORS = [COLORS.red, COLORS.red, COLORS.amber, COLORS.green, COLORS.green];
+const SCORE_ICONS = ["frown", "meh", "meh", "smile", "zap"] as const;
+
 const CYCLE_PHASES = [
-  { key: "menstrual", label: "Menstrual", desc: "Days 1–5", color: COLORS.red },
-  { key: "follicular", label: "Follicular", desc: "Days 6–13", color: COLORS.cyan },
-  { key: "ovulatory", label: "Ovulation", desc: "Day 14", color: COLORS.green },
-  { key: "luteal", label: "Luteal", desc: "Days 15–28", color: COLORS.amber },
+  { key: "menstrual", label: "Menstruelle", desc: "Jours 1–5", color: COLORS.red },
+  { key: "follicular", label: "Folliculaire", desc: "Jours 6–13", color: COLORS.cyan },
+  { key: "ovulatory", label: "Ovulation", desc: "Jour 14", color: COLORS.green },
+  { key: "luteal", label: "Lutéale", desc: "Jours 15–28", color: COLORS.amber },
 ] as const;
 
 type CyclePhase = (typeof CYCLE_PHASES)[number]["key"] | null;
+
+function ScoreSelector({
+  value,
+  onChange,
+  labels,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  labels: [string, string, string, string, string];
+}) {
+  return (
+    <View style={scoreStyles.container}>
+      <View style={scoreStyles.buttonsRow}>
+        {[1, 2, 3, 4, 5].map((v) => {
+          const isActive = value === v;
+          const color = SCORE_COLORS[v - 1];
+          return (
+            <TouchableOpacity
+              key={v}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onChange(v);
+              }}
+              style={[
+                scoreStyles.btn,
+                isActive && { backgroundColor: color, borderColor: color, shadowColor: color },
+              ]}
+            >
+              <Text
+                style={[
+                  scoreStyles.btnNum,
+                  { fontFamily: FONTS.monoBold },
+                  isActive && { color: COLORS.bg },
+                  !isActive && { color: color },
+                ]}
+              >
+                {v}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <View style={scoreStyles.labelsRow}>
+        <Text style={[scoreStyles.labelText, { fontFamily: FONTS.body }]}>
+          {labels[0]}
+        </Text>
+        <Text style={[scoreStyles.labelText, { fontFamily: FONTS.body }]}>
+          {labels[4]}
+        </Text>
+      </View>
+      {value > 0 && (
+        <View style={[scoreStyles.selectedLabel, { borderColor: SCORE_COLORS[value - 1], backgroundColor: `${SCORE_COLORS[value - 1]}15` }]}>
+          <Text style={[scoreStyles.selectedText, { fontFamily: FONTS.bodyMedium, color: SCORE_COLORS[value - 1] }]}>
+            {labels[value - 1]}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const scoreStyles = StyleSheet.create({
+  container: { width: "100%", gap: 12, alignItems: "center" },
+  buttonsRow: { flexDirection: "row", gap: 12, justifyContent: "center" },
+  btn: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  btnNum: { fontSize: 20 },
+  labelsRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", paddingHorizontal: 4 },
+  labelText: { fontSize: 11, color: COLORS.textMuted },
+  selectedLabel: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  selectedText: { fontSize: 14 },
+});
 
 export default function CheckinScreen() {
   const insets = useSafeAreaInsets();
@@ -206,6 +292,14 @@ export default function CheckinScreen() {
     setStepIndex((s) => s - 1);
   };
 
+  const WELCOME_ITEMS = [
+    { key: "sleep", label: "Sommeil", icon: "sun" as const },
+    { key: "energy", label: "Énergie", icon: "zap" as const },
+    { key: "stress", label: "Stress", icon: "activity" as const },
+    { key: "soreness", label: "Courbatures", icon: "thermometer" as const },
+    { key: "motivation", label: "Motivation", icon: "target" as const },
+  ];
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -262,37 +356,26 @@ export default function CheckinScreen() {
         {currentStep.kind === "welcome" && (
           <View style={styles.welcomeSection}>
             <View style={styles.welcomeGrid}>
-              {(["sleep", "energy", "stress", "soreness", "motivation"] as const).map(
-                (key) => (
-                  <View key={key} style={styles.welcomeItem}>
-                    <Feather name="check" size={14} color={COLORS.green} />
-                    <Text style={[styles.welcomeLabel, { fontFamily: FONTS.body }]}>
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </Text>
-                  </View>
-                )
-              )}
+              {WELCOME_ITEMS.map((item) => (
+                <View key={item.key} style={styles.welcomeItem}>
+                  <Feather name={item.icon} size={16} color={COLORS.green} />
+                  <Text style={[styles.welcomeLabel, { fontFamily: FONTS.body }]}>
+                    {item.label}
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
         )}
 
         {currentStep.kind === "slider" && (
           <View style={styles.sliderSection}>
-            <View style={styles.sliderLabelRow}>
-              <Text style={[styles.sliderLabelText, { fontFamily: FONTS.body }]}>
-                {currentStep.lowLabel}
-              </Text>
-              <Text style={[styles.sliderLabelText, { fontFamily: FONTS.body }]}>
-                {currentStep.highLabel}
-              </Text>
-            </View>
-            <CustomSlider
+            <ScoreSelector
               value={values[currentStep.key]}
-              min={1}
-              max={5}
               onChange={(v) =>
                 setValues((prev) => ({ ...prev, [currentStep.key]: v }))
               }
+              labels={currentStep.labels}
             />
           </View>
         )}
@@ -344,8 +427,8 @@ export default function CheckinScreen() {
             <View style={styles.painOptions}>
               {(
                 [
-                  { label: "No pain", value: false, icon: "check-circle" as const, color: COLORS.green },
-                  { label: "Yes, I have pain", value: true, icon: "alert-circle" as const, color: COLORS.red },
+                  { label: "Aucune douleur", value: false, icon: "check-circle" as const, color: COLORS.green },
+                  { label: "J'ai une douleur", value: true, icon: "alert-circle" as const, color: COLORS.red },
                 ] as const
               ).map((opt) => (
                 <Pressable
@@ -384,7 +467,7 @@ export default function CheckinScreen() {
                 style={[styles.painInput, { fontFamily: FONTS.body }]}
                 value={painNotes}
                 onChangeText={setPainNotes}
-                placeholder="Describe the pain location and intensity..."
+                placeholder="Décris la zone douloureuse et l'intensité..."
                 placeholderTextColor={COLORS.textMuted}
                 multiline
                 numberOfLines={3}
@@ -401,7 +484,7 @@ export default function CheckinScreen() {
         ]}
       >
         <Button
-          label={isLastStep ? "Submit" : "Next"}
+          label={isLastStep ? "Valider mon check-in" : "Suivant"}
           onPress={handleNext}
           loading={submitMutation.isPending}
         />
@@ -470,21 +553,15 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: COLORS.bgCard,
     borderRadius: 10,
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  welcomeLabel: { fontSize: 15, color: COLORS.textSecondary, textTransform: "capitalize" },
+  welcomeLabel: { fontSize: 15, color: COLORS.textSecondary },
   sliderSection: {
     width: "100%",
     gap: 16,
   },
-  sliderLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
-  },
-  sliderLabelText: { fontSize: 12, color: COLORS.textMuted },
   cycleSection: { width: "100%", gap: 10 },
   cycleBtn: {
     flexDirection: "row",

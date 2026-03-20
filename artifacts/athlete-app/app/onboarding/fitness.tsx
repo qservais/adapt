@@ -10,20 +10,20 @@ import { Button } from "@/components/ui/Button";
 const FITNESS_LEVELS = [
   {
     key: "beginner",
-    label: "Beginner",
-    desc: "Less than 1 year of training",
+    label: "Débutant",
+    desc: "Moins d'1 an d'entraînement régulier",
     icon: "zap" as const,
   },
   {
     key: "intermediate",
-    label: "Intermediate",
-    desc: "1–3 years of consistent training",
+    label: "Intermédiaire",
+    desc: "1 à 3 ans d'entraînement structuré",
     icon: "trending-up" as const,
   },
   {
     key: "advanced",
-    label: "Advanced",
-    desc: "3+ years, structured programming",
+    label: "Avancé",
+    desc: "3+ ans avec une programmation structurée",
     icon: "award" as const,
   },
 ];
@@ -37,10 +37,10 @@ export default function FitnessLevelScreen() {
   const handleNext = async () => {
     if (selected) {
       try {
-        await updateMutation.mutateAsync({ data: { fitnessLevel: selected } });
+        await updateMutation.mutateAsync({ data: { fitnessLevel: selected as "beginner" | "intermediate" | "advanced" } });
         router.push("/onboarding/goal");
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to save fitness level";
+        const msg = err instanceof Error ? err.message : "Impossible d'enregistrer le niveau";
         setError(msg);
       }
     } else {
@@ -59,9 +59,9 @@ export default function FitnessLevelScreen() {
       <View style={styles.stepIndicator}>
         <Text style={[styles.step, { fontFamily: FONTS.mono }]}>02 / 05</Text>
       </View>
-      <Text style={[styles.title, { fontFamily: FONTS.title }]}>FITNESS LEVEL</Text>
+      <Text style={[styles.title, { fontFamily: FONTS.title }]}>NIVEAU</Text>
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        Choose what best describes you.
+        Choisis ce qui te correspond le mieux.
       </Text>
 
       <View style={styles.cards}>
@@ -117,9 +117,9 @@ export default function FitnessLevelScreen() {
         <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
       ) : null}
       <View style={styles.actions}>
-        <Button label="Continue" onPress={handleNext} loading={updateMutation.isPending} />
+        <Button label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
         <Button
-          label="Skip"
+          label="Passer pour l'instant"
           onPress={() => router.push("/onboarding/goal")}
           variant="ghost"
         />

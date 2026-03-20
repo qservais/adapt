@@ -26,17 +26,16 @@ export default function RegisterScreen() {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"athlete" | "coach">("athlete");
   const [error, setError] = useState("");
 
   const handleRegister = async () => {
     setError("");
     if (!firstName.trim() || !email.trim() || !password) {
-      setError("All fields required");
+      setError("Tous les champs sont requis");
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError("Le mot de passe doit contenir au moins 8 caractères");
       return;
     }
     try {
@@ -45,17 +44,13 @@ export default function RegisterScreen() {
           firstName: firstName.trim(),
           email: email.trim().toLowerCase(),
           password,
-          role,
+          role: "athlete",
         },
       });
       await login(res.accessToken, res.refreshToken, res.user);
-      if (role === "athlete") {
-        router.replace("/onboarding/splash");
-      } else {
-        router.replace("/");
-      }
+      router.replace("/onboarding/splash");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Registration failed";
+      const msg = err instanceof Error ? err.message : "Échec de l'inscription";
       setError(msg);
     }
   };
@@ -82,44 +77,16 @@ export default function RegisterScreen() {
 
         <View style={styles.header}>
           <Text style={[styles.title, { fontFamily: FONTS.title }]}>
-            CREATE ACCOUNT
+            CRÉER UN COMPTE
           </Text>
           <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-            Join ADAPT by LMJ
+            Rejoins ADAPT by LMJ
           </Text>
-        </View>
-
-        <View style={styles.roleRow}>
-          {(["athlete", "coach"] as const).map((r) => (
-            <TouchableOpacity
-              key={r}
-              onPress={() => setRole(r)}
-              style={[
-                styles.roleBtn,
-                role === r && styles.roleActive,
-              ]}
-            >
-              <Feather
-                name={r === "athlete" ? "activity" : "users"}
-                size={20}
-                color={role === r ? COLORS.green : COLORS.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.roleLabel,
-                  { fontFamily: FONTS.bodyMedium },
-                  role === r && { color: COLORS.green },
-                ]}
-              >
-                {r === "athlete" ? "Athlete" : "Coach"}
-              </Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
         <View style={styles.form}>
           <InputField
-            label="First Name"
+            label="Prénom"
             value={firstName}
             onChangeText={setFirstName}
             placeholder="Alex"
@@ -129,15 +96,15 @@ export default function RegisterScreen() {
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="your@email.com"
+            placeholder="ton@email.com"
             keyboardType="email-address"
             autoCapitalize="none"
           />
           <InputField
-            label="Password"
+            label="Mot de passe"
             value={password}
             onChangeText={setPassword}
-            placeholder="Min 8 characters"
+            placeholder="Min 8 caractères"
             secureToggle
           />
           {error ? (
@@ -146,7 +113,7 @@ export default function RegisterScreen() {
             </Text>
           ) : null}
           <Button
-            label="Create Account"
+            label="Créer mon compte"
             onPress={handleRegister}
             loading={registerMutation.isPending}
           />
@@ -157,9 +124,9 @@ export default function RegisterScreen() {
           style={styles.loginLink}
         >
           <Text style={[styles.loginText, { fontFamily: FONTS.body }]}>
-            Already have an account?{" "}
+            Déjà un compte ?{" "}
             <Text style={{ color: COLORS.green, fontFamily: FONTS.bodySemiBold }}>
-              Sign in
+              Se connecter
             </Text>
           </Text>
         </Pressable>
@@ -186,39 +153,14 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 48,
+    fontSize: 44,
     color: COLORS.white,
-    letterSpacing: 4,
+    letterSpacing: 3,
   },
   subtitle: {
     fontSize: 16,
     color: COLORS.textSecondary,
     marginTop: 4,
-  },
-  roleRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-  },
-  roleBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  roleActive: {
-    borderColor: COLORS.green,
-    backgroundColor: COLORS.greenDim,
-  },
-  roleLabel: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
   },
   form: {
     gap: 16,

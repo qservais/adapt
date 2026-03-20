@@ -14,12 +14,28 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useUpdateMe } from "@workspace/api-client-react";
+import { useGetMe, useUpdateMe, useAthleteLink } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
 import { Button } from "@/components/ui/Button";
+
+const GOAL_LABELS: Record<string, string> = {
+  strength: "Force",
+  muscle: "Prise de masse",
+  fat_loss: "Perte de poids",
+  performance: "Performance",
+  health: "Santé",
+  aesthetic: "Esthétique",
+  fitness: "Fitness",
+};
+
+const FITNESS_LABELS: Record<string, string> = {
+  beginner: "Débutant",
+  intermediate: "Intermédiaire",
+  advanced: "Avancé",
+};
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -27,11 +43,16 @@ export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
   const meQuery = useGetMe();
   const updateMutation = useUpdateMe();
+  const linkMutation = useAthleteLink();
   const queryClient = useQueryClient();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [cycleTracking, setCycleTracking] = useState(user?.cycleTracking ?? false);
+
+  const [coachCode, setCoachCode] = useState("");
+  const [coachLinkError, setCoachLinkError] = useState("");
+  const [coachLinked, setCoachLinked] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -45,16 +66,34 @@ export default function ProfileScreen() {
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update profile";
-      Alert.alert("Error", msg);
+      const msg = err instanceof Error ? err.message : "Impossible de mettre à jour le profil";
+      Alert.alert("Erreur", msg);
+    }
+  };
+
+  const handleLinkCoach = async () => {
+    setCoachLinkError("");
+    const trimmed = coachCode.trim().toUpperCase();
+    if (trimmed.length !== 6) {
+      setCoachLinkError("Entre le code à 6 caractères donné par ton coach");
+      return;
+    }
+    try {
+      await linkMutation.mutateAsync({ data: { inviteCode: trimmed } });
+      setCoachLinked(true);
+      setCoachCode("");
+      queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Code invalide";
+      setCoachLinkError(msg);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert("Déconnexion", "Es-tu sûr(e) de vouloir te déconnecter ?", [
+      { text: "Annuler", style: "cancel" },
       {
-        text: "Sign Out",
+        text: "Déconnexion",
         style: "destructive",
         onPress: async () => {
           await logout();
@@ -65,6 +104,7 @@ export default function ProfileScreen() {
 
   const profile = meQuery.data ?? user;
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+  const hasCoach = profile?.coachId != null;
 
   return (
     <ScrollView
@@ -73,7 +113,7 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>
-        <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>PROFILE</Text>
+        <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>PROFIL</Text>
         <TouchableOpacity onPress={() => setEditing(!editing)} style={styles.editBtn}>
           <Feather name={editing ? "x" : "edit-2"} size={20} color={COLORS.green} />
         </TouchableOpacity>
@@ -104,7 +144,7 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            {(profile?.role ?? "ATHLETE").toUpperCase()}
+            {profile?.role === "coach" ? "COACH" : "ATHLÈTE"}
           </Text>
         </View>
       </View>
@@ -115,7 +155,7 @@ export default function ProfileScreen() {
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
               {profile.age ?? "—"}
             </Text>
-            <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Age</Text>
+            <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Âge</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
@@ -135,20 +175,20 @@ export default function ProfileScreen() {
       {editing ? (
         <GlowCard glowColor={COLORS.green} style={styles.editCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-            EDIT PROFILE
+            MODIFIER LE PROFIL
           </Text>
           <InputField
-            label="First Name"
+            label="Prénom"
             value={firstName}
             onChangeText={setFirstName}
           />
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.switchLabel, { fontFamily: FONTS.bodyMedium }]}>
-                Cycle Tracking
+                Suivi du cycle
               </Text>
               <Text style={[styles.switchDesc, { fontFamily: FONTS.body }]}>
-                Adds cycle phase context to check-ins
+                Ajoute le contexte cycle à tes check-ins (athlètes féminines)
               </Text>
             </View>
             <Switch
@@ -158,55 +198,106 @@ export default function ProfileScreen() {
               thumbColor={cycleTracking ? COLORS.green : COLORS.textMuted}
             />
           </View>
-          <Button label="Save Changes" onPress={handleSave} loading={updateMutation.isPending} />
+          <Button label="Enregistrer" onPress={handleSave} loading={updateMutation.isPending} />
         </GlowCard>
       ) : (
         <View style={styles.infoSection}>
           {profile?.fitnessLevel != null && (
             <View style={styles.infoRow}>
               <Feather name="activity" size={16} color={COLORS.textMuted} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Level</Text>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Niveau</Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
-                {profile.fitnessLevel.charAt(0).toUpperCase() + profile.fitnessLevel.slice(1)}
+                {FITNESS_LABELS[profile.fitnessLevel] ?? profile.fitnessLevel}
               </Text>
             </View>
           )}
           {profile?.primaryGoal != null && (
             <View style={styles.infoRow}>
               <Feather name="target" size={16} color={COLORS.textMuted} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Goal</Text>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Objectif</Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
-                {profile.primaryGoal.replace(/_/g, " ")}
+                {GOAL_LABELS[profile.primaryGoal] ?? profile.primaryGoal.replace(/_/g, " ")}
               </Text>
             </View>
           )}
           <View style={styles.infoRow}>
             <Feather name="refresh-cw" size={16} color={COLORS.textMuted} />
             <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
-              Cycle Tracking
+              Suivi du cycle
             </Text>
             <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
-              {profile?.cycleTracking ? "On" : "Off"}
+              {profile?.cycleTracking ? "Activé" : "Désactivé"}
             </Text>
           </View>
           {profile?.inviteCode != null && (
             <View style={styles.infoRow}>
               <Feather name="link" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
-                Invite Code
+                Code coach
               </Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.mono }]}>
                 {profile.inviteCode}
               </Text>
             </View>
           )}
+          {hasCoach && (
+            <View style={styles.infoRow}>
+              <Feather name="users" size={16} color={COLORS.green} />
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Coach</Text>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.green }]}>
+                Connecté
+              </Text>
+            </View>
+          )}
         </View>
+      )}
+
+      {!hasCoach && (
+        <GlowCard glowColor={COLORS.cyan} style={styles.coachSection}>
+          <View style={styles.coachHeader}>
+            <Feather name="users" size={18} color={COLORS.cyan} />
+            <Text style={[styles.coachTitle, { fontFamily: FONTS.mono }]}>
+              CONNECTER UN COACH
+            </Text>
+          </View>
+          <Text style={[styles.coachDesc, { fontFamily: FONTS.body }]}>
+            Ton coach t'a fourni un code à 6 caractères. Entre-le ci-dessous pour relier ton compte.
+          </Text>
+          {coachLinked ? (
+            <View style={styles.linkedRow}>
+              <Feather name="check-circle" size={20} color={COLORS.green} />
+              <Text style={[styles.linkedText, { fontFamily: FONTS.bodyMedium, color: COLORS.green }]}>
+                Coach connecté avec succès !
+              </Text>
+            </View>
+          ) : (
+            <>
+              <InputField
+                label="Code d'invitation"
+                value={coachCode}
+                onChangeText={(t) => setCoachCode(t.toUpperCase())}
+                placeholder="ABC123"
+                autoCapitalize="characters"
+              />
+              {coachLinkError ? (
+                <Text style={[styles.linkError, { fontFamily: FONTS.body }]}>
+                  {coachLinkError}
+                </Text>
+              ) : null}
+              <Button
+                label="Connecter"
+                onPress={handleLinkCoach}
+                loading={linkMutation.isPending}
+              />
+            </>
+          )}
+        </GlowCard>
       )}
 
       <Pressable onPress={handleLogout} style={styles.logoutBtn}>
         <Feather name="log-out" size={18} color={COLORS.red} />
         <Text style={[styles.logoutText, { fontFamily: FONTS.bodyMedium }]}>
-          Sign Out
+          Se déconnecter
         </Text>
       </Pressable>
     </ScrollView>
@@ -279,7 +370,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: "hidden",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   infoRow: {
     flexDirection: "row",
@@ -292,6 +383,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: { flex: 1, fontSize: 14, color: COLORS.textSecondary },
   infoVal: { fontSize: 14, color: COLORS.white },
+  coachSection: { gap: 14, marginBottom: 24 },
+  coachHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  coachTitle: { fontSize: 11, color: COLORS.cyan, letterSpacing: 2 },
+  coachDesc: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
+  linkedRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  linkedText: { fontSize: 15 },
+  linkError: { color: COLORS.red, fontSize: 13, textAlign: "center" },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",

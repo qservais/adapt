@@ -25,7 +25,7 @@ export default function ProfileSetupScreen() {
   const handleNext = async () => {
     setError("");
     if (!age || !weight || !height) {
-      setError("Please fill in all fields");
+      setError("Veuillez remplir tous les champs");
       return;
     }
     const ageN = parseInt(age);
@@ -41,7 +41,7 @@ export default function ProfileSetupScreen() {
       });
       router.push("/onboarding/fitness");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to save profile";
+      const msg = err instanceof Error ? err.message : "Impossible d'enregistrer le profil";
       setError(msg);
     }
   };
@@ -62,28 +62,28 @@ export default function ProfileSetupScreen() {
         <View style={styles.stepIndicator}>
           <Text style={[styles.step, { fontFamily: FONTS.mono }]}>01 / 05</Text>
         </View>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>YOUR PROFILE</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>TON PROFIL</Text>
         <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          We'll use this to tailor your experience.
+          Ces informations nous permettent de personnaliser ton expérience.
         </Text>
 
         <View style={styles.form}>
           <InputField
-            label="Age"
+            label="Âge"
             value={age}
             onChangeText={setAge}
             placeholder="25"
             keyboardType="number-pad"
           />
           <InputField
-            label="Weight (kg)"
+            label="Poids (kg)"
             value={weight}
             onChangeText={setWeight}
             placeholder="70"
             keyboardType="decimal-pad"
           />
           <InputField
-            label="Height (cm)"
+            label="Taille (cm)"
             value={height}
             onChangeText={setHeight}
             placeholder="175"
@@ -95,9 +95,9 @@ export default function ProfileSetupScreen() {
         </View>
 
         <View style={styles.actions}>
-          <Button label="Continue" onPress={handleNext} loading={updateMutation.isPending} />
+          <Button label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
           <Button
-            label="Skip for now"
+            label="Passer pour l'instant"
             onPress={() => router.push("/onboarding/fitness")}
             variant="ghost"
           />

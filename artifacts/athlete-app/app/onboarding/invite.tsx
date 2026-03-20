@@ -26,14 +26,14 @@ export default function InviteScreen() {
     setError("");
     const trimmed = code.trim().toUpperCase();
     if (trimmed.length !== 6) {
-      setError("Please enter the 6-character code from your coach");
+      setError("Entre le code à 6 caractères donné par ton coach");
       return;
     }
     try {
       await linkMutation.mutateAsync({ data: { inviteCode: trimmed } });
       setLinked(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Invalid invite code";
+      const msg = err instanceof Error ? err.message : "Code d'invitation invalide";
       setError(msg);
     }
   };
@@ -54,9 +54,9 @@ export default function InviteScreen() {
         <View style={styles.stepIndicator}>
           <Text style={[styles.step, { fontFamily: FONTS.mono }]}>04 / 05</Text>
         </View>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>COACH LINK</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>RELIER UN COACH</Text>
         <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          Enter the 6-character invite code given to you by your coach.
+          Entre le code à 6 caractères fourni par ton coach.
         </Text>
 
         {linked ? (
@@ -65,25 +65,25 @@ export default function InviteScreen() {
               <Feather name="check-circle" size={40} color={COLORS.green} />
             </View>
             <Text style={[styles.successTitle, { fontFamily: FONTS.bodyBold }]}>
-              Coach Linked!
+              Coach connecté !
             </Text>
             <Text style={[styles.successDesc, { fontFamily: FONTS.body }]}>
-              Your coach is now connected and can view your sessions and check-ins.
+              Ton coach est maintenant lié à ton compte et peut suivre tes séances et check-ins.
             </Text>
-            <Button label="Continue" onPress={() => router.push("/onboarding/tutorial")} />
+            <Button label="Continuer" onPress={() => router.push("/onboarding/tutorial")} />
           </View>
         ) : (
           <>
             <View style={styles.infoBox}>
               <Feather name="info" size={16} color={COLORS.cyan} />
               <Text style={[styles.infoText, { fontFamily: FONTS.body }]}>
-                Your coach can find their invite code in the ADAPT coach dashboard under their profile settings.
+                Ton coach trouve son code d'invitation dans le tableau de bord ADAPT, dans ses paramètres de profil.
               </Text>
             </View>
 
             <View style={styles.form}>
               <InputField
-                label="6-Character Invite Code"
+                label="Code d'invitation (6 caractères)"
                 value={code}
                 onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
                 placeholder="ABC123"
@@ -92,18 +92,18 @@ export default function InviteScreen() {
                 style={styles.codeInput}
               />
               <Text style={[styles.codeHint, { fontFamily: FONTS.mono }]}>
-                {code.length}/6 characters
+                {code.length}/6 caractères
               </Text>
               {error ? (
                 <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
               ) : null}
               <Button
-                label="Link Coach"
+                label="Connecter mon coach"
                 onPress={handleLink}
                 loading={linkMutation.isPending}
               />
               <Button
-                label="Skip for now"
+                label="Passer pour l'instant"
                 onPress={() => router.push("/onboarding/tutorial")}
                 variant="ghost"
               />

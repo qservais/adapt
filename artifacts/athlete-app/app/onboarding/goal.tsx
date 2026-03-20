@@ -10,29 +10,29 @@ import { Button } from "@/components/ui/Button";
 const GOALS = [
   {
     key: "strength",
-    label: "Build Strength",
-    desc: "Get stronger and increase max lifts",
+    label: "Force",
+    desc: "Augmenter ta force et tes charges maximales",
     icon: "trending-up" as const,
     color: COLORS.violet,
   },
   {
     key: "muscle",
-    label: "Gain Muscle",
-    desc: "Build lean mass and improve body composition",
+    label: "Prise de masse",
+    desc: "Développer la masse musculaire et améliorer la composition corporelle",
     icon: "activity" as const,
     color: COLORS.green,
   },
   {
     key: "fat_loss",
-    label: "Lose Fat",
-    desc: "Reduce body fat while maintaining muscle",
+    label: "Perte de poids",
+    desc: "Réduire la masse grasse en préservant le muscle",
     icon: "target" as const,
     color: COLORS.amber,
   },
   {
     key: "performance",
     label: "Performance",
-    desc: "Optimize speed, power and endurance",
+    desc: "Optimiser la vitesse, la puissance et l'endurance",
     icon: "zap" as const,
     color: COLORS.cyan,
   },
@@ -48,10 +48,10 @@ export default function GoalScreen() {
     setError("");
     if (selected) {
       try {
-        await updateMutation.mutateAsync({ data: { primaryGoal: selected } });
+        await updateMutation.mutateAsync({ data: { primaryGoal: selected as "strength" | "muscle" | "fat_loss" | "performance" } });
         router.push("/onboarding/invite");
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to save goal";
+        const msg = err instanceof Error ? err.message : "Impossible d'enregistrer l'objectif";
         setError(msg);
       }
     } else {
@@ -70,9 +70,9 @@ export default function GoalScreen() {
       <View style={styles.stepIndicator}>
         <Text style={[styles.step, { fontFamily: FONTS.mono }]}>03 / 05</Text>
       </View>
-      <Text style={[styles.title, { fontFamily: FONTS.title }]}>PRIMARY GOAL</Text>
+      <Text style={[styles.title, { fontFamily: FONTS.title }]}>OBJECTIF</Text>
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        ADAPT tailors load targets to your objective.
+        ADAPT calibre les charges et l'intensité selon ton but.
       </Text>
 
       <View style={styles.grid}>
@@ -116,9 +116,9 @@ export default function GoalScreen() {
         <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
       ) : null}
       <View style={styles.actions}>
-        <Button label="Continue" onPress={handleNext} loading={updateMutation.isPending} />
+        <Button label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
         <Button
-          label="Skip"
+          label="Passer pour l'instant"
           onPress={() => router.push("/onboarding/invite")}
           variant="ghost"
         />

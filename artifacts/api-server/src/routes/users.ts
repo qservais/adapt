@@ -45,7 +45,7 @@ const updateSchema = z.object({
   weightKg: z.number().min(20).max(500).optional(),
   heightCm: z.number().int().min(50).max(300).optional(),
   fitnessLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
-  primaryGoal: z.enum(["performance", "health", "aesthetic", "fitness"]).optional(),
+  primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
   cycleTracking: z.boolean().optional(),
 });
 

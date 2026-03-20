@@ -85,7 +85,7 @@ function ScoreTrendChart({ data, color }: { data: number[]; color: string }) {
     return (
       <View style={{ height: CHART_HEIGHT, alignItems: "center", justifyContent: "center" }}>
         <Text style={{ fontFamily: FONTS.body, color: COLORS.textMuted, fontSize: 13 }}>
-          Not enough data yet
+          Pas encore assez de données
         </Text>
       </View>
     );
@@ -200,7 +200,7 @@ function MonthCalendar({
     }
   }
 
-  const monthName = new Date(year, month).toLocaleString("en-US", { month: "long" });
+  const monthName = new Date(year, month).toLocaleString("fr-FR", { month: "long" });
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
@@ -215,7 +215,7 @@ function MonthCalendar({
         {monthName.toUpperCase()} {year}
       </Text>
       <View style={styles.calDayRow}>
-        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+        {["D", "L", "M", "M", "J", "V", "S"].map((d, i) => (
           <Text key={i} style={[styles.calDayLabel, { fontFamily: FONTS.mono }]}>
             {d}
           </Text>
@@ -377,7 +377,7 @@ export default function StatsScreen() {
             <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
               {avgScore.toFixed(0)}
             </Text>
-            <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Avg Score</Text>
+            <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Moy. Score</Text>
           </GlowCard>
           <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
             <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
@@ -389,14 +389,14 @@ export default function StatsScreen() {
             <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
               {sessions.length}
             </Text>
-            <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Sessions</Text>
+            <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Séances</Text>
           </GlowCard>
         </View>
       </View>
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>WEEKLY SUMMARY</Text>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>BILAN HEBDOMADAIRE</Text>
           <View style={styles.weeklyRow}>
             <View style={styles.weeklyItem}>
               <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
@@ -407,21 +407,21 @@ export default function StatsScreen() {
                   return d >= weekAgo;
                 }).length}
               </Text>
-              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Sessions done</Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Séances</Text>
             </View>
             <View style={styles.weeklyDivider} />
             <View style={styles.weeklyItem}>
               <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.amber }]}>
                 {avgRpe > 0 ? avgRpe.toFixed(1) : "—"}
               </Text>
-              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Avg RPE</Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>RPE moy.</Text>
             </View>
             <View style={styles.weeklyDivider} />
             <View style={styles.weeklyItem}>
               <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
                 {avgScore.toFixed(0)}
               </Text>
-              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Avg Score</Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Score moy.</Text>
             </View>
           </View>
         </GlowCard>
@@ -429,27 +429,27 @@ export default function StatsScreen() {
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.green} style={styles.chartCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ADAPT SCORE TREND</Text>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ÉVOLUTION ADAPT SCORE</Text>
           <ScoreTrendChart data={sortedScores} color={COLORS.green} />
         </GlowCard>
       </View>
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.amber} style={styles.chartCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>EXERCISE EFFORT PROGRESSION (RPE)</Text>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>PROGRESSION D'EFFORT (RPE)</Text>
           <ScoreTrendChart data={sortedRpe} color={COLORS.amber} />
           <View style={styles.rpeScaleRow}>
             <View style={styles.rpeScaleItem}>
               <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.cyan }]} />
-              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>1-4 Easy</Text>
+              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>1-4 Facile</Text>
             </View>
             <View style={styles.rpeScaleItem}>
               <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.green }]} />
-              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>5-7 Moderate</Text>
+              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>5-7 Modéré</Text>
             </View>
             <View style={styles.rpeScaleItem}>
               <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.amber }]} />
-              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>8-9 Hard</Text>
+              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>8-9 Difficile</Text>
             </View>
             <View style={styles.rpeScaleItem}>
               <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.red }]} />
@@ -462,7 +462,7 @@ export default function StatsScreen() {
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.border} style={styles.calCard}>
           <View style={styles.calHeader}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>CALENDAR</Text>
+            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>CALENDRIER</Text>
             <View style={styles.calNav}>
               <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
                 <Feather name="chevron-left" size={18} color={COLORS.textSecondary} />
@@ -492,13 +492,13 @@ export default function StatsScreen() {
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>DAILY AVERAGES</Text>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>MOYENNES QUOTIDIENNES</Text>
           <View style={styles.barList}>
-            <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sleep" />
-            <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Energy" />
+            <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sommeil" />
+            <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Énergie" />
             <ScoreBar value={avg("stress")} max={5} color={COLORS.amber} label="Stress" />
-            <ScoreBar value={avg("soreness")} max={5} color={COLORS.red} label="Soreness" />
-            <ScoreBar value={avg("motivation")} max={5} color={COLORS.violet} label="Motivation" />
+            <ScoreBar value={avg("soreness")} max={5} color={COLORS.red} label="Courbat." />
+            <ScoreBar value={avg("motivation")} max={5} color={COLORS.violet} label="Motivat." />
           </View>
         </GlowCard>
       </View>
@@ -507,7 +507,7 @@ export default function StatsScreen() {
         <View style={styles.section}>
           <GlowCard glowColor={COLORS.border} style={styles.modesCard}>
             <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>
-              SESSION DISTRIBUTION
+              RÉPARTITION DES SÉANCES
             </Text>
             <View style={styles.modesList}>
               {Object.entries(modeCounts).map(([mode, count]) => {
@@ -537,7 +537,7 @@ export default function StatsScreen() {
         <View style={styles.emptyWrap}>
           <Feather name="bar-chart-2" size={40} color={COLORS.textMuted} />
           <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
-            No data for this period. Start checking in daily!
+            Aucune donnée pour cette période. Commence ton check-in quotidien !
           </Text>
         </View>
       )}

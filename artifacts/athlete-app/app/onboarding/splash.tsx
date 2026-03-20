@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Dimensions,
   StyleSheet,
   Text,
   View,
@@ -11,31 +10,29 @@ import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 
-const { height } = Dimensions.get("window");
-
 const FEATURES = [
   {
     icon: "activity" as const,
-    title: "Daily Check-in",
-    desc: "Rate sleep, energy, stress, soreness & motivation in under 60 seconds.",
+    title: "Check-in quotidien",
+    desc: "Évalue sommeil, énergie, stress, courbatures et motivation en moins d'une minute.",
     color: COLORS.green,
   },
   {
     icon: "zap" as const,
     title: "ADAPT Score",
-    desc: "Your score (0-100) determines the ideal session mode for your body today.",
+    desc: "Ton score (0–100) détermine le mode de séance idéal pour ton corps aujourd'hui.",
     color: COLORS.amber,
   },
   {
     icon: "bar-chart-2" as const,
-    title: "Track Progress",
-    desc: "Calendar views, trend charts, and weekly summaries keep you on track.",
+    title: "Suivi de progression",
+    desc: "Vue calendrier, graphiques de tendance et bilans hebdomadaires pour rester dans l'axe.",
     color: COLORS.cyan,
   },
   {
     icon: "users" as const,
-    title: "Coach Connection",
-    desc: "Your coach sees your data and tailors your programme in real-time.",
+    title: "Connexion coach",
+    desc: "Ton coach voit tes données et adapte ton programme en temps réel.",
     color: COLORS.violet,
   },
 ];
@@ -54,7 +51,7 @@ export default function OnboardingSplashScreen() {
         <Text style={[styles.logo, { fontFamily: FONTS.title }]}>ADAPT</Text>
         <Text style={[styles.logoSub, { fontFamily: FONTS.body }]}>by LMJ</Text>
         <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
-          Train smarter. Recover faster. Perform better.
+          Entraîne-toi intelligemment. Récupère mieux. Performe davantage.
         </Text>
       </View>
 
@@ -78,11 +75,11 @@ export default function OnboardingSplashScreen() {
 
       <View style={styles.actions}>
         <Button
-          label="Set Up My Profile"
+          label="Configurer mon profil"
           onPress={() => router.push("/onboarding/profile")}
         />
         <Text style={[styles.steps, { fontFamily: FONTS.mono }]}>
-          5 QUICK STEPS · TAKES LESS THAN 2 MINUTES
+          5 ÉTAPES RAPIDES · MOINS DE 2 MINUTES
         </Text>
       </View>
     </View>

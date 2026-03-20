@@ -16,20 +16,20 @@ export default function CheckinResultScreen() {
   const getMessage = () => {
     switch (modeKey) {
       case "performance":
-        return "Excellent readiness! Today's session is dialed up. Go crush it.";
+        return "Excellente forme aujourd'hui ! Ta séance est renforcée. Vas tout donner.";
       case "adapt":
-        return "Your body needs some adjustment today. Session is calibrated to fit.";
+        return "Ton corps a besoin d'ajustements. La séance a été calibrée en conséquence.";
       case "recovery":
-        return "Your body is asking for rest. Today is a recovery session. Honor it.";
+        return "Ton corps demande du repos. Aujourd'hui, c'est récupération. Respecte-le.";
       default:
-        return "Good readiness. Standard session is ready — train smart.";
+        return "Bonne forme. Séance standard prête — entraîne-toi intelligemment.";
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
-        <Text style={[styles.topLabel, { fontFamily: FONTS.mono }]}>CHECK-IN COMPLETE</Text>
+        <Text style={[styles.topLabel, { fontFamily: FONTS.mono }]}>CHECK-IN TERMINÉ</Text>
 
         <View style={styles.scoreWrap}>
           <AdaptScoreDisplay score={scoreNum} mode={modeKey} size="lg" />

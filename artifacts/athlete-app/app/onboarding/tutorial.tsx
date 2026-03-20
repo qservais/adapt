@@ -28,22 +28,22 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     key: "checkin",
-    title: "MORNING CHECK-IN",
-    desc: "Each morning, rate your sleep, energy, stress, soreness and motivation. Takes under 60 seconds.",
+    title: "CHECK-IN QUOTIDIEN",
+    desc: "Chaque matin, évalue ton sommeil, énergie, stress, courbatures et motivation. En moins de 60 secondes.",
     icon: "sun",
     color: COLORS.cyan,
   },
   {
     key: "adapt",
-    title: "YOUR ADAPT SCORE",
-    desc: "We calculate your ADAPT Score (0–100) and assign a session mode: Performance, Normal, Adapt, or Recovery.",
+    title: "TON ADAPT SCORE",
+    desc: "On calcule ton ADAPT Score (0–100) et on attribue un mode de séance : Performance, Normal, Adapt ou Récupération.",
     icon: "activity",
     color: COLORS.green,
   },
   {
     key: "session",
-    title: "TRAIN SMARTER",
-    desc: "Your session is automatically adjusted to match your body's readiness today. Load, volume — all calibrated.",
+    title: "ENTRAÎNE-TOI MIEUX",
+    desc: "Ta séance est automatiquement ajustée à la forme de ton corps aujourd'hui. Charges, volume — tout est calibré.",
     icon: "zap",
     color: COLORS.violet,
   },
@@ -118,7 +118,7 @@ export default function TutorialScreen() {
           ))}
         </View>
         <Button
-          label={index < SLIDES.length - 1 ? "Next" : "Let's Go"}
+          label={index < SLIDES.length - 1 ? "Suivant" : "C'est parti !"}
           onPress={goNext}
         />
         {index < SLIDES.length - 1 && (
@@ -126,7 +126,7 @@ export default function TutorialScreen() {
             onPress={() => router.replace("/checkin")}
             style={styles.skip}
           >
-            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Skip</Text>
+            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer</Text>
           </TouchableOpacity>
         )}
       </View>
