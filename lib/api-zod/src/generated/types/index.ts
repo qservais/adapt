@@ -7,6 +7,7 @@
  */
 
 export * from "./alertData";
+export * from "./athleteLinkRequest";
 export * from "./authResponse";
 export * from "./checkinData";
 export * from "./checkinRequest";

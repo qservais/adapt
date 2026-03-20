@@ -738,6 +738,25 @@ export const LinkClientResponse = zod.object({
 });
 
 /**
+ * @summary Link athlete to a coach using invite code
+ */
+export const athleteLinkBodyInviteCodeMin = 6;
+export const athleteLinkBodyInviteCodeMax = 6;
+
+export const AthleteLinkBody = zod.object({
+  inviteCode: zod
+    .string()
+    .min(athleteLinkBodyInviteCodeMin)
+    .max(athleteLinkBodyInviteCodeMax)
+    .describe("6-character invite code from the coach"),
+});
+
+export const AthleteLinkResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Get exercise library
  */
 export const GetExercisesQueryParams = zod.object({

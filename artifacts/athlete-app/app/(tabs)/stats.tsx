@@ -319,6 +319,11 @@ export default function StatsScreen() {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((c) => c.adaptScore);
 
+  const sortedRpe = [...sessions]
+    .filter((s) => s.rpe != null && s.completedAt != null)
+    .sort((a, b) => new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime())
+    .map((s) => s.rpe as number);
+
   const prevMonth = () => {
     setCalMonth((prev) => {
       if (prev.month === 0) return { year: prev.year - 1, month: 11 };
@@ -424,8 +429,33 @@ export default function StatsScreen() {
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.green} style={styles.chartCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>30-DAY ADAPT SCORE</Text>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ADAPT SCORE TREND</Text>
           <ScoreTrendChart data={sortedScores} color={COLORS.green} />
+        </GlowCard>
+      </View>
+
+      <View style={styles.section}>
+        <GlowCard glowColor={COLORS.amber} style={styles.chartCard}>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>EXERCISE EFFORT PROGRESSION (RPE)</Text>
+          <ScoreTrendChart data={sortedRpe} color={COLORS.amber} />
+          <View style={styles.rpeScaleRow}>
+            <View style={styles.rpeScaleItem}>
+              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.cyan }]} />
+              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>1-4 Easy</Text>
+            </View>
+            <View style={styles.rpeScaleItem}>
+              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.green }]} />
+              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>5-7 Moderate</Text>
+            </View>
+            <View style={styles.rpeScaleItem}>
+              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.amber }]} />
+              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>8-9 Hard</Text>
+            </View>
+            <View style={styles.rpeScaleItem}>
+              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.red }]} />
+              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>10 Max</Text>
+            </View>
+          </View>
         </GlowCard>
       </View>
 
@@ -608,6 +638,10 @@ const styles = StyleSheet.create({
   calLegendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   calLegendDot: { width: 8, height: 8, borderRadius: 4 },
   calLegendText: { fontSize: 10, letterSpacing: 1 },
+  rpeScaleRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 10, flexWrap: "wrap", gap: 6 },
+  rpeScaleItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  rpeScaleDot: { width: 8, height: 8, borderRadius: 4 },
+  rpeScaleLabel: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 0.5 },
   cardTitle: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
   barList: { gap: 12 },
   modesList: { gap: 10 },

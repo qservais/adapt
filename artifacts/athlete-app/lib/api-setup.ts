@@ -81,7 +81,6 @@ async function getValidToken(): Promise<string | null> {
   }
 
   if (isTokenExpiredOrExpiringSoon(token)) {
-    await tokenStore.clear();
     return refreshAccessToken();
   }
 

@@ -381,6 +381,15 @@ export interface LinkClientRequest {
   athleteEmail: string;
 }
 
+export interface AthleteLinkRequest {
+  /**
+   * 6-character invite code from the coach
+   * @minLength 6
+   * @maxLength 6
+   */
+  inviteCode: string;
+}
+
 export interface ExerciseData {
   id: string;
   name: string;

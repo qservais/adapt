@@ -18,6 +18,7 @@ import type {
 
 import type {
   AlertData,
+  AthleteLinkRequest,
   AuthResponse,
   CheckinData,
   CheckinRequest,
@@ -2716,6 +2717,92 @@ export const useLinkClient = <
   TContext
 > => {
   return useMutation(getLinkClientMutationOptions(options));
+};
+
+/**
+ * @summary Link athlete to a coach using invite code
+ */
+export const getAthleteLinkUrl = () => {
+  return `/api/athlete/link`;
+};
+
+export const athleteLink = async (
+  athleteLinkRequest: AthleteLinkRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAthleteLinkUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(athleteLinkRequest),
+  });
+};
+
+export const getAthleteLinkMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof athleteLink>>,
+    TError,
+    { data: BodyType<AthleteLinkRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof athleteLink>>,
+  TError,
+  { data: BodyType<AthleteLinkRequest> },
+  TContext
+> => {
+  const mutationKey = ["athleteLink"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof athleteLink>>,
+    { data: BodyType<AthleteLinkRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return athleteLink(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AthleteLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof athleteLink>>
+>;
+export type AthleteLinkMutationBody = BodyType<AthleteLinkRequest>;
+export type AthleteLinkMutationError = ErrorType<void>;
+
+/**
+ * @summary Link athlete to a coach using invite code
+ */
+export const useAthleteLink = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof athleteLink>>,
+    TError,
+    { data: BodyType<AthleteLinkRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof athleteLink>>,
+  TError,
+  { data: BodyType<AthleteLinkRequest> },
+  TContext
+> => {
+  return useMutation(getAthleteLinkMutationOptions(options));
 };
 
 /**

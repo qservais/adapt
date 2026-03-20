@@ -700,6 +700,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /athlete/link:
+    post:
+      operationId: athleteLink
+      tags: [athlete]
+      summary: Link athlete to a coach using invite code
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AthleteLinkRequest"
+      responses:
+        "200":
+          description: Linked to coach successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid invite code
+
   # EXERCISES
   /exercises:
     get:
@@ -1540,6 +1563,17 @@ components:
           description: Email address of the athlete to link to this coach's roster
       required:
         - athleteEmail
+
+    AthleteLinkRequest:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+          minLength: 6
+          maxLength: 6
+          description: 6-character invite code from the coach
+      required:
+        - inviteCode
 
     ExerciseData:
       type: object

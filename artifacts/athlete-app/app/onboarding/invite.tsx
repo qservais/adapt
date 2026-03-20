@@ -13,7 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { InputField } from "@/components/ui/InputField";
-import { useAthleteLink } from "@/lib/useAthleteLink";
+import { useAthleteLink } from "@workspace/api-client-react";
 
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
@@ -30,7 +30,7 @@ export default function InviteScreen() {
       return;
     }
     try {
-      await linkMutation.mutateAsync({ inviteCode: trimmed });
+      await linkMutation.mutateAsync({ data: { inviteCode: trimmed } });
       setLinked(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Invalid invite code";
