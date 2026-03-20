@@ -343,7 +343,7 @@ export default function StatsScreen() {
   return (
     <ScrollView
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
-      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 49 + 40 }}
+      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40 }}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headRow}>

@@ -35,7 +35,7 @@ export default function SessionTab() {
   return (
     <ScrollView
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
-      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 49 + 24 }}
+      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 24 }}
       showsVerticalScrollIndicator={false}
     >
       <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>SÉANCE</Text>

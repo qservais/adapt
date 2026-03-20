@@ -44,7 +44,7 @@ export default function MessagesScreen() {
         <FlatList
           data={threads}
           keyExtractor={(item) => item.userId}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 49 + 20 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 20 }}
           renderItem={({ item }) => {
             const initials = (item.userFirstName?.[0] ?? "?").toUpperCase();
             const hasUnread = (item.unreadCount ?? 0) > 0;

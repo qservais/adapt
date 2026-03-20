@@ -79,7 +79,7 @@ export default function HomeScreen() {
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: topPad + 16, paddingBottom: insets.bottom + 49 + 24 },
+        { paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 24 },
       ]}
       refreshControl={
         <RefreshControl
