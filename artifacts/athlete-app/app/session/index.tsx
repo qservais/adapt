@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { useGetTodaySession, useStartSession } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
-import { GlowCard } from "@/components/ui/GlowCard";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 export default function SessionIntroScreen() {
   const insets = useSafeAreaInsets();
@@ -26,15 +27,8 @@ export default function SessionIntroScreen() {
 
   if (sessionQuery.isPending) {
     return (
-      <View style={[styles.flex, { backgroundColor: COLORS.bg, paddingTop: insets.top + 20 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={COLORS.white} />
-        </TouchableOpacity>
-        <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
-            Chargement...
-          </Text>
-        </View>
+      <View style={[styles.flex, { backgroundColor: COLORS.bg, alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color={COLORS.cyan} />
       </View>
     );
   }
@@ -46,20 +40,15 @@ export default function SessionIntroScreen() {
           <Feather name="arrow-left" size={22} color={COLORS.white} />
         </TouchableOpacity>
         <View style={styles.emptyState}>
-          <Feather name="calendar" size={40} color={COLORS.textMuted} />
-          <Text style={[styles.emptyTitle, { fontFamily: FONTS.title }]}>
-            AUCUNE SÉANCE
-          </Text>
+          <View style={styles.emptyIconWrap}>
+            <Feather name="calendar" size={36} color={COLORS.textMuted} />
+          </View>
+          <Text style={[styles.emptyTitle, { fontFamily: FONTS.title }]}>AUCUNE SÉANCE</Text>
           <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
             Aucune séance n'est programmée pour aujourd'hui. Ton coach n'a pas encore attribué de programme.
           </Text>
-          <TouchableOpacity
-            onPress={() => router.replace("/")}
-            style={styles.homeBtn}
-          >
-            <Text style={[styles.homeBtnText, { fontFamily: FONTS.bodyMedium }]}>
-              Retour à l'accueil
-            </Text>
+          <TouchableOpacity onPress={() => router.replace("/")} style={styles.homeBtn}>
+            <Text style={[styles.homeBtnText, { fontFamily: FONTS.bodyMedium }]}>Retour à l'accueil</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -78,107 +67,97 @@ export default function SessionIntroScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.flex, { backgroundColor: COLORS.bg }]}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 40 }}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={COLORS.white} />
-        </TouchableOpacity>
-        <ModeBadge mode={modeKey} size="sm" glow />
-      </View>
-
-      <View style={[styles.heroSection, { borderColor: cfg.color }]}>
-        <Text style={[styles.heroTitle, { fontFamily: FONTS.title, color: cfg.color }]}>
-          {session.name}
-        </Text>
-        <View style={styles.heroMeta}>
-          {session.estimatedDurationMin != null && (
-            <View style={styles.metaItem}>
-              <Feather name="clock" size={16} color={COLORS.textSecondary} />
-              <Text style={[styles.metaText, { fontFamily: FONTS.mono }]}>
-                {session.estimatedDurationMin} MIN
-              </Text>
-            </View>
-          )}
-          <View style={styles.metaItem}>
-            <Feather name="list" size={16} color={COLORS.textSecondary} />
-            <Text style={[styles.metaText, { fontFamily: FONTS.mono }]}>
-              {session.exercises?.length ?? 0} EXERCICES
-            </Text>
-          </View>
-        </View>
-        <View
-          style={[
-            styles.scoreRow,
-            { backgroundColor: cfg.dim, borderColor: cfg.color },
-          ]}
-        >
-          <Text style={[styles.scoreLabel, { fontFamily: FONTS.mono }]}>ADAPT SCORE</Text>
-          <Text style={[styles.scoreVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
-            {session.adaptScore}
-          </Text>
-        </View>
-      </View>
-
-      {session.coachNotes != null && (
-        <GlowCard glowColor={COLORS.cyan} style={styles.coachCard}>
-          <View style={styles.coachHeader}>
-            <Feather name="message-square" size={16} color={COLORS.cyan} />
-            <Text style={[styles.coachLabel, { fontFamily: FONTS.mono }]}>
-              NOTES DU COACH
-            </Text>
-          </View>
-          <Text style={[styles.coachText, { fontFamily: FONTS.body }]}>
-            {session.coachNotes}
-          </Text>
-        </GlowCard>
-      )}
-
-      <View style={styles.exerciseList}>
-        <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-          PROGRAMME
-        </Text>
-        {session.exercises?.map((ex, i) => (
-          <View key={ex.id} style={styles.exRow}>
-            <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-              {String(i + 1).padStart(2, "0")}
-            </Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
-                {ex.exerciseName}
-              </Text>
-              <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
-                {ex.sets}×{ex.reps}
-                {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
-                {ex.restSeconds != null ? ` · ${ex.restSeconds}s récup` : ""}
-              </Text>
-              {ex.coachCue != null && (
-                <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>
-                  {ex.coachCue}
-                </Text>
-              )}
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {startError ? (
-        <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{startError}</Text>
-      ) : null}
-      <TouchableOpacity
-        onPress={handleStart}
-        disabled={startMutation.isPending}
-        style={[styles.startBtn, { backgroundColor: cfg.color, opacity: startMutation.isPending ? 0.6 : 1 }]}
+    <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={{
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 120,
+        }}
+        showsVerticalScrollIndicator={false}
       >
-        <Feather name="play" size={20} color={COLORS.bg} />
-        <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-          {startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={22} color={COLORS.white} />
+          </TouchableOpacity>
+          <ModeBadge mode={modeKey} size="sm" glow />
+        </View>
+
+        <View style={[styles.heroSection, { borderColor: `${cfg.color}40` }]}>
+          <Text style={[styles.heroTitle, { fontFamily: FONTS.title, color: cfg.color }]}>
+            {session.name}
+          </Text>
+          <View style={styles.heroMeta}>
+            {session.estimatedDurationMin != null && (
+              <View style={styles.metaChip}>
+                <Feather name="clock" size={13} color={COLORS.textMuted} />
+                <Text style={[styles.metaText, { fontFamily: FONTS.mono }]}>
+                  {session.estimatedDurationMin} MIN
+                </Text>
+              </View>
+            )}
+            <View style={styles.metaChip}>
+              <Feather name="list" size={13} color={COLORS.textMuted} />
+              <Text style={[styles.metaText, { fontFamily: FONTS.mono }]}>
+                {session.exercises?.length ?? 0} EXERCICES
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.scoreRow, { backgroundColor: `${cfg.color}10`, borderColor: `${cfg.color}40` }]}>
+            <Text style={[styles.scoreLabel, { fontFamily: FONTS.mono }]}>ADAPT SCORE</Text>
+            <Text style={[styles.scoreVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
+              {session.adaptScore}
+            </Text>
+          </View>
+        </View>
+
+        {session.coachNotes != null && (
+          <View style={styles.coachCard}>
+            <View style={styles.coachHeader}>
+              <View style={styles.coachIconWrap}>
+                <Feather name="message-square" size={14} color={COLORS.cyan} />
+              </View>
+              <Text style={[styles.coachLabel, { fontFamily: FONTS.mono }]}>NOTES DU COACH</Text>
+            </View>
+            <Text style={[styles.coachText, { fontFamily: FONTS.body }]}>{session.coachNotes}</Text>
+          </View>
+        )}
+
+        <View style={styles.exerciseList}>
+          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRAMME</Text>
+          {session.exercises?.map((ex, i) => (
+            <View key={ex.id} style={styles.exRow}>
+              <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                {String(i + 1).padStart(2, "0")}
+              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
+                <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                  {ex.sets}×{ex.reps}
+                  {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
+                  {ex.restSeconds != null ? ` · ${ex.restSeconds}s repos` : ""}
+                </Text>
+                {ex.coachCue != null && (
+                  <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
+                )}
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
+        {startError ? (
+          <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{startError}</Text>
+        ) : null}
+        <GradientButton
+          label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
+          onPress={handleStart}
+          loading={startMutation.isPending}
+          icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
+        />
+      </View>
+    </View>
   );
 }
 
@@ -196,30 +175,58 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderRadius: 20,
     borderWidth: 1,
+    backgroundColor: COLORS.bgCard,
     padding: 24,
     marginBottom: 16,
     gap: 16,
   },
-  heroTitle: { fontSize: 44, letterSpacing: 2, lineHeight: 48 },
-  heroMeta: { flexDirection: "row", gap: 20 },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  metaText: { fontSize: 12, color: COLORS.textSecondary, letterSpacing: 1 },
+  heroTitle: { fontSize: 40, letterSpacing: 2, lineHeight: 44 },
+  heroMeta: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+  metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  metaText: { fontSize: 11, color: COLORS.textSecondary, letterSpacing: 0.5 },
   scoreRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   scoreLabel: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1.5 },
   scoreVal: { fontSize: 24 },
-  coachCard: { marginHorizontal: 20, marginBottom: 16, gap: 10 },
+  coachCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: COLORS.cyanDim,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}30`,
+    padding: 16,
+    gap: 10,
+  },
   coachHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  coachIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: `${COLORS.cyan}20`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   coachLabel: { fontSize: 10, color: COLORS.cyan, letterSpacing: 2 },
   coachText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 21 },
-  exerciseList: { paddingHorizontal: 20, marginBottom: 24, gap: 2 },
+  exerciseList: { paddingHorizontal: 20, marginBottom: 16, gap: 2 },
   sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2, marginBottom: 16 },
   exRow: {
     flexDirection: "row",
@@ -233,18 +240,36 @@ const styles = StyleSheet.create({
   exName: { fontSize: 16, color: COLORS.white, marginBottom: 3 },
   exDetail: { fontSize: 12, color: COLORS.textSecondary },
   exCue: { fontSize: 12, color: COLORS.textMuted, fontStyle: "italic", marginTop: 3 },
-  startBtn: {
-    marginHorizontal: 20,
-    flexDirection: "row",
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: COLORS.bg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    gap: 8,
+  },
+  errorText: { color: COLORS.red, fontSize: 13, textAlign: "center" },
+  emptyState: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    borderRadius: 16,
-    paddingVertical: 20,
-    marginBottom: 12,
+    gap: 16,
+    paddingHorizontal: 28,
   },
-  startBtnText: { fontSize: 16, color: COLORS.bg, letterSpacing: 1.5 },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 28 },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.bgCard,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   emptyTitle: { fontSize: 36, color: COLORS.white, letterSpacing: 4 },
   emptyText: { fontSize: 15, color: COLORS.textSecondary, textAlign: "center", lineHeight: 22 },
   homeBtn: {
@@ -257,5 +282,4 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   homeBtnText: { fontSize: 15, color: COLORS.white },
-  errorText: { color: COLORS.red, fontSize: 13, textAlign: "center", marginHorizontal: 20, marginBottom: 8 },
 });

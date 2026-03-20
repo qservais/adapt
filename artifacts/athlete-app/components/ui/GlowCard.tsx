@@ -11,7 +11,7 @@ interface GlowCardProps {
 
 export function GlowCard({
   children,
-  glowColor = COLORS.green,
+  glowColor = COLORS.cyan,
   style,
   intensity = "medium",
 }: GlowCardProps) {

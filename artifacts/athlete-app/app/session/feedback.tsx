@@ -12,25 +12,34 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useGetTodaySession, useSubmitSessionFeedback } from "@workspace/api-client-react";
-import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
-import { GlowCard } from "@/components/ui/GlowCard";
-import { Button } from "@/components/ui/Button";
+import { COLORS, FONTS } from "@/constants/theme";
+import { GradientButton } from "@/components/ui/GradientButton";
+import { AdaptSlider } from "@/components/ui/AdaptSlider";
 
 type Difficulty = "too_easy" | "well_calibrated" | "too_hard";
 
-interface DifficultyOption {
-  key: Difficulty;
-  label: string;
-  icon: "thumbs-up" | "check-circle" | "alert-triangle";
-  color: string;
+const DIFFICULTY_OPTIONS = [
+  { key: "too_easy" as Difficulty, label: "Trop facile", icon: "thumbs-up" as const, color: COLORS.cyan },
+  { key: "well_calibrated" as Difficulty, label: "Parfait", icon: "check-circle" as const, color: COLORS.green },
+  { key: "too_hard" as Difficulty, label: "Trop dur", icon: "alert-triangle" as const, color: COLORS.red },
+];
+
+function getRPEColor(rpe: number): string {
+  if (rpe <= 4) return COLORS.green;
+  if (rpe <= 7) return COLORS.cyan;
+  return COLORS.red;
 }
 
-const DIFFICULTY_OPTIONS: DifficultyOption[] = [
-  { key: "too_easy", label: "Trop facile", icon: "thumbs-up", color: COLORS.cyan },
-  { key: "well_calibrated", label: "Parfait", icon: "check-circle", color: COLORS.green },
-  { key: "too_hard", label: "Trop dur", icon: "alert-triangle", color: COLORS.red },
-];
+function getRPELabel(rpe: number): string {
+  if (rpe <= 2) return "Très facile";
+  if (rpe <= 4) return "Facile";
+  if (rpe <= 6) return "Modéré";
+  if (rpe <= 8) return "Difficile";
+  if (rpe <= 9) return "Très difficile";
+  return "Effort maximal";
+}
 
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
@@ -38,14 +47,13 @@ export default function FeedbackScreen() {
   const feedbackMutation = useSubmitSessionFeedback();
 
   const session = sessionQuery.data;
-  const modeKey = (session?.mode ?? "normal") as SessionMode;
 
   const [rpe, setRpe] = useState(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
   const [notes, setNotes] = useState("");
   const [submitError, setSubmitError] = useState("");
 
-  const rpeColor = rpe <= 4 ? COLORS.cyan : rpe <= 7 ? COLORS.green : rpe <= 9 ? COLORS.amber : COLORS.red;
+  const rpeColor = getRPEColor(rpe);
 
   const handleSubmit = async () => {
     setSubmitError("");
@@ -87,7 +95,7 @@ export default function FeedbackScreen() {
           Aide ADAPT à calibrer tes prochaines séances.
         </Text>
 
-        <GlowCard glowColor={rpeColor} style={styles.rpeCard}>
+        <View style={[styles.card, { borderColor: `${rpeColor}30` }]}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             EFFORT RESSENTI (RPE)
           </Text>
@@ -97,58 +105,50 @@ export default function FeedbackScreen() {
             </Text>
             <Text style={[styles.rpeMax, { fontFamily: FONTS.mono }]}>/10</Text>
           </View>
-          <View style={styles.rpeButtons}>
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => {
-              const btnColor =
-                v <= 4 ? COLORS.cyan : v <= 7 ? COLORS.green : v <= 9 ? COLORS.amber : COLORS.red;
-              return (
-                <TouchableOpacity
-                  key={v}
-                  onPress={() => setRpe(v)}
-                  style={[
-                    styles.rpeBtn,
-                    v === rpe && { backgroundColor: btnColor, borderColor: btnColor },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.rpeBtnText,
-                      { fontFamily: FONTS.mono },
-                      v === rpe && { color: COLORS.bg },
-                    ]}
-                  >
-                    {v}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <View style={styles.rpeLabels}>
-            <Text style={[styles.rpeLabelText, { fontFamily: FONTS.body }]}>Facile</Text>
-            <Text style={[styles.rpeLabelText, { fontFamily: FONTS.body }]}>Effort max</Text>
-          </View>
-        </GlowCard>
-
-        <GlowCard glowColor={COLORS.border} style={styles.calibCard}>
-          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-            CALIBRATION
+          <Text style={[styles.rpeLabel, { fontFamily: FONTS.bodyMedium, color: rpeColor }]}>
+            {getRPELabel(rpe)}
           </Text>
+          <View style={{ marginTop: 16, width: "100%" }}>
+            <AdaptSlider
+              value={rpe}
+              min={1}
+              max={10}
+              step={1}
+              onChange={(v) => {
+                Haptics.selectionAsync();
+                setRpe(v);
+              }}
+              activeColor={rpeColor}
+              showTicks={false}
+            />
+            <View style={styles.rpeEndLabels}>
+              <Text style={[styles.rpeEndText, { fontFamily: FONTS.mono }]}>Facile</Text>
+              <Text style={[styles.rpeEndText, { fontFamily: FONTS.mono }]}>Effort max</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>CALIBRATION</Text>
           <View style={styles.calibRow}>
             {DIFFICULTY_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.key}
-                onPress={() => setDifficulty(opt.key)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setDifficulty(opt.key);
+                }}
                 style={[
                   styles.calibBtn,
                   difficulty === opt.key && {
                     borderColor: opt.color,
-                    backgroundColor: `${opt.color}20`,
+                    backgroundColor: `${opt.color}15`,
                   },
                 ]}
               >
                 <Feather
                   name={opt.icon}
-                  size={22}
+                  size={24}
                   color={difficulty === opt.key ? opt.color : COLORS.textMuted}
                 />
                 <Text
@@ -163,12 +163,10 @@ export default function FeedbackScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </GlowCard>
+        </View>
 
-        <GlowCard glowColor={COLORS.border} style={styles.notesCard}>
-          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-            NOTES (OPTIONNEL)
-          </Text>
+        <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>NOTES (OPTIONNEL)</Text>
           <TextInput
             style={[styles.notesInput, { fontFamily: FONTS.body }]}
             value={notes}
@@ -178,16 +176,23 @@ export default function FeedbackScreen() {
             multiline
             numberOfLines={4}
           />
-        </GlowCard>
+        </View>
 
         {submitError ? (
-          <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{submitError}</Text>
+          <View style={styles.errorWrap}>
+            <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{submitError}</Text>
+          </View>
         ) : null}
-        <Button
+
+        <GradientButton
           label="Envoyer le retour"
           onPress={handleSubmit}
           loading={feedbackMutation.isPending}
         />
+
+        <TouchableOpacity onPress={() => router.replace("/")} style={styles.skipBtn}>
+          <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer</Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -197,38 +202,32 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingHorizontal: 20, gap: 16 },
   title: { fontSize: 40, color: COLORS.white, letterSpacing: 4 },
-  subtitle: { fontSize: 15, color: COLORS.textSecondary, marginBottom: 8 },
-  sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2, marginBottom: 16 },
-  rpeCard: { gap: 0 },
+  subtitle: { fontSize: 15, color: COLORS.textSecondary },
+  card: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 20,
+    gap: 12,
+  },
+  sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
   rpeDisplay: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "center",
-    marginBottom: 20,
     gap: 4,
   },
-  rpeVal: { fontSize: 56 },
-  rpeMax: { fontSize: 22, color: COLORS.textMuted, marginBottom: 10 },
-  rpeButtons: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
-  rpeBtn: {
-    flex: 1,
-    minWidth: "8%",
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.bgElevated,
-  },
-  rpeBtnText: { fontSize: 14, color: COLORS.textSecondary },
-  rpeLabels: {
+  rpeVal: { fontSize: 64, lineHeight: 72 },
+  rpeMax: { fontSize: 24, color: COLORS.textMuted, marginBottom: 8 },
+  rpeLabel: { fontSize: 16, textAlign: "center" },
+  rpeEndLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 8,
+    marginTop: 6,
+    paddingHorizontal: 4,
   },
-  rpeLabelText: { fontSize: 11, color: COLORS.textMuted },
-  calibCard: { gap: 0 },
+  rpeEndText: { fontSize: 11, color: COLORS.textMuted },
   calibRow: { flexDirection: "row", gap: 8 },
   calibBtn: {
     flex: 1,
@@ -241,8 +240,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.bgElevated,
   },
-  calibLabel: { fontSize: 12, color: COLORS.textMuted, textAlign: "center" },
-  notesCard: { gap: 0 },
+  calibLabel: { fontSize: 11, color: COLORS.textMuted, textAlign: "center" },
   notesInput: {
     backgroundColor: COLORS.bgInput,
     borderRadius: 10,
@@ -254,5 +252,14 @@ const styles = StyleSheet.create({
     minHeight: 90,
     textAlignVertical: "top",
   },
+  errorWrap: {
+    backgroundColor: COLORS.redDim,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: `${COLORS.red}40`,
+  },
   errorText: { color: COLORS.red, fontSize: 13, textAlign: "center" },
+  skipBtn: { alignItems: "center", paddingVertical: 12 },
+  skipText: { fontSize: 14, color: COLORS.textMuted },
 });

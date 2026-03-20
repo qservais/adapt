@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useUpdateMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 const GOALS = [
   {
@@ -20,7 +20,7 @@ const GOALS = [
     label: "Prise de masse",
     desc: "Développer la masse musculaire et améliorer la composition corporelle",
     icon: "activity" as const,
-    color: COLORS.green,
+    color: COLORS.cyan,
   },
   {
     key: "fat_loss",
@@ -34,7 +34,7 @@ const GOALS = [
     label: "Performance",
     desc: "Optimiser la vitesse, la puissance et l'endurance",
     icon: "zap" as const,
-    color: COLORS.cyan,
+    color: COLORS.green,
   },
 ];
 
@@ -116,12 +116,13 @@ export default function GoalScreen() {
         <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
       ) : null}
       <View style={styles.actions}>
-        <Button label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
-        <Button
-          label="Passer pour l'instant"
+        <GradientButton label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
+        <TouchableOpacity
           onPress={() => router.push("/onboarding/invite")}
-          variant="ghost"
-        />
+          style={styles.skipBtn}
+        >
+          <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flexGrow: 1, paddingHorizontal: 24 },
   stepIndicator: { marginBottom: 16 },
-  step: { fontSize: 13, color: COLORS.green, letterSpacing: 2 },
+  step: { fontSize: 13, color: COLORS.cyan, letterSpacing: 2 },
   title: { fontSize: 48, color: COLORS.white, letterSpacing: 4, lineHeight: 52 },
   subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, marginBottom: 32 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 32 },
@@ -150,4 +151,6 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17 },
   actions: { gap: 12 },
   error: { color: COLORS.red, fontSize: 13, textAlign: "center", marginBottom: 8 },
+  skipBtn: { alignItems: "center", padding: 12 },
+  skipText: { color: COLORS.textMuted, fontSize: 14 },
 });

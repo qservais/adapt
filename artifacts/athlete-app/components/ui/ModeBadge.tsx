@@ -1,19 +1,21 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, ViewStyle } from "react-native";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 
 interface ModeBadgeProps {
   mode: string;
   size?: "sm" | "md" | "lg";
   glow?: boolean;
+  style?: ViewStyle;
 }
 
-export function ModeBadge({ mode, size = "md", glow = false }: ModeBadgeProps) {
+export function ModeBadge({ mode, size = "md", glow = false, style }: ModeBadgeProps) {
   const cfg = MODE_CONFIG[mode as SessionMode] ?? MODE_CONFIG.normal;
 
-  const fontSize = size === "sm" ? 10 : size === "lg" ? 16 : 12;
-  const paddingH = size === "sm" ? 8 : size === "lg" ? 16 : 12;
+  const fontSize = size === "sm" ? 9 : size === "lg" ? 14 : 11;
+  const paddingH = size === "sm" ? 8 : size === "lg" ? 16 : 10;
   const paddingV = size === "sm" ? 3 : size === "lg" ? 6 : 4;
+  const borderR = size === "sm" ? 4 : 6;
 
   return (
     <View
@@ -21,19 +23,19 @@ export function ModeBadge({ mode, size = "md", glow = false }: ModeBadgeProps) {
         styles.badge,
         {
           backgroundColor: cfg.dim,
-          borderColor: cfg.color,
+          borderColor: `${cfg.color}60`,
           paddingHorizontal: paddingH,
           paddingVertical: paddingV,
-          ...(glow
-            ? {
-                shadowColor: cfg.color,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.8,
-                shadowRadius: 8,
-                elevation: 6,
-              }
-            : {}),
+          borderRadius: borderR,
         },
+        glow && {
+          shadowColor: cfg.color,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.6,
+          shadowRadius: 8,
+          elevation: 6,
+        },
+        style,
       ]}
     >
       <Text

@@ -5,13 +5,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
 import { useAthleteLink } from "@workspace/api-client-react";
 
@@ -62,7 +63,7 @@ export default function InviteScreen() {
         {linked ? (
           <View style={styles.successBox}>
             <View style={styles.successIcon}>
-              <Feather name="check-circle" size={40} color={COLORS.green} />
+              <Feather name="check-circle" size={40} color={COLORS.cyan} />
             </View>
             <Text style={[styles.successTitle, { fontFamily: FONTS.bodyBold }]}>
               Coach connecté !
@@ -70,7 +71,7 @@ export default function InviteScreen() {
             <Text style={[styles.successDesc, { fontFamily: FONTS.body }]}>
               Ton coach est maintenant lié à ton compte et peut suivre tes séances et check-ins.
             </Text>
-            <Button label="Continuer" onPress={() => router.push("/onboarding/tutorial")} />
+            <GradientButton label="Continuer" onPress={() => router.push("/onboarding/tutorial")} />
           </View>
         ) : (
           <>
@@ -97,16 +98,17 @@ export default function InviteScreen() {
               {error ? (
                 <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
               ) : null}
-              <Button
+              <GradientButton
                 label="Connecter mon coach"
                 onPress={handleLink}
                 loading={linkMutation.isPending}
               />
-              <Button
-                label="Passer pour l'instant"
+              <TouchableOpacity
                 onPress={() => router.push("/onboarding/tutorial")}
-                variant="ghost"
-              />
+                style={styles.skipBtn}
+              >
+                <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -119,7 +121,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flexGrow: 1, paddingHorizontal: 24 },
   stepIndicator: { marginBottom: 16 },
-  step: { fontSize: 13, color: COLORS.green, letterSpacing: 2 },
+  step: { fontSize: 13, color: COLORS.cyan, letterSpacing: 2 },
   title: { fontSize: 48, color: COLORS.white, letterSpacing: 4, lineHeight: 52 },
   subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, marginBottom: 24 },
   infoBox: {
@@ -152,12 +154,14 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: COLORS.greenDim,
+    backgroundColor: COLORS.cyanDim,
     borderWidth: 1,
-    borderColor: COLORS.green,
+    borderColor: COLORS.cyan,
     alignItems: "center",
     justifyContent: "center",
   },
   successTitle: { fontSize: 22, color: COLORS.white },
   successDesc: { fontSize: 15, color: COLORS.textSecondary, textAlign: "center" },
+  skipBtn: { alignItems: "center", padding: 12 },
+  skipText: { color: COLORS.textMuted, fontSize: 14 },
 });

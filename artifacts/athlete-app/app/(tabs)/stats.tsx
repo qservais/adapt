@@ -366,7 +366,7 @@ export default function StatsScreen() {
                 style={[
                   styles.periodText,
                   { fontFamily: FONTS.mono },
-                  period === p && { color: COLORS.green },
+                  period === p && { color: COLORS.cyan },
                 ]}
               >
                 {p}j
@@ -378,8 +378,8 @@ export default function StatsScreen() {
 
       <View style={styles.section}>
         <View style={styles.kpiRow}>
-          <GlowCard glowColor={COLORS.green} style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
+          <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
+            <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
               {avgScore.toFixed(0)}
             </Text>
             <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Moy. Score</Text>
@@ -427,7 +427,7 @@ export default function StatsScreen() {
               </View>
               <View style={styles.weeklyDivider} />
               <View style={styles.weeklyItem}>
-                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
+                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
                   {avgScore.toFixed(0)}
                 </Text>
                 <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Score moy.</Text>
@@ -439,10 +439,10 @@ export default function StatsScreen() {
 
       {(prQuery.data?.personalRecords?.length ?? 0) > 0 && (
         <View style={styles.section}>
-          <GlowCard glowColor={COLORS.green} style={styles.prCard}>
+          <GlowCard glowColor={COLORS.cyan} style={styles.prCard}>
             <View style={styles.prCardHeader}>
-              <Feather name="trending-up" size={14} color={COLORS.green} />
-              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.green }]}>
+              <Feather name="trending-up" size={14} color={COLORS.cyan} />
+              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
                 MES RECORDS PERSONNELS
               </Text>
             </View>
@@ -454,10 +454,10 @@ export default function StatsScreen() {
                 <View style={styles.prItemRight}>
                   {pr.isRecent && (
                     <View style={styles.prNewBadge}>
-                      <Text style={[{ fontSize: 9, color: COLORS.green, fontFamily: FONTS.mono }]}>NEW</Text>
+                      <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
                     </View>
                   )}
-                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
+                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
                     {pr.loadKg} kg
                   </Text>
                 </View>
@@ -473,9 +473,9 @@ export default function StatsScreen() {
       )}
 
       <View style={styles.section}>
-        <GlowCard glowColor={COLORS.green} style={styles.chartCard}>
+        <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
           <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ÉVOLUTION ADAPT SCORE</Text>
-          <ScoreTrendChart data={sortedScores} color={COLORS.green} />
+          <ScoreTrendChart data={sortedScores} color={COLORS.cyan} />
         </GlowCard>
       </View>
 
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   periodBtn: { paddingHorizontal: 12, paddingVertical: 8 },
-  periodActive: { backgroundColor: COLORS.greenDim },
+  periodActive: { backgroundColor: COLORS.cyanDim },
   periodText: { fontSize: 12, color: COLORS.textSecondary },
   section: { paddingHorizontal: 20, marginBottom: 16 },
   kpiRow: { flexDirection: "row", gap: 10 },
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   calToday: {
-    borderColor: COLORS.green,
+    borderColor: COLORS.cyan,
     borderWidth: 1.5,
   },
   calDayNum: {
@@ -704,10 +704,10 @@ const styles = StyleSheet.create({
   prNewBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    backgroundColor: COLORS.greenDim,
+    backgroundColor: COLORS.cyanDim,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: COLORS.green,
+    borderColor: COLORS.cyan,
   },
   cardTitle: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
   barList: { gap: 12 },

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useUpdateMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 const FITNESS_LEVELS = [
   {
@@ -74,15 +74,15 @@ export default function FitnessLevelScreen() {
               style={[
                 styles.card,
                 isActive && {
-                  borderColor: COLORS.green,
-                  backgroundColor: COLORS.greenDim,
+                  borderColor: COLORS.cyan,
+                  backgroundColor: COLORS.cyanDim,
                 },
               ]}
             >
               <View
                 style={[
                   styles.iconBox,
-                  isActive && { backgroundColor: COLORS.green },
+                  isActive && { backgroundColor: COLORS.cyan },
                 ]}
               >
                 <Feather
@@ -96,7 +96,7 @@ export default function FitnessLevelScreen() {
                   style={[
                     styles.cardTitle,
                     { fontFamily: FONTS.bodyBold },
-                    isActive && { color: COLORS.green },
+                    isActive && { color: COLORS.cyan },
                   ]}
                 >
                   {level.label}
@@ -106,7 +106,7 @@ export default function FitnessLevelScreen() {
                 </Text>
               </View>
               {isActive && (
-                <Feather name="check-circle" size={20} color={COLORS.green} />
+                <Feather name="check-circle" size={20} color={COLORS.cyan} />
               )}
             </TouchableOpacity>
           );
@@ -117,12 +117,13 @@ export default function FitnessLevelScreen() {
         <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
       ) : null}
       <View style={styles.actions}>
-        <Button label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
-        <Button
-          label="Passer pour l'instant"
+        <GradientButton label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
+        <TouchableOpacity
           onPress={() => router.push("/onboarding/goal")}
-          variant="ghost"
-        />
+          style={styles.skipBtn}
+        >
+          <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flexGrow: 1, paddingHorizontal: 24 },
   stepIndicator: { marginBottom: 16 },
-  step: { fontSize: 13, color: COLORS.green, letterSpacing: 2 },
+  step: { fontSize: 13, color: COLORS.cyan, letterSpacing: 2 },
   title: { fontSize: 48, color: COLORS.white, letterSpacing: 4, lineHeight: 52 },
   subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, marginBottom: 32 },
   cards: { gap: 12, marginBottom: 32 },
@@ -159,4 +160,6 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 13, color: COLORS.textSecondary },
   actions: { gap: 12 },
   error: { color: COLORS.red, fontSize: 13, textAlign: "center", marginBottom: 8 },
+  skipBtn: { alignItems: "center", padding: 12 },
+  skipText: { color: COLORS.textMuted, fontSize: 14 },
 });

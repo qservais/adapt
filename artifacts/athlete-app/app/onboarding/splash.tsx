@@ -8,14 +8,14 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 const FEATURES = [
   {
     icon: "activity" as const,
     title: "Check-in quotidien",
     desc: "Évalue sommeil, énergie, stress, courbatures et motivation en moins d'une minute.",
-    color: COLORS.green,
+    color: COLORS.cyan,
   },
   {
     icon: "zap" as const,
@@ -27,13 +27,13 @@ const FEATURES = [
     icon: "bar-chart-2" as const,
     title: "Suivi de progression",
     desc: "Vue calendrier, graphiques de tendance et bilans hebdomadaires pour rester dans l'axe.",
-    color: COLORS.cyan,
+    color: COLORS.violet,
   },
   {
     icon: "users" as const,
     title: "Connexion coach",
     desc: "Ton coach voit tes données et adapte ton programme en temps réel.",
-    color: COLORS.violet,
+    color: COLORS.green,
   },
 ];
 
@@ -74,7 +74,7 @@ export default function OnboardingSplashScreen() {
       </View>
 
       <View style={styles.actions}>
-        <Button
+        <GradientButton
           label="Configurer mon profil"
           onPress={() => router.push("/onboarding/profile")}
         />
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 80,
-    color: COLORS.green,
+    color: COLORS.cyan,
     letterSpacing: 12,
     lineHeight: 80,
   },

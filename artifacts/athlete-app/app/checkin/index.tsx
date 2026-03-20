@@ -16,7 +16,9 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useSubmitCheckin, useGetMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
+import { AdaptSlider } from "@/components/ui/AdaptSlider";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 
 type IconName = "sun" | "zap" | "activity" | "thermometer" | "target" | "alert-triangle";
 
@@ -26,6 +28,7 @@ interface SliderStep {
   title: string;
   subtitle: string;
   icon: IconName;
+  color: string;
   labels: [string, string, string, string, string];
 }
 
@@ -69,6 +72,7 @@ const ALL_STEPS: Step[] = [
     title: "SOMMEIL",
     subtitle: "Comment as-tu dormi cette nuit ?",
     icon: "sun",
+    color: COLORS.cyan,
     labels: ["Très mal", "Mal", "Correct", "Bien", "Excellent"],
   },
   {
@@ -77,6 +81,7 @@ const ALL_STEPS: Step[] = [
     title: "ÉNERGIE",
     subtitle: "Quel est ton niveau d'énergie en ce moment ?",
     icon: "zap",
+    color: COLORS.green,
     labels: ["Épuisé", "Fatigué", "Neutre", "Bien", "Au top"],
   },
   {
@@ -85,6 +90,7 @@ const ALL_STEPS: Step[] = [
     title: "STRESS",
     subtitle: "Quel est ton niveau de stress actuel ?",
     icon: "activity",
+    color: COLORS.amber,
     labels: ["Très stressé", "Stressé", "Neutre", "Calme", "Très calme"],
   },
   {
@@ -93,6 +99,7 @@ const ALL_STEPS: Step[] = [
     title: "COURBATURES",
     subtitle: "As-tu des douleurs ou courbatures musculaires ?",
     icon: "thermometer",
+    color: COLORS.red,
     labels: ["Très douloureux", "Douloureux", "Moyen", "Peu", "Aucun"],
   },
   {
@@ -101,6 +108,7 @@ const ALL_STEPS: Step[] = [
     title: "MOTIVATION",
     subtitle: "À quel point es-tu motivé(e) pour t'entraîner ?",
     icon: "target",
+    color: COLORS.violet,
     labels: ["Aucune", "Faible", "Correcte", "Élevée", "Extrême"],
   },
   {
@@ -119,9 +127,6 @@ const ALL_STEPS: Step[] = [
   },
 ];
 
-const SCORE_COLORS = [COLORS.red, COLORS.red, COLORS.amber, COLORS.green, COLORS.green];
-const SCORE_ICONS = ["frown", "meh", "meh", "smile", "zap"] as const;
-
 const CYCLE_PHASES = [
   { key: "menstrual", label: "Menstruelle", desc: "Jours 1–5", color: COLORS.red },
   { key: "follicular", label: "Folliculaire", desc: "Jours 6–13", color: COLORS.cyan },
@@ -131,95 +136,13 @@ const CYCLE_PHASES = [
 
 type CyclePhase = (typeof CYCLE_PHASES)[number]["key"] | null;
 
-function ScoreSelector({
-  value,
-  onChange,
-  labels,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  labels: [string, string, string, string, string];
-}) {
-  return (
-    <View style={scoreStyles.container}>
-      <View style={scoreStyles.buttonsRow}>
-        {[1, 2, 3, 4, 5].map((v) => {
-          const isActive = value === v;
-          const color = SCORE_COLORS[v - 1];
-          return (
-            <TouchableOpacity
-              key={v}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onChange(v);
-              }}
-              style={[
-                scoreStyles.btn,
-                isActive && { backgroundColor: color, borderColor: color, shadowColor: color },
-              ]}
-            >
-              <Text
-                style={[
-                  scoreStyles.btnNum,
-                  { fontFamily: FONTS.monoBold },
-                  isActive && { color: COLORS.bg },
-                  !isActive && { color: color },
-                ]}
-              >
-                {v}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      <View style={scoreStyles.labelsRow}>
-        <Text style={[scoreStyles.labelText, { fontFamily: FONTS.body }]}>
-          {labels[0]}
-        </Text>
-        <Text style={[scoreStyles.labelText, { fontFamily: FONTS.body }]}>
-          {labels[4]}
-        </Text>
-      </View>
-      {value > 0 && (
-        <View style={[scoreStyles.selectedLabel, { borderColor: SCORE_COLORS[value - 1], backgroundColor: `${SCORE_COLORS[value - 1]}15` }]}>
-          <Text style={[scoreStyles.selectedText, { fontFamily: FONTS.bodyMedium, color: SCORE_COLORS[value - 1] }]}>
-            {labels[value - 1]}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-const scoreStyles = StyleSheet.create({
-  container: { width: "100%", gap: 12, alignItems: "center" },
-  buttonsRow: { flexDirection: "row", gap: 12, justifyContent: "center" },
-  btn: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.bgCard,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  btnNum: { fontSize: 20 },
-  labelsRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", paddingHorizontal: 4 },
-  labelText: { fontSize: 11, color: COLORS.textMuted },
-  selectedLabel: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  selectedText: { fontSize: 14 },
-});
+const WELCOME_ITEMS = [
+  { key: "sleep", label: "Sommeil", icon: "sun" as const, color: COLORS.cyan },
+  { key: "energy", label: "Énergie", icon: "zap" as const, color: COLORS.green },
+  { key: "stress", label: "Stress", icon: "activity" as const, color: COLORS.amber },
+  { key: "soreness", label: "Courbatures", icon: "thermometer" as const, color: COLORS.red },
+  { key: "motivation", label: "Motivation", icon: "target" as const, color: COLORS.violet },
+];
 
 export default function CheckinScreen() {
   const insets = useSafeAreaInsets();
@@ -245,6 +168,7 @@ export default function CheckinScreen() {
 
   const isLastStep = stepIndex === steps.length - 1;
   const currentStep = steps[stepIndex];
+  const currentColor = currentStep.kind === "slider" ? currentStep.color : COLORS.cyan;
 
   const handleNext = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -294,34 +218,21 @@ export default function CheckinScreen() {
     setStepIndex((s) => s - 1);
   };
 
-  const WELCOME_ITEMS = [
-    { key: "sleep", label: "Sommeil", icon: "sun" as const },
-    { key: "energy", label: "Énergie", icon: "zap" as const },
-    { key: "stress", label: "Stress", icon: "activity" as const },
-    { key: "soreness", label: "Courbatures", icon: "thermometer" as const },
-    { key: "motivation", label: "Motivation", icon: "target" as const },
-  ];
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
     >
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top + 16 },
-        ]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Pressable onPress={handleBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.white} />
         </Pressable>
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${((stepIndex + 1) / steps.length) * 100}%` },
-            ]}
+        <View style={{ flex: 1 }}>
+          <ProgressBar
+            progress={stepIndex + 1}
+            total={steps.length}
+            color={currentColor}
+            height={3}
           />
         </View>
         <Text style={[styles.stepCount, { fontFamily: FONTS.mono }]}>
@@ -330,10 +241,7 @@ export default function CheckinScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 120 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -341,44 +249,47 @@ export default function CheckinScreen() {
           <View
             style={[
               styles.iconCircle,
-              { borderColor: COLORS.green, backgroundColor: COLORS.greenDim },
+              { borderColor: currentColor, backgroundColor: `${currentColor}15` },
             ]}
           >
-            <Feather name={currentStep.icon} size={40} color={COLORS.green} />
+            <Feather name={currentStep.icon} size={40} color={currentColor} />
           </View>
         </View>
 
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>
-          {currentStep.title}
-        </Text>
-        <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          {currentStep.subtitle}
-        </Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{currentStep.title}</Text>
+        <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>{currentStep.subtitle}</Text>
 
         {currentStep.kind === "welcome" && (
           <View style={styles.welcomeSection}>
-            <View style={styles.welcomeGrid}>
-              {WELCOME_ITEMS.map((item) => (
-                <View key={item.key} style={styles.welcomeItem}>
-                  <Feather name={item.icon} size={16} color={COLORS.green} />
-                  <Text style={[styles.welcomeLabel, { fontFamily: FONTS.body }]}>
-                    {item.label}
-                  </Text>
+            {WELCOME_ITEMS.map((item) => (
+              <View key={item.key} style={styles.welcomeItem}>
+                <View style={[styles.welcomeIconWrap, { backgroundColor: `${item.color}15` }]}>
+                  <Feather name={item.icon} size={18} color={item.color} />
                 </View>
-              ))}
-            </View>
+                <Text style={[styles.welcomeLabel, { fontFamily: FONTS.bodyMedium }]}>
+                  {item.label}
+                </Text>
+              </View>
+            ))}
           </View>
         )}
 
         {currentStep.kind === "slider" && (
           <View style={styles.sliderSection}>
-            <ScoreSelector
+            <AdaptSlider
               value={values[currentStep.key]}
-              onChange={(v) =>
-                setValues((prev) => ({ ...prev, [currentStep.key]: v }))
-              }
+              min={1}
+              max={5}
+              step={1}
+              onChange={(v) => setValues((prev) => ({ ...prev, [currentStep.key]: v }))}
+              activeColor={currentStep.color}
               labels={currentStep.labels}
             />
+            <View style={[styles.selectedLabelWrap, { borderColor: `${currentStep.color}40`, backgroundColor: `${currentStep.color}10` }]}>
+              <Text style={[styles.selectedLabel, { fontFamily: FONTS.bodyMedium, color: currentStep.color }]}>
+                {currentStep.labels[values[currentStep.key] - 1]}
+              </Text>
+            </View>
           </View>
         )}
 
@@ -389,33 +300,18 @@ export default function CheckinScreen() {
               return (
                 <TouchableOpacity
                   key={phase.key}
-                  onPress={() =>
-                    setCyclePhase((prev) => (prev === phase.key ? null : phase.key))
-                  }
+                  onPress={() => setCyclePhase((prev) => (prev === phase.key ? null : phase.key))}
                   style={[
                     styles.cycleBtn,
-                    isActive && { borderColor: phase.color, backgroundColor: `${phase.color}20` },
+                    isActive && { borderColor: phase.color, backgroundColor: `${phase.color}15` },
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.cycleDot,
-                      { backgroundColor: isActive ? phase.color : COLORS.border },
-                    ]}
-                  />
+                  <View style={[styles.cycleDot, { backgroundColor: isActive ? phase.color : COLORS.border }]} />
                   <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.cycleLabel,
-                        { fontFamily: FONTS.bodyMedium },
-                        isActive && { color: phase.color },
-                      ]}
-                    >
+                    <Text style={[styles.cycleLabel, { fontFamily: FONTS.bodyMedium }, isActive && { color: phase.color }]}>
                       {phase.label}
                     </Text>
-                    <Text style={[styles.cycleDesc, { fontFamily: FONTS.mono }]}>
-                      {phase.desc}
-                    </Text>
+                    <Text style={[styles.cycleDesc, { fontFamily: FONTS.mono }]}>{phase.desc}</Text>
                   </View>
                   {isActive && <Feather name="check" size={18} color={phase.color} />}
                 </TouchableOpacity>
@@ -441,15 +337,12 @@ export default function CheckinScreen() {
                   }}
                   style={[
                     styles.painOpt,
-                    hasPain === opt.value && {
-                      borderColor: opt.color,
-                      backgroundColor: `${opt.color}20`,
-                    },
+                    hasPain === opt.value && { borderColor: opt.color, backgroundColor: `${opt.color}15` },
                   ]}
                 >
                   <Feather
                     name={opt.icon}
-                    size={24}
+                    size={28}
                     color={hasPain === opt.value ? opt.color : COLORS.textMuted}
                   />
                   <Text
@@ -479,13 +372,8 @@ export default function CheckinScreen() {
         )}
       </ScrollView>
 
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: insets.bottom + 24 },
-        ]}
-      >
-        <Button
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
+        <GradientButton
           label={isLastStep ? "Valider mon check-in" : "Suivant"}
           onPress={handleNext}
           loading={submitMutation.isPending}
@@ -505,31 +393,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: { padding: 4 },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: COLORS.green,
-    borderRadius: 2,
-  },
-  stepCount: { fontSize: 12, color: COLORS.textMuted, minWidth: 30, textAlign: "right" },
+  stepCount: { fontSize: 11, color: COLORS.textMuted, minWidth: 30, textAlign: "right" },
   content: {
     flexGrow: 1,
     paddingHorizontal: 28,
     alignItems: "center",
-    gap: 0,
   },
   iconWrap: { marginTop: 40, marginBottom: 28 },
   iconCircle: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 2,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -541,29 +416,41 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textSecondary,
     textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 48,
+    lineHeight: 22,
+    marginBottom: 40,
   },
-  welcomeSection: { width: "100%", alignItems: "center" },
-  welcomeGrid: { gap: 12, width: "100%" },
+  welcomeSection: { width: "100%", gap: 10 },
   welcomeItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
     backgroundColor: COLORS.bgCard,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  welcomeLabel: { fontSize: 15, color: COLORS.textSecondary },
-  sliderSection: {
-    width: "100%",
-    gap: 16,
+  welcomeIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  welcomeLabel: { fontSize: 15, color: COLORS.textSecondary },
+  sliderSection: { width: "100%", gap: 20 },
+  selectedLabelWrap: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    alignItems: "center",
+    alignSelf: "center",
+  },
+  selectedLabel: { fontSize: 15 },
   cycleSection: { width: "100%", gap: 10 },
   cycleBtn: {
     flexDirection: "row",
@@ -582,16 +469,15 @@ const styles = StyleSheet.create({
   painOptions: { flexDirection: "row", gap: 12 },
   painOpt: {
     flex: 1,
-    flexDirection: "column",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     backgroundColor: COLORS.bgCard,
     borderRadius: 14,
     padding: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  painOptLabel: { fontSize: 14, color: COLORS.textSecondary, textAlign: "center" },
+  painOptLabel: { fontSize: 13, color: COLORS.textSecondary, textAlign: "center" },
   painInput: {
     backgroundColor: COLORS.bgInput,
     borderRadius: 12,
@@ -602,6 +488,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     minHeight: 80,
     textAlignVertical: "top",
+    width: "100%",
   },
   footer: {
     position: "absolute",

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,8 +14,18 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { useGetTodaySession } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+import { CircularTimer, type CircularTimerRef } from "@/components/ui/CircularTimer";
+import { Stepper } from "@/components/ui/Stepper";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 
 const CATEGORY_IMAGES: Record<string, ReturnType<typeof require>> = {
   compound: require("@/assets/images/categories/compound.png"),
@@ -25,76 +35,45 @@ const CATEGORY_IMAGES: Record<string, ReturnType<typeof require>> = {
   plyometric: require("@/assets/images/categories/plyometric.png"),
 };
 
-function RestTimer({
-  seconds,
-  onSkip,
-}: {
-  seconds: number;
-  onSkip: () => void;
-}) {
-  const [remaining, setRemaining] = useState(seconds);
-
+function PRPulse({ color }: { color: string }) {
+  const scale = useSharedValue(1);
   useEffect(() => {
-    setRemaining(seconds);
-    if (seconds <= 0) return;
-    const interval = setInterval(() => {
-      setRemaining((r) => {
-        if (r <= 1) {
-          clearInterval(interval);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          return 0;
-        }
-        return r - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [seconds]);
-
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-
+    scale.value = withRepeat(
+      withSequence(withTiming(1.08, { duration: 600 }), withTiming(1, { duration: 600 })),
+      -1,
+      false
+    );
+  }, []);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <View style={timerStyles.container}>
-      <Text style={[timerStyles.label, { fontFamily: FONTS.mono }]}>REPOS</Text>
-      <Text style={[timerStyles.timer, { fontFamily: FONTS.mono }]}>
-        {mins}:{String(secs).padStart(2, "0")}
+    <Animated.View
+      style={[
+        style,
+        {
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          paddingHorizontal: 14,
+          paddingVertical: 7,
+          borderRadius: 20,
+          backgroundColor: `${color}20`,
+          borderWidth: 1,
+          borderColor: color,
+        },
+      ]}
+    >
+      <Feather name="trending-up" size={12} color={color} />
+      <Text style={{ fontFamily: FONTS.monoBold, fontSize: 11, color, letterSpacing: 1 }}>
+        NOUVEAU RECORD !
       </Text>
-      <TouchableOpacity onPress={onSkip} style={timerStyles.skipBtn}>
-        <Text style={[timerStyles.skipText, { fontFamily: FONTS.bodyMedium }]}>
-          Passer le repos
-        </Text>
-      </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
-
-const timerStyles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 24,
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    width: "100%",
-  },
-  label: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
-  timer: { fontSize: 52, color: COLORS.cyan },
-  skipBtn: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: COLORS.bgElevated,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  skipText: { fontSize: 13, color: COLORS.textSecondary },
-});
 
 export default function ExerciseScreen() {
   const insets = useSafeAreaInsets();
   const sessionQuery = useGetTodaySession();
+  const timerRef = useRef<CircularTimerRef>(null);
   const session = sessionQuery.data;
   const exercises = session?.exercises ?? [];
   const modeKey = (session?.mode ?? "normal") as SessionMode;
@@ -110,12 +89,8 @@ export default function ExerciseScreen() {
   const totalExercises = exercises.length;
   const isLast = exerciseIndex === totalExercises - 1;
 
-  const adjustLoad = useCallback((exId: string, delta: number, base: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLoadAdjustments((prev) => {
-      const current = prev[exId] ?? base;
-      return { ...prev, [exId]: Math.max(0, current + delta) };
-    });
+  const adjustLoad = useCallback((exId: string, next: number) => {
+    setLoadAdjustments((prev) => ({ ...prev, [exId]: next }));
   }, []);
 
   const handleSetDone = () => {
@@ -123,6 +98,7 @@ export default function ExerciseScreen() {
     if (currentSet < (exercise?.sets ?? 1)) {
       if ((exercise?.restSeconds ?? 0) > 0) {
         setShowRest(true);
+        setTimeout(() => timerRef.current?.start(), 50);
       } else {
         setCurrentSet((s) => s + 1);
       }
@@ -133,6 +109,7 @@ export default function ExerciseScreen() {
 
   const handleExerciseDone = () => {
     setShowRest(false);
+    timerRef.current?.reset();
     if (isLast) {
       router.replace("/session/complete");
     } else {
@@ -143,6 +120,12 @@ export default function ExerciseScreen() {
 
   const handleSkipRest = () => {
     setShowRest(false);
+    timerRef.current?.reset();
+    setCurrentSet((s) => s + 1);
+  };
+
+  const handleTimerComplete = () => {
+    setShowRest(false);
     setCurrentSet((s) => s + 1);
   };
 
@@ -150,7 +133,7 @@ export default function ExerciseScreen() {
     return (
       <View style={[styles.flex, { backgroundColor: COLORS.bg, alignItems: "center", justifyContent: "center", gap: 16 }]}>
         <ActivityIndicator size="large" color={COLORS.cyan} />
-        <Text style={[{ color: COLORS.textSecondary, fontFamily: FONTS.body }]}>
+        <Text style={{ color: COLORS.textSecondary, fontFamily: FONTS.body }}>
           Chargement de la séance...
         </Text>
       </View>
@@ -161,18 +144,18 @@ export default function ExerciseScreen() {
     return (
       <View style={[styles.flex, { backgroundColor: COLORS.bg, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 32 }]}>
         <Feather name="alert-circle" size={40} color={COLORS.textMuted} />
-        <Text style={[{ color: COLORS.textSecondary, fontFamily: FONTS.body, textAlign: "center" }]}>
+        <Text style={{ color: COLORS.textSecondary, fontFamily: FONTS.body, textAlign: "center" }}>
           Aucun exercice disponible pour cette séance.
         </Text>
         <TouchableOpacity onPress={() => router.replace("/")} style={styles.backHomeBtn}>
-          <Text style={[{ color: COLORS.white, fontFamily: FONTS.bodyMedium }]}>Retour à l'accueil</Text>
+          <Text style={{ color: COLORS.white, fontFamily: FONTS.bodyMedium }}>Retour à l'accueil</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? 0;
-  const progress = ((exerciseIndex) / totalExercises) * 100;
+  const progress = exerciseIndex / totalExercises;
   const currentPR = athletePRs?.[exercise.exerciseId];
   const isAbovePR = currentPR != null && currentLoad > currentPR;
 
@@ -189,14 +172,10 @@ export default function ExerciseScreen() {
           onPress={() => {
             Alert.alert(
               "Quitter la séance ?",
-              "Tu pourras reprendre depuis le début après ta prochaine vérification.",
+              "Ta progression sera perdue.",
               [
                 { text: "Continuer", style: "cancel" },
-                {
-                  text: "Quitter",
-                  style: "destructive",
-                  onPress: () => router.back(),
-                },
+                { text: "Quitter", style: "destructive", onPress: () => router.back() },
               ]
             );
           }}
@@ -204,33 +183,35 @@ export default function ExerciseScreen() {
         >
           <Feather name="x" size={22} color={COLORS.textSecondary} />
         </Pressable>
-        <View style={styles.progressWrap}>
-          <View style={styles.progressBg}>
-            <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: cfg.color }]} />
-          </View>
-          <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
-            {exerciseIndex + 1}/{totalExercises}
-          </Text>
+        <View style={{ flex: 1 }}>
+          <ProgressBar
+            progress={exerciseIndex}
+            total={totalExercises}
+            color={cfg.color}
+            height={4}
+          />
         </View>
+        <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
+          {exerciseIndex + 1}/{totalExercises}
+        </Text>
       </View>
 
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 120 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.setLabel, { fontFamily: FONTS.mono }]}>
+        <Text style={[styles.setLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
           SÉRIE {currentSet}/{exercise.sets}
         </Text>
-        {(exercise.category && CATEGORY_IMAGES[exercise.category]) ? (
+
+        {exercise.category && CATEGORY_IMAGES[exercise.category] ? (
           <Image
             source={CATEGORY_IMAGES[exercise.category]}
             style={styles.exerciseImage}
             resizeMode="cover"
           />
         ) : null}
+
         <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
           {exercise.exerciseName}
         </Text>
@@ -240,60 +221,50 @@ export default function ExerciseScreen() {
 
         {currentLoad > 0 && (
           <View style={styles.loadSection}>
-            <View style={styles.loadRow}>
-              <TouchableOpacity
-                onPress={() => adjustLoad(exercise.id, -2.5, currentLoad)}
-                style={styles.loadBtn}
-              >
-                <Feather name="minus" size={22} color={COLORS.white} />
-              </TouchableOpacity>
-              <View style={styles.loadDisplay}>
-                <Text style={[styles.loadVal, { fontFamily: FONTS.monoBold }]}>
-                  {currentLoad}
-                </Text>
-                <Text style={[styles.loadUnit, { fontFamily: FONTS.mono }]}>kg</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => adjustLoad(exercise.id, 2.5, currentLoad)}
-                style={styles.loadBtn}
-              >
-                <Feather name="plus" size={22} color={COLORS.white} />
-              </TouchableOpacity>
-            </View>
-            {currentPR != null && (
-              <View style={[styles.prBadge, isAbovePR ? styles.prBadgeAbove : styles.prBadgeBelow]}>
-                {isAbovePR ? (
-                  <Feather name="trending-up" size={12} color={COLORS.green} />
-                ) : (
-                  <Feather name="award" size={12} color={COLORS.textMuted} />
-                )}
-                <Text style={[
-                  styles.prText,
-                  { fontFamily: FONTS.mono },
-                  isAbovePR ? { color: COLORS.green } : { color: COLORS.textMuted },
-                ]}>
-                  {isAbovePR ? `NOUVEAU RECORD ! (${currentPR} kg)` : `RECORD : ${currentPR} kg`}
+            <Stepper
+              value={currentLoad}
+              onChange={(v) => adjustLoad(exercise.id, v)}
+              min={0}
+              max={500}
+              step={2.5}
+              unit="kg"
+              label="CHARGE"
+              decimals={1}
+            />
+            {isAbovePR && <PRPulse color={COLORS.green} />}
+            {currentPR != null && !isAbovePR && (
+              <View style={styles.prInfo}>
+                <Feather name="award" size={12} color={COLORS.textMuted} />
+                <Text style={[styles.prText, { fontFamily: FONTS.mono }]}>
+                  Record actuel : {currentPR} kg
                 </Text>
               </View>
             )}
           </View>
         )}
 
-        {exercise.coachCue && (
+        {exercise.coachCue ? (
           <View style={styles.cueBox}>
             <Feather name="message-square" size={14} color={COLORS.cyan} />
-            <Text style={[styles.cueText, { fontFamily: FONTS.body }]}>
-              {exercise.coachCue}
-            </Text>
+            <Text style={[styles.cueText, { fontFamily: FONTS.body }]}>{exercise.coachCue}</Text>
           </View>
-        )}
+        ) : null}
 
-        {showRest && (exercise.restSeconds ?? 0) > 0 && (
-          <RestTimer
-            seconds={exercise.restSeconds!}
-            onSkip={handleSkipRest}
-          />
-        )}
+        {showRest && (exercise.restSeconds ?? 0) > 0 ? (
+          <View style={styles.restContainer}>
+            <CircularTimer
+              ref={timerRef}
+              durationSeconds={exercise.restSeconds!}
+              onComplete={handleTimerComplete}
+              autoStart={false}
+            />
+            <TouchableOpacity onPress={handleSkipRest} style={styles.skipBtn}>
+              <Text style={[styles.skipText, { fontFamily: FONTS.bodyMedium }]}>
+                Passer le repos
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </ScrollView>
 
       {!showRest && (
@@ -323,20 +294,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   closeBtn: { padding: 4 },
-  progressWrap: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  progressBg: {
-    flex: 1,
-    height: 4,
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: { height: "100%", borderRadius: 2 },
   progressText: { fontSize: 12, color: COLORS.textMuted, minWidth: 36, textAlign: "right" },
   content: {
     paddingHorizontal: 28,
@@ -344,53 +301,22 @@ const styles = StyleSheet.create({
     gap: 24,
     paddingTop: 16,
   },
-  setLabel: { fontSize: 13, color: COLORS.textMuted, letterSpacing: 2 },
+  setLabel: { fontSize: 13, letterSpacing: 2 },
   exerciseImage: {
     width: "100%",
     height: 180,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: 14,
     backgroundColor: COLORS.bgCard,
   },
   exerciseName: { fontSize: 44, letterSpacing: 2, textAlign: "center", lineHeight: 48 },
   repsText: { fontSize: 32, color: COLORS.white, letterSpacing: 4 },
-  loadSection: { alignItems: "center", gap: 10, width: "100%" },
-  loadRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 24,
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  loadBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.bgElevated,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  loadDisplay: { alignItems: "center" },
-  loadVal: { fontSize: 38, color: COLORS.white },
-  loadUnit: { fontSize: 14, color: COLORS.textSecondary },
-  prBadge: {
+  loadSection: { alignItems: "center", gap: 14, width: "100%" },
+  prInfo: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
   },
-  prBadgeAbove: { backgroundColor: COLORS.greenDim, borderColor: COLORS.green },
-  prBadgeBelow: { backgroundColor: COLORS.bgCard, borderColor: COLORS.border },
-  prText: { fontSize: 11, letterSpacing: 1 },
+  prText: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1 },
   cueBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -398,11 +324,21 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cyanDim,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.cyan,
+    borderColor: `${COLORS.cyan}40`,
     padding: 14,
     width: "100%",
   },
   cueText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
+  restContainer: { alignItems: "center", gap: 20 },
+  skipBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: COLORS.bgElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  skipText: { fontSize: 14, color: COLORS.textSecondary },
   footer: {
     position: "absolute",
     bottom: 0,

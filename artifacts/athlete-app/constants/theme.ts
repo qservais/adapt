@@ -1,69 +1,69 @@
 export const COLORS = {
   bg: "#0A0A0A",
-  bgCard: "#121212",
-  bgElevated: "#1A1A1A",
+  bgCard: "#141414",
+  bgElevated: "#252525",
   bgInput: "#1E1E1E",
   border: "#2A2A2A",
   borderLight: "#333333",
 
-  green: "#00F5A0",
-  greenDim: "rgba(0,245,160,0.15)",
-  greenGlow: "rgba(0,245,160,0.3)",
+  cyan: "#00F0FF",
+  cyanDim: "rgba(0,240,255,0.12)",
+  cyanGlow: "rgba(0,240,255,0.3)",
 
-  cyan: "#00D9FF",
-  cyanDim: "rgba(0,217,255,0.15)",
+  green: "#22C55E",
+  greenDim: "rgba(34,197,94,0.12)",
+  greenGlow: "rgba(34,197,94,0.3)",
 
-  amber: "#FFB800",
-  amberDim: "rgba(255,184,0,0.15)",
-  amberGlow: "rgba(255,184,0,0.3)",
+  violet: "#A855F7",
+  violetDim: "rgba(168,85,247,0.12)",
+  violetGlow: "rgba(168,85,247,0.3)",
 
-  red: "#FF3B5C",
-  redDim: "rgba(255,59,92,0.15)",
-  redGlow: "rgba(255,59,92,0.3)",
+  amber: "#F59E0B",
+  amberDim: "rgba(245,158,11,0.12)",
+  amberGlow: "rgba(245,158,11,0.3)",
 
-  violet: "#7B61FF",
-  violetDim: "rgba(123,97,255,0.15)",
-  violetGlow: "rgba(123,97,255,0.3)",
+  red: "#EF4444",
+  redDim: "rgba(239,68,68,0.12)",
+  redGlow: "rgba(239,68,68,0.3)",
+
+  gold: "#FFD700",
+  goldDim: "rgba(255,215,0,0.12)",
+  goldGlow: "rgba(255,215,0,0.3)",
 
   white: "#FFFFFF",
-  gray100: "#F5F5F5",
-  gray200: "#E0E0E0",
-  gray400: "#999999",
-  gray600: "#666666",
-  gray800: "#333333",
   textPrimary: "#FFFFFF",
-  textSecondary: "#888888",
+  textSecondary: "#A0A0A0",
   textMuted: "#555555",
+  textInverse: "#0A0A0A",
+
+  gradientStart: "#00F0FF",
+  gradientEnd: "#A855F7",
 };
 
 export const MODE_CONFIG = {
   performance: {
-    color: COLORS.violet,
-    dim: COLORS.violetDim,
-    glow: COLORS.violetGlow,
+    color: "#3B82F6",
+    dim: "rgba(59,130,246,0.12)",
+    glow: "rgba(59,130,246,0.3)",
     label: "PERFORMANCE",
-    emoji: "violet",
   },
   normal: {
     color: COLORS.cyan,
     dim: COLORS.cyanDim,
-    glow: "rgba(0,217,255,0.3)",
+    glow: COLORS.cyanGlow,
     label: "NORMAL",
-    emoji: "cyan",
   },
   adapt: {
     color: COLORS.amber,
     dim: COLORS.amberDim,
     glow: COLORS.amberGlow,
     label: "ADAPT",
-    emoji: "amber",
   },
   recovery: {
     color: COLORS.red,
     dim: COLORS.redDim,
     glow: COLORS.redGlow,
     label: "RECOVERY",
-    emoji: "red",
   },
 } as const;
 
@@ -78,3 +78,29 @@ export const FONTS = {
   mono: "SpaceMono_400Regular",
   monoBold: "SpaceMono_700Bold",
 };
+
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+  screen: 20,
+};
+
+export const RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 9999,
+};
+
+export function getModeColor(mode: string): string {
+  return (MODE_CONFIG[mode as SessionMode]?.color) ?? COLORS.cyan;
+}
+
+export function getModeDim(mode: string): string {
+  return (MODE_CONFIG[mode as SessionMode]?.dim) ?? COLORS.cyanDim;
+}

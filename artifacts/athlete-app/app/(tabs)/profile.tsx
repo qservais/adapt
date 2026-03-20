@@ -20,7 +20,7 @@ import { COLORS, FONTS } from "@/constants/theme";
 import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 const GOAL_LABELS: Record<string, string> = {
   strength: "Force",
@@ -176,7 +176,7 @@ export default function ProfileScreen() {
       <View style={styles.headerRow}>
         <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>PROFIL</Text>
         <TouchableOpacity onPress={editing ? () => setEditing(false) : startEditing} style={styles.editBtn}>
-          <Feather name={editing ? "x" : "edit-2"} size={20} color={COLORS.green} />
+          <Feather name={editing ? "x" : "edit-2"} size={20} color={COLORS.cyan} />
         </TouchableOpacity>
       </View>
 
@@ -201,7 +201,7 @@ export default function ProfileScreen() {
               styles.roleText,
               {
                 fontFamily: FONTS.mono,
-                color: profile?.role === "coach" ? COLORS.violet : COLORS.green,
+                color: profile?.role === "coach" ? COLORS.violet : COLORS.cyan,
               },
             ]}
           >
@@ -242,7 +242,7 @@ export default function ProfileScreen() {
       )}
 
       {editing ? (
-        <GlowCard glowColor={COLORS.green} style={styles.editCard}>
+        <GlowCard glowColor={COLORS.cyan} style={styles.editCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             MODIFIER LE PROFIL
           </Text>
@@ -287,8 +287,8 @@ export default function ProfileScreen() {
               <Switch
                 value={cycleTracking}
                 onValueChange={setCycleTracking}
-                trackColor={{ false: COLORS.border, true: COLORS.greenDim }}
-                thumbColor={cycleTracking ? COLORS.green : COLORS.textMuted}
+                trackColor={{ false: COLORS.border, true: COLORS.cyanDim }}
+                thumbColor={cycleTracking ? COLORS.cyan : COLORS.textMuted}
               />
             </View>
           )}
@@ -336,7 +336,7 @@ export default function ProfileScreen() {
               />
             </View>
           </View>
-          <Button label="Enregistrer" onPress={handleSave} loading={updateMutation.isPending} />
+          <GradientButton label="Enregistrer" onPress={handleSave} loading={updateMutation.isPending} />
         </GlowCard>
       ) : (
         <View style={styles.infoSection}>
@@ -391,9 +391,9 @@ export default function ProfileScreen() {
           )}
           {hasCoach && (
             <View style={styles.infoRow}>
-              <Feather name="users" size={16} color={COLORS.green} />
+              <Feather name="users" size={16} color={COLORS.cyan} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Coach</Text>
-              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.green }]}>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan }]}>
                 Connecté
               </Text>
             </View>
@@ -414,8 +414,8 @@ export default function ProfileScreen() {
           </Text>
           {coachLinked ? (
             <View style={styles.linkedRow}>
-              <Feather name="check-circle" size={20} color={COLORS.green} />
-              <Text style={[styles.linkedText, { fontFamily: FONTS.bodyMedium, color: COLORS.green }]}>
+              <Feather name="check-circle" size={20} color={COLORS.cyan} />
+              <Text style={[styles.linkedText, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan }]}>
                 Coach connecté avec succès !
               </Text>
             </View>
@@ -433,7 +433,7 @@ export default function ProfileScreen() {
                   {coachLinkError}
                 </Text>
               ) : null}
-              <Button
+              <GradientButton
                 label="Connecter"
                 onPress={handleLinkCoach}
                 loading={linkMutation.isPending}
@@ -507,20 +507,20 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: COLORS.greenDim,
+    backgroundColor: COLORS.cyanDim,
     borderWidth: 2,
-    borderColor: COLORS.green,
+    borderColor: COLORS.cyan,
     alignItems: "center",
     justifyContent: "center",
   },
-  initials: { fontSize: 38, color: COLORS.green },
+  initials: { fontSize: 38, color: COLORS.cyan },
   displayName: { fontSize: 22, color: COLORS.white },
   email: { fontSize: 13, color: COLORS.textMuted },
   roleBadge: {
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: COLORS.green,
-    backgroundColor: COLORS.greenDim,
+    borderColor: COLORS.cyan,
+    backgroundColor: COLORS.cyanDim,
     paddingHorizontal: 12,
     paddingVertical: 3,
   },

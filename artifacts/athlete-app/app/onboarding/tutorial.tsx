@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS, MODE_CONFIG } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 const { width } = Dimensions.get("window");
 
@@ -38,14 +38,14 @@ const SLIDES: Slide[] = [
     title: "TON ADAPT SCORE",
     desc: "On calcule ton ADAPT Score (0–100) et on attribue un mode de séance : Performance, Normal, Adapt ou Récupération.",
     icon: "activity",
-    color: COLORS.green,
+    color: COLORS.violet,
   },
   {
     key: "session",
     title: "ENTRAÎNE-TOI MIEUX",
     desc: "Ta séance est automatiquement ajustée à la forme de ton corps aujourd'hui. Charges, volume — tout est calibré.",
     icon: "zap",
-    color: COLORS.violet,
+    color: COLORS.amber,
   },
 ];
 
@@ -117,7 +117,7 @@ export default function TutorialScreen() {
             />
           ))}
         </View>
-        <Button
+        <GradientButton
           label={index < SLIDES.length - 1 ? "Suivant" : "C'est parti !"}
           onPress={goNext}
         />
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 24,
-    backgroundColor: COLORS.green,
+    backgroundColor: COLORS.cyan,
   },
   skip: { padding: 8 },
   skipText: { color: COLORS.textMuted, fontSize: 14 },

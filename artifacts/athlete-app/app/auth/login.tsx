@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,10 +10,16 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
 
 export default function LoginScreen() {
@@ -24,6 +30,28 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  const logoOpacity = useSharedValue(0);
+  const logoY = useSharedValue(30);
+  const formOpacity = useSharedValue(0);
+  const formY = useSharedValue(20);
+
+  useEffect(() => {
+    logoOpacity.value = withTiming(1, { duration: 600 });
+    logoY.value = withTiming(0, { duration: 600 });
+    formOpacity.value = withDelay(300, withTiming(1, { duration: 600 }));
+    formY.value = withDelay(300, withTiming(0, { duration: 600 }));
+  }, []);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ translateY: logoY.value }],
+  }));
+
+  const formStyle = useAnimatedStyle(() => ({
+    opacity: formOpacity.value,
+    transform: [{ translateY: formY.value }],
+  }));
 
   const handleLogin = async () => {
     setError("");
@@ -51,22 +79,20 @@ export default function LoginScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 },
+          { paddingTop: insets.top + 72, paddingBottom: insets.bottom + 40 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, logoStyle]}>
           <Text style={[styles.logo, { fontFamily: FONTS.title }]}>ADAPT</Text>
-          <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-            by LMJ
-          </Text>
+          <Text style={[styles.subtitle, { fontFamily: FONTS.mono }]}>by LMJ</Text>
           <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
             L'entraînement qui s'adapte à toi.
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.form}>
+        <Animated.View style={[styles.form, formStyle]}>
           <InputField
             label="Email"
             value={email}
@@ -84,28 +110,29 @@ export default function LoginScreen() {
             secureToggle
           />
           {error ? (
-            <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>
-              {error}
-            </Text>
+            <View style={styles.errorWrap}>
+              <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>
+                {error}
+              </Text>
+            </View>
           ) : null}
-          <Button
+          <GradientButton
             label="Se connecter"
             onPress={handleLogin}
             loading={loginMutation.isPending}
           />
-        </View>
+        </Animated.View>
 
-        <Pressable
-          onPress={() => router.push("/auth/register")}
-          style={styles.registerLink}
-        >
-          <Text style={[styles.registerText, { fontFamily: FONTS.body }]}>
-            Pas encore de compte ?{" "}
-            <Text style={{ color: COLORS.green, fontFamily: FONTS.bodySemiBold }}>
-              Créer un compte
+        <Animated.View style={[styles.footer, formStyle]}>
+          <Pressable onPress={() => router.push("/auth/register")}>
+            <Text style={[styles.footerText, { fontFamily: FONTS.body }]}>
+              Pas encore de compte ?{" "}
+              <Text style={{ color: COLORS.cyan, fontFamily: FONTS.bodySemiBold }}>
+                Créer un compte
+              </Text>
             </Text>
-          </Text>
-        </Pressable>
+          </Pressable>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -116,44 +143,43 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 28,
-    gap: 0,
   },
   header: {
     alignItems: "center",
-    marginBottom: 60,
+    marginBottom: 64,
   },
   logo: {
-    fontSize: 72,
-    color: COLORS.green,
-    letterSpacing: 8,
-    lineHeight: 80,
+    fontSize: 80,
+    color: COLORS.cyan,
+    letterSpacing: 10,
+    lineHeight: 88,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    letterSpacing: 3,
-    marginTop: -8,
+    fontSize: 14,
+    color: COLORS.textMuted,
+    letterSpacing: 4,
+    marginTop: -6,
   },
   tagline: {
     fontSize: 14,
-    color: COLORS.textMuted,
-    marginTop: 16,
+    color: COLORS.textSecondary,
+    marginTop: 18,
     textAlign: "center",
+    lineHeight: 20,
   },
-  form: {
-    gap: 16,
-    marginBottom: 32,
+  form: { gap: 16, marginBottom: 32 },
+  errorWrap: {
+    backgroundColor: COLORS.redDim,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: `${COLORS.red}40`,
   },
   errorText: {
     color: COLORS.red,
     fontSize: 13,
     textAlign: "center",
   },
-  registerLink: {
-    alignItems: "center",
-  },
-  registerText: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-  },
+  footer: { alignItems: "center" },
+  footerText: { fontSize: 15, color: COLORS.textSecondary },
 });

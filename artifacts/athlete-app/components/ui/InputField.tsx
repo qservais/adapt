@@ -33,7 +33,7 @@ export function InputField({
       <View
         style={[
           styles.inputRow,
-          focused && { borderColor: COLORS.green },
+          focused && { borderColor: COLORS.cyan },
           error && { borderColor: COLORS.red },
         ]}
       >

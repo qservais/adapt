@@ -6,7 +6,6 @@ import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants/theme";
 
 function NativeTabLayout() {
@@ -36,31 +35,70 @@ function NativeTabLayout() {
   );
 }
 
+function TabIcon({
+  name,
+  color,
+  focused,
+  sfSymbol,
+}: {
+  name: React.ComponentProps<typeof Feather>["name"];
+  color: string;
+  focused: boolean;
+  sfSymbol?: string;
+}) {
+  const isIOS = Platform.OS === "ios";
+  return (
+    <View style={tabIconStyles.wrapper}>
+      {isIOS && sfSymbol ? (
+        <SymbolView name={sfSymbol} tintColor={color} size={22} />
+      ) : (
+        <Feather name={name} size={22} color={color} />
+      )}
+      {focused && <View style={[tabIconStyles.dot, { backgroundColor: COLORS.cyan }]} />}
+    </View>
+  );
+}
+
+const tabIconStyles = StyleSheet.create({
+  wrapper: { alignItems: "center", gap: 3 },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+});
+
 function ClassicTabLayout() {
-  const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const tabHeight = isWeb ? 84 : isIOS ? 88 : 64;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.green,
+        tabBarActiveTintColor: COLORS.cyan,
         tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "500",
+          marginTop: -2,
+        },
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : COLORS.bgCard,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
           elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          height: tabHeight,
         },
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={80}
+              intensity={90}
               tint="dark"
-              style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(10,10,10,0.8)" }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(10,10,10,0.85)" }]}
             />
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.bgCard }]} />
@@ -71,60 +109,45 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Accueil",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house" tintColor={color} size={22} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="home" sfSymbol="house" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="session"
         options={{
           title: "Séance",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="bolt" tintColor={color} size={22} />
-            ) : (
-              <Feather name="zap" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="zap" sfSymbol="bolt" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
           title: "Stats",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="chart.bar" tintColor={color} size={22} />
-            ) : (
-              <Feather name="bar-chart-2" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="bar-chart-2" sfSymbol="chart.bar" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
           title: "Messages",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="message" tintColor={color} size={22} />
-            ) : (
-              <Feather name="message-circle" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="message-circle" sfSymbol="message" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profil",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person" tintColor={color} size={22} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="user" sfSymbol="person" color={color} focused={focused} />
+          ),
         }}
       />
     </Tabs>

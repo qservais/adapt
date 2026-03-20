@@ -5,13 +5,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUpdateMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
-import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
 
 export default function ProfileSetupScreen() {
@@ -95,12 +96,13 @@ export default function ProfileSetupScreen() {
         </View>
 
         <View style={styles.actions}>
-          <Button label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
-          <Button
-            label="Passer pour l'instant"
+          <GradientButton label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
+          <TouchableOpacity
             onPress={() => router.push("/onboarding/fitness")}
-            variant="ghost"
-          />
+            style={styles.skipBtn}
+          >
+            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -111,10 +113,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flexGrow: 1, paddingHorizontal: 28 },
   stepIndicator: { marginBottom: 16 },
-  step: { fontSize: 13, color: COLORS.green, letterSpacing: 2 },
+  step: { fontSize: 13, color: COLORS.cyan, letterSpacing: 2 },
   title: { fontSize: 48, color: COLORS.white, letterSpacing: 4, lineHeight: 52 },
   subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, marginBottom: 40 },
   form: { gap: 16, marginBottom: 32 },
   error: { color: COLORS.red, fontSize: 13, textAlign: "center" },
   actions: { gap: 12 },
+  skipBtn: { alignItems: "center", padding: 12 },
+  skipText: { color: COLORS.textMuted, fontSize: 14 },
 });
