@@ -19,6 +19,7 @@ import type {
 import type {
   AlertData,
   AthleteLinkRequest,
+  BadgesResponse,
   CoachLinkRequest,
   CoachUnlinkRequest,
   AuthResponse,
@@ -41,6 +42,7 @@ import type {
   MessageData,
   MessageThread,
   OverrideRequest,
+  PersonalRecordsResponse,
   ProgramDetail,
   ProgramSummary,
   RefreshRequest,
@@ -53,6 +55,7 @@ import type {
   SuccessResponse,
   UpdateProfileRequest,
   UserProfile,
+  WeeklyRecapResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -3471,3 +3474,111 @@ export const useCoachUnlink = <
 > => {
   return useMutation(getCoachUnlinkMutationOptions(options));
 };
+
+export const getBadges = async (options?: RequestInit): Promise<BadgesResponse> => {
+  return customFetch<BadgesResponse>("/api/users/badges", { ...options, method: "GET" });
+};
+
+export const getGetBadgesQueryKey = () => ["/api/users/badges"] as const;
+
+export const getGetBadgesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBadges>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getBadges>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetBadgesQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBadges>>> = ({ signal }) =>
+    getBadges({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBadges>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetBadges<
+  TData = Awaited<ReturnType<typeof getBadges>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getBadges>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBadgesQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getPersonalRecords = async (options?: RequestInit): Promise<PersonalRecordsResponse> => {
+  return customFetch<PersonalRecordsResponse>("/api/users/prs", { ...options, method: "GET" });
+};
+
+export const getGetPersonalRecordsQueryKey = () => ["/api/users/prs"] as const;
+
+export const getGetPersonalRecordsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPersonalRecords>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getPersonalRecords>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetPersonalRecordsQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPersonalRecords>>> = ({ signal }) =>
+    getPersonalRecords({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPersonalRecords>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetPersonalRecords<
+  TData = Awaited<ReturnType<typeof getPersonalRecords>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getPersonalRecords>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPersonalRecordsQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getWeeklyRecap = async (options?: RequestInit): Promise<WeeklyRecapResponse> => {
+  return customFetch<WeeklyRecapResponse>("/api/users/weekly-recap/latest", { ...options, method: "GET" });
+};
+
+export const getGetWeeklyRecapQueryKey = () => ["/api/users/weekly-recap/latest"] as const;
+
+export const getGetWeeklyRecapQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWeeklyRecap>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getWeeklyRecap>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetWeeklyRecapQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeeklyRecap>>> = ({ signal }) =>
+    getWeeklyRecap({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWeeklyRecap>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetWeeklyRecap<
+  TData = Awaited<ReturnType<typeof getWeeklyRecap>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getWeeklyRecap>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWeeklyRecapQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}

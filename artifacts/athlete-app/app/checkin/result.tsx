@@ -1,17 +1,29 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { AdaptScoreDisplay } from "@/components/ui/AdaptScoreDisplay";
+import { BadgeToast } from "@/components/ui/BadgeToast";
 
 export default function CheckinResultScreen() {
   const insets = useSafeAreaInsets();
-  const { score, mode } = useLocalSearchParams<{ score: string; mode: string }>();
+  const { score, mode, badges } = useLocalSearchParams<{ score: string; mode: string; badges?: string }>();
   const scoreNum = parseInt(score ?? "0");
   const modeKey = (mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+
+  const parsedBadges: Array<{ code: string; name: string; icon: string }> =
+    badges ? JSON.parse(badges) : [];
+
+  const [toastIndex, setToastIndex] = useState(0);
+  const [toastQueue, setToastQueue] = useState(parsedBadges);
+  const currentToast = toastQueue[toastIndex] ?? null;
+
+  const dismissToast = () => {
+    setToastIndex((i) => i + 1);
+  };
 
   const getMessage = () => {
     switch (modeKey) {
@@ -28,6 +40,7 @@ export default function CheckinResultScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+      <BadgeToast badge={currentToast} onDismiss={dismissToast} />
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
         <Text style={[styles.topLabel, { fontFamily: FONTS.mono }]}>CHECK-IN TERMINÉ</Text>
 
@@ -72,30 +85,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 28,
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
   },
   topLabel: {
-    fontSize: 11,
-    color: COLORS.green,
+    fontSize: 12,
     letterSpacing: 3,
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
   },
-  scoreWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  scoreWrap: { alignItems: "center" },
   messageBox: {
     borderRadius: 16,
     borderWidth: 1,
     padding: 20,
     width: "100%",
-    marginBottom: 24,
   },
   message: {
     fontSize: 16,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     textAlign: "center",
-    lineHeight: 26,
+    lineHeight: 24,
   },
   actions: { width: "100%", gap: 12 },
   primaryBtn: {
@@ -107,9 +116,6 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   primaryBtnText: { fontSize: 16, letterSpacing: 0.5 },
-  secondaryBtn: {
-    alignItems: "center",
-    paddingVertical: 14,
-  },
+  secondaryBtn: { alignItems: "center", paddingVertical: 14 },
   secondaryBtnText: { fontSize: 15, color: COLORS.textSecondary },
 });

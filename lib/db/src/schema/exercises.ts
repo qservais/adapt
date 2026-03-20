@@ -12,6 +12,7 @@ export const exercisesTable = pgTable("exercises", {
   muscleGroups: jsonb("muscle_groups"),
   equipment: jsonb("equipment"),
   demoUrl: varchar("demo_url", { length: 500 }),
+  demoGifUrl: varchar("demo_gif_url", { length: 500 }),
   createdBy: uuid("created_by").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

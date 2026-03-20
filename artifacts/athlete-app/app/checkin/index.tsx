@@ -258,11 +258,13 @@ export default function CheckinScreen() {
             cyclePhase: cyclePhase ?? undefined,
           },
         });
+        const badges = result.newBadges ?? [];
         router.replace({
           pathname: "/checkin/result",
           params: {
             score: String(result.checkin.adaptScore),
             mode: result.checkin.sessionMode,
+            badges: badges.length > 0 ? JSON.stringify(badges) : "",
           },
         });
       } catch (err: unknown) {

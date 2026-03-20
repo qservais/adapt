@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, exercisesTable, sessionLogsTable, checkinsTable, exerciseLogsTable } from "@workspace/db";
+import { eq, and, desc, gte, sql, count } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -87,6 +87,173 @@ router.put("/users/me", authenticate, async (req, res) => {
 
     res.json(userProfile(user));
   } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.get("/users/badges", authenticate, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const allBadges = await db.select().from(badgesTable).orderBy(badgesTable.sortOrder);
+    const unlocked = await db.select({ badgeId: userBadgesTable.badgeId, unlockedAt: userBadgesTable.unlockedAt })
+      .from(userBadgesTable)
+      .where(eq(userBadgesTable.userId, userId));
+
+    const unlockedMap: Record<string, string> = {};
+    for (const ub of unlocked) {
+      unlockedMap[ub.badgeId] = ub.unlockedAt ? ub.unlockedAt.toISOString() : "";
+    }
+
+    const badges = allBadges.map(b => ({
+      code: b.code,
+      name: b.name,
+      description: b.description,
+      icon: b.icon,
+      category: b.category,
+      sortOrder: b.sortOrder,
+      unlocked: !!unlockedMap[b.id],
+      unlockedAt: unlockedMap[b.id] ?? null,
+    }));
+
+    res.json({ badges, total: badges.length, unlockedCount: unlocked.length });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.get("/users/prs", authenticate, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+
+    const prs = await db.select({
+      exerciseId: personalRecordsTable.exerciseId,
+      exerciseName: exercisesTable.name,
+      loadKg: personalRecordsTable.loadKg,
+      reps: personalRecordsTable.reps,
+      previousLoadKg: personalRecordsTable.previousLoadKg,
+      achievedAt: personalRecordsTable.achievedAt,
+    })
+      .from(personalRecordsTable)
+      .innerJoin(exercisesTable, eq(personalRecordsTable.exerciseId, exercisesTable.id))
+      .where(eq(personalRecordsTable.userId, userId))
+      .orderBy(desc(personalRecordsTable.achievedAt));
+
+    const result = prs.map(pr => ({
+      exerciseId: pr.exerciseId,
+      exerciseName: pr.exerciseName,
+      loadKg: parseFloat(pr.loadKg),
+      reps: pr.reps,
+      previousLoadKg: pr.previousLoadKg ? parseFloat(pr.previousLoadKg) : null,
+      achievedAt: pr.achievedAt,
+      isRecent: pr.achievedAt ? pr.achievedAt > sevenDaysAgo : false,
+    }));
+
+    res.json({ personalRecords: result, total: result.length });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.get("/users/weekly-recap/latest", authenticate, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const daysToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - daysToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const prevWeekEnd = new Date(weekStart);
+    prevWeekEnd.setDate(weekStart.getDate() - 1);
+    const prevWeekStart = new Date(prevWeekEnd);
+    prevWeekStart.setDate(prevWeekEnd.getDate() - 6);
+    prevWeekStart.setHours(0, 0, 0, 0);
+    prevWeekEnd.setHours(23, 59, 59, 999);
+
+    async function getWeekStats(start: Date, end: Date) {
+      const weekStartDate = start.toISOString().split("T")[0];
+      const weekEndDate = end.toISOString().split("T")[0];
+
+      const [sessions] = await db.select({ cnt: count() }).from(sessionLogsTable)
+        .where(and(
+          eq(sessionLogsTable.athleteId, userId),
+          sql`${sessionLogsTable.completedAt} >= ${start}`,
+          sql`${sessionLogsTable.completedAt} <= ${end}`
+        ));
+
+      const scoreResult = await db.execute(sql`
+        SELECT AVG(adapt_score::float) as avg FROM checkins 
+        WHERE athlete_id = ${userId} AND date >= ${weekStartDate} AND date <= ${weekEndDate}
+      `);
+      const scoreRow = scoreResult.rows[0] as { avg: string | null } | undefined;
+      const avgAdaptScore = scoreRow?.avg ? parseFloat(scoreRow.avg) : null;
+
+      const rpeResult = await db.execute(sql`
+        SELECT AVG(rpe::float) as avg FROM session_logs
+        WHERE athlete_id = ${userId} AND rpe IS NOT NULL
+        AND completed_at >= ${start} AND completed_at <= ${end}
+      `);
+      const rpeRow = rpeResult.rows[0] as { avg: string | null } | undefined;
+      const avgRpe = rpeRow?.avg ? parseFloat(rpeRow.avg) : null;
+
+      const volResult = await db.execute(sql`
+        SELECT COALESCE(SUM(
+          el.load_kg_used::float * el.sets_completed
+        ), 0) as total
+        FROM exercise_logs el
+        JOIN session_logs sl ON el.session_log_id = sl.id
+        WHERE sl.athlete_id = ${userId} AND sl.completed_at >= ${start} AND sl.completed_at <= ${end}
+        AND el.load_kg_used IS NOT NULL AND el.sets_completed IS NOT NULL
+      `);
+      const volRow = volResult.rows[0] as { total: string } | undefined;
+      const totalVolume = parseFloat(String(volRow?.total ?? "0"));
+
+      const prsResult = await db.execute(sql`
+        SELECT COUNT(*) as cnt FROM personal_records
+        WHERE user_id = ${userId} AND achieved_at >= ${start} AND achieved_at <= ${end}
+      `);
+      const prsRow = prsResult.rows[0] as { cnt: string } | undefined;
+      const prsCount = Number(prsRow?.cnt ?? 0);
+
+      return {
+        sessions: Number(sessions?.cnt ?? 0),
+        avgAdaptScore,
+        avgRpe,
+        totalVolume,
+        prsCount,
+      };
+    }
+
+    const [thisWeek, lastWeek] = await Promise.all([
+      getWeekStats(weekStart, weekEnd),
+      getWeekStats(prevWeekStart, prevWeekEnd),
+    ]);
+
+    res.json({
+      recap: {
+        weekStart: weekStart.toISOString().split("T")[0],
+        weekEnd: weekEnd.toISOString().split("T")[0],
+        sessionsCompleted: thisWeek.sessions,
+        sessionsPlanned: 3,
+        avgAdaptScore: thisWeek.avgAdaptScore,
+        avgRpe: thisWeek.avgRpe,
+        totalVolumeKg: thisWeek.totalVolume,
+        prsCount: thisWeek.prsCount,
+        sessionsDelta: thisWeek.sessions - lastWeek.sessions,
+        scoreDelta: thisWeek.avgAdaptScore != null && lastWeek.avgAdaptScore != null
+          ? parseFloat((thisWeek.avgAdaptScore - lastWeek.avgAdaptScore).toFixed(1)) : null,
+        rpeDelta: thisWeek.avgRpe != null && lastWeek.avgRpe != null
+          ? parseFloat((thisWeek.avgRpe - lastWeek.avgRpe).toFixed(1)) : null,
+        volumeDelta: thisWeek.totalVolume - lastWeek.totalVolume,
+      },
+    });
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });

@@ -5,3 +5,5 @@ export * from "./checkins";
 export * from "./session_logs";
 export * from "./alerts";
 export * from "./messages";
+export * from "./badges";
+export * from "./personal_records";

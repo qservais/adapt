@@ -4,6 +4,7 @@ import { checkinsTable, sessionsTable, sessionVariantsTable, sessionExercisesTab
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { calculateAdaptScore } from "../services/adapt-engine.js";
+import { checkAfterCheckin } from "../services/badgeService.js";
 import { z } from "zod";
 
 const router = Router();
@@ -143,6 +144,9 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     }
   }
 
+  const checkinHour = new Date().getHours();
+  const newBadges = await checkAfterCheckin(req.user!.userId, checkinHour);
+
   res.status(201).json({
     checkin: {
       id: checkin.id,
@@ -160,6 +164,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
       createdAt: checkin.createdAt,
     },
     sessionPreview,
+    newBadges,
   });
 });
 

@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import {
   useGetCheckinHistory,
   useGetSessionHistory,
+  useGetPersonalRecords,
 } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useScrollToTop } from "@react-navigation/native";
@@ -285,6 +287,7 @@ export default function StatsScreen() {
 
   const checkinQuery = useGetCheckinHistory();
   const sessionQuery = useGetSessionHistory();
+  const prQuery = useGetPersonalRecords();
 
   const days = parseInt(period);
   const cutoff = new Date();
@@ -397,37 +400,77 @@ export default function StatsScreen() {
       </View>
 
       <View style={styles.section}>
-        <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>BILAN HEBDOMADAIRE</Text>
-          <View style={styles.weeklyRow}>
-            <View style={styles.weeklyItem}>
-              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
-                {sessions.filter((s) => {
-                  const d = new Date(s.completedAt ?? "");
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  return d >= weekAgo;
-                }).length}
-              </Text>
-              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Séances</Text>
+        <TouchableOpacity activeOpacity={0.85} onPress={() => router.push("/weekly-recap")}>
+          <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
+            <View style={styles.weeklyCardHeader}>
+              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>BILAN HEBDOMADAIRE</Text>
+              <Feather name="chevron-right" size={16} color={COLORS.amber} />
             </View>
-            <View style={styles.weeklyDivider} />
-            <View style={styles.weeklyItem}>
-              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.amber }]}>
-                {avgRpe > 0 ? avgRpe.toFixed(1) : "—"}
-              </Text>
-              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>RPE moy.</Text>
+            <View style={styles.weeklyRow}>
+              <View style={styles.weeklyItem}>
+                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
+                  {sessions.filter((s) => {
+                    const d = new Date(s.completedAt ?? "");
+                    const weekAgo = new Date();
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return d >= weekAgo;
+                  }).length}
+                </Text>
+                <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Séances</Text>
+              </View>
+              <View style={styles.weeklyDivider} />
+              <View style={styles.weeklyItem}>
+                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.amber }]}>
+                  {avgRpe > 0 ? avgRpe.toFixed(1) : "—"}
+                </Text>
+                <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>RPE moy.</Text>
+              </View>
+              <View style={styles.weeklyDivider} />
+              <View style={styles.weeklyItem}>
+                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
+                  {avgScore.toFixed(0)}
+                </Text>
+                <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Score moy.</Text>
+              </View>
             </View>
-            <View style={styles.weeklyDivider} />
-            <View style={styles.weeklyItem}>
-              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
-                {avgScore.toFixed(0)}
-              </Text>
-              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Score moy.</Text>
-            </View>
-          </View>
-        </GlowCard>
+          </GlowCard>
+        </TouchableOpacity>
       </View>
+
+      {(prQuery.data?.personalRecords?.length ?? 0) > 0 && (
+        <View style={styles.section}>
+          <GlowCard glowColor={COLORS.green} style={styles.prCard}>
+            <View style={styles.prCardHeader}>
+              <Feather name="trending-up" size={14} color={COLORS.green} />
+              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.green }]}>
+                MES RECORDS PERSONNELS
+              </Text>
+            </View>
+            {(prQuery.data?.personalRecords ?? []).slice(0, 8).map((pr) => (
+              <View key={pr.exerciseId} style={styles.prItemRow}>
+                <Text style={[styles.prItemName, { fontFamily: FONTS.body }]} numberOfLines={1}>
+                  {pr.exerciseName}
+                </Text>
+                <View style={styles.prItemRight}>
+                  {pr.isRecent && (
+                    <View style={styles.prNewBadge}>
+                      <Text style={[{ fontSize: 9, color: COLORS.green, fontFamily: FONTS.mono }]}>NEW</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
+                    {pr.loadKg} kg
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {(prQuery.data?.total ?? 0) > 8 && (
+              <Text style={[{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body, textAlign: "center", marginTop: 4 }]}>
+                +{(prQuery.data?.total ?? 0) - 8} autres records
+              </Text>
+            )}
+          </GlowCard>
+        </View>
+      )}
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.green} style={styles.chartCard}>
@@ -644,6 +687,28 @@ const styles = StyleSheet.create({
   rpeScaleItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   rpeScaleDot: { width: 8, height: 8, borderRadius: 4 },
   rpeScaleLabel: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 0.5 },
+  weeklyCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  prCard: { gap: 8 },
+  prCardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  prItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  prItemName: { fontSize: 13, color: COLORS.textSecondary, flex: 1, marginRight: 12 },
+  prItemRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  prItemLoad: { fontSize: 14 },
+  prNewBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: COLORS.greenDim,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.green,
+  },
   cardTitle: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
   barList: { gap: 12 },
   modesList: { gap: 10 },

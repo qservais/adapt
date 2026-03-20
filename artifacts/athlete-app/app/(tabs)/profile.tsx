@@ -10,10 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useUpdateMe, useAthleteLink } from "@workspace/api-client-react";
+import { useGetMe, useUpdateMe, useAthleteLink, useGetBadges } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useScrollToTop } from "@react-navigation/native";
@@ -60,6 +61,7 @@ export default function ProfileScreen() {
   const updateMutation = useUpdateMe();
   const linkMutation = useAthleteLink();
   const queryClient = useQueryClient();
+  const badgesQuery = useGetBadges();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
@@ -441,6 +443,44 @@ export default function ProfileScreen() {
         </GlowCard>
       )}
 
+      <View style={styles.quickLinks}>
+        <TouchableOpacity
+          onPress={() => router.push("/badges")}
+          style={styles.quickLinkRow}
+          activeOpacity={0.7}
+        >
+          <View style={styles.quickLinkLeft}>
+            <Text style={styles.quickLinkIcon}>🏅</Text>
+            <View>
+              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Mes badges</Text>
+              {(badgesQuery.data?.unlockedCount ?? 0) > 0 && (
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                  {badgesQuery.data?.unlockedCount} / {badgesQuery.data?.total} débloqués
+                </Text>
+              )}
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+        </TouchableOpacity>
+
+        <View style={[styles.quickLinkRow, styles.quickLinkDisabled]}>
+          <View style={styles.quickLinkLeft}>
+            <Text style={styles.quickLinkIcon}>❤️</Text>
+            <View>
+              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: COLORS.textMuted }]}>
+                Apple Santé
+              </Text>
+              <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
+                Bientôt disponible
+              </Text>
+            </View>
+          </View>
+          <View style={styles.comingSoonBadge}>
+            <Text style={[styles.comingSoonText, { fontFamily: FONTS.mono }]}>BIENTÔT</Text>
+          </View>
+        </View>
+      </View>
+
       <Pressable onPress={handleLogout} style={styles.logoutBtn}>
         <Feather name="log-out" size={18} color={COLORS.red} />
         <Text style={[styles.logoutText, { fontFamily: FONTS.bodyMedium }]}>
@@ -550,6 +590,38 @@ const styles = StyleSheet.create({
   linkedRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   linkedText: { fontSize: 15 },
   linkError: { color: COLORS.red, fontSize: 13, textAlign: "center" },
+  quickLinks: {
+    marginTop: 8,
+    marginBottom: 24,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  quickLinkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  quickLinkDisabled: { opacity: 0.6 },
+  quickLinkLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  quickLinkIcon: { fontSize: 22 },
+  quickLinkTitle: { fontSize: 15, color: COLORS.white },
+  quickLinkSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  comingSoonBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  comingSoonText: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 1 },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",

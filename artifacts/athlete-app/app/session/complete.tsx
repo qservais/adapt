@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -25,6 +25,11 @@ export default function SessionCompleteScreen() {
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
 
+  const newPRs: Array<{ exerciseName: string; loadKg: number; previousLoadKg?: number | null }> =
+    (completeMutation.data as any)?.newPRs ?? [];
+  const newBadges: Array<{ code: string; name: string; icon: string }> =
+    (completeMutation.data as any)?.newBadges ?? [];
+
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     scale.value = withDelay(200, withSpring(1, { damping: 12, stiffness: 100 }));
@@ -45,7 +50,10 @@ export default function SessionCompleteScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
-      <View style={[styles.content, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Animated.View style={[styles.trophy, celebrateStyle]}>
           <View style={[styles.trophyCircle, { borderColor: cfg.color, backgroundColor: cfg.dim }]}>
             <Feather name="award" size={64} color={cfg.color} />
@@ -84,6 +92,47 @@ export default function SessionCompleteScreen() {
           </View>
         )}
 
+        {newPRs.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Feather name="trending-up" size={16} color={COLORS.green} />
+              <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold, color: COLORS.green }]}>
+                NOUVEAUX RECORDS ({newPRs.length})
+              </Text>
+            </View>
+            {newPRs.map((pr, i) => (
+              <View key={i} style={styles.prRow}>
+                <Text style={[styles.prName, { fontFamily: FONTS.bodyMedium }]}>{pr.exerciseName}</Text>
+                <View style={styles.prLoads}>
+                  {pr.previousLoadKg != null && (
+                    <Text style={[styles.prPrev, { fontFamily: FONTS.mono }]}>{pr.previousLoadKg} kg →</Text>
+                  )}
+                  <Text style={[styles.prNew, { fontFamily: FONTS.monoBold }]}>{pr.loadKg} kg</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {newBadges.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Feather name="award" size={16} color={COLORS.cyan} />
+              <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold, color: COLORS.cyan }]}>
+                BADGES DÉBLOQUÉS ({newBadges.length})
+              </Text>
+            </View>
+            <View style={styles.badgeRow}>
+              {newBadges.map((b) => (
+                <View key={b.code} style={styles.badgePill}>
+                  <Text style={styles.badgeIcon}>{b.icon}</Text>
+                  <Text style={[styles.badgeName, { fontFamily: FONTS.bodyMedium }]}>{b.name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={styles.actions}>
           <TouchableOpacity
             onPress={() => router.replace("/session/feedback")}
@@ -103,7 +152,7 @@ export default function SessionCompleteScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -111,10 +160,9 @@ export default function SessionCompleteScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
-    flex: 1,
     paddingHorizontal: 28,
     alignItems: "center",
-    justifyContent: "space-around",
+    gap: 24,
   },
   trophy: { alignItems: "center" },
   trophyCircle: {
@@ -147,6 +195,43 @@ const styles = StyleSheet.create({
   statVal: { fontSize: 28 },
   statLabel: { fontSize: 12, color: COLORS.textSecondary },
   divider: { width: 1, height: 40, backgroundColor: COLORS.border },
+  section: {
+    width: "100%",
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    gap: 10,
+  },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  sectionTitle: { fontSize: 12, letterSpacing: 1, textTransform: "uppercase" },
+  prRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  prName: { fontSize: 14, color: COLORS.white, flex: 1 },
+  prLoads: { flexDirection: "row", alignItems: "center", gap: 6 },
+  prPrev: { fontSize: 12, color: COLORS.textMuted },
+  prNew: { fontSize: 14, color: COLORS.green },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  badgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.cyanDim,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: COLORS.cyan,
+  },
+  badgeIcon: { fontSize: 16 },
+  badgeName: { fontSize: 12, color: COLORS.white },
   actions: { width: "100%", gap: 12 },
   feedbackBtn: {
     flexDirection: "row",

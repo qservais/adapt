@@ -7,6 +7,8 @@ import {
 import { eq, and, desc, gte } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { calculateAdaptedLoad } from "../services/adapt-engine.js";
+import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
+import { checkAfterSession, checkAfterFeedback } from "../services/badgeService.js";
 import { z } from "zod";
 
 const router = Router();
@@ -21,6 +23,8 @@ async function buildSessionDetail(
     exerciseName: string;
     category: string | null;
     imageUrl: string | null;
+    gifUrl: string | null;
+    muscleGroups: unknown;
     orderIndex: number;
     sets: number;
     reps: string | null;
@@ -58,6 +62,8 @@ async function buildSessionDetail(
         exerciseName: exercisesTable.name,
         category: exercisesTable.category,
         demoUrl: exercisesTable.demoUrl,
+        demoGifUrl: exercisesTable.demoGifUrl,
+        muscleGroups: exercisesTable.muscleGroups,
       })
         .from(sessionExercisesTable)
         .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
@@ -70,6 +76,8 @@ async function buildSessionDetail(
         exerciseName: ex.exerciseName,
         category: ex.category ?? null,
         imageUrl: ex.demoUrl ?? null,
+        gifUrl: ex.demoGifUrl ?? null,
+        muscleGroups: ex.muscleGroups,
         orderIndex: ex.orderIndex,
         sets: ex.sets,
         reps: ex.reps ?? null,
@@ -207,6 +215,10 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             restSeconds: sessionExercisesTable.restSeconds,
             coachCue: sessionExercisesTable.coachCue,
             exerciseName: exercisesTable.name,
+            category: exercisesTable.category,
+            demoUrl: exercisesTable.demoUrl,
+            demoGifUrl: exercisesTable.demoGifUrl,
+            muscleGroups: exercisesTable.muscleGroups,
           })
             .from(sessionExercisesTable)
             .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
@@ -217,6 +229,10 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             id: ex.id,
             exerciseId: ex.exerciseId,
             exerciseName: ex.exerciseName,
+            category: ex.category ?? null,
+            imageUrl: ex.demoUrl ?? null,
+            gifUrl: ex.demoGifUrl ?? null,
+            muscleGroups: ex.muscleGroups,
             orderIndex: ex.orderIndex,
             sets: ex.sets,
             reps: ex.reps ?? null,
@@ -236,6 +252,8 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       checkinId: checkin.id,
     }).returning();
 
+    const athletePRs = await getAthleteCurrentPRs(athleteId);
+
     res.json({
       sessionLogId: sessionLog.id,
       sessionId,
@@ -246,6 +264,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       exercises,
       adaptScore: checkin.adaptScore,
       overriddenByCoach: painAlerts.length > 0,
+      athletePRs,
     });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
@@ -311,7 +330,23 @@ router.post("/sessions/:sessionId/complete", authenticate, requireRole("athlete"
       });
     }
 
-    res.json({ success: true, message: "Session completed" });
+    const [sessionLog] = await db.select({ variantMode: sessionLogsTable.variantMode, athleteId: sessionLogsTable.athleteId })
+      .from(sessionLogsTable).where(eq(sessionLogsTable.id, sessionId));
+
+    let newPRs: Awaited<ReturnType<typeof detectNewPRs>> = [];
+    let newBadges: Awaited<ReturnType<typeof checkAfterSession>> = [];
+
+    if (sessionLog) {
+      newPRs = await detectNewPRs(sessionLog.athleteId, sessionId, parsed.data.exercises.map(ex => ({
+        exerciseId: ex.exerciseId,
+        setsCompleted: ex.setsCompleted,
+        repsPerSet: ex.repsPerSet,
+        loadKgUsed: ex.loadKgUsed,
+      })));
+      newBadges = await checkAfterSession(sessionLog.athleteId, sessionLog.variantMode, newPRs.length);
+    }
+
+    res.json({ success: true, message: "Session completed", newPRs, newBadges });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
@@ -355,7 +390,8 @@ router.post("/sessions/:sessionId/feedback", authenticate, requireRole("athlete"
       return;
     }
 
-    res.json({ success: true, message: "Feedback submitted" });
+    const newBadges = await checkAfterFeedback(req.user!.userId);
+    res.json({ success: true, message: "Feedback submitted", newBadges });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

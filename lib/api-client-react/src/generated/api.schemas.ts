@@ -154,9 +154,16 @@ export type CheckinResponseSessionPreview = {
   exerciseCount?: number;
 } | null;
 
+export interface NewBadgeItem {
+  code: string;
+  name: string;
+  icon: string;
+}
+
 export interface CheckinResponse {
   checkin: CheckinData;
   sessionPreview?: CheckinResponseSessionPreview;
+  newBadges?: NewBadgeItem[];
 }
 
 export interface SessionExerciseItem {
@@ -165,6 +172,8 @@ export interface SessionExerciseItem {
   exerciseName: string;
   category?: string | null;
   imageUrl?: string | null;
+  gifUrl?: string | null;
+  muscleGroups?: unknown;
   orderIndex: number;
   sets: number;
   reps?: string | null;
@@ -184,6 +193,58 @@ export interface SessionDetail {
   exercises: SessionExerciseItem[];
   adaptScore: number;
   overriddenByCoach?: boolean;
+  athletePRs?: Record<string, number>;
+}
+
+export interface BadgeItem {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  sortOrder?: number | null;
+  unlocked: boolean;
+  unlockedAt?: string | null;
+}
+
+export interface BadgesResponse {
+  badges: BadgeItem[];
+  total: number;
+  unlockedCount: number;
+}
+
+export interface PersonalRecord {
+  exerciseId: string;
+  exerciseName: string;
+  loadKg: number;
+  reps: number;
+  previousLoadKg?: number | null;
+  achievedAt?: string;
+  isRecent?: boolean;
+}
+
+export interface PersonalRecordsResponse {
+  personalRecords: PersonalRecord[];
+  total: number;
+}
+
+export interface WeeklyRecap {
+  weekStart: string;
+  weekEnd: string;
+  sessionsCompleted: number;
+  sessionsPlanned: number;
+  avgAdaptScore?: number | null;
+  avgRpe?: number | null;
+  totalVolumeKg?: number;
+  prsCount?: number;
+  sessionsDelta?: number;
+  scoreDelta?: number | null;
+  rpeDelta?: number | null;
+  volumeDelta?: number;
+}
+
+export interface WeeklyRecapResponse {
+  recap: WeeklyRecap;
 }
 
 export interface SessionLogSummary {

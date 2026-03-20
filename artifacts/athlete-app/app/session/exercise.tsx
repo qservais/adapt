@@ -77,6 +77,7 @@ const timerStyles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
+    width: "100%",
   },
   label: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
   timer: { fontSize: 52, color: COLORS.cyan },
@@ -98,6 +99,7 @@ export default function ExerciseScreen() {
   const exercises = session?.exercises ?? [];
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+  const athletePRs = (session as any)?.athletePRs as Record<string, number> | undefined;
 
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
@@ -171,6 +173,8 @@ export default function ExerciseScreen() {
 
   const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? 0;
   const progress = ((exerciseIndex) / totalExercises) * 100;
+  const currentPR = athletePRs?.[exercise.exerciseId];
+  const isAbovePR = currentPR != null && currentLoad > currentPR;
 
   const setDoneLabel = () => {
     if (currentSet < (exercise.sets ?? 1)) return `Série ${currentSet} terminée`;
@@ -235,25 +239,43 @@ export default function ExerciseScreen() {
         </Text>
 
         {currentLoad > 0 && (
-          <View style={styles.loadRow}>
-            <TouchableOpacity
-              onPress={() => adjustLoad(exercise.id, -2.5, currentLoad)}
-              style={styles.loadBtn}
-            >
-              <Feather name="minus" size={22} color={COLORS.white} />
-            </TouchableOpacity>
-            <View style={styles.loadDisplay}>
-              <Text style={[styles.loadVal, { fontFamily: FONTS.monoBold }]}>
-                {currentLoad}
-              </Text>
-              <Text style={[styles.loadUnit, { fontFamily: FONTS.mono }]}>kg</Text>
+          <View style={styles.loadSection}>
+            <View style={styles.loadRow}>
+              <TouchableOpacity
+                onPress={() => adjustLoad(exercise.id, -2.5, currentLoad)}
+                style={styles.loadBtn}
+              >
+                <Feather name="minus" size={22} color={COLORS.white} />
+              </TouchableOpacity>
+              <View style={styles.loadDisplay}>
+                <Text style={[styles.loadVal, { fontFamily: FONTS.monoBold }]}>
+                  {currentLoad}
+                </Text>
+                <Text style={[styles.loadUnit, { fontFamily: FONTS.mono }]}>kg</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => adjustLoad(exercise.id, 2.5, currentLoad)}
+                style={styles.loadBtn}
+              >
+                <Feather name="plus" size={22} color={COLORS.white} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={() => adjustLoad(exercise.id, 2.5, currentLoad)}
-              style={styles.loadBtn}
-            >
-              <Feather name="plus" size={22} color={COLORS.white} />
-            </TouchableOpacity>
+            {currentPR != null && (
+              <View style={[styles.prBadge, isAbovePR ? styles.prBadgeAbove : styles.prBadgeBelow]}>
+                {isAbovePR ? (
+                  <Feather name="trending-up" size={12} color={COLORS.green} />
+                ) : (
+                  <Feather name="award" size={12} color={COLORS.textMuted} />
+                )}
+                <Text style={[
+                  styles.prText,
+                  { fontFamily: FONTS.mono },
+                  isAbovePR ? { color: COLORS.green } : { color: COLORS.textMuted },
+                ]}>
+                  {isAbovePR ? `NOUVEAU RECORD ! (${currentPR} kg)` : `RECORD : ${currentPR} kg`}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -332,6 +354,7 @@ const styles = StyleSheet.create({
   },
   exerciseName: { fontSize: 44, letterSpacing: 2, textAlign: "center", lineHeight: 48 },
   repsText: { fontSize: 32, color: COLORS.white, letterSpacing: 4 },
+  loadSection: { alignItems: "center", gap: 10, width: "100%" },
   loadRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -356,6 +379,18 @@ const styles = StyleSheet.create({
   loadDisplay: { alignItems: "center" },
   loadVal: { fontSize: 38, color: COLORS.white },
   loadUnit: { fontSize: 14, color: COLORS.textSecondary },
+  prBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  prBadgeAbove: { backgroundColor: COLORS.greenDim, borderColor: COLORS.green },
+  prBadgeBelow: { backgroundColor: COLORS.bgCard, borderColor: COLORS.border },
+  prText: { fontSize: 11, letterSpacing: 1 },
   cueBox: {
     flexDirection: "row",
     alignItems: "flex-start",
