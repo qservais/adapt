@@ -9,7 +9,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import {
   useGetCheckinHistory,
@@ -275,7 +274,6 @@ function MonthCalendar({
 
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const [period, setPeriod] = useState<Period>("30");
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
@@ -345,7 +343,7 @@ export default function StatsScreen() {
   return (
     <ScrollView
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
-      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: tabBarHeight + 40 }}
+      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 49 + 40 }}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headRow}>

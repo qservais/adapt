@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { useGetMessageThreads } from "@workspace/api-client-react";
 import type { MessageThread } from "@workspace/api-client-react";
@@ -17,7 +16,6 @@ import { COLORS, FONTS } from "@/constants/theme";
 
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const threadsQuery = useGetMessageThreads();
 
   const threads: MessageThread[] = threadsQuery.data ?? [];
@@ -46,7 +44,7 @@ export default function MessagesScreen() {
         <FlatList
           data={threads}
           keyExtractor={(item) => item.userId}
-          contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 49 + 20 }}
           renderItem={({ item }) => {
             const initials = (item.userFirstName?.[0] ?? "?").toUpperCase();
             const hasUnread = (item.unreadCount ?? 0) > 0;

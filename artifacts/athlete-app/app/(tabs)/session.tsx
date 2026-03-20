@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import {
   useGetTodaySession,
@@ -22,7 +21,6 @@ import { GlowCard } from "@/components/ui/GlowCard";
 
 export default function SessionTab() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetSessionHistory();
@@ -37,7 +35,7 @@ export default function SessionTab() {
   return (
     <ScrollView
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
-      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: tabBarHeight + 24 }}
+      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 49 + 24 }}
       showsVerticalScrollIndicator={false}
     >
       <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>SÉANCE</Text>

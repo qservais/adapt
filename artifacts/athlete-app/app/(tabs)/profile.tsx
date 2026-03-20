@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useUpdateMe, useAthleteLink } from "@workspace/api-client-react";
@@ -53,7 +52,6 @@ function computeAge(birthDate: string | null | undefined): number | null {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const { user, logout, updateUser } = useAuth();
   const meQuery = useGetMe();
   const updateMutation = useUpdateMe();
@@ -129,7 +127,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
-      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: tabBarHeight + 40, paddingHorizontal: 20 }}
+      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + 49 + 40, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>

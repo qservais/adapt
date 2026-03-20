@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import {
@@ -28,7 +27,6 @@ import { GlowCard } from "@/components/ui/GlowCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const { user } = useAuth();
 
   const checkinQuery = useGetTodayCheckin();
@@ -81,7 +79,7 @@ export default function HomeScreen() {
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: topPad + 16, paddingBottom: tabBarHeight + 24 },
+        { paddingTop: topPad + 16, paddingBottom: insets.bottom + 49 + 24 },
       ]}
       refreshControl={
         <RefreshControl
