@@ -163,6 +163,8 @@ export interface SessionExerciseItem {
   id: string;
   exerciseId: string;
   exerciseName: string;
+  category?: string | null;
+  imageUrl?: string | null;
   orderIndex: number;
   sets: number;
   reps?: string | null;

@@ -62,18 +62,37 @@ export default function ProfileScreen() {
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [gender, setGender] = useState<string>(user?.gender ?? "");
   const [cycleTracking, setCycleTracking] = useState(user?.cycleTracking ?? false);
+  const [weight, setWeight] = useState<string>("");
+  const [birthYear, setBirthYear] = useState<string>("");
 
   const [coachCode, setCoachCode] = useState("");
   const [coachLinkError, setCoachLinkError] = useState("");
   const [coachLinked, setCoachLinked] = useState(false);
 
+  const startEditing = () => {
+    const p = meQuery.data ?? user;
+    setFirstName(p?.firstName ?? "");
+    setGender(p?.gender ?? "");
+    setCycleTracking(p?.cycleTracking ?? false);
+    setWeight(p?.weightKg ? String(parseFloat(String(p.weightKg))) : "");
+    setBirthYear(p?.birthDate ? String(p.birthDate).substring(0, 4) : "");
+    setEditing(true);
+  };
+
   const handleSave = async () => {
+    const parsedWeight = parseFloat(weight);
+    const parsedYear = parseInt(birthYear, 10);
     try {
       const updated = await updateMutation.mutateAsync({
         data: {
           firstName: firstName.trim() || undefined,
           gender: (gender as "homme" | "femme" | "autre") || undefined,
           cycleTracking,
+          weightKg: !isNaN(parsedWeight) && parsedWeight >= 20 ? parsedWeight : undefined,
+          birthDate:
+            !isNaN(parsedYear) && parsedYear >= 1920 && parsedYear <= new Date().getFullYear() - 5
+              ? `${parsedYear}-01-01`
+              : undefined,
         },
       });
       updateUser(updated);
@@ -132,7 +151,7 @@ export default function ProfileScreen() {
     >
       <View style={styles.headerRow}>
         <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>PROFIL</Text>
-        <TouchableOpacity onPress={() => setEditing(!editing)} style={styles.editBtn}>
+        <TouchableOpacity onPress={editing ? () => setEditing(false) : startEditing} style={styles.editBtn}>
           <Feather name={editing ? "x" : "edit-2"} size={20} color={COLORS.green} />
         </TouchableOpacity>
       </View>
@@ -249,6 +268,27 @@ export default function ProfileScreen() {
               />
             </View>
           )}
+          <View style={styles.rowInputs}>
+            <View style={{ flex: 1 }}>
+              <InputField
+                label="Poids (kg)"
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="decimal-pad"
+                placeholder="ex: 70.5"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <InputField
+                label="Année de naissance"
+                value={birthYear}
+                onChangeText={setBirthYear}
+                keyboardType="number-pad"
+                placeholder="ex: 1995"
+                maxLength={4}
+              />
+            </View>
+          </View>
           <Button label="Enregistrer" onPress={handleSave} loading={updateMutation.isPending} />
         </GlowCard>
       ) : (
@@ -376,6 +416,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: { fontSize: 44, color: COLORS.white, letterSpacing: 5 },
   editBtn: { padding: 8 },
+  rowInputs: { flexDirection: "row", gap: 12 },
   avatarSection: { alignItems: "center", marginBottom: 28, gap: 8 },
   avatar: {
     width: 90,

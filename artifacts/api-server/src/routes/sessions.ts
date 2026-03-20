@@ -19,6 +19,8 @@ async function buildSessionDetail(
     id: string;
     exerciseId: string;
     exerciseName: string;
+    category: string | null;
+    imageUrl: string | null;
     orderIndex: number;
     sets: number;
     reps: string | null;
@@ -54,6 +56,8 @@ async function buildSessionDetail(
         restSeconds: sessionExercisesTable.restSeconds,
         coachCue: sessionExercisesTable.coachCue,
         exerciseName: exercisesTable.name,
+        category: exercisesTable.category,
+        demoUrl: exercisesTable.demoUrl,
       })
         .from(sessionExercisesTable)
         .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
@@ -64,6 +68,8 @@ async function buildSessionDetail(
         id: ex.id,
         exerciseId: ex.exerciseId,
         exerciseName: ex.exerciseName,
+        category: ex.category ?? null,
+        imageUrl: ex.demoUrl ?? null,
         orderIndex: ex.orderIndex,
         sets: ex.sets,
         reps: ex.reps ?? null,

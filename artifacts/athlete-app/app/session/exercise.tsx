@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +16,14 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useGetTodaySession } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+
+const CATEGORY_IMAGES: Record<string, ReturnType<typeof require>> = {
+  compound: require("@/assets/images/categories/compound.png"),
+  isolation: require("@/assets/images/categories/isolation.png"),
+  cardio: require("@/assets/images/categories/cardio.png"),
+  mobility: require("@/assets/images/categories/mobility.png"),
+  plyometric: require("@/assets/images/categories/plyometric.png"),
+};
 
 function RestTimer({
   seconds,
@@ -109,7 +119,11 @@ export default function ExerciseScreen() {
   const handleSetDone = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (currentSet < (exercise?.sets ?? 1)) {
-      setShowRest(true);
+      if ((exercise?.restSeconds ?? 0) > 0) {
+        setShowRest(true);
+      } else {
+        setCurrentSet((s) => s + 1);
+      }
     } else {
       handleExerciseDone();
     }
@@ -167,7 +181,23 @@ export default function ExerciseScreen() {
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+        <Pressable
+          onPress={() => {
+            Alert.alert(
+              "Quitter la séance ?",
+              "Tu pourras reprendre depuis le début après ta prochaine vérification.",
+              [
+                { text: "Continuer", style: "cancel" },
+                {
+                  text: "Quitter",
+                  style: "destructive",
+                  onPress: () => router.back(),
+                },
+              ]
+            );
+          }}
+          style={styles.closeBtn}
+        >
           <Feather name="x" size={22} color={COLORS.textSecondary} />
         </Pressable>
         <View style={styles.progressWrap}>
@@ -190,6 +220,13 @@ export default function ExerciseScreen() {
         <Text style={[styles.setLabel, { fontFamily: FONTS.mono }]}>
           SÉRIE {currentSet}/{exercise.sets}
         </Text>
+        {(exercise.category && CATEGORY_IMAGES[exercise.category]) ? (
+          <Image
+            source={CATEGORY_IMAGES[exercise.category]}
+            style={styles.exerciseImage}
+            resizeMode="cover"
+          />
+        ) : null}
         <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
           {exercise.exerciseName}
         </Text>
@@ -229,9 +266,9 @@ export default function ExerciseScreen() {
           </View>
         )}
 
-        {showRest && exercise.restSeconds && (
+        {showRest && (exercise.restSeconds ?? 0) > 0 && (
           <RestTimer
-            seconds={exercise.restSeconds}
+            seconds={exercise.restSeconds!}
             onSkip={handleSkipRest}
           />
         )}
@@ -286,6 +323,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   setLabel: { fontSize: 13, color: COLORS.textMuted, letterSpacing: 2 },
+  exerciseImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: COLORS.bgCard,
+  },
   exerciseName: { fontSize: 44, letterSpacing: 2, textAlign: "center", lineHeight: 48 },
   repsText: { fontSize: 32, color: COLORS.white, letterSpacing: 4 },
   loadRow: {
