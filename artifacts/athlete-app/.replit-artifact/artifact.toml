@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "ADAPT by LMJ"
+version = "1.0.0"
+id = "artifacts/athlete-app"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 23899
+
+[services.development]
+run = "pnpm --filter @workspace/athlete-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/athlete-app", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/athlete-app", "run", "serve" ]
+
+[services.env]
+PORT = "23899"
+BASE_PATH = "/"
