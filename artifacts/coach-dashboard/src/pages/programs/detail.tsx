@@ -7,6 +7,8 @@ import {
   useDeleteProgramSession,
   useDeleteProgram,
   useGetExercises,
+  addProgramSession,
+  updateProgram,
   SessionWithVariants,
   VariantWithExercises,
   ExerciseData,
@@ -630,18 +632,25 @@ export default function ProgramDetail() {
   };
 
   const duplicateWeek = useCallback(async (weekNum: number) => {
-    if (!program) return;
+    if (!program || !programId) return;
     const weekSessions = program.sessions.filter((s) => s.weekNumber === weekNum);
     const nextWeek = program.durationWeeks + 1;
     try {
+      await updateProgram(programId, {
+        name: program.name,
+        athleteId: program.athleteId,
+        durationWeeks: nextWeek,
+        startDate: program.startDate || undefined,
+      });
+
       for (const s of weekSessions) {
-        const payload = {
+        await addProgramSession(programId, {
           weekNumber: nextWeek,
           dayNumber: s.dayNumber,
           name: s.name,
           type: s.type as "strength" | "cardio" | "hybrid" | "mobility",
-          estimatedDurationMin: s.estimatedDurationMin || undefined,
-          coachNotes: s.coachNotes || undefined,
+          estimatedDurationMin: s.estimatedDurationMin ?? undefined,
+          coachNotes: s.coachNotes ?? undefined,
           variants: s.variants
             .filter((v) => v.exercises.length > 0)
             .map((v) => ({
@@ -650,20 +659,16 @@ export default function ProgramDetail() {
                 exerciseId: e.exerciseId,
                 orderIndex: e.orderIndex,
                 sets: e.sets,
-                reps: e.reps || undefined,
-                loadKg: e.nominalLoadKg || undefined,
-                restSeconds: e.restSeconds || undefined,
-                coachCue: e.coachCue || undefined,
+                reps: e.reps ?? undefined,
+                loadKg: e.nominalLoadKg ?? undefined,
+                restSeconds: e.restSeconds ?? undefined,
+                coachCue: e.coachCue ?? undefined,
               })),
             })),
-        };
-        await fetch(`/api/programs/${programId}/sessions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("adapt_coach_access")}` },
-          body: JSON.stringify(payload),
         });
       }
-      toast({ title: `Week ${weekNum} duplicated as week ${nextWeek}` });
+
+      toast({ title: `Week ${weekNum} duplicated as Week ${nextWeek}` });
       refetch();
     } catch {
       toast({ title: "Failed to duplicate week", variant: "destructive" });
