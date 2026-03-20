@@ -7,10 +7,31 @@ const baseUrl = domain ? `https://${domain}` : "";
 let _isRefreshing = false;
 let _refreshQueue: Array<(token: string | null) => void> = [];
 
-async function doRawRefresh(refreshTokenValue: string): Promise<{ accessToken: string; refreshToken: string } | null> {
-  const url = baseUrl
-    ? `${baseUrl}/api/auth/refresh`
-    : "/api/auth/refresh";
+function getJwtExpiry(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+    const json = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
+    const parsed = JSON.parse(json) as { exp?: number };
+    return typeof parsed.exp === "number" ? parsed.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpiredOrExpiringSoon(token: string): boolean {
+  const exp = getJwtExpiry(token);
+  if (exp == null) return false;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return exp <= nowSeconds + 30;
+}
+
+async function doRawRefresh(
+  refreshTokenValue: string
+): Promise<{ accessToken: string; refreshToken: string } | null> {
+  const url = baseUrl ? `${baseUrl}/api/auth/refresh` : "/api/auth/refresh";
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -24,10 +45,7 @@ async function doRawRefresh(refreshTokenValue: string): Promise<{ accessToken: s
   }
 }
 
-async function getValidToken(): Promise<string | null> {
-  const token = await tokenStore.getAccess();
-  if (token) return token;
-
+async function refreshAccessToken(): Promise<string | null> {
   if (_isRefreshing) {
     return new Promise<string | null>((resolve) => {
       _refreshQueue.push(resolve);
@@ -53,6 +71,21 @@ async function getValidToken(): Promise<string | null> {
   } finally {
     _isRefreshing = false;
   }
+}
+
+async function getValidToken(): Promise<string | null> {
+  const token = await tokenStore.getAccess();
+
+  if (!token) {
+    return refreshAccessToken();
+  }
+
+  if (isTokenExpiredOrExpiringSoon(token)) {
+    await tokenStore.clear();
+    return refreshAccessToken();
+  }
+
+  return token;
 }
 
 export function setupApiClient() {

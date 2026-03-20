@@ -50,7 +50,7 @@ export default function RegisterScreen() {
       });
       await login(res.accessToken, res.refreshToken, res.user);
       if (role === "athlete") {
-        router.replace("/onboarding/profile");
+        router.replace("/onboarding/splash");
       } else {
         router.replace("/");
       }

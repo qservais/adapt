@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,30 +10,30 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useLinkClient } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { Button } from "@/components/ui/Button";
 import { InputField } from "@/components/ui/InputField";
+import { useAthleteLink } from "@/lib/useAthleteLink";
 
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
-  const linkMutation = useLinkClient();
-  const [email, setEmail] = useState("");
+  const linkMutation = useAthleteLink();
+  const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [linked, setLinked] = useState(false);
 
   const handleLink = async () => {
     setError("");
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) {
-      setError("Please enter your coach's email");
+    const trimmed = code.trim().toUpperCase();
+    if (trimmed.length !== 6) {
+      setError("Please enter the 6-character code from your coach");
       return;
     }
     try {
-      await linkMutation.mutateAsync({ data: { athleteEmail: trimmed } });
+      await linkMutation.mutateAsync({ inviteCode: trimmed });
       setLinked(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Could not link coach";
+      const msg = err instanceof Error ? err.message : "Invalid invite code";
       setError(msg);
     }
   };
@@ -57,7 +56,7 @@ export default function InviteScreen() {
         </View>
         <Text style={[styles.title, { fontFamily: FONTS.title }]}>COACH LINK</Text>
         <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          Link your coach by entering their email address. They'll have access to your sessions and check-ins.
+          Enter the 6-character invite code given to you by your coach.
         </Text>
 
         {linked ? (
@@ -69,7 +68,7 @@ export default function InviteScreen() {
               Coach Linked!
             </Text>
             <Text style={[styles.successDesc, { fontFamily: FONTS.body }]}>
-              Your coach is now connected and can view your data.
+              Your coach is now connected and can view your sessions and check-ins.
             </Text>
             <Button label="Continue" onPress={() => router.push("/onboarding/tutorial")} />
           </View>
@@ -78,19 +77,23 @@ export default function InviteScreen() {
             <View style={styles.infoBox}>
               <Feather name="info" size={16} color={COLORS.cyan} />
               <Text style={[styles.infoText, { fontFamily: FONTS.body }]}>
-                Ask your coach for their email. They need to have an account on ADAPT by LMJ.
+                Your coach can find their invite code in the ADAPT coach dashboard under their profile settings.
               </Text>
             </View>
 
             <View style={styles.form}>
               <InputField
-                label="Coach Email"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="coach@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
+                label="6-Character Invite Code"
+                value={code}
+                onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                placeholder="ABC123"
+                autoCapitalize="characters"
+                maxLength={6}
+                style={styles.codeInput}
               />
+              <Text style={[styles.codeHint, { fontFamily: FONTS.mono }]}>
+                {code.length}/6 characters
+              </Text>
               {error ? (
                 <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
               ) : null}
@@ -137,6 +140,8 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   form: { gap: 14 },
+  codeInput: { letterSpacing: 8, textAlign: "center", fontSize: 22 },
+  codeHint: { fontSize: 11, color: COLORS.textMuted, textAlign: "center" },
   error: { color: COLORS.red, fontSize: 13, textAlign: "center" },
   successBox: {
     alignItems: "center",

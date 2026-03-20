@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import { tokenStore } from "@/lib/auth";
-import { customFetch } from "@/lib/custom-fetch";
+import { getMe } from "@workspace/api-client-react";
 import type { UserProfile } from "@workspace/api-client-react";
 
 interface AuthContextValue {
@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const token = await tokenStore.getAccess();
         if (token) {
-          const profile = await customFetch<UserProfile>("/api/users/me");
+          const profile = await getMe();
           setUser(profile);
         }
       } catch {
