@@ -95,7 +95,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { fontFamily: FONTS.body }]}>
-            Bonjour, {user?.firstName ?? "Athlete"}
+            Bonjour, {user?.firstName ?? "Athlète"}
           </Text>
           <Text style={[styles.date, { fontFamily: FONTS.mono }]}>
             {new Date()

@@ -27,9 +27,9 @@ interface DifficultyOption {
 }
 
 const DIFFICULTY_OPTIONS: DifficultyOption[] = [
-  { key: "too_easy", label: "Too Easy", icon: "thumbs-up", color: COLORS.cyan },
-  { key: "well_calibrated", label: "Just Right", icon: "check-circle", color: COLORS.green },
-  { key: "too_hard", label: "Too Hard", icon: "alert-triangle", color: COLORS.red },
+  { key: "too_easy", label: "Trop facile", icon: "thumbs-up", color: COLORS.cyan },
+  { key: "well_calibrated", label: "Parfait", icon: "check-circle", color: COLORS.green },
+  { key: "too_hard", label: "Trop dur", icon: "alert-triangle", color: COLORS.red },
 ];
 
 export default function FeedbackScreen() {
@@ -64,7 +64,7 @@ export default function FeedbackScreen() {
       });
       router.replace("/");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to submit feedback";
+      const msg = err instanceof Error ? err.message : "Impossible d'envoyer le retour";
       setSubmitError(msg);
     }
   };
@@ -82,14 +82,14 @@ export default function FeedbackScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>SESSION FEEDBACK</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>RETOUR DE SÉANCE</Text>
         <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          Help ADAPT calibrate your future sessions.
+          Aide ADAPT à calibrer tes prochaines séances.
         </Text>
 
         <GlowCard glowColor={rpeColor} style={styles.rpeCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-            PERCEIVED EFFORT (RPE)
+            EFFORT RESSENTI (RPE)
           </Text>
           <View style={styles.rpeDisplay}>
             <Text style={[styles.rpeVal, { fontFamily: FONTS.monoBold, color: rpeColor }]}>
@@ -124,14 +124,14 @@ export default function FeedbackScreen() {
             })}
           </View>
           <View style={styles.rpeLabels}>
-            <Text style={[styles.rpeLabelText, { fontFamily: FONTS.body }]}>Easy</Text>
-            <Text style={[styles.rpeLabelText, { fontFamily: FONTS.body }]}>Max Effort</Text>
+            <Text style={[styles.rpeLabelText, { fontFamily: FONTS.body }]}>Facile</Text>
+            <Text style={[styles.rpeLabelText, { fontFamily: FONTS.body }]}>Effort max</Text>
           </View>
         </GlowCard>
 
         <GlowCard glowColor={COLORS.border} style={styles.calibCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-            SESSION CALIBRATION
+            CALIBRATION
           </Text>
           <View style={styles.calibRow}>
             {DIFFICULTY_OPTIONS.map((opt) => (
@@ -173,7 +173,7 @@ export default function FeedbackScreen() {
             style={[styles.notesInput, { fontFamily: FONTS.body }]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="How did it feel? Anything to note?"
+            placeholder="Comment ça s'est passé ? Quelque chose à noter ?"
             placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={4}
@@ -184,7 +184,7 @@ export default function FeedbackScreen() {
           <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{submitError}</Text>
         ) : null}
         <Button
-          label="Submit Feedback"
+          label="Envoyer le retour"
           onPress={handleSubmit}
           loading={feedbackMutation.isPending}
         />

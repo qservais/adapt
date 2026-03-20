@@ -79,7 +79,7 @@ export default function MessagesScreen() {
                         hasUnread && { color: COLORS.white },
                       ]}
                     >
-                      {item.userFirstName ?? "Unknown"}{" "}
+                      {item.userFirstName ?? "Inconnu"}{" "}
                       {item.userLastName ?? ""}
                     </Text>
                     {item.lastMessageAt != null && (

@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -44,13 +45,13 @@ function RestTimer({
 
   return (
     <View style={timerStyles.container}>
-      <Text style={[timerStyles.label, { fontFamily: FONTS.mono }]}>REST</Text>
+      <Text style={[timerStyles.label, { fontFamily: FONTS.mono }]}>REPOS</Text>
       <Text style={[timerStyles.timer, { fontFamily: FONTS.mono }]}>
         {mins}:{String(secs).padStart(2, "0")}
       </Text>
       <TouchableOpacity onPress={onSkip} style={timerStyles.skipBtn}>
         <Text style={[timerStyles.skipText, { fontFamily: FONTS.bodyMedium }]}>
-          Skip Rest
+          Passer le repos
         </Text>
       </TouchableOpacity>
     </View>
@@ -129,18 +130,39 @@ export default function ExerciseScreen() {
     setCurrentSet((s) => s + 1);
   };
 
+  if (sessionQuery.isPending || (sessionQuery.isFetching && !session)) {
+    return (
+      <View style={[styles.flex, { backgroundColor: COLORS.bg, alignItems: "center", justifyContent: "center", gap: 16 }]}>
+        <ActivityIndicator size="large" color={COLORS.cyan} />
+        <Text style={[{ color: COLORS.textSecondary, fontFamily: FONTS.body }]}>
+          Chargement de la séance...
+        </Text>
+      </View>
+    );
+  }
+
   if (!exercise) {
     return (
-      <View style={[styles.flex, { backgroundColor: COLORS.bg, alignItems: "center", justifyContent: "center" }]}>
-        <Text style={[{ color: COLORS.textSecondary, fontFamily: FONTS.body }]}>
-          Loading session...
+      <View style={[styles.flex, { backgroundColor: COLORS.bg, alignItems: "center", justifyContent: "center", gap: 16, paddingHorizontal: 32 }]}>
+        <Feather name="alert-circle" size={40} color={COLORS.textMuted} />
+        <Text style={[{ color: COLORS.textSecondary, fontFamily: FONTS.body, textAlign: "center" }]}>
+          Aucun exercice disponible pour cette séance.
         </Text>
+        <TouchableOpacity onPress={() => router.replace("/")} style={styles.backHomeBtn}>
+          <Text style={[{ color: COLORS.white, fontFamily: FONTS.bodyMedium }]}>Retour à l'accueil</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? 0;
   const progress = ((exerciseIndex) / totalExercises) * 100;
+
+  const setDoneLabel = () => {
+    if (currentSet < (exercise.sets ?? 1)) return `Série ${currentSet} terminée`;
+    if (isLast) return "Terminer la séance";
+    return "Exercice suivant";
+  };
 
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
@@ -166,7 +188,7 @@ export default function ExerciseScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.setLabel, { fontFamily: FONTS.mono }]}>
-          SET {currentSet}/{exercise.sets}
+          SÉRIE {currentSet}/{exercise.sets}
         </Text>
         <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
           {exercise.exerciseName}
@@ -223,11 +245,7 @@ export default function ExerciseScreen() {
           >
             <Feather name="check" size={22} color={COLORS.bg} />
             <Text style={[styles.doneBtnText, { fontFamily: FONTS.bodyBold }]}>
-              {currentSet < (exercise.sets ?? 1)
-                ? `Set ${currentSet} Done`
-                : isLast
-                ? "Finish Session"
-                : "Next Exercise"}
+              {setDoneLabel()}
             </Text>
           </TouchableOpacity>
         </View>
@@ -326,4 +344,12 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   doneBtnText: { fontSize: 16, color: COLORS.bg, letterSpacing: 0.5 },
+  backHomeBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
 });

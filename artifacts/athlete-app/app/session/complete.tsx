@@ -53,10 +53,10 @@ export default function SessionCompleteScreen() {
         </Animated.View>
 
         <Text style={[styles.congrats, { fontFamily: FONTS.title, color: cfg.color }]}>
-          SESSION COMPLETE!
+          SÉANCE TERMINÉE !
         </Text>
         <Text style={[styles.desc, { fontFamily: FONTS.body }]}>
-          Great work today. Your effort is logged and your coach will see it.
+          Excellent travail. Ton effort est enregistré et ton coach le verra.
         </Text>
 
         {session != null && (
@@ -91,7 +91,7 @@ export default function SessionCompleteScreen() {
           >
             <Feather name="star" size={18} color={COLORS.bg} />
             <Text style={[styles.feedbackBtnText, { fontFamily: FONTS.bodyBold }]}>
-              Leave Feedback
+              Donner un retour
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -99,7 +99,7 @@ export default function SessionCompleteScreen() {
             style={styles.homeBtn}
           >
             <Text style={[styles.homeBtnText, { fontFamily: FONTS.body }]}>
-              Back to Home
+              Retour à l'accueil
             </Text>
           </TouchableOpacity>
         </View>

@@ -55,7 +55,7 @@ export default function ChatScreen() {
       messagesQuery.refetch();
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to send";
+      const msg = err instanceof Error ? err.message : "Impossible d'envoyer";
       console.warn(msg);
     }
   };
