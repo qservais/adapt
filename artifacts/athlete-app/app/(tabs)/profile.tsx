@@ -66,6 +66,8 @@ export default function ProfileScreen() {
   const [gender, setGender] = useState<string>(user?.gender ?? "");
   const [cycleTracking, setCycleTracking] = useState(user?.cycleTracking ?? false);
   const [weight, setWeight] = useState<string>("");
+  const [birthDay, setBirthDay] = useState<string>("");
+  const [birthMonth, setBirthMonth] = useState<string>("");
   const [birthYear, setBirthYear] = useState<string>("");
 
   const [coachCode, setCoachCode] = useState("");
@@ -78,13 +80,30 @@ export default function ProfileScreen() {
     setGender(p?.gender ?? "");
     setCycleTracking(p?.cycleTracking ?? false);
     setWeight(p?.weightKg ? String(parseFloat(String(p.weightKg))) : "");
-    setBirthYear(p?.birthDate ? String(p.birthDate).substring(0, 4) : "");
+    if (p?.birthDate) {
+      const parts = String(p.birthDate).substring(0, 10).split("-");
+      setBirthYear(parts[0] ?? "");
+      setBirthMonth(parts[1] ? String(parseInt(parts[1], 10)) : "");
+      setBirthDay(parts[2] ? String(parseInt(parts[2], 10)) : "");
+    } else {
+      setBirthYear("");
+      setBirthMonth("");
+      setBirthDay("");
+    }
     setEditing(true);
   };
 
   const handleSave = async () => {
     const parsedWeight = parseFloat(weight);
+    const parsedDay = parseInt(birthDay, 10);
+    const parsedMonth = parseInt(birthMonth, 10);
     const parsedYear = parseInt(birthYear, 10);
+    const currentYear = new Date().getFullYear();
+    const isValidDate =
+      !isNaN(parsedDay) && parsedDay >= 1 && parsedDay <= 31 &&
+      !isNaN(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12 &&
+      !isNaN(parsedYear) && parsedYear >= 1920 && parsedYear <= currentYear - 5;
+    const hasAnyDateField = birthDay !== "" || birthMonth !== "" || birthYear !== "";
     try {
       const updated = await updateMutation.mutateAsync({
         data: {
@@ -92,10 +111,9 @@ export default function ProfileScreen() {
           gender: (gender as "homme" | "femme" | "autre") || undefined,
           cycleTracking,
           weightKg: !isNaN(parsedWeight) && parsedWeight >= 20 ? parsedWeight : undefined,
-          birthDate:
-            !isNaN(parsedYear) && parsedYear >= 1920 && parsedYear <= new Date().getFullYear() - 5
-              ? `${parsedYear}-01-01`
-              : undefined,
+          birthDate: isValidDate
+            ? `${parsedYear}-${String(parsedMonth).padStart(2, "0")}-${String(parsedDay).padStart(2, "0")}`
+            : hasAnyDateField ? undefined : undefined,
         },
       });
       updateUser(updated);
@@ -272,23 +290,46 @@ export default function ProfileScreen() {
               />
             </View>
           )}
+          <View style={{ flex: 1 }}>
+            <InputField
+              label="Poids (kg)"
+              value={weight}
+              onChangeText={setWeight}
+              keyboardType="decimal-pad"
+              placeholder="ex: 70.5"
+            />
+          </View>
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 12, marginBottom: 6 }]}>
+            Date de naissance
+          </Text>
           <View style={styles.rowInputs}>
             <View style={{ flex: 1 }}>
               <InputField
-                label="Poids (kg)"
-                value={weight}
-                onChangeText={setWeight}
-                keyboardType="decimal-pad"
-                placeholder="ex: 70.5"
+                label="Jour"
+                value={birthDay}
+                onChangeText={setBirthDay}
+                keyboardType="number-pad"
+                placeholder="JJ"
+                maxLength={2}
               />
             </View>
             <View style={{ flex: 1 }}>
               <InputField
-                label="Année de naissance"
+                label="Mois"
+                value={birthMonth}
+                onChangeText={setBirthMonth}
+                keyboardType="number-pad"
+                placeholder="MM"
+                maxLength={2}
+              />
+            </View>
+            <View style={{ flex: 2 }}>
+              <InputField
+                label="Année"
                 value={birthYear}
                 onChangeText={setBirthYear}
                 keyboardType="number-pad"
-                placeholder="ex: 1995"
+                placeholder="AAAA"
                 maxLength={4}
               />
             </View>

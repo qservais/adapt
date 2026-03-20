@@ -366,7 +366,7 @@ export default function StatsScreen() {
                   period === p && { color: COLORS.green },
                 ]}
               >
-                {p}d
+                {p}j
               </Text>
             </TouchableOpacity>
           ))}

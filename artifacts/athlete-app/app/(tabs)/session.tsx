@@ -112,13 +112,18 @@ export default function SessionTab() {
             </View>
 
             <TouchableOpacity
-              onPress={() => router.push("/session")}
-              style={[styles.startBtn, { backgroundColor: cfg.color }]}
+              onPress={() => (session.exercises?.length ?? 0) > 0 ? router.push("/session") : undefined}
+              style={[
+                styles.startBtn,
+                { backgroundColor: cfg.color },
+                (session.exercises?.length ?? 0) === 0 && { backgroundColor: COLORS.border, opacity: 0.5 },
+              ]}
+              disabled={(session.exercises?.length ?? 0) === 0}
             >
               <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                DÉMARRER LA SÉANCE
+                {(session.exercises?.length ?? 0) === 0 ? "AUCUN EXERCICE" : "DÉMARRER LA SÉANCE"}
               </Text>
-              <Feather name="arrow-right" size={18} color={COLORS.bg} />
+              {(session.exercises?.length ?? 0) > 0 && <Feather name="arrow-right" size={18} color={COLORS.bg} />}
             </TouchableOpacity>
           </GlowCard>
         </View>
