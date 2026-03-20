@@ -40,8 +40,8 @@ export default function ClientDetail() {
       await overrideMutation.mutateAsync({ clientId: id, data: { mode } });
       toast({ title: "Session Overridden", description: `Set to ${mode.toUpperCase()}` });
       refetch();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch {
+      toast({ title: "Override failed", variant: "destructive" });
     }
   };
 
@@ -50,8 +50,8 @@ export default function ClientDetail() {
       await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: "Resolved via dashboard" } });
       toast({ title: "Alert Resolved" });
       refetch();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch {
+      toast({ title: "Failed to resolve alert", variant: "destructive" });
     }
   };
 

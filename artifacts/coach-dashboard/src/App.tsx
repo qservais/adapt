@@ -10,6 +10,7 @@ import LoginPage from "./pages/login";
 import ClientsOverview from "./pages/clients/index";
 import ClientDetail from "./pages/clients/detail";
 import ProgramsList from "./pages/programs/index";
+import ProgramDetail from "./pages/programs/detail";
 import AlertsFeed from "./pages/alerts/index";
 import MessagesList from "./pages/messages/index";
 import ChatView from "./pages/messages/chat";
@@ -63,6 +64,7 @@ function AppRouter() {
         <Route path="/clients" component={ClientsOverview} />
         <Route path="/clients/:id" component={ClientDetail} />
         <Route path="/programs" component={ProgramsList} />
+        <Route path="/programs/:id" component={ProgramDetail} />
         <Route path="/alerts" component={AlertsFeed} />
         <Route path="/messages" component={MessagesList} />
         <Route path="/messages/:id" component={ChatView} />

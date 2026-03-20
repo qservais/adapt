@@ -38,8 +38,9 @@ export default function LoginPage() {
         return;
       }
       setAuth(response.accessToken, response.refreshToken);
-    } catch (err: any) {
-      setError(err.message || "Invalid credentials");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Invalid credentials";
+      setError(message);
     }
   };
 
