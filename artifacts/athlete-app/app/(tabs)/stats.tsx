@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Dimensions,
   Platform,
@@ -15,6 +15,7 @@ import {
   useGetSessionHistory,
 } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 
 const { width } = Dimensions.get("window");
@@ -274,6 +275,8 @@ function MonthCalendar({
 
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  useScrollToTop(scrollRef);
   const [period, setPeriod] = useState<Period>("30");
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
@@ -342,6 +345,7 @@ export default function StatsScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40 }}
       showsVerticalScrollIndicator={false}

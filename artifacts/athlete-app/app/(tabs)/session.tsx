@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   Platform,
   ScrollView,
@@ -16,11 +16,14 @@ import {
   useGetTodayCheckin,
 } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+import { useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
 
 export default function SessionTab() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  useScrollToTop(scrollRef);
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetSessionHistory();
@@ -34,6 +37,7 @@ export default function SessionTab() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 24 }}
       showsVerticalScrollIndicator={false}

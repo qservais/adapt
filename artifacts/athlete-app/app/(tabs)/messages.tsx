@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   FlatList,
   Platform,
@@ -13,9 +13,12 @@ import { Feather } from "@expo/vector-icons";
 import { useGetMessageThreads } from "@workspace/api-client-react";
 import type { MessageThread } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useScrollToTop } from "@react-navigation/native";
 
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<React.ElementRef<typeof FlatList>>(null);
+  useScrollToTop(scrollRef);
   const threadsQuery = useGetMessageThreads();
 
   const threads: MessageThread[] = threadsQuery.data ?? [];
@@ -42,6 +45,7 @@ export default function MessagesScreen() {
         </View>
       ) : (
         <FlatList
+          ref={scrollRef}
           data={threads}
           keyExtractor={(item) => item.userId}
           contentContainerStyle={{ paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 20 }}

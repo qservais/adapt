@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   Platform,
   Pressable,
@@ -21,12 +21,15 @@ import {
 import type { CheckinData, SessionDetail } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+import { useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { AdaptScoreDisplay } from "@/components/ui/AdaptScoreDisplay";
 import { GlowCard } from "@/components/ui/GlowCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  useScrollToTop(scrollRef);
   const { user } = useAuth();
 
   const checkinQuery = useGetTodayCheckin();
@@ -76,6 +79,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
       contentContainerStyle={[
         styles.content,

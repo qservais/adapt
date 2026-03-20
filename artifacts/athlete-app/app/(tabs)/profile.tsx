@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Platform,
@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useUpdateMe, useAthleteLink } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
 import { Button } from "@/components/ui/Button";
@@ -52,6 +53,8 @@ function computeAge(birthDate: string | null | undefined): number | null {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  useScrollToTop(scrollRef);
   const { user, logout, updateUser } = useAuth();
   const meQuery = useGetMe();
   const updateMutation = useUpdateMe();
@@ -145,6 +148,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
