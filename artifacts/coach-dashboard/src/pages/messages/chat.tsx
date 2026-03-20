@@ -13,7 +13,7 @@ export default function ChatView() {
   const [content, setContent] = useState("");
   
   const { data: client, isLoading: clientLoading } = useGetClientDetail(id);
-  const { data: messages, isLoading: msgLoading, refetch } = useGetThreadMessages(id, { query: { queryKey: [`/api/messages/${id}`], refetchInterval: 5000 }});
+  const { data: messages, isLoading: msgLoading, refetch } = useGetThreadMessages(id, { query: { queryKey: [`/api/messages/${id}`], refetchInterval: 10000 }});
   const sendMutation = useSendMessage();
   
   const bottomRef = useRef<HTMLDivElement>(null);

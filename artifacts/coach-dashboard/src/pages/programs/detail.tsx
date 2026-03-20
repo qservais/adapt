@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetProgram,
+  useGetPrograms,
   useAddProgramSession,
   useUpdateProgramSession,
   useDeleteProgramSession,
@@ -617,6 +618,9 @@ export default function ProgramDetail() {
   const { data: program, isLoading, refetch } = useGetProgram(programId!, {
     query: { queryKey: ["/api/programs", programId], enabled: !!programId },
   });
+  const { data: programs } = useGetPrograms();
+  const programSummary = programs?.find((p) => p.id === programId);
+  const athleteName = programSummary?.athleteName;
   const deleteProgramMutation = useDeleteProgram();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { toast } = useToast();
@@ -716,7 +720,7 @@ export default function ProgramDetail() {
               <span>{program.durationWeeks} Weeks</span>
               <span>•</span>
               <Link href={`/clients/${program.athleteId}`} className="hover:text-primary transition-colors">
-                {program.id}
+                {athleteName ?? "View Athlete"}
               </Link>
               {program.isActive && (
                 <span className="text-primary flex items-center gap-1">
