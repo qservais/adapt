@@ -40,14 +40,14 @@ export default function ClientsOverview() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display text-white">ROSTER OVERVIEW</h1>
-          <p className="text-muted-foreground text-sm">Monitor athlete readiness and daily compliance.</p>
+          <h1 className="text-3xl font-display text-white">VUE D'ENSEMBLE</h1>
+          <p className="text-muted-foreground text-sm">Surveillez la disponibilité et la compliance quotidienne des athlètes.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="Search athletes..." 
+              placeholder="Rechercher un athlète..." 
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 w-full sm:w-[250px] bg-card border-border"
@@ -60,9 +60,9 @@ export default function ClientsOverview() {
         <div className="border-b border-border p-4 bg-background/50">
           <Tabs value={filter} onValueChange={setFilter} className="w-full">
             <TabsList className="bg-background/50 border border-border">
-              <TabsTrigger value="all">All Athletes</TabsTrigger>
-              <TabsTrigger value="active">Active Today</TabsTrigger>
-              <TabsTrigger value="alerts" className="data-[state=active]:text-destructive">With Alerts</TabsTrigger>
+              <TabsTrigger value="all">Tous les athlètes</TabsTrigger>
+              <TabsTrigger value="active">Actifs aujourd'hui</TabsTrigger>
+              <TabsTrigger value="alerts" className="data-[state=active]:text-destructive">Avec alertes</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -71,11 +71,11 @@ export default function ClientsOverview() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-muted-foreground uppercase font-mono bg-background/30 border-b border-border">
               <tr>
-                <th className="px-6 py-4 font-semibold">Athlete Name</th>
+                <th className="px-6 py-4 font-semibold">Athlète</th>
                 <th className="px-6 py-4 font-semibold">ADAPT Score</th>
-                <th className="px-6 py-4 font-semibold">Session Mode</th>
-                <th className="px-6 py-4 font-semibold">Check-in Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Active Alerts</th>
+                <th className="px-6 py-4 font-semibold">Mode de séance</th>
+                <th className="px-6 py-4 font-semibold">Statut check-in</th>
+                <th className="px-6 py-4 font-semibold text-right">Alertes actives</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -84,7 +84,6 @@ export default function ClientsOverview() {
                 const score = client.todayCheckin?.adaptScore || 0;
                 const alerts = client.activeAlerts;
                 
-                // Color coding logic
                 let rowState = "default";
                 if (alerts > 0) rowState = "danger";
                 else if (!hasCheckin || score < 40) rowState = "warning";
@@ -130,19 +129,19 @@ export default function ClientsOverview() {
                       {client.todayCheckin?.sessionMode ? (
                         <ModeBadge mode={client.todayCheckin.sessionMode} />
                       ) : (
-                        <span className="text-muted-foreground italic text-xs">Pending</span>
+                        <span className="text-muted-foreground italic text-xs">En attente</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
                       {hasCheckin ? (
                         <span className="inline-flex items-center gap-1.5 text-xs text-primary font-medium">
                           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          Submitted
+                          Soumis
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                           <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                          Missed
+                          Manqué
                         </span>
                       )}
                     </td>
@@ -162,7 +161,7 @@ export default function ClientsOverview() {
               {filteredClients.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
-                    No athletes found matching criteria.
+                    Aucun athlète trouvé selon les critères.
                   </td>
                 </tr>
               )}

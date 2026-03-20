@@ -167,10 +167,10 @@ function StateNoPending({ onCheckin }: { onCheckin: () => void }) {
           <Feather name="lock" size={22} color={COLORS.textMuted} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.lockedTitle, { fontFamily: FONTS.bodyBold }]}>
-              Session Locked
+              Séance verrouillée
             </Text>
             <Text style={[styles.lockedDesc, { fontFamily: FONTS.body }]}>
-              Complete your check-in to unlock today's session
+              Effectue ton check-in pour déverrouiller la séance du jour
             </Text>
           </View>
         </View>
@@ -228,7 +228,7 @@ function StateCheckedIn({
         <GlowCard style={styles.noSessionCard} glowColor={COLORS.border}>
           <Feather name="calendar" size={28} color={COLORS.textMuted} />
           <Text style={[styles.noSessionText, { fontFamily: FONTS.body }]}>
-            No session planned for today
+            Aucune séance prévue aujourd'hui
           </Text>
         </GlowCard>
       )}

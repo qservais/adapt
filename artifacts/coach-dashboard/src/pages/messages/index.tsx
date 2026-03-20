@@ -2,6 +2,7 @@ import { useGetMessageThreads } from "@workspace/api-client-react";
 import { Loader2, MessageSquare } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 
 export default function MessagesList() {
   const { data: threads, isLoading } = useGetMessageThreads({ query: { queryKey: ['/api/messages/threads'], refetchInterval: 10000 }});
@@ -16,7 +17,7 @@ export default function MessagesList() {
         <h1 className="text-3xl font-display text-white flex items-center gap-3">
           <MessageSquare className="w-8 h-8 text-primary" /> MESSAGES
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">Direct communication with athletes.</p>
+        <p className="text-muted-foreground text-sm mt-1">Communication directe avec les athlètes.</p>
       </div>
 
       <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden divide-y divide-border/50">
@@ -37,11 +38,11 @@ export default function MessagesList() {
                 <div className="flex justify-between items-baseline mb-1">
                   <h3 className="font-semibold text-white truncate">{thread.userFirstName} {thread.userLastName}</h3>
                   <span className="text-xs text-muted-foreground shrink-0 ml-2 font-mono">
-                    {thread.lastMessageAt ? formatDistanceToNow(new Date(thread.lastMessageAt), { addSuffix: true }) : ''}
+                    {thread.lastMessageAt ? formatDistanceToNow(new Date(thread.lastMessageAt), { addSuffix: true, locale: fr }) : ''}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground truncate pr-4">
-                  {thread.lastMessage || "No messages yet"}
+                  {thread.lastMessage || "Aucun message"}
                 </p>
               </div>
             </div>
@@ -50,7 +51,7 @@ export default function MessagesList() {
 
         {threads?.length === 0 && (
           <div className="p-12 text-center text-muted-foreground">
-            No active conversations.
+            Aucune conversation active.
           </div>
         )}
       </div>

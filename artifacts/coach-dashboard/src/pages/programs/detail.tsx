@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { fr } from "date-fns/locale";
 
 const MODE_STYLES: Record<string, { label: string; color: string; border: string; bg: string }> = {
   performance: { label: "Performance", color: "text-primary", border: "border-primary", bg: "bg-primary/10" },
@@ -66,7 +67,7 @@ const MODE_STYLES: Record<string, { label: string; color: string; border: string
 
 const SESSION_TYPES = ["strength", "cardio", "hybrid", "mobility"] as const;
 const MODES = ["performance", "normal", "adapt", "recovery"] as const;
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 interface ExerciseRow {
   exerciseId: string;
@@ -153,7 +154,7 @@ function ExercisePicker({ onAdd }: ExercisePickerProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search exercises..."
+          placeholder="Rechercher un exercice..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="pl-9 bg-background border-border h-9 text-sm"
@@ -175,7 +176,7 @@ function ExercisePicker({ onAdd }: ExercisePickerProps) {
           </button>
         ))}
         {filtered.length === 0 && (
-          <p className="text-center py-4 text-sm text-muted-foreground">No exercises found</p>
+          <p className="text-center py-4 text-sm text-muted-foreground">Aucun exercice trouvé</p>
         )}
       </div>
     </div>
@@ -268,7 +269,7 @@ function VariantEditor({ variant, onChange }: VariantEditorProps) {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Load (kg)</label>
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Charge (kg)</label>
                 <Input
                   type="number"
                   min={0}
@@ -278,7 +279,7 @@ function VariantEditor({ variant, onChange }: VariantEditorProps) {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Rest (s)</label>
+                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Repos (s)</label>
                 <Input
                   type="number"
                   min={0}
@@ -289,11 +290,11 @@ function VariantEditor({ variant, onChange }: VariantEditorProps) {
               </div>
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Coach Cue</label>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Indication coach</label>
               <Input
                 value={ex.coachCue}
                 onChange={(e) => updateExercise(idx, { coachCue: e.target.value })}
-                placeholder="Keep core tight, tempo 3-1-1..."
+                placeholder="Gainage serré, tempo 3-1-1..."
                 className="h-7 text-xs bg-background border-border mt-0.5"
               />
             </div>
@@ -302,7 +303,7 @@ function VariantEditor({ variant, onChange }: VariantEditorProps) {
       </div>
 
       <div className="border border-dashed border-border rounded-lg p-3">
-        <p className="text-xs font-mono text-muted-foreground mb-2 uppercase tracking-wider">Add Exercise</p>
+        <p className="text-xs font-mono text-muted-foreground mb-2 uppercase tracking-wider">Ajouter un exercice</p>
         <ExercisePicker onAdd={addExercise} />
       </div>
     </div>
@@ -333,7 +334,7 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
 
   const handleSave = async () => {
     if (!draft.name.trim()) {
-      toast({ title: "Session name required", variant: "destructive" });
+      toast({ title: "Nom de séance requis", variant: "destructive" });
       return;
     }
     setIsSaving(true);
@@ -366,10 +367,10 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
       } else {
         await addMutation.mutateAsync({ programId, data: payload });
       }
-      toast({ title: isEdit ? "Session updated" : "Session added" });
+      toast({ title: isEdit ? "Séance mise à jour" : "Séance ajoutée" });
       onSaved();
     } catch {
-      toast({ title: "Failed to save session", variant: "destructive" });
+      toast({ title: "Échec de l'enregistrement", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -382,30 +383,30 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
     }));
   };
 
-  const dayName = DAY_NAMES[dayNumber - 1] || `Day ${dayNumber}`;
+  const dayName = DAY_NAMES[dayNumber - 1] || `Jour ${dayNumber}`;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="bg-card border-border max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="font-display text-2xl tracking-widest text-white">
-            {isEdit ? "EDIT" : "NEW"} SESSION — W{weekNumber} {dayName}
+            {isEdit ? "MODIFIER" : "NOUVELLE"} SÉANCE — S{weekNumber} {dayName}
           </DialogTitle>
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 space-y-5 pr-1">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Session Name</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Nom de la séance</label>
               <Input
                 value={draft.name}
                 onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                placeholder="e.g. Upper Body Strength"
+                placeholder="Ex : Force haut du corps"
                 className="bg-background border-border"
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Type</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Type de séance</label>
               <Select
                 value={draft.type}
                 onValueChange={(v) => setDraft((d) => ({ ...d, type: v as typeof SESSION_TYPES[number] }))}
@@ -424,7 +425,7 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Duration (min)</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Durée (min)</label>
               <Input
                 type="number"
                 min={1}
@@ -434,18 +435,18 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Coach Notes</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Notes coach</label>
               <Input
                 value={draft.coachNotes}
                 onChange={(e) => setDraft((d) => ({ ...d, coachNotes: e.target.value }))}
-                placeholder="Optional notes..."
+                placeholder="Notes optionnelles..."
                 className="bg-background border-border"
               />
             </div>
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Mode Variants</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Variantes par mode</p>
             <Tabs value={activeMode} onValueChange={setActiveMode}>
               <TabsList className="bg-background border border-border w-full grid grid-cols-4 h-9">
                 {MODES.map((m) => {
@@ -485,14 +486,14 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
 
         <div className="shrink-0 flex gap-3 pt-4 border-t border-border">
           <Button variant="outline" className="border-border" onClick={onClose}>
-            Cancel
+            Annuler
           </Button>
           <Button
             className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? "Update Session" : "Add Session"}
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? "Mettre à jour" : "Ajouter la séance"}
           </Button>
         </div>
       </DialogContent>
@@ -518,10 +519,10 @@ function SessionCell({ session, weekNumber, dayNumber, programId, onRefetch }: S
     if (!session) return;
     try {
       await deleteMutation.mutateAsync({ programId, sessionId: session.id });
-      toast({ title: "Session removed" });
+      toast({ title: "Séance supprimée" });
       onRefetch();
     } catch {
-      toast({ title: "Failed to remove session", variant: "destructive" });
+      toast({ title: "Échec de la suppression", variant: "destructive" });
     }
   };
 
@@ -593,17 +594,17 @@ function SessionCell({ session, weekNumber, dayNumber, programId, onRefetch }: S
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-white">Delete Session?</AlertDialogTitle>
-            <AlertDialogDescription>This will permanently remove "{session.name}" from the program.</AlertDialogDescription>
+            <AlertDialogTitle className="font-display text-xl text-white">Supprimer la séance ?</AlertDialogTitle>
+            <AlertDialogDescription>Cette action supprimera définitivement « {session.name} » du programme.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Supprimer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -628,10 +629,10 @@ export default function ProgramDetail() {
   const handleDeleteProgram = async () => {
     try {
       await deleteProgramMutation.mutateAsync({ programId: programId! });
-      toast({ title: "Program deleted" });
+      toast({ title: "Programme supprimé" });
       navigate("/programs");
     } catch {
-      toast({ title: "Failed to delete program", variant: "destructive" });
+      toast({ title: "Échec de la suppression", variant: "destructive" });
     }
   };
 
@@ -672,10 +673,10 @@ export default function ProgramDetail() {
         });
       }
 
-      toast({ title: `Week ${weekNum} duplicated as Week ${nextWeek}` });
+      toast({ title: `Semaine ${weekNum} dupliquée en semaine ${nextWeek}` });
       refetch();
     } catch {
-      toast({ title: "Failed to duplicate week", variant: "destructive" });
+      toast({ title: "Échec de la duplication", variant: "destructive" });
     }
   }, [program, programId, refetch, toast]);
 
@@ -690,9 +691,9 @@ export default function ProgramDetail() {
   if (!program) {
     return (
       <div className="text-center py-20">
-        <p className="text-muted-foreground">Program not found.</p>
+        <p className="text-muted-foreground">Programme introuvable.</p>
         <Link href="/programs">
-          <Button variant="ghost" className="mt-4">Back to Programs</Button>
+          <Button variant="ghost" className="mt-4">Retour aux programmes</Button>
         </Link>
       </div>
     );
@@ -717,15 +718,15 @@ export default function ProgramDetail() {
           <div>
             <h1 className="text-3xl font-display text-white">{program.name}</h1>
             <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground font-mono">
-              <span>{program.durationWeeks} Weeks</span>
+              <span>{program.durationWeeks} semaines</span>
               <span>•</span>
               <Link href={`/clients/${program.athleteId}`} className="hover:text-primary transition-colors">
-                {athleteName ?? "View Athlete"}
+                {athleteName ?? "Voir l'athlète"}
               </Link>
               {program.isActive && (
                 <span className="text-primary flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
-                  Active
+                  Actif
                 </span>
               )}
             </div>
@@ -738,7 +739,7 @@ export default function ProgramDetail() {
           className="border-destructive/50 text-destructive hover:bg-destructive/10"
           onClick={() => setDeleteOpen(true)}
         >
-          <Trash2 className="w-4 h-4 mr-2" /> Delete Program
+          <Trash2 className="w-4 h-4 mr-2" /> Supprimer le programme
         </Button>
       </div>
 
@@ -752,22 +753,22 @@ export default function ProgramDetail() {
             </div>
           );
         })}
-        <p className="text-xs text-muted-foreground self-center ml-2">Each cell can have 4 mode variants</p>
+        <p className="text-xs text-muted-foreground self-center ml-2">Chaque case peut avoir 4 variantes par mode</p>
       </div>
 
       <div className="space-y-4">
         {weeks.map((week) => (
           <div key={week} className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-border">
-              <h3 className="font-display text-lg text-white tracking-wider">WEEK {week}</h3>
+              <h3 className="font-display text-lg text-white tracking-wider">SEMAINE {week}</h3>
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-muted-foreground hover:text-white gap-1.5 text-xs h-7"
                 onClick={() => duplicateWeek(week)}
-                title="Duplicate this week and append to end"
+                title="Dupliquer cette semaine et l'ajouter à la fin"
               >
-                <Copy className="w-3.5 h-3.5" /> Duplicate Week
+                <Copy className="w-3.5 h-3.5" /> Dupliquer la semaine
               </Button>
             </div>
             <div className="p-3">
@@ -797,19 +798,19 @@ export default function ProgramDetail() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-white">Delete "{program.name}"?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-xl text-white">Supprimer « {program.name} » ?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the program and all its sessions. This cannot be undone.
+              Cette action supprimera définitivement le programme et toutes ses séances. Cette opération est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDeleteProgram}
               disabled={deleteProgramMutation.isPending}
             >
-              {deleteProgramMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete Program"}
+              {deleteProgramMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Supprimer le programme"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

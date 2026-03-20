@@ -3,6 +3,7 @@ import { Loader2, AlertTriangle, CheckCircle2, User, MessageSquare } from "lucid
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,12 +14,12 @@ const PRIORITY_STYLE: Record<string, { card: string; badge: string; label: strin
   p1: {
     card: "border-destructive bg-destructive/5 shadow-[0_0_15px_rgba(255,59,92,0.1)]",
     badge: "bg-destructive text-white",
-    label: "P1 CRITICAL",
+    label: "P1 CRITIQUE",
   },
   p2: {
     card: "border-accent bg-accent/5",
     badge: "bg-accent text-accent-foreground",
-    label: "P2 WARNING",
+    label: "P2 ATTENTION",
   },
   p3: {
     card: "border-border bg-card",
@@ -46,10 +47,10 @@ export default function AlertsFeed() {
   const handleResolve = async (alertId: string, note: string) => {
     try {
       await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: note } });
-      toast({ title: "Alert resolved" });
+      toast({ title: "Alerte résolue" });
       refetch();
     } catch {
-      toast({ title: "Failed to resolve alert", variant: "destructive" });
+      toast({ title: "Échec de la résolution", variant: "destructive" });
     }
   };
 
@@ -73,10 +74,10 @@ export default function AlertsFeed() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-display text-white flex items-center gap-3">
-            <AlertTriangle className="w-8 h-8 text-destructive" /> ALERT FEED
+            <AlertTriangle className="w-8 h-8 text-destructive" /> FLUX D'ALERTES
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Real-time athlete interventions and warnings.
+            Interventions et avertissements en temps réel.
           </p>
         </div>
       </div>
@@ -85,10 +86,10 @@ export default function AlertsFeed() {
         <Tabs value={filter} onValueChange={setFilter}>
           <TabsList className="bg-transparent">
             <TabsTrigger value="unresolved" className="data-[state=active]:bg-background">
-              Unresolved Only
+              Non résolues
             </TabsTrigger>
             <TabsTrigger value="all" className="data-[state=active]:bg-background">
-              All Alerts
+              Toutes les alertes
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -124,12 +125,13 @@ export default function AlertsFeed() {
                       {alert.createdAt
                         ? formatDistanceToNow(new Date(alert.createdAt), {
                             addSuffix: true,
+                            locale: fr,
                           })
                         : ""}
                     </span>
                     {alert.isResolved && (
                       <span className="text-xs text-primary flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Resolved
+                        <CheckCircle2 className="w-3 h-3" /> Résolu
                       </span>
                     )}
                   </div>
@@ -157,21 +159,21 @@ export default function AlertsFeed() {
                         size="sm"
                         className="bg-destructive hover:bg-destructive/90 text-white"
                         onClick={() =>
-                          handleResolve(alert.id, "Recovery Validated")
+                          handleResolve(alert.id, "Récupération validée")
                         }
                         disabled={resolveMutation.isPending}
                       >
-                        Validate Recovery
+                        Valider la récupération
                       </Button>
                     )}
                     <Button
                       size="sm"
                       variant="outline"
                       className="border-white/10 hover:bg-white/5"
-                      onClick={() => handleResolve(alert.id, "Reviewed")}
+                      onClick={() => handleResolve(alert.id, "Vérifié")}
                       disabled={resolveMutation.isPending}
                     >
-                      Mark Resolved
+                      Marquer résolu
                     </Button>
                     <Link href={`/messages/${alert.athleteId}`}>
                       <Button
@@ -192,8 +194,8 @@ export default function AlertsFeed() {
         {sortedAlerts.length === 0 && (
           <div className="py-20 text-center text-muted-foreground bg-card/30 rounded-2xl border border-dashed border-border flex flex-col items-center">
             <CheckCircle2 className="w-12 h-12 text-primary/50 mb-3" />
-            <p className="text-lg text-white">All clear.</p>
-            <p className="text-sm">No alerts require your attention right now.</p>
+            <p className="text-lg text-white">Tout est en ordre.</p>
+            <p className="text-sm">Aucune alerte ne nécessite votre attention pour le moment.</p>
           </div>
         )}
       </div>

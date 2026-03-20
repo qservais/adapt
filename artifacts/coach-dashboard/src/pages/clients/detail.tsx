@@ -9,6 +9,7 @@ import {
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import { Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { 
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine
 } from "recharts";
@@ -38,49 +39,63 @@ export default function ClientDetail() {
   const handleOverride = async (mode: 'performance' | 'normal' | 'adapt' | 'recovery') => {
     try {
       await overrideMutation.mutateAsync({ clientId: id, data: { mode } });
-      toast({ title: "Session Overridden", description: `Set to ${mode.toUpperCase()}` });
+      toast({ title: "Séance modifiée", description: `Définie sur ${mode.toUpperCase()}` });
       refetch();
     } catch {
-      toast({ title: "Override failed", variant: "destructive" });
+      toast({ title: "Échec de la modification", variant: "destructive" });
     }
   };
 
   const handleResolveAlert = async (alertId: string) => {
     try {
-      await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: "Resolved via dashboard" } });
-      toast({ title: "Alert Resolved" });
+      await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: "Résolu via dashboard" } });
+      toast({ title: "Alerte résolue" });
       refetch();
     } catch {
-      toast({ title: "Failed to resolve alert", variant: "destructive" });
+      toast({ title: "Échec de la résolution", variant: "destructive" });
     }
   };
 
-  // Chart Data preparation
   const chartData = client.recentCheckins
     .slice(0, chartRange)
     .reverse()
     .map(c => ({
-      date: format(new Date(c.date), 'MMM dd'),
+      date: format(new Date(c.date), 'd MMM', { locale: fr }),
       score: c.adaptScore
     }));
 
   const metrics = [
-    { name: "Sleep", value: client.todayCheckin?.sleep },
-    { name: "Energy", value: client.todayCheckin?.energy },
+    { name: "Sommeil", value: client.todayCheckin?.sleep },
+    { name: "Énergie", value: client.todayCheckin?.energy },
     { name: "Stress", value: client.todayCheckin?.stress },
-    { name: "Soreness", value: client.todayCheckin?.soreness },
+    { name: "Courbatures", value: client.todayCheckin?.soreness },
     { name: "Motivation", value: client.todayCheckin?.motivation },
   ];
+
+  const LEVEL_LABELS: Record<string, string> = {
+    beginner: "Débutant",
+    intermediate: "Intermédiaire",
+    advanced: "Avancé",
+    elite: "Élite",
+  };
+  const GOAL_LABELS: Record<string, string> = {
+    strength: "Force",
+    muscle: "Prise de masse",
+    fat_loss: "Perte de poids",
+    performance: "Performance",
+    health: "Santé",
+    aesthetic: "Esthétique",
+    fitness: "Forme générale",
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <Link href="/clients" className="hover:text-white flex items-center gap-1 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Roster
+          <ArrowLeft className="w-4 h-4" /> Retour au roster
         </Link>
       </div>
 
-      {/* Header Profile */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 bg-card border border-border p-6 rounded-2xl shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-secondary" />
         
@@ -92,8 +107,8 @@ export default function ClientDetail() {
             <h1 className="text-4xl font-display text-white tracking-wide">{client.firstName} {client.lastName}</h1>
             <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
               <span className="font-mono">{client.email}</span>
-              {client.fitnessLevel && <span>• Level: <span className="text-white capitalize">{client.fitnessLevel}</span></span>}
-              {client.primaryGoal && <span>• Goal: <span className="text-white capitalize">{client.primaryGoal}</span></span>}
+              {client.fitnessLevel && <span>• Niveau : <span className="text-white capitalize">{LEVEL_LABELS[client.fitnessLevel] ?? client.fitnessLevel}</span></span>}
+              {client.primaryGoal && <span>• Objectif : <span className="text-white capitalize">{GOAL_LABELS[client.primaryGoal] ?? client.primaryGoal}</span></span>}
             </div>
           </div>
         </div>
@@ -101,20 +116,20 @@ export default function ClientDetail() {
         <div className="flex flex-col gap-3 shrink-0">
           <Link href={`/messages/${client.id}`}>
             <Button variant="outline" className="w-full justify-start hover-elevate">
-              <MessageSquare className="w-4 h-4 mr-2" /> Message Athlete
+              <MessageSquare className="w-4 h-4 mr-2" /> Envoyer un message
             </Button>
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="w-full justify-start bg-white/5 hover:bg-white/10 text-white border border-white/10 hover-elevate" disabled={overrideMutation.isPending}>
-                Override Today's Session
+                Forcer la séance du jour
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-card border-border">
-              <DropdownMenuItem onClick={() => handleOverride('performance')} className="text-[#00F5A0] focus:bg-[#00F5A0]/10">Force PERFORMANCE</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOverride('normal')} className="text-[#00D9FF] focus:bg-[#00D9FF]/10">Force NORMAL</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOverride('adapt')} className="text-[#FFB800] focus:bg-[#FFB800]/10">Force ADAPT</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOverride('recovery')} className="text-[#7B61FF] focus:bg-[#7B61FF]/10">Force RECOVERY</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('performance')} className="text-[#00F5A0] focus:bg-[#00F5A0]/10">Forcer PERFORMANCE</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('normal')} className="text-[#00D9FF] focus:bg-[#00D9FF]/10">Forcer NORMAL</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('adapt')} className="text-[#FFB800] focus:bg-[#FFB800]/10">Forcer ADAPT</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('recovery')} className="text-[#7B61FF] focus:bg-[#7B61FF]/10">Forcer RÉCUPÉRATION</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -123,7 +138,7 @@ export default function ClientDetail() {
       {client.activeAlerts.length > 0 && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2 text-destructive font-bold uppercase tracking-wider">
-            <AlertTriangle className="w-5 h-5" /> Active Alerts
+            <AlertTriangle className="w-5 h-5" /> Alertes actives
           </div>
           <div className="grid gap-2">
             {client.activeAlerts.map(alert => (
@@ -133,7 +148,7 @@ export default function ClientDetail() {
                   <span className="text-sm text-white">{alert.message}</span>
                 </div>
                 <Button size="sm" variant="ghost" className="text-xs text-muted-foreground hover:text-white" onClick={() => handleResolveAlert(alert.id)}>
-                  Resolve <CheckCircle2 className="w-3 h-3 ml-1" />
+                  Résoudre <CheckCircle2 className="w-3 h-3 ml-1" />
                 </Button>
               </div>
             ))}
@@ -142,23 +157,22 @@ export default function ClientDetail() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Charts & Metrics */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-card border-border shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl font-display tracking-widest text-white">ADAPT SCORE TREND</CardTitle>
+              <CardTitle className="text-xl font-display tracking-widest text-white">ÉVOLUTION ADAPT SCORE</CardTitle>
               <div className="flex items-center gap-1 bg-background p-1 rounded-md border border-border">
                 <button 
                   onClick={() => setChartRange(7)} 
                   className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 7 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
                 >
-                  7D
+                  7J
                 </button>
                 <button 
                   onClick={() => setChartRange(30)} 
                   className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 30 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
                 >
-                  30D
+                  30J
                 </button>
               </div>
             </CardHeader>
@@ -181,13 +195,13 @@ export default function ClientDetail() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">Not enough data</div>
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground">Pas encore assez de données</div>
               )}
             </CardContent>
           </Card>
 
           <div>
-            <h3 className="text-sm font-display text-muted-foreground tracking-widest mb-3 uppercase">Today's Readiness</h3>
+            <h3 className="text-sm font-display text-muted-foreground tracking-widest mb-3 uppercase">Forme du jour</h3>
             {client.todayCheckin ? (
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 {metrics.map(m => {
@@ -206,17 +220,16 @@ export default function ClientDetail() {
               </div>
             ) : (
               <div className="bg-background border border-border p-6 rounded-xl text-center text-muted-foreground italic text-sm">
-                No check-in submitted today.
+                Aucun check-in soumis aujourd'hui.
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Recent Sessions */}
         <div className="space-y-6">
           <Card className="bg-card border-border shadow-lg h-full flex flex-col">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-display tracking-widest text-white">RECENT SESSIONS</CardTitle>
+              <CardTitle className="text-xl font-display tracking-widest text-white">SÉANCES RÉCENTES</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-auto">
               <div className="space-y-3 pr-2">
@@ -224,7 +237,7 @@ export default function ClientDetail() {
                   <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-background border border-border hover:border-white/20 transition-colors">
                     <div>
                       <div className="text-sm font-medium text-white">
-                        {session.completedAt ? format(new Date(session.completedAt), 'MMM dd') : 'Incomplete'}
+                        {session.completedAt ? format(new Date(session.completedAt), 'd MMM', { locale: fr }) : 'Incomplète'}
                       </div>
                       <div className="mt-1">
                         <ModeBadge mode={session.variantMode} />
@@ -236,7 +249,7 @@ export default function ClientDetail() {
                     </div>
                   </div>
                 )) : (
-                  <div className="text-center text-muted-foreground text-sm italic py-8">No recent sessions found.</div>
+                  <div className="text-center text-muted-foreground text-sm italic py-8">Aucune séance récente.</div>
                 )}
               </div>
             </CardContent>

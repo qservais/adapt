@@ -25,11 +25,11 @@ export function AppSidebar() {
   const unreadMessagesCount = threads?.reduce((acc, t) => acc + t.unreadCount, 0) || 0;
 
   const items = [
-    { title: "Dashboard", url: "/clients", icon: LayoutDashboard },
-    { title: "Clients", url: "/clients", icon: Users },
-    { title: "Programs", url: "/programs", icon: Dumbbell },
+    { title: "Tableau de bord", url: "/clients", icon: LayoutDashboard },
+    { title: "Athlètes", url: "/clients", icon: Users },
+    { title: "Programmes", url: "/programs", icon: Dumbbell },
     { 
-      title: "Alerts", 
+      title: "Alertes", 
       url: "/alerts", 
       icon: Bell,
       badge: unresolvedAlertsCount > 0 ? unresolvedAlertsCount : null
@@ -51,7 +51,7 @@ export function AppSidebar() {
           </h1>
         </div>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground uppercase font-mono tracking-widest text-xs mb-2">Main Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-muted-foreground uppercase font-mono tracking-widest text-xs mb-2">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -94,7 +94,7 @@ export function AppSidebar() {
           className="flex items-center gap-3 w-full px-2 py-2 text-sm text-muted-foreground hover:text-white transition-colors"
         >
           <LogOut className="w-4 h-4" />
-          <span>Sign Out</span>
+          <span>Se déconnecter</span>
         </button>
       </SidebarFooter>
     </Sidebar>

@@ -36,10 +36,10 @@ export default function MessagesScreen() {
         <View style={styles.empty}>
           <Feather name="message-circle" size={40} color={COLORS.textMuted} />
           <Text style={[styles.emptyTitle, { fontFamily: FONTS.bodyBold }]}>
-            No conversations
+            Aucune conversation
           </Text>
           <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>
-            Your coach will message you here once you're connected.
+            Ton coach te contactera ici une fois que vous serez connectés.
           </Text>
         </View>
       ) : (
@@ -100,7 +100,7 @@ export default function MessagesScreen() {
                         hasUnread && { color: COLORS.textSecondary },
                       ]}
                     >
-                      {item.lastMessage ?? "No messages yet"}
+                      {item.lastMessage ?? "Aucun message"}
                     </Text>
                     {hasUnread && (
                       <View style={styles.unreadBadge}>

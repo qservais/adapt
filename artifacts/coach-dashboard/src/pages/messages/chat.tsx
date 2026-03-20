@@ -5,6 +5,7 @@ import { Loader2, ArrowLeft, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useAuth } from "@/lib/auth-context";
 
 export default function ChatView() {
@@ -35,13 +36,12 @@ export default function ChatView() {
       await sendMutation.mutateAsync({ data: { recipientId: id, content: txt } });
       refetch();
     } catch (e) {
-      setContent(txt); // revert on failure
+      setContent(txt);
     }
   };
 
   return (
     <div className="max-w-3xl mx-auto h-[calc(100vh-8rem)] flex flex-col bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-      {/* Header */}
       <div className="h-16 border-b border-border bg-background/50 flex items-center px-4 gap-4 shrink-0">
         <Link href="/messages" className="text-muted-foreground hover:text-white p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-5 h-5" />
@@ -52,12 +52,11 @@ export default function ChatView() {
           </div>
           <div>
             <div className="font-semibold text-white">{client?.firstName} {client?.lastName}</div>
-            <div className="text-xs text-muted-foreground">Athlete</div>
+            <div className="text-xs text-muted-foreground">Athlète</div>
           </div>
         </div>
       </div>
 
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/30">
         {messages?.map((msg, i) => {
           const isMine = msg.senderId === user?.id;
@@ -67,7 +66,7 @@ export default function ChatView() {
             <div key={msg.id} className="flex flex-col">
               {showDate && (
                 <div className="text-center text-xs font-mono text-muted-foreground my-4">
-                  {format(new Date(msg.createdAt), 'MMMM d, yyyy')}
+                  {format(new Date(msg.createdAt), 'd MMMM yyyy', { locale: fr })}
                 </div>
               )}
               <div className={`flex w-full ${isMine ? 'justify-end' : 'justify-start'}`}>
@@ -78,7 +77,7 @@ export default function ChatView() {
                 }`}>
                   <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
                   <div className={`text-[10px] mt-1 opacity-70 ${isMine ? 'text-right' : 'text-left'}`}>
-                    {format(new Date(msg.createdAt), 'h:mm a')}
+                    {format(new Date(msg.createdAt), 'HH:mm')}
                   </div>
                 </div>
               </div>
@@ -88,13 +87,12 @@ export default function ChatView() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Compose Area */}
       <div className="p-4 bg-card border-t border-border shrink-0">
         <form onSubmit={handleSend} className="flex gap-2">
           <Input 
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="Écrire un message..."
             className="flex-1 bg-background border-border h-12 rounded-full px-6"
           />
           <Button 
