@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -155,7 +156,6 @@ export default function ExerciseScreen() {
   }
 
   const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? 0;
-  const progress = exerciseIndex / totalExercises;
   const currentPR = athletePRs?.[exercise.exerciseId];
   const isAbovePR = currentPR != null && currentLoad > currentPR;
 
@@ -165,59 +165,115 @@ export default function ExerciseScreen() {
     return "Exercice suivant";
   };
 
+  const heroImage = exercise.category ? CATEGORY_IMAGES[exercise.category] : null;
+
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable
-          onPress={() => {
-            Alert.alert(
-              "Quitter la séance ?",
-              "Ta progression sera perdue.",
-              [
-                { text: "Continuer", style: "cancel" },
-                { text: "Quitter", style: "destructive", onPress: () => router.back() },
-              ]
-            );
-          }}
-          style={styles.closeBtn}
-        >
-          <Feather name="x" size={22} color={COLORS.textSecondary} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <ProgressBar
-            progress={exerciseIndex}
-            total={totalExercises}
-            color={cfg.color}
-            height={4}
+      {/* Hero image with gradient overlay */}
+      {heroImage ? (
+        <View style={styles.heroContainer}>
+          <Image source={heroImage} style={styles.heroImage} resizeMode="cover" />
+          <LinearGradient
+            colors={["transparent", `${cfg.color}20`, COLORS.bg]}
+            locations={[0, 0.6, 1]}
+            style={styles.heroGradient}
           />
+          {/* Progress bar + header on top of image */}
+          <View style={[styles.headerOverlay, { paddingTop: insets.top + 12 }]}>
+            <Pressable
+              onPress={() => {
+                Alert.alert(
+                  "Quitter la séance ?",
+                  "Ta progression sera perdue.",
+                  [
+                    { text: "Continuer", style: "cancel" },
+                    { text: "Quitter", style: "destructive", onPress: () => router.back() },
+                  ]
+                );
+              }}
+              style={styles.closeBtn}
+            >
+              <View style={styles.closeBtnBg}>
+                <Feather name="x" size={18} color={COLORS.white} />
+              </View>
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <ProgressBar
+                progress={exerciseIndex}
+                total={totalExercises}
+                color={cfg.color}
+                height={3}
+              />
+            </View>
+            <View style={styles.progressChip}>
+              <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
+                {exerciseIndex + 1}/{totalExercises}
+              </Text>
+            </View>
+          </View>
+          {/* Exercise name over image bottom */}
+          <View style={styles.heroBottom}>
+            <Text style={[styles.setLabel, { fontFamily: FONTS.mono }]}>
+              SÉRIE {currentSet}/{exercise.sets}
+            </Text>
+            <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
+              {exercise.exerciseName}
+            </Text>
+            <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
+              {exercise.reps} REPS
+            </Text>
+          </View>
         </View>
-        <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
-          {exerciseIndex + 1}/{totalExercises}
-        </Text>
-      </View>
+      ) : (
+        /* Fallback header without image */
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <Pressable
+            onPress={() => {
+              Alert.alert(
+                "Quitter la séance ?",
+                "Ta progression sera perdue.",
+                [
+                  { text: "Continuer", style: "cancel" },
+                  { text: "Quitter", style: "destructive", onPress: () => router.back() },
+                ]
+              );
+            }}
+            style={styles.closeBtn}
+          >
+            <Feather name="x" size={22} color={COLORS.textSecondary} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <ProgressBar
+              progress={exerciseIndex}
+              total={totalExercises}
+              color={cfg.color}
+              height={4}
+            />
+          </View>
+          <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
+            {exerciseIndex + 1}/{totalExercises}
+          </Text>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.setLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
-          SÉRIE {currentSet}/{exercise.sets}
-        </Text>
-
-        {exercise.category && CATEGORY_IMAGES[exercise.category] ? (
-          <Image
-            source={CATEGORY_IMAGES[exercise.category]}
-            style={styles.exerciseImage}
-            resizeMode="cover"
-          />
-        ) : null}
-
-        <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
-          {exercise.exerciseName}
-        </Text>
-        <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
-          {exercise.reps} REPS
-        </Text>
+        {/* Name section if no image hero */}
+        {!heroImage && (
+          <>
+            <Text style={[styles.setLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+              SÉRIE {currentSet}/{exercise.sets}
+            </Text>
+            <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
+              {exercise.exerciseName}
+            </Text>
+            <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
+              {exercise.reps} REPS
+            </Text>
+          </>
+        )}
 
         {currentLoad > 0 && (
           <View style={styles.loadSection}>
@@ -286,6 +342,50 @@ export default function ExerciseScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  heroContainer: {
+    width: "100%",
+    height: 300,
+    position: "relative",
+  },
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
+  heroGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "100%",
+  },
+  headerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  closeBtnBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    gap: 4,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -294,22 +394,28 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   closeBtn: { padding: 4 },
-  progressText: { fontSize: 12, color: COLORS.textMuted, minWidth: 36, textAlign: "right" },
+  progressChip: {
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  progressText: { fontSize: 12, color: COLORS.white },
   content: {
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     alignItems: "center",
     gap: 24,
-    paddingTop: 16,
+    paddingTop: 20,
   },
-  setLabel: { fontSize: 13, letterSpacing: 2 },
+  setLabel: { fontSize: 11, letterSpacing: 2, color: COLORS.textMuted },
   exerciseImage: {
     width: "100%",
-    height: 180,
-    borderRadius: 14,
+    height: 200,
+    borderRadius: 16,
     backgroundColor: COLORS.bgCard,
   },
   exerciseName: { fontSize: 44, letterSpacing: 2, textAlign: "center", lineHeight: 48 },
-  repsText: { fontSize: 32, color: COLORS.white, letterSpacing: 4 },
+  repsText: { fontSize: 28, color: COLORS.white, letterSpacing: 4 },
   loadSection: { alignItems: "center", gap: 14, width: "100%" },
   prInfo: {
     flexDirection: "row",

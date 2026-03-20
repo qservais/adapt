@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +15,14 @@ import { useGetTodaySession, useStartSession } from "@workspace/api-client-react
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
+
+const CATEGORY_IMAGES: Record<string, ReturnType<typeof require>> = {
+  compound: require("@/assets/images/categories/compound.png"),
+  isolation: require("@/assets/images/categories/isolation.png"),
+  cardio: require("@/assets/images/categories/cardio.png"),
+  mobility: require("@/assets/images/categories/mobility.png"),
+  plyometric: require("@/assets/images/categories/plyometric.png"),
+};
 
 export default function SessionIntroScreen() {
   const insets = useSafeAreaInsets();
@@ -125,24 +134,34 @@ export default function SessionIntroScreen() {
 
         <View style={styles.exerciseList}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRAMME</Text>
-          {session.exercises?.map((ex, i) => (
-            <View key={ex.id} style={styles.exRow}>
-              <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-                {String(i + 1).padStart(2, "0")}
-              </Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
-                <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
-                  {ex.sets}×{ex.reps}
-                  {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
-                  {ex.restSeconds != null ? ` · ${ex.restSeconds}s repos` : ""}
-                </Text>
-                {ex.coachCue != null && (
-                  <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
+          {session.exercises?.map((ex, i) => {
+            const thumb = ex.category ? CATEGORY_IMAGES[ex.category] : null;
+            return (
+              <View key={ex.id} style={styles.exRow}>
+                {thumb ? (
+                  <Image source={thumb} style={styles.exThumb} resizeMode="cover" />
+                ) : (
+                  <View style={styles.exThumbFallback}>
+                    <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                      {String(i + 1).padStart(2, "0")}
+                    </Text>
+                  </View>
                 )}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
+                  <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                    {ex.sets}×{ex.reps}
+                    {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
+                    {ex.restSeconds != null ? ` · ${ex.restSeconds}s repos` : ""}
+                  </Text>
+                  {ex.coachCue != null && (
+                    <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
+                  )}
+                </View>
+                <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -231,15 +250,33 @@ const styles = StyleSheet.create({
   exRow: {
     flexDirection: "row",
     gap: 14,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    alignItems: "flex-start",
+    alignItems: "center",
   },
-  exNum: { fontSize: 12, color: COLORS.textMuted, marginTop: 2, minWidth: 28 },
-  exName: { fontSize: 16, color: COLORS.white, marginBottom: 3 },
-  exDetail: { fontSize: 12, color: COLORS.textSecondary },
-  exCue: { fontSize: 12, color: COLORS.textMuted, fontStyle: "italic", marginTop: 3 },
+  exThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: COLORS.bgCard,
+    flexShrink: 0,
+  },
+  exThumbFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: COLORS.bgCard,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    flexShrink: 0,
+  },
+  exNum: { fontSize: 12, color: COLORS.textMuted },
+  exName: { fontSize: 15, color: COLORS.white, marginBottom: 3 },
+  exDetail: { fontSize: 12, color: COLORS.textSecondary, letterSpacing: 0.3 },
+  exCue: { fontSize: 11, color: COLORS.textMuted, fontStyle: "italic", marginTop: 2 },
   footer: {
     position: "absolute",
     bottom: 0,

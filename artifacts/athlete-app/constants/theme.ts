@@ -1,10 +1,10 @@
 export const COLORS = {
-  bg: "#0A0A0A",
-  bgCard: "#141414",
-  bgElevated: "#252525",
-  bgInput: "#1E1E1E",
-  border: "#2A2A2A",
-  borderLight: "#333333",
+  bg: "#111111",
+  bgCard: "#1A1A1A",
+  bgElevated: "#272727",
+  bgInput: "#222222",
+  border: "#303030",
+  borderLight: "#3A3A3A",
 
   cyan: "#00F0FF",
   cyanDim: "rgba(0,240,255,0.12)",

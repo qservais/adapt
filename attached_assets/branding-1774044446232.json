@@ -1,0 +1,127 @@
+{
+  "colorScheme": "dark",
+  "fonts": [
+    {
+      "family": "Geist",
+      "role": "unknown"
+    }
+  ],
+  "colors": {
+    "primary": "#FFFFFF",
+    "accent": "#111111",
+    "background": "#111111",
+    "textPrimary": "#111111",
+    "link": "#FFFFFF"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Geist",
+      "heading": "Geist"
+    },
+    "fontStacks": {
+      "heading": [
+        "Geist",
+        "sans-serif"
+      ],
+      "body": [
+        "Geist",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Geist",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "16px",
+      "h2": "64px",
+      "body": "20px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "14px"
+  },
+  "components": {
+    "buttonPrimary": {
+      "background": "#111111",
+      "textColor": "#111111",
+      "borderRadius": "8px",
+      "borderRadiusCorners": {
+        "topLeft": "8px",
+        "topRight": "8px",
+        "bottomRight": "8px",
+        "bottomLeft": "8px"
+      },
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "#1F1F1F",
+      "textColor": "#FFFFFF",
+      "borderColor": "#585858",
+      "borderRadius": "999px",
+      "borderRadiusCorners": {
+        "topLeft": "999px",
+        "topRight": "999px",
+        "bottomRight": "999px",
+        "bottomLeft": "999px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "https://mouvup.be/assets/moveup-logo-white.png",
+    "favicon": "https://mouvup.be/assets/favicon.png",
+    "ogImage": null,
+    "logoAlt": "Mouv'Up Logo"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Selected #0 because it matches the brand name 'Mouv'Up', is visible, and the source URL contains 'logo', indicating it is the main brand logo.",
+    "confidence": 0.85,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 1,
+      "text": "Commencer maintenant",
+      "reasoning": "The button 'Commencer maintenant' is likely the primary CTA due to its action-oriented text, suggesting immediate engagement. It is also styled as a large CTA button, indicating prominence."
+    },
+    "secondary": {
+      "index": 3,
+      "text": "Réserver mon cours",
+      "reasoning": "The button 'Réserver mon cours' is selected as secondary because it has a different background color (#1F1F1F) and serves as a supportive action, aligning with booking or scheduling."
+    },
+    "confidence": 0.9
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "medium",
+    "targetAudience": "fitness enthusiasts in Namur"
+  },
+  "designSystem": {
+    "framework": "custom",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.9,
+    "colors": 0.8,
+    "overall": 0.8500000000000001
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": 0,
+        "selectedLogoReasoning": "Selected #0 because it matches the brand name 'Mouv'Up', is visible, and the source URL contains 'logo', indicating it is the main brand logo.",
+        "confidence": 0.85
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}
