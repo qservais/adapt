@@ -30,7 +30,7 @@ export default function SessionCompleteScreen() {
     scale.value = withDelay(200, withSpring(1, { damping: 12, stiffness: 100 }));
     opacity.value = withDelay(100, withSpring(1));
 
-    if (session?.sessionLogId) {
+    if (session?.sessionLogId != null) {
       completeMutation.mutate({
         sessionId: session.sessionLogId,
         data: { exercises: [] },
@@ -42,10 +42,6 @@ export default function SessionCompleteScreen() {
     transform: [{ scale: scale.value }],
     opacity: opacity.value,
   }));
-
-  const handleFeedback = () => {
-    router.replace("/session/feedback" as any);
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
@@ -63,7 +59,7 @@ export default function SessionCompleteScreen() {
           Great work today. Your effort is logged and your coach will see it.
         </Text>
 
-        {session && (
+        {session != null && (
           <View style={styles.stats}>
             <View style={styles.statItem}>
               <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
@@ -71,14 +67,14 @@ export default function SessionCompleteScreen() {
               </Text>
               <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Exercices</Text>
             </View>
-            <View style={[styles.divider]} />
+            <View style={styles.divider} />
             <View style={styles.statItem}>
               <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
                 {session.estimatedDurationMin ?? "—"}
               </Text>
               <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Min</Text>
             </View>
-            <View style={[styles.divider]} />
+            <View style={styles.divider} />
             <View style={styles.statItem}>
               <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
                 {session.adaptScore}
@@ -90,7 +86,7 @@ export default function SessionCompleteScreen() {
 
         <View style={styles.actions}>
           <TouchableOpacity
-            onPress={handleFeedback}
+            onPress={() => router.replace("/session/feedback")}
             style={[styles.feedbackBtn, { backgroundColor: cfg.color }]}
           >
             <Feather name="star" size={18} color={COLORS.bg} />
@@ -99,7 +95,7 @@ export default function SessionCompleteScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.replace("/(tabs)/" as any)}
+            onPress={() => router.replace("/")}
             style={styles.homeBtn}
           >
             <Text style={[styles.homeBtnText, { fontFamily: FONTS.body }]}>

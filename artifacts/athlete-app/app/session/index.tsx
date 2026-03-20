@@ -42,8 +42,9 @@ export default function SessionIntroScreen() {
   const handleStart = async () => {
     try {
       await startMutation.mutateAsync({ sessionId: session.sessionLogId });
-    } catch {}
-    router.push("/session/exercise" as any);
+    } catch {
+    }
+    router.push("/session/exercise");
   };
 
   return (
@@ -64,7 +65,7 @@ export default function SessionIntroScreen() {
           {session.name}
         </Text>
         <View style={styles.heroMeta}>
-          {session.estimatedDurationMin && (
+          {session.estimatedDurationMin != null && (
             <View style={styles.metaItem}>
               <Feather name="clock" size={16} color={COLORS.textSecondary} />
               <Text style={[styles.metaText, { fontFamily: FONTS.mono }]}>
@@ -92,7 +93,7 @@ export default function SessionIntroScreen() {
         </View>
       </View>
 
-      {session.coachNotes && (
+      {session.coachNotes != null && (
         <GlowCard glowColor={COLORS.cyan} style={styles.coachCard}>
           <View style={styles.coachHeader}>
             <Feather name="message-square" size={16} color={COLORS.cyan} />
@@ -110,7 +111,7 @@ export default function SessionIntroScreen() {
         <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
           PROGRAMME
         </Text>
-        {session.exercises?.map((ex: any, i: number) => (
+        {session.exercises?.map((ex, i) => (
           <View key={ex.id} style={styles.exRow}>
             <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
               {String(i + 1).padStart(2, "0")}
@@ -121,10 +122,10 @@ export default function SessionIntroScreen() {
               </Text>
               <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
                 {ex.sets}×{ex.reps}
-                {ex.adaptedLoadKg ? ` · ${ex.adaptedLoadKg}kg` : ""}
-                {ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}
+                {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
+                {ex.restSeconds != null ? ` · ${ex.restSeconds}s rest` : ""}
               </Text>
-              {ex.coachCue && (
+              {ex.coachCue != null && (
                 <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>
                   {ex.coachCue}
                 </Text>

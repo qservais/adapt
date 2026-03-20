@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useGetTodaySession, useSubmitSessionFeedback } from "@workspace/api-client-react";
@@ -17,11 +17,20 @@ import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme"
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/Button";
 
-const DIFFICULTY_OPTIONS = [
-  { key: "too_easy", label: "Too Easy", icon: "thumbs-up" as const, color: COLORS.cyan },
-  { key: "well_calibrated", label: "Just Right", icon: "check-circle" as const, color: COLORS.green },
-  { key: "too_hard", label: "Too Hard", icon: "alert-triangle" as const, color: COLORS.red },
-] as const;
+type Difficulty = "too_easy" | "well_calibrated" | "too_hard";
+
+interface DifficultyOption {
+  key: Difficulty;
+  label: string;
+  icon: "thumbs-up" | "check-circle" | "alert-triangle";
+  color: string;
+}
+
+const DIFFICULTY_OPTIONS: DifficultyOption[] = [
+  { key: "too_easy", label: "Too Easy", icon: "thumbs-up", color: COLORS.cyan },
+  { key: "well_calibrated", label: "Just Right", icon: "check-circle", color: COLORS.green },
+  { key: "too_hard", label: "Too Hard", icon: "alert-triangle", color: COLORS.red },
+];
 
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
@@ -30,17 +39,16 @@ export default function FeedbackScreen() {
 
   const session = sessionQuery.data;
   const modeKey = (session?.mode ?? "normal") as SessionMode;
-  const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
 
   const [rpe, setRpe] = useState(6);
-  const [difficulty, setDifficulty] = useState<"too_easy" | "well_calibrated" | "too_hard">("well_calibrated");
+  const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
   const [notes, setNotes] = useState("");
 
   const rpeColor = rpe <= 4 ? COLORS.cyan : rpe <= 7 ? COLORS.green : rpe <= 9 ? COLORS.amber : COLORS.red;
 
   const handleSubmit = async () => {
-    if (!session?.sessionLogId) {
-      router.replace("/(tabs)/" as any);
+    if (session?.sessionLogId == null) {
+      router.replace("/");
       return;
     }
     try {
@@ -52,8 +60,9 @@ export default function FeedbackScreen() {
           athleteNotes: notes.trim() || null,
         },
       });
-    } catch {}
-    router.replace("/(tabs)/" as any);
+    } catch {
+    }
+    router.replace("/");
   };
 
   return (
@@ -74,7 +83,6 @@ export default function FeedbackScreen() {
           Help ADAPT calibrate your future sessions.
         </Text>
 
-        {/* RPE Slider */}
         <GlowCard glowColor={rpeColor} style={styles.rpeCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             PERCEIVED EFFORT (RPE)
@@ -117,7 +125,6 @@ export default function FeedbackScreen() {
           </View>
         </GlowCard>
 
-        {/* Calibration */}
         <GlowCard glowColor={COLORS.border} style={styles.calibCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             SESSION CALIBRATION
@@ -154,7 +161,6 @@ export default function FeedbackScreen() {
           </View>
         </GlowCard>
 
-        {/* Notes */}
         <GlowCard glowColor={COLORS.border} style={styles.notesCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             NOTES (OPTIONNEL)

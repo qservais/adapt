@@ -14,7 +14,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useGetMe, useGetTodayCheckin, useGetTodaySession, useGetCheckinHistory } from "@workspace/api-client-react";
+import {
+  useGetTodayCheckin,
+  useGetTodaySession,
+  useGetCheckinHistory,
+} from "@workspace/api-client-react";
+import type { CheckinData, SessionDetail } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
@@ -26,12 +31,10 @@ export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { user } = useAuth();
 
-  const meQuery = useGetMe();
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetCheckinHistory();
 
-  const hasCheckin = !!checkinQuery.data;
   const todayCheckin = checkinQuery.data;
   const todaySession = sessionQuery.data;
 
@@ -43,25 +46,27 @@ export default function HomeScreen() {
   };
 
   const modeColor =
-    todayCheckin
-      ? MODE_CONFIG[todayCheckin.sessionMode as SessionMode]?.color ?? COLORS.green
+    todayCheckin != null
+      ? (MODE_CONFIG[todayCheckin.sessionMode as SessionMode]?.color ?? COLORS.green)
       : COLORS.green;
 
   const streak = React.useMemo(() => {
-    if (!historyQuery.data?.length) return 0;
-    const sorted = [...historyQuery.data].sort(
+    const history = historyQuery.data;
+    if (!history?.length) return 0;
+    const sorted = [...history].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     let count = 0;
-    let expected = new Date();
+    const expected = new Date();
     expected.setHours(0, 0, 0, 0);
+    let expectedMs = expected.getTime();
     for (const c of sorted) {
       const d = new Date(c.date);
       d.setHours(0, 0, 0, 0);
-      const diff = (expected.getTime() - d.getTime()) / 86400000;
+      const diff = (expectedMs - d.getTime()) / 86400000;
       if (diff <= 1) {
         count++;
-        expected = new Date(d.getTime() - 86400000);
+        expectedMs = d.getTime() - 86400000;
       } else {
         break;
       }
@@ -87,18 +92,19 @@ export default function HomeScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { fontFamily: FONTS.body }]}>
             Bonjour, {user?.firstName ?? "Athlete"}
           </Text>
           <Text style={[styles.date, { fontFamily: FONTS.mono }]}>
-            {new Date().toLocaleDateString("fr-FR", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            }).toUpperCase()}
+            {new Date()
+              .toLocaleDateString("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })
+              .toUpperCase()}
           </Text>
         </View>
         {streak > 0 && (
@@ -111,12 +117,11 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {!hasCheckin ? (
-        <StateNoPending onCheckin={() => router.push("/checkin/" as any)} />
+      {todayCheckin == null ? (
+        <StateNoPending onCheckin={() => router.push("/checkin")} />
       ) : (
         <StateCheckedIn
-          score={todayCheckin!.adaptScore}
-          mode={todayCheckin!.sessionMode}
+          checkin={todayCheckin}
           session={todaySession}
           modeColor={modeColor}
         />
@@ -175,28 +180,27 @@ function StateNoPending({ onCheckin }: { onCheckin: () => void }) {
 }
 
 function StateCheckedIn({
-  score,
-  mode,
+  checkin,
   session,
   modeColor,
 }: {
-  score: number;
-  mode: string;
-  session: any;
+  checkin: CheckinData;
+  session: SessionDetail | undefined;
   modeColor: string;
 }) {
+  const modeKey = checkin.sessionMode as SessionMode;
   return (
     <View style={styles.checkedContainer}>
       <View style={styles.scoreSection}>
-        <AdaptScoreDisplay score={score} mode={mode} size="lg" />
+        <AdaptScoreDisplay score={checkin.adaptScore} mode={modeKey} size="lg" />
       </View>
 
-      {session ? (
+      {session != null ? (
         <GlowCard glowColor={modeColor} intensity="medium" style={styles.sessionCard}>
           <View style={styles.sessionHeader}>
-            <ModeBadge mode={mode} size="sm" />
+            <ModeBadge mode={modeKey} size="sm" />
             <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
-              {session.estimatedDurationMin ? `${session.estimatedDurationMin} MIN` : ""}
+              {session.estimatedDurationMin != null ? `${session.estimatedDurationMin} MIN` : ""}
             </Text>
           </View>
           <Text style={[styles.sessionName, { fontFamily: FONTS.title }]}>
@@ -205,13 +209,13 @@ function StateCheckedIn({
           <Text style={[styles.sessionExCount, { fontFamily: FONTS.body }]}>
             {session.exercises?.length ?? 0} exercices
           </Text>
-          {session.coachNotes && (
+          {session.coachNotes != null && (
             <Text style={[styles.coachNote, { fontFamily: FONTS.body }]}>
               "{session.coachNotes}"
             </Text>
           )}
           <TouchableOpacity
-            onPress={() => router.push("/session/" as any)}
+            onPress={() => router.push("/session")}
             style={[styles.startBtn, { backgroundColor: modeColor }]}
           >
             <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold, color: COLORS.bg }]}>

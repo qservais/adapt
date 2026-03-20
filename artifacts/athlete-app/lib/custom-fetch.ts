@@ -65,11 +65,10 @@ export async function customFetch<T>(
 
   if (!response.ok) {
     const errBody = await response.json().catch(() => ({}));
-    const err = new Error(
-      errBody?.error?.message || `HTTP ${response.status}`
+    const err = Object.assign(
+      new Error(errBody?.error?.message || `HTTP ${response.status}`),
+      { status: response.status as number, code: errBody?.error?.code as string | undefined }
     );
-    (err as any).status = response.status;
-    (err as any).code = errBody?.error?.code;
     throw err;
   }
 

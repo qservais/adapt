@@ -1,10 +1,9 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
-  Platform,
+  PanResponder,
   StyleSheet,
   Text,
   View,
-  PanResponder,
 } from "react-native";
 import { COLORS, FONTS } from "@/constants/theme";
 
@@ -14,12 +13,21 @@ interface CustomSliderProps {
   max?: number;
   step?: number;
   onChange: (v: number) => void;
-  label?: string;
   showValue?: boolean;
 }
 
 const THUMB_SIZE = 32;
 const TRACK_HEIGHT = 8;
+
+function getGradientColor(pct: number): string {
+  if (pct <= 0.25) {
+    return COLORS.red;
+  }
+  if (pct <= 0.5) {
+    return COLORS.amber;
+  }
+  return COLORS.green;
+}
 
 export function CustomSlider({
   value,
@@ -27,47 +35,45 @@ export function CustomSlider({
   max = 5,
   step = 1,
   onChange,
-  label,
   showValue = true,
 }: CustomSliderProps) {
-  const [trackWidth, setTrackWidth] = React.useState(300);
+  const [trackWidth, setTrackWidth] = useState(300);
+  const trackWidthRef = useRef(trackWidth);
 
   const pct = (value - min) / (max - min);
+  const fillColor = getGradientColor(pct);
 
   const getValueFromX = useCallback(
-    (x: number) => {
-      const raw = (x / trackWidth) * (max - min) + min;
+    (x: number): number => {
+      const raw = (x / trackWidthRef.current) * (max - min) + min;
       const stepped = Math.round(raw / step) * step;
       return Math.max(min, Math.min(max, stepped));
     },
-    [trackWidth, min, max, step]
+    [min, max, step]
   );
 
-  const panResponder = React.useRef(
+  const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
-        const x = e.nativeEvent.locationX;
-        onChange(getValueFromX(x));
+        onChange(getValueFromX(e.nativeEvent.locationX));
       },
       onPanResponderMove: (e) => {
-        const x = e.nativeEvent.locationX;
-        onChange(getValueFromX(x));
+        onChange(getValueFromX(e.nativeEvent.locationX));
       },
     })
   ).current;
 
-  const fillColor = pct <= 0.3 ? COLORS.red : pct <= 0.6 ? COLORS.amber : COLORS.green;
-
   return (
     <View style={styles.wrapper}>
-      {label && (
-        <Text style={styles.label}>{label}</Text>
-      )}
       <View
         style={styles.trackContainer}
-        onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          setTrackWidth(w);
+          trackWidthRef.current = w;
+        }}
         {...panResponder.panHandlers}
       >
         <View style={styles.track}>
@@ -89,6 +95,7 @@ export function CustomSlider({
               left: pct * (trackWidth - THUMB_SIZE),
               backgroundColor: fillColor,
               shadowColor: fillColor,
+              borderColor: COLORS.bg,
             },
           ]}
         >
@@ -101,7 +108,7 @@ export function CustomSlider({
       </View>
       <View style={styles.ticks}>
         {Array.from({ length: max - min + 1 }).map((_, i) => (
-          <Text key={i} style={styles.tickLabel}>
+          <Text key={i} style={[styles.tickLabel, { fontFamily: FONTS.mono }]}>
             {min + i}
           </Text>
         ))}
@@ -114,14 +121,6 @@ const styles = StyleSheet.create({
   wrapper: {
     width: "100%",
     paddingHorizontal: 4,
-  },
-  label: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
   trackContainer: {
     height: THUMB_SIZE + 16,
@@ -156,12 +155,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
     borderWidth: 2,
-    borderColor: COLORS.bg,
   },
   thumbValue: {
     color: COLORS.bg,
     fontSize: 13,
-    fontWeight: "700",
   },
   ticks: {
     flexDirection: "row",
@@ -170,7 +167,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   tickLabel: {
-    fontFamily: FONTS.mono,
     fontSize: 11,
     color: COLORS.textMuted,
   },

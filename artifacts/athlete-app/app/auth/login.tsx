@@ -36,9 +36,10 @@ export default function LoginScreen() {
         data: { email: email.trim().toLowerCase(), password },
       });
       await login(res.accessToken, res.refreshToken, res.user);
-      router.replace("/(tabs)/" as any);
-    } catch (e: any) {
-      setError(e?.message || "Invalid credentials");
+      router.replace("/");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid credentials";
+      setError(msg);
     }
   };
 
@@ -95,7 +96,7 @@ export default function LoginScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.push("/auth/register" as any)}
+          onPress={() => router.push("/auth/register")}
           style={styles.registerLink}
         >
           <Text style={[styles.registerText, { fontFamily: FONTS.body }]}>

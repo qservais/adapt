@@ -50,12 +50,13 @@ export default function RegisterScreen() {
       });
       await login(res.accessToken, res.refreshToken, res.user);
       if (role === "athlete") {
-        router.replace("/onboarding/profile" as any);
+        router.replace("/onboarding/profile");
       } else {
-        router.replace("/(tabs)/" as any);
+        router.replace("/");
       }
-    } catch (e: any) {
-      setError(e?.message || "Registration failed");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed";
+      setError(msg);
     }
   };
 
@@ -152,7 +153,7 @@ export default function RegisterScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.push("/auth/login" as any)}
+          onPress={() => router.push("/auth/login")}
           style={styles.loginLink}
         >
           <Text style={[styles.loginText, { fontFamily: FONTS.body }]}>

@@ -44,7 +44,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
-        router.replace("/auth/login" as any);
+        router.replace("/auth/login");
       }
     }
   }, [isLoading, isAuthenticated]);

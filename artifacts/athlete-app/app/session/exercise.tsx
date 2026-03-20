@@ -117,7 +117,7 @@ export default function ExerciseScreen() {
   const handleExerciseDone = () => {
     setShowRest(false);
     if (isLast) {
-      router.replace("/session/complete" as any);
+      router.replace("/session/complete");
     } else {
       setExerciseIndex((i) => i + 1);
       setCurrentSet(1);

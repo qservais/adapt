@@ -13,6 +13,19 @@ export default function CheckinResultScreen() {
   const modeKey = (mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
 
+  const getMessage = () => {
+    switch (modeKey) {
+      case "performance":
+        return "Excellent readiness! Today's session is dialed up. Go crush it.";
+      case "adapt":
+        return "Your body needs some adjustment today. Session is calibrated to fit.";
+      case "recovery":
+        return "Your body is asking for rest. Today is a recovery session. Honor it.";
+      default:
+        return "Good readiness. Standard session is ready — train smart.";
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
@@ -23,31 +36,14 @@ export default function CheckinResultScreen() {
         </View>
 
         <View style={[styles.messageBox, { borderColor: cfg.color, backgroundColor: `${cfg.color}10` }]}>
-          {modeKey === "performance" && (
-            <Text style={[styles.message, { fontFamily: FONTS.body }]}>
-              Excellent readiness! Today's session is dialed up. Go crush it.
-            </Text>
-          )}
-          {modeKey === "normal" && (
-            <Text style={[styles.message, { fontFamily: FONTS.body }]}>
-              Good readiness. Standard session is ready — train smart.
-            </Text>
-          )}
-          {modeKey === "adapt" && (
-            <Text style={[styles.message, { fontFamily: FONTS.body }]}>
-              Your body needs some adjustment today. Session is calibrated to fit.
-            </Text>
-          )}
-          {modeKey === "recovery" && (
-            <Text style={[styles.message, { fontFamily: FONTS.body }]}>
-              Your body is asking for rest. Today is a recovery session. Honor it.
-            </Text>
-          )}
+          <Text style={[styles.message, { fontFamily: FONTS.body }]}>
+            {getMessage()}
+          </Text>
         </View>
 
         <View style={styles.actions}>
           <TouchableOpacity
-            onPress={() => router.replace("/session/" as any)}
+            onPress={() => router.replace("/session")}
             style={[styles.primaryBtn, { backgroundColor: cfg.color }]}
           >
             <Feather name="zap" size={18} color={COLORS.bg} />
@@ -57,7 +53,7 @@ export default function CheckinResultScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => router.replace("/(tabs)/" as any)}
+            onPress={() => router.replace("/")}
             style={styles.secondaryBtn}
           >
             <Text style={[styles.secondaryBtnText, { fontFamily: FONTS.body }]}>

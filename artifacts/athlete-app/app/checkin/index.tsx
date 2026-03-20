@@ -7,73 +7,145 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useSubmitCheckin } from "@workspace/api-client-react";
+import { useSubmitCheckin, useGetMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { CustomSlider } from "@/components/ui/CustomSlider";
 import { Button } from "@/components/ui/Button";
 
-const STEPS = [
+type IconName = "sun" | "zap" | "activity" | "thermometer" | "target" | "alert-triangle";
+
+interface SliderStep {
+  kind: "slider";
+  key: "sleep" | "energy" | "stress" | "soreness" | "motivation";
+  title: string;
+  subtitle: string;
+  icon: IconName;
+  lowLabel: string;
+  highLabel: string;
+}
+
+interface PainStep {
+  kind: "pain";
+  key: "pain";
+  title: string;
+  subtitle: string;
+  icon: IconName;
+}
+
+interface CycleStep {
+  kind: "cycle";
+  key: "cycle";
+  title: string;
+  subtitle: string;
+  icon: IconName;
+}
+
+interface WelcomeStep {
+  kind: "welcome";
+  key: "welcome";
+  title: string;
+  subtitle: string;
+  icon: IconName;
+}
+
+type Step = WelcomeStep | SliderStep | CycleStep | PainStep;
+
+const ALL_STEPS: Step[] = [
   {
+    kind: "welcome",
+    key: "welcome",
+    title: "BONJOUR",
+    subtitle: "Let's calibrate today's session. This takes less than a minute.",
+    icon: "sun",
+  },
+  {
+    kind: "slider",
     key: "sleep",
     title: "SOMMEIL",
     subtitle: "How did you sleep last night?",
-    icon: "moon" as const,
+    icon: "sun",
     lowLabel: "Terrible",
     highLabel: "Amazing",
   },
   {
+    kind: "slider",
     key: "energy",
     title: "ÉNERGIE",
     subtitle: "How energized do you feel right now?",
-    icon: "zap" as const,
+    icon: "zap",
     lowLabel: "Exhausted",
     highLabel: "Energized",
   },
   {
+    kind: "slider",
     key: "stress",
     title: "STRESS",
     subtitle: "Rate your current stress level",
-    icon: "activity" as const,
+    icon: "activity",
     lowLabel: "Very stressed",
     highLabel: "Relaxed",
   },
   {
+    kind: "slider",
     key: "soreness",
     title: "COURBATURES",
     subtitle: "How sore are your muscles?",
-    icon: "thermometer" as const,
+    icon: "thermometer",
     lowLabel: "Very sore",
     highLabel: "No soreness",
   },
   {
+    kind: "slider",
     key: "motivation",
     title: "MOTIVATION",
     subtitle: "How motivated are you to train?",
-    icon: "target" as const,
+    icon: "target",
     lowLabel: "Not at all",
     highLabel: "Pumped",
   },
   {
+    kind: "cycle",
+    key: "cycle",
+    title: "CYCLE",
+    subtitle: "Where are you in your cycle today? (optional)",
+    icon: "activity",
+  },
+  {
+    kind: "pain",
     key: "pain",
     title: "DOULEUR",
     subtitle: "Any pain or discomfort today?",
-    icon: "alert-triangle" as const,
-    lowLabel: null,
-    highLabel: null,
+    icon: "alert-triangle",
   },
 ];
 
+const CYCLE_PHASES = [
+  { key: "menstrual", label: "Menstrual", desc: "Days 1–5", color: COLORS.red },
+  { key: "follicular", label: "Follicular", desc: "Days 6–13", color: COLORS.cyan },
+  { key: "ovulatory", label: "Ovulation", desc: "Day 14", color: COLORS.green },
+  { key: "luteal", label: "Luteal", desc: "Days 15–28", color: COLORS.amber },
+] as const;
+
+type CyclePhase = (typeof CYCLE_PHASES)[number]["key"] | null;
+
 export default function CheckinScreen() {
   const insets = useSafeAreaInsets();
+  const meQuery = useGetMe();
   const submitMutation = useSubmitCheckin();
 
-  const [step, setStep] = useState(0);
+  const hasCycleTracking = meQuery.data?.cycleTracking ?? false;
+  const steps = hasCycleTracking
+    ? ALL_STEPS
+    : ALL_STEPS.filter((s) => s.kind !== "cycle");
+
+  const [stepIndex, setStepIndex] = useState(0);
   const [values, setValues] = useState({
     sleep: 3,
     energy: 3,
@@ -83,10 +155,10 @@ export default function CheckinScreen() {
   });
   const [hasPain, setHasPain] = useState(false);
   const [painNotes, setPainNotes] = useState("");
+  const [cyclePhase, setCyclePhase] = useState<CyclePhase>(null);
 
-  const isLastStep = step === STEPS.length - 1;
-  const isPainStep = STEPS[step].key === "pain";
-  const currentStep = STEPS[step];
+  const isLastStep = stepIndex === steps.length - 1;
+  const currentStep = steps[stepIndex];
 
   const handleNext = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -97,34 +169,41 @@ export default function CheckinScreen() {
             ...values,
             hasPain,
             painNotes: hasPain ? painNotes : null,
+            cyclePhase: cyclePhase ?? undefined,
           },
         });
         router.replace({
-          pathname: "/checkin/result" as any,
+          pathname: "/checkin/result",
           params: {
             score: String(result.checkin.adaptScore),
             mode: result.checkin.sessionMode,
           },
         });
-      } catch (e: any) {
-        const code = e?.code;
+      } catch (err: unknown) {
+        const code =
+          err !== null &&
+          typeof err === "object" &&
+          "code" in err &&
+          typeof (err as Record<string, unknown>).code === "string"
+            ? (err as Record<string, string>).code
+            : "";
         if (code === "CHECKIN_CONFLICT") {
-          router.replace("/checkin/result" as any);
+          router.replace("/checkin/result");
           return;
         }
-        router.replace("/(tabs)/" as any);
+        router.replace("/");
       }
       return;
     }
-    setStep((s) => s + 1);
+    setStepIndex((s) => s + 1);
   };
 
   const handleBack = () => {
-    if (step === 0) {
+    if (stepIndex === 0) {
       router.back();
       return;
     }
-    setStep((s) => s - 1);
+    setStepIndex((s) => s - 1);
   };
 
   return (
@@ -145,12 +224,12 @@ export default function CheckinScreen() {
           <View
             style={[
               styles.progressFill,
-              { width: `${((step + 1) / STEPS.length) * 100}%` },
+              { width: `${((stepIndex + 1) / steps.length) * 100}%` },
             ]}
           />
         </View>
         <Text style={[styles.stepCount, { fontFamily: FONTS.mono }]}>
-          {step + 1}/{STEPS.length}
+          {stepIndex + 1}/{steps.length}
         </Text>
       </View>
 
@@ -180,13 +259,95 @@ export default function CheckinScreen() {
           {currentStep.subtitle}
         </Text>
 
-        {isPainStep ? (
+        {currentStep.kind === "welcome" && (
+          <View style={styles.welcomeSection}>
+            <View style={styles.welcomeGrid}>
+              {(["sleep", "energy", "stress", "soreness", "motivation"] as const).map(
+                (key) => (
+                  <View key={key} style={styles.welcomeItem}>
+                    <Feather name="check" size={14} color={COLORS.green} />
+                    <Text style={[styles.welcomeLabel, { fontFamily: FONTS.body }]}>
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                    </Text>
+                  </View>
+                )
+              )}
+            </View>
+          </View>
+        )}
+
+        {currentStep.kind === "slider" && (
+          <View style={styles.sliderSection}>
+            <View style={styles.sliderLabelRow}>
+              <Text style={[styles.sliderLabelText, { fontFamily: FONTS.body }]}>
+                {currentStep.lowLabel}
+              </Text>
+              <Text style={[styles.sliderLabelText, { fontFamily: FONTS.body }]}>
+                {currentStep.highLabel}
+              </Text>
+            </View>
+            <CustomSlider
+              value={values[currentStep.key]}
+              min={1}
+              max={5}
+              onChange={(v) =>
+                setValues((prev) => ({ ...prev, [currentStep.key]: v }))
+              }
+            />
+          </View>
+        )}
+
+        {currentStep.kind === "cycle" && (
+          <View style={styles.cycleSection}>
+            {CYCLE_PHASES.map((phase) => {
+              const isActive = cyclePhase === phase.key;
+              return (
+                <TouchableOpacity
+                  key={phase.key}
+                  onPress={() =>
+                    setCyclePhase((prev) => (prev === phase.key ? null : phase.key))
+                  }
+                  style={[
+                    styles.cycleBtn,
+                    isActive && { borderColor: phase.color, backgroundColor: `${phase.color}20` },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.cycleDot,
+                      { backgroundColor: isActive ? phase.color : COLORS.border },
+                    ]}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.cycleLabel,
+                        { fontFamily: FONTS.bodyMedium },
+                        isActive && { color: phase.color },
+                      ]}
+                    >
+                      {phase.label}
+                    </Text>
+                    <Text style={[styles.cycleDesc, { fontFamily: FONTS.mono }]}>
+                      {phase.desc}
+                    </Text>
+                  </View>
+                  {isActive && <Feather name="check" size={18} color={phase.color} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {currentStep.kind === "pain" && (
           <View style={styles.painSection}>
             <View style={styles.painOptions}>
-              {[
-                { label: "No pain", value: false, icon: "check-circle" as const, color: COLORS.green },
-                { label: "Yes, I have pain", value: true, icon: "alert-circle" as const, color: COLORS.red },
-              ].map((opt) => (
+              {(
+                [
+                  { label: "No pain", value: false, icon: "check-circle" as const, color: COLORS.green },
+                  { label: "Yes, I have pain", value: true, icon: "alert-circle" as const, color: COLORS.red },
+                ] as const
+              ).map((opt) => (
                 <Pressable
                   key={String(opt.value)}
                   onPress={() => {
@@ -229,25 +390,6 @@ export default function CheckinScreen() {
                 numberOfLines={3}
               />
             )}
-          </View>
-        ) : (
-          <View style={styles.sliderSection}>
-            <View style={styles.sliderLabelRow}>
-              <Text style={[styles.sliderLabelText, { fontFamily: FONTS.body }]}>
-                {currentStep.lowLabel}
-              </Text>
-              <Text style={[styles.sliderLabelText, { fontFamily: FONTS.body }]}>
-                {currentStep.highLabel}
-              </Text>
-            </View>
-            <CustomSlider
-              value={values[currentStep.key as keyof typeof values]}
-              min={1}
-              max={5}
-              onChange={(v) =>
-                setValues((prev) => ({ ...prev, [currentStep.key]: v }))
-              }
-            />
           </View>
         )}
       </ScrollView>
@@ -320,6 +462,19 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 48,
   },
+  welcomeSection: { width: "100%", alignItems: "center" },
+  welcomeGrid: { gap: 12, width: "100%" },
+  welcomeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  welcomeLabel: { fontSize: 15, color: COLORS.textSecondary, textTransform: "capitalize" },
   sliderSection: {
     width: "100%",
     gap: 16,
@@ -330,6 +485,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   sliderLabelText: { fontSize: 12, color: COLORS.textMuted },
+  cycleSection: { width: "100%", gap: 10 },
+  cycleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cycleDot: { width: 12, height: 12, borderRadius: 6 },
+  cycleLabel: { fontSize: 15, color: COLORS.white, marginBottom: 2 },
+  cycleDesc: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1 },
   painSection: { width: "100%", gap: 16 },
   painOptions: { flexDirection: "row", gap: 12 },
   painOpt: {

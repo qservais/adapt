@@ -44,8 +44,9 @@ export default function ProfileScreen() {
       updateUser(updated);
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
-    } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Failed to update profile");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update profile";
+      Alert.alert("Error", msg);
     }
   };
 
@@ -78,7 +79,6 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Avatar Section */}
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
           <Text style={[styles.initials, { fontFamily: FONTS.title }]}>
@@ -95,14 +95,21 @@ export default function ProfileScreen() {
             profile?.role === "coach" && { borderColor: COLORS.violet, backgroundColor: COLORS.violetDim },
           ]}
         >
-          <Text style={[styles.roleText, { fontFamily: FONTS.mono, color: profile?.role === "coach" ? COLORS.violet : COLORS.green }]}>
+          <Text
+            style={[
+              styles.roleText,
+              {
+                fontFamily: FONTS.mono,
+                color: profile?.role === "coach" ? COLORS.violet : COLORS.green,
+              },
+            ]}
+          >
             {(profile?.role ?? "ATHLETE").toUpperCase()}
           </Text>
         </View>
       </View>
 
-      {/* Stats */}
-      {profile && (
+      {profile != null && (
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
@@ -155,7 +162,7 @@ export default function ProfileScreen() {
         </GlowCard>
       ) : (
         <View style={styles.infoSection}>
-          {profile?.fitnessLevel && (
+          {profile?.fitnessLevel != null && (
             <View style={styles.infoRow}>
               <Feather name="activity" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Level</Text>
@@ -164,7 +171,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
-          {profile?.primaryGoal && (
+          {profile?.primaryGoal != null && (
             <View style={styles.infoRow}>
               <Feather name="target" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Goal</Text>
@@ -182,7 +189,7 @@ export default function ProfileScreen() {
               {profile?.cycleTracking ? "On" : "Off"}
             </Text>
           </View>
-          {profile?.inviteCode && (
+          {profile?.inviteCode != null && (
             <View style={styles.infoRow}>
               <Feather name="link" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>

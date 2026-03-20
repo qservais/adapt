@@ -15,26 +15,36 @@ import { Button } from "@/components/ui/Button";
 
 const { width } = Dimensions.get("window");
 
-const SLIDES = [
+type IconName = "sun" | "activity" | "zap";
+
+interface Slide {
+  key: string;
+  title: string;
+  desc: string;
+  icon: IconName;
+  color: string;
+}
+
+const SLIDES: Slide[] = [
   {
     key: "checkin",
     title: "MORNING CHECK-IN",
     desc: "Each morning, rate your sleep, energy, stress, soreness and motivation. Takes under 60 seconds.",
-    icon: "sun" as const,
+    icon: "sun",
     color: COLORS.cyan,
   },
   {
     key: "adapt",
     title: "YOUR ADAPT SCORE",
     desc: "We calculate your ADAPT Score (0–100) and assign a session mode: Performance, Normal, Adapt, or Recovery.",
-    icon: "activity" as const,
+    icon: "activity",
     color: COLORS.green,
   },
   {
     key: "session",
     title: "TRAIN SMARTER",
     desc: "Your session is automatically adjusted to match your body's readiness today. Load, volume — all calibrated.",
-    icon: "zap" as const,
+    icon: "zap",
     color: COLORS.violet,
   },
 ];
@@ -42,13 +52,13 @@ const SLIDES = [
 export default function TutorialScreen() {
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
-  const listRef = useRef<FlatList>(null);
+  const listRef = useRef<FlatList<Slide>>(null);
 
   const goNext = () => {
     if (index < SLIDES.length - 1) {
       listRef.current?.scrollToIndex({ index: index + 1, animated: true });
     } else {
-      router.replace("/(tabs)/" as any);
+      router.replace("/");
     }
   };
 
@@ -113,7 +123,7 @@ export default function TutorialScreen() {
         />
         {index < SLIDES.length - 1 && (
           <TouchableOpacity
-            onPress={() => router.replace("/(tabs)/" as any)}
+            onPress={() => router.replace("/")}
             style={styles.skip}
           >
             <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Skip</Text>

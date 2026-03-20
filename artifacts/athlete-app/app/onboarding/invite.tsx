@@ -48,11 +48,11 @@ export default function InviteScreen() {
       <View style={styles.actions}>
         <Button
           label="I've told my coach"
-          onPress={() => router.push("/onboarding/tutorial" as any)}
+          onPress={() => router.push("/onboarding/tutorial")}
         />
         <Button
           label="Continue without coach"
-          onPress={() => router.push("/onboarding/tutorial" as any)}
+          onPress={() => router.push("/onboarding/tutorial")}
           variant="ghost"
         />
       </View>

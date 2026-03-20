@@ -24,25 +24,24 @@ export default function ProfileSetupScreen() {
 
   const handleNext = async () => {
     setError("");
-    const ageN = parseInt(age);
-    const weightN = parseFloat(weight);
-    const heightN = parseInt(height);
     if (!age || !weight || !height) {
       setError("Please fill in all fields");
       return;
     }
+    const ageN = parseInt(age);
+    const weightN = parseFloat(weight);
+    const heightN = parseInt(height);
     try {
       await updateMutation.mutateAsync({
         data: {
-          age: ageN || undefined,
-          weightKg: weightN || undefined,
-          heightCm: heightN || undefined,
+          age: isNaN(ageN) ? undefined : ageN,
+          weightKg: isNaN(weightN) ? undefined : weightN,
+          heightCm: isNaN(heightN) ? undefined : heightN,
         },
       });
-      router.push("/onboarding/fitness" as any);
     } catch {
-      router.push("/onboarding/fitness" as any);
     }
+    router.push("/onboarding/fitness");
   };
 
   return (
@@ -97,7 +96,7 @@ export default function ProfileSetupScreen() {
           <Button label="Continue" onPress={handleNext} loading={updateMutation.isPending} />
           <Button
             label="Skip for now"
-            onPress={() => router.push("/onboarding/fitness" as any)}
+            onPress={() => router.push("/onboarding/fitness")}
             variant="ghost"
           />
         </View>

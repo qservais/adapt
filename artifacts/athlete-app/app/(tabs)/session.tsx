@@ -11,7 +11,11 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
-import { useGetTodaySession, useGetSessionHistory, useGetTodayCheckin } from "@workspace/api-client-react";
+import {
+  useGetTodaySession,
+  useGetSessionHistory,
+  useGetTodayCheckin,
+} from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -23,7 +27,7 @@ export default function SessionTab() {
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetSessionHistory();
 
-  const hasCheckin = !!checkinQuery.data;
+  const hasCheckin = checkinQuery.data != null;
   const session = sessionQuery.data;
   const modeKey = (checkinQuery.data?.sessionMode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey];
@@ -50,7 +54,7 @@ export default function SessionTab() {
                 Complete your morning check-in to unlock today's session.
               </Text>
               <TouchableOpacity
-                onPress={() => router.push("/checkin/" as any)}
+                onPress={() => router.push("/checkin")}
                 style={styles.lockBtn}
               >
                 <Text style={[styles.lockBtnText, { fontFamily: FONTS.bodyBold }]}>
@@ -60,12 +64,12 @@ export default function SessionTab() {
             </View>
           </GlowCard>
         </View>
-      ) : session ? (
+      ) : session != null ? (
         <View style={styles.section}>
           <GlowCard glowColor={cfg.color} intensity="medium">
             <View style={styles.sessionMeta}>
               <ModeBadge mode={modeKey} size="md" glow />
-              {session.estimatedDurationMin && (
+              {session.estimatedDurationMin != null && (
                 <View style={styles.durationPill}>
                   <Feather name="clock" size={13} color={COLORS.textSecondary} />
                   <Text style={[styles.durationText, { fontFamily: FONTS.mono }]}>
@@ -82,7 +86,7 @@ export default function SessionTab() {
             </Text>
 
             <View style={styles.exercisePreview}>
-              {session.exercises?.slice(0, 4).map((ex: any, i: number) => (
+              {session.exercises?.slice(0, 4).map((ex, i) => (
                 <View key={ex.id} style={styles.exRow}>
                   <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
                     {String(i + 1).padStart(2, "0")}
@@ -92,8 +96,8 @@ export default function SessionTab() {
                       {ex.exerciseName}
                     </Text>
                     <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
-                      {ex.sets}×{ex.reps}{" "}
-                      {ex.adaptedLoadKg ? `@ ${ex.adaptedLoadKg}kg` : ""}
+                      {ex.sets}×{ex.reps}
+                      {ex.adaptedLoadKg != null ? ` @ ${ex.adaptedLoadKg}kg` : ""}
                     </Text>
                   </View>
                 </View>
@@ -106,7 +110,7 @@ export default function SessionTab() {
             </View>
 
             <TouchableOpacity
-              onPress={() => router.push("/session/" as any)}
+              onPress={() => router.push("/session")}
               style={[styles.startBtn, { backgroundColor: cfg.color }]}
             >
               <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
@@ -132,7 +136,6 @@ export default function SessionTab() {
         </View>
       )}
 
-      {/* Session History */}
       {(historyQuery.data?.length ?? 0) > 0 && (
         <View style={styles.historySection}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
@@ -149,12 +152,12 @@ export default function SessionTab() {
                     {c.label}
                   </Text>
                   <Text style={[styles.historyDate, { fontFamily: FONTS.mono }]}>
-                    {log.completedAt
+                    {log.completedAt != null
                       ? new Date(log.completedAt).toLocaleDateString("fr-FR")
                       : "In progress"}
                   </Text>
                 </View>
-                {log.rpe && (
+                {log.rpe != null && (
                   <Text style={[styles.rpe, { fontFamily: FONTS.mono }]}>
                     RPE {log.rpe}
                   </Text>

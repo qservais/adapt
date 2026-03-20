@@ -31,7 +31,7 @@ const GOALS = [
   },
   {
     key: "performance",
-    label: "Athletic Performance",
+    label: "Performance",
     desc: "Optimize speed, power and endurance",
     icon: "zap" as const,
     color: COLORS.cyan,
@@ -47,9 +47,10 @@ export default function GoalScreen() {
     if (selected) {
       try {
         await updateMutation.mutateAsync({ data: { primaryGoal: selected } });
-      } catch {}
+      } catch {
+      }
     }
-    router.push("/onboarding/invite" as any);
+    router.push("/onboarding/invite");
   };
 
   return (
@@ -109,7 +110,7 @@ export default function GoalScreen() {
         <Button label="Continue" onPress={handleNext} />
         <Button
           label="Skip"
-          onPress={() => router.push("/onboarding/invite" as any)}
+          onPress={() => router.push("/onboarding/invite")}
           variant="ghost"
         />
       </View>

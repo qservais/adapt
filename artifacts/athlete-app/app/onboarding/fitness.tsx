@@ -37,9 +37,10 @@ export default function FitnessLevelScreen() {
     if (selected) {
       try {
         await updateMutation.mutateAsync({ data: { fitnessLevel: selected } });
-      } catch {}
+      } catch {
+      }
     }
-    router.push("/onboarding/goal" as any);
+    router.push("/onboarding/goal");
   };
 
   return (
@@ -111,7 +112,7 @@ export default function FitnessLevelScreen() {
         <Button label="Continue" onPress={handleNext} />
         <Button
           label="Skip"
-          onPress={() => router.push("/onboarding/goal" as any)}
+          onPress={() => router.push("/onboarding/goal")}
           variant="ghost"
         />
       </View>
