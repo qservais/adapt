@@ -37,6 +37,20 @@ const FITNESS_LABELS: Record<string, string> = {
   advanced: "Avancé",
 };
 
+const GENDER_LABELS: Record<string, string> = {
+  homme: "Homme",
+  femme: "Femme",
+  autre: "Autre",
+};
+
+function computeAge(birthDate: string | null | undefined): number | null {
+  if (!birthDate) return null;
+  const dob = new Date(birthDate);
+  if (isNaN(dob.getTime())) return null;
+  const diff = Date.now() - dob.getTime();
+  return Math.floor(diff / (365.25 * 24 * 3600 * 1000));
+}
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -48,6 +62,7 @@ export default function ProfileScreen() {
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [gender, setGender] = useState<string>(user?.gender ?? "");
   const [cycleTracking, setCycleTracking] = useState(user?.cycleTracking ?? false);
 
   const [coachCode, setCoachCode] = useState("");
@@ -59,6 +74,7 @@ export default function ProfileScreen() {
       const updated = await updateMutation.mutateAsync({
         data: {
           firstName: firstName.trim() || undefined,
+          gender: (gender as "homme" | "femme" | "autre") || undefined,
           cycleTracking,
         },
       });
@@ -105,6 +121,10 @@ export default function ProfileScreen() {
   const profile = meQuery.data ?? user;
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const hasCoach = profile?.coachId != null;
+  const profileGender = profile?.gender;
+  const showCycleTracking = profileGender !== "homme";
+  const displayAge = computeAge(profile?.birthDate) ?? profile?.age;
+  const trainingFreq = profile?.trainingFrequency;
 
   return (
     <ScrollView
@@ -153,7 +173,7 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
-              {profile.age ?? "—"}
+              {displayAge ?? "—"}
             </Text>
             <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Âge</Text>
           </View>
@@ -169,6 +189,14 @@ export default function ProfileScreen() {
             </Text>
             <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>cm</Text>
           </View>
+          {trainingFreq != null && (
+            <View style={styles.statItem}>
+              <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
+                {trainingFreq}×
+              </Text>
+              <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>/ sem.</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -182,26 +210,60 @@ export default function ProfileScreen() {
             value={firstName}
             onChangeText={setFirstName}
           />
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.switchLabel, { fontFamily: FONTS.bodyMedium }]}>
-                Suivi du cycle
-              </Text>
-              <Text style={[styles.switchDesc, { fontFamily: FONTS.body }]}>
-                Ajoute le contexte cycle à tes check-ins (athlètes féminines)
-              </Text>
-            </View>
-            <Switch
-              value={cycleTracking}
-              onValueChange={setCycleTracking}
-              trackColor={{ false: COLORS.border, true: COLORS.greenDim }}
-              thumbColor={cycleTracking ? COLORS.green : COLORS.textMuted}
-            />
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body }]}>Genre</Text>
+          <View style={styles.genderRow}>
+            {(["homme", "femme", "autre"] as const).map((g) => (
+              <TouchableOpacity
+                key={g}
+                onPress={() => {
+                  setGender(g);
+                  if (g === "homme") setCycleTracking(false);
+                }}
+                style={[
+                  styles.genderBtn,
+                  gender === g && { borderColor: COLORS.cyan, backgroundColor: COLORS.cyanDim },
+                ]}
+              >
+                <Text style={[
+                  styles.genderBtnText,
+                  { fontFamily: FONTS.body, color: gender === g ? COLORS.cyan : COLORS.textSecondary },
+                ]}>
+                  {GENDER_LABELS[g]}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+          {gender !== "homme" && (
+            <View style={styles.switchRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.switchLabel, { fontFamily: FONTS.bodyMedium }]}>
+                  Suivi du cycle
+                </Text>
+                <Text style={[styles.switchDesc, { fontFamily: FONTS.body }]}>
+                  Intègre ta phase cycle dans le score ADAPT
+                </Text>
+              </View>
+              <Switch
+                value={cycleTracking}
+                onValueChange={setCycleTracking}
+                trackColor={{ false: COLORS.border, true: COLORS.greenDim }}
+                thumbColor={cycleTracking ? COLORS.green : COLORS.textMuted}
+              />
+            </View>
+          )}
           <Button label="Enregistrer" onPress={handleSave} loading={updateMutation.isPending} />
         </GlowCard>
       ) : (
         <View style={styles.infoSection}>
+          {profileGender != null && (
+            <View style={styles.infoRow}>
+              <Feather name="user" size={16} color={COLORS.textMuted} />
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Genre</Text>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
+                {GENDER_LABELS[profileGender] ?? profileGender}
+              </Text>
+            </View>
+          )}
           {profile?.fitnessLevel != null && (
             <View style={styles.infoRow}>
               <Feather name="activity" size={16} color={COLORS.textMuted} />
@@ -220,20 +282,22 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
-          <View style={styles.infoRow}>
-            <Feather name="refresh-cw" size={16} color={COLORS.textMuted} />
-            <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
-              Suivi du cycle
-            </Text>
-            <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
-              {profile?.cycleTracking ? "Activé" : "Désactivé"}
-            </Text>
-          </View>
+          {showCycleTracking && (
+            <View style={styles.infoRow}>
+              <Feather name="refresh-cw" size={16} color={COLORS.textMuted} />
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
+                Suivi du cycle
+              </Text>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
+                {profile?.cycleTracking ? "Activé" : "Désactivé"}
+              </Text>
+            </View>
+          )}
           {profile?.inviteCode != null && (
             <View style={styles.infoRow}>
               <Feather name="link" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
-                Code coach
+                Code d'invitation
               </Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.mono }]}>
                 {profile.inviteCode}
@@ -352,6 +416,18 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: COLORS.textSecondary },
   editCard: { gap: 16, marginBottom: 24 },
   sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
+  fieldLabel: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 },
+  genderRow: { flexDirection: "row", gap: 10 },
+  genderBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgInput,
+    alignItems: "center",
+  },
+  genderBtnText: { fontSize: 14 },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -401,5 +477,5 @@ const styles = StyleSheet.create({
     borderColor: COLORS.redDim,
     backgroundColor: COLORS.redDim,
   },
-  logoutText: { fontSize: 15, color: COLORS.red },
+  logoutText: { fontSize: 16, color: COLORS.red },
 });

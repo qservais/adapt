@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import { 
   useGetClientDetail, 
   useOverrideClientSession, 
   useResolveAlert,
+  useCoachUnlink,
   AlertData 
 } from "@workspace/api-client-react";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
-import { Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
@@ -18,14 +19,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
   const { data: client, isLoading, refetch } = useGetClientDetail(id, { query: { queryKey: [`/api/coach/clients/${id}`], refetchInterval: 30000 }});
   const [chartRange, setChartRange] = useState<7 | 30>(7);
+  const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
   const overrideMutation = useOverrideClientSession();
   const resolveMutation = useResolveAlert();
+  const unlinkMutation = useCoachUnlink();
   const { toast } = useToast();
 
   if (isLoading || !client) {
@@ -43,6 +57,16 @@ export default function ClientDetail() {
       refetch();
     } catch {
       toast({ title: "Échec de la modification", variant: "destructive" });
+    }
+  };
+
+  const handleUnlink = async () => {
+    try {
+      await unlinkMutation.mutateAsync({ data: { athleteId: id } });
+      toast({ title: "Athlète délié", description: `${client?.firstName} a été retiré de votre équipe.` });
+      navigate("/clients");
+    } catch {
+      toast({ title: "Échec de la déconnexion", variant: "destructive" });
     }
   };
 
@@ -132,8 +156,37 @@ export default function ClientDetail() {
               <DropdownMenuItem onClick={() => handleOverride('recovery')} className="text-[#7B61FF] focus:bg-[#7B61FF]/10">Forcer RÉCUPÉRATION</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            variant="outline"
+            onClick={() => setUnlinkDialogOpen(true)}
+            className="w-full justify-start border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <UserMinus className="w-4 h-4 mr-2" /> Délier l'athlète
+          </Button>
         </div>
       </div>
+
+      <AlertDialog open={unlinkDialogOpen} onOpenChange={setUnlinkDialogOpen}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white font-display">Délier {client.firstName} ?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Cette action retirera {client.firstName} {client.lastName} de votre roster. L'athlète conservera son compte et son historique de données.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUnlink}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+              disabled={unlinkMutation.isPending}
+            >
+              {unlinkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Oui, délier
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {client.activeAlerts.length > 0 && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">

@@ -309,6 +309,62 @@ router.post("/coach/clients/link", authenticate, requireRole("coach"), async (re
   }
 });
 
+// Coach endpoints: link/unlink athlete by invite code
+const coachLinkSchema = z.object({
+  inviteCode: z.string().length(6),
+});
+
+router.post("/coach/link", authenticate, requireRole("coach"), async (req, res) => {
+  const parsed = coachLinkSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Code invalide (6 caractères requis)" } });
+    return;
+  }
+  const { inviteCode } = parsed.data;
+  try {
+    const [athlete] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, coachId: usersTable.coachId })
+      .from(usersTable)
+      .where(and(eq(usersTable.inviteCode, inviteCode.toUpperCase()), eq(usersTable.role, "athlete")));
+
+    if (!athlete) {
+      res.status(404).json({ error: { code: "INVITE_CODE_INVALID", message: "Code d'invitation invalide" } });
+      return;
+    }
+    if (athlete.coachId && athlete.coachId !== req.user!.userId) {
+      res.status(409).json({ error: { code: "ATHLETE_ALREADY_LINKED", message: "Cet athlète est déjà lié à un autre coach" } });
+      return;
+    }
+    await db.update(usersTable).set({ coachId: req.user!.userId, updatedAt: new Date() }).where(eq(usersTable.id, athlete.id));
+    res.json({ success: true, message: `${athlete.firstName} est maintenant dans votre équipe` });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.post("/coach/unlink", authenticate, requireRole("coach"), async (req, res) => {
+  const schema = z.object({ athleteId: z.string().uuid() });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "athleteId invalide" } });
+    return;
+  }
+  const { athleteId } = parsed.data;
+  try {
+    const [athlete] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, coachId: usersTable.coachId })
+      .from(usersTable)
+      .where(and(eq(usersTable.id, athleteId), eq(usersTable.role, "athlete")));
+
+    if (!athlete || athlete.coachId !== req.user!.userId) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlète non trouvé ou non lié" } });
+      return;
+    }
+    await db.update(usersTable).set({ coachId: null, updatedAt: new Date() }).where(eq(usersTable.id, athleteId));
+    res.json({ success: true, message: `${athlete.firstName} a été retiré de votre équipe` });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 const athleteLinkSchema = z.object({
   inviteCode: z.string().min(1).max(10).toUpperCase(),
 });

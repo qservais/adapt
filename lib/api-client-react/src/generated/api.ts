@@ -19,6 +19,8 @@ import type {
 import type {
   AlertData,
   AthleteLinkRequest,
+  CoachLinkRequest,
+  CoachUnlinkRequest,
   AuthResponse,
   CheckinData,
   CheckinRequest,
@@ -3316,4 +3318,156 @@ export const useMarkMessagesRead = <
   TContext
 > => {
   return useMutation(getMarkMessagesReadMutationOptions(options));
+};
+
+// ── Coach Link / Unlink ──────────────────────────────────────────────────────
+
+export const getCoachLinkUrl = () => `/api/coach/link`;
+
+export const coachLink = async (
+  coachLinkRequest: CoachLinkRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getCoachLinkUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(coachLinkRequest),
+  });
+};
+
+export const getCoachLinkMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachLink>>,
+    TError,
+    { data: BodyType<CoachLinkRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof coachLink>>,
+  TError,
+  { data: BodyType<CoachLinkRequest> },
+  TContext
+> => {
+  const mutationKey = ["coachLink"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof coachLink>>,
+    { data: BodyType<CoachLinkRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return coachLink(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CoachLinkMutationResult = NonNullable<Awaited<ReturnType<typeof coachLink>>>;
+export type CoachLinkMutationBody = BodyType<CoachLinkRequest>;
+export type CoachLinkMutationError = ErrorType<void>;
+
+export const useCoachLink = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachLink>>,
+    TError,
+    { data: BodyType<CoachLinkRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof coachLink>>,
+  TError,
+  { data: BodyType<CoachLinkRequest> },
+  TContext
+> => {
+  return useMutation(getCoachLinkMutationOptions(options));
+};
+
+export const getCoachUnlinkUrl = () => `/api/coach/unlink`;
+
+export const coachUnlink = async (
+  coachUnlinkRequest: CoachUnlinkRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getCoachUnlinkUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(coachUnlinkRequest),
+  });
+};
+
+export const getCoachUnlinkMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachUnlink>>,
+    TError,
+    { data: BodyType<CoachUnlinkRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof coachUnlink>>,
+  TError,
+  { data: BodyType<CoachUnlinkRequest> },
+  TContext
+> => {
+  const mutationKey = ["coachUnlink"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof coachUnlink>>,
+    { data: BodyType<CoachUnlinkRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return coachUnlink(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CoachUnlinkMutationResult = NonNullable<Awaited<ReturnType<typeof coachUnlink>>>;
+export type CoachUnlinkMutationBody = BodyType<CoachUnlinkRequest>;
+export type CoachUnlinkMutationError = ErrorType<void>;
+
+export const useCoachUnlink = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachUnlink>>,
+    TError,
+    { data: BodyType<CoachUnlinkRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof coachUnlink>>,
+  TError,
+  { data: BodyType<CoachUnlinkRequest> },
+  TContext
+> => {
+  return useMutation(getCoachUnlinkMutationOptions(options));
 };

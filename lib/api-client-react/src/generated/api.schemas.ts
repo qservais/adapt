@@ -55,9 +55,13 @@ export interface UserProfile {
   role: string;
   firstName: string;
   lastName?: string | null;
+  gender?: string | null;
+  birthDate?: string | null;
   age?: number | null;
   weightKg?: number | null;
   heightCm?: number | null;
+  trainingFrequency?: number | null;
+  injuries?: string | null;
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   cycleTracking?: boolean;
@@ -74,9 +78,13 @@ export interface AuthResponse {
 export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
+  gender?: string;
+  birthDate?: string;
   age?: number;
   weightKg?: number;
   heightCm?: number;
+  trainingFrequency?: number;
+  injuries?: string;
   fitnessLevel?: string;
   primaryGoal?: string;
   cycleTracking?: boolean;
@@ -444,3 +452,11 @@ export type GetExercisesParams = {
   category?: string;
   q?: string;
 };
+
+export interface CoachLinkRequest {
+  inviteCode: string;
+}
+
+export interface CoachUnlinkRequest {
+  athleteId: string;
+}

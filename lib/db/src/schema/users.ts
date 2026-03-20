@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, integer, decimal, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, boolean, integer, decimal, timestamp, date, text } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { sql } from "drizzle-orm";
@@ -12,9 +12,13 @@ export const usersTable = pgTable("users", {
   role: varchar("role", { length: 10 }).notNull(),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }),
+  gender: varchar("gender", { length: 10 }),
+  birthDate: date("birth_date"),
   age: integer("age"),
   weightKg: decimal("weight_kg", { precision: 5, scale: 2 }),
   heightCm: integer("height_cm"),
+  trainingFrequency: integer("training_frequency"),
+  injuries: text("injuries"),
   fitnessLevel: varchar("fitness_level", { length: 20 }),
   primaryGoal: varchar("primary_goal", { length: 20 }),
   cycleTracking: boolean("cycle_tracking").default(false),
