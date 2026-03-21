@@ -178,6 +178,7 @@ function StateCheckedIn({
 }) {
   const modeKey = checkin.sessionMode as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+  const isCompleted = session != null && (session as any).completedAt != null;
 
   return (
     <View style={styles.checkedContainer}>
@@ -186,7 +187,9 @@ function StateCheckedIn({
         <ModeBadge mode={modeKey} size="md" style={{ marginTop: 16 }} />
       </View>
 
-      {session != null ? (
+      {isCompleted ? (
+        <SessionDoneCard session={session!} modeColor={modeColor} cfg={cfg} />
+      ) : session != null ? (
         <View style={[styles.sessionCard, { borderColor: `${modeColor}30` }]}>
           <View style={styles.sessionTopRow}>
             <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
@@ -228,6 +231,72 @@ function StateCheckedIn({
           </Text>
         </View>
       )}
+    </View>
+  );
+}
+
+function SessionDoneCard({
+  session,
+  modeColor,
+  cfg,
+}: {
+  session: SessionDetail;
+  modeColor: string;
+  cfg: { color: string; label: string };
+}) {
+  const durationMin = (session as any).durationMin ?? session.estimatedDurationMin;
+  const exCount = session.exercises?.length ?? 0;
+
+  return (
+    <View style={[styles.doneCard, { borderColor: `${modeColor}30` }]}>
+      <View style={styles.doneIconRow}>
+        <View style={[styles.doneIconWrap, { backgroundColor: `${modeColor}20`, borderColor: `${modeColor}40` }]}>
+          <Feather name="check-circle" size={36} color={modeColor} />
+        </View>
+      </View>
+      <Text style={[styles.doneTitleSmall, { fontFamily: FONTS.mono, color: modeColor }]}>
+        SÉANCE TERMINÉE
+      </Text>
+      <Text style={[styles.doneTitle, { fontFamily: FONTS.title, color: COLORS.white }]}>
+        BIEN JOUÉ !
+      </Text>
+      <Text style={[styles.doneName, { fontFamily: FONTS.body, color: COLORS.textSecondary }]}>
+        {session.name}
+      </Text>
+      <View style={styles.doneStatsRow}>
+        {durationMin != null && (
+          <View style={styles.doneStat}>
+            <Text style={[styles.doneStatVal, { fontFamily: FONTS.monoBold, color: modeColor }]}>
+              {durationMin}
+            </Text>
+            <Text style={[styles.doneStatLabel, { fontFamily: FONTS.body }]}>min</Text>
+          </View>
+        )}
+        {exCount > 0 && (
+          <View style={styles.doneStat}>
+            <Text style={[styles.doneStatVal, { fontFamily: FONTS.monoBold, color: modeColor }]}>
+              {exCount}
+            </Text>
+            <Text style={[styles.doneStatLabel, { fontFamily: FONTS.body }]}>exercices</Text>
+          </View>
+        )}
+        <View style={styles.doneStat}>
+          <Text style={[styles.doneStatVal, { fontFamily: FONTS.monoBold, color: modeColor }]}>
+            +1
+          </Text>
+          <Text style={[styles.doneStatLabel, { fontFamily: FONTS.body }]}>streak</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={() => router.push("/history")}
+        style={[styles.doneHistBtn, { borderColor: `${modeColor}40` }]}
+        activeOpacity={0.7}
+      >
+        <Feather name="bar-chart-2" size={15} color={modeColor} />
+        <Text style={[styles.doneHistBtnText, { fontFamily: FONTS.bodyMedium, color: modeColor }]}>
+          Voir l'historique
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -333,4 +402,44 @@ const styles = StyleSheet.create({
     padding: 36,
   },
   noSessionText: { fontSize: 15, color: COLORS.textMuted, textAlign: "center" },
+  doneCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 28,
+    gap: 10,
+    alignItems: "center",
+  },
+  doneIconRow: { marginBottom: 4 },
+  doneIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  doneTitleSmall: { fontSize: 11, letterSpacing: 3, marginTop: 4 },
+  doneTitle: { fontSize: 42, color: COLORS.white, letterSpacing: 4 },
+  doneName: { fontSize: 14, textAlign: "center", marginTop: -4 },
+  doneStatsRow: {
+    flexDirection: "row",
+    gap: 32,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  doneStat: { alignItems: "center", gap: 2 },
+  doneStatVal: { fontSize: 28 },
+  doneStatLabel: { fontSize: 12, color: COLORS.textMuted },
+  doneHistBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  doneHistBtnText: { fontSize: 14 },
 });

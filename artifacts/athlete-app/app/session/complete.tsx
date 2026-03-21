@@ -125,7 +125,7 @@ export default function SessionCompleteScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
-                {session.estimatedDurationMin ?? "—"}
+                {(completeMutation.data as any)?.durationMin ?? session.estimatedDurationMin ?? "—"}
               </Text>
               <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Min</Text>
             </View>

@@ -4,7 +4,7 @@ import {
   checkinsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable,
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
 } from "@workspace/db";
-import { eq, and, desc, gte } from "drizzle-orm";
+import { eq, and, desc, gte, lt, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { calculateAdaptedLoad } from "../services/adapt-engine.js";
 import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
@@ -12,6 +12,44 @@ import { checkAfterSession, checkAfterFeedback } from "../services/badgeService.
 import { z } from "zod";
 
 const router = Router();
+
+async function getLastUsedLoads(
+  athleteId: string,
+  exerciseIds: string[]
+): Promise<Record<string, { loadKg: number; date: string }>> {
+  if (exerciseIds.length === 0) return {};
+
+  const logs = await db
+    .select({
+      exerciseId: exerciseLogsTable.exerciseId,
+      loadKgUsed: exerciseLogsTable.loadKgUsed,
+      createdAt: exerciseLogsTable.createdAt,
+    })
+    .from(exerciseLogsTable)
+    .innerJoin(sessionLogsTable, eq(exerciseLogsTable.sessionLogId, sessionLogsTable.id))
+    .where(
+      and(
+        eq(sessionLogsTable.athleteId, athleteId),
+        inArray(exerciseLogsTable.exerciseId, exerciseIds),
+        isNotNull(exerciseLogsTable.loadKgUsed)
+      )
+    )
+    .orderBy(desc(exerciseLogsTable.createdAt));
+
+  const result: Record<string, { loadKg: number; date: string }> = {};
+  for (const log of logs) {
+    if (!result[log.exerciseId] && log.loadKgUsed != null) {
+      const parsed = parseFloat(log.loadKgUsed);
+      if (!isNaN(parsed) && parsed > 0) {
+        result[log.exerciseId] = {
+          loadKg: parsed,
+          date: log.createdAt ? new Date(log.createdAt).toISOString().split("T")[0]! : "",
+        };
+      }
+    }
+  }
+  return result;
+}
 
 async function buildSessionDetail(
   sessionLog: typeof sessionLogsTable.$inferSelect,
@@ -32,6 +70,8 @@ async function buildSessionDetail(
     adaptedLoadKg: number | null;
     restSeconds: number | null;
     coachCue: string | null;
+    lastUsedLoadKg: number | null;
+    lastUsedDate: string | null;
   }[] = [];
 
   if (sessionLog.sessionId) {
@@ -70,6 +110,9 @@ async function buildSessionDetail(
         .where(eq(sessionExercisesTable.variantId, variant.id))
         .orderBy(sessionExercisesTable.orderIndex);
 
+      const exerciseIds = exs.map(e => e.exerciseId);
+      const lastUsed = await getLastUsedLoads(checkin.athleteId, exerciseIds);
+
       exercises = exs.map(ex => ({
         id: ex.id,
         exerciseId: ex.exerciseId,
@@ -85,6 +128,8 @@ async function buildSessionDetail(
         adaptedLoadKg: calculateAdaptedLoad(ex.loadKg ? parseFloat(ex.loadKg) : null, sessionLog.variantMode),
         restSeconds: ex.restSeconds ?? null,
         coachCue: ex.coachCue ?? null,
+        lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
+        lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
       }));
     }
   }
@@ -94,6 +139,7 @@ async function buildSessionDetail(
     sessionId: sessionLog.sessionId,
     mode: sessionLog.variantMode,
     adaptScore: checkin.adaptScore,
+    completedAt: sessionLog.completedAt ?? null,
     exercises,
   };
 }
@@ -111,7 +157,6 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       return;
     }
 
-    // Check for existing session log today
     const [existingLog] = await db.select().from(sessionLogsTable)
       .where(and(
         eq(sessionLogsTable.athleteId, athleteId),
@@ -120,11 +165,10 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
 
     if (existingLog) {
       const detail = await buildSessionDetail(existingLog, checkin);
-      res.json({ ...detail, name: "Séance du jour", coachNotes: null, overriddenByCoach: false });
+      res.json({ ...detail, name: "Séance du jour", coachNotes: null, overriddenByCoach: false, estimatedDurationMin: null });
       return;
     }
 
-    // Check for pain override (active P1 pain alert)
     const painAlerts = await db.select({ id: alertsTable.id }).from(alertsTable)
       .where(and(
         eq(alertsTable.athleteId, athleteId),
@@ -134,7 +178,6 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
 
     const forcedMode = painAlerts.length > 0 ? "recovery" : checkin.sessionMode;
 
-    // Find active program
     const [program] = await db.select().from(programsTable)
       .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)));
 
@@ -146,6 +189,10 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       id: string;
       exerciseId: string;
       exerciseName: string;
+      category: string | null;
+      imageUrl: string | null;
+      gifUrl: string | null;
+      muscleGroups: unknown;
       orderIndex: number;
       sets: number;
       reps: string | null;
@@ -153,10 +200,11 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       adaptedLoadKg: number | null;
       restSeconds: number | null;
       coachCue: string | null;
+      lastUsedLoadKg: number | null;
+      lastUsedDate: string | null;
     }[] = [];
 
     if (program) {
-      // Derive current training week from program start date
       const startDate = program.startDate ? new Date(program.startDate) : new Date();
       const now = new Date();
       const daysSinceStart = Math.floor((now.getTime() - startDate.getTime()) / 86400000);
@@ -165,12 +213,10 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
         program.durationWeeks ?? 1
       );
 
-      // Map JS day-of-week (0=Sun … 6=Sat) to program dayNumber convention (1=Mon … 7=Sun)
       const dayOfWeek = now.getDay();
       const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
       const dayNum = dayMap[dayOfWeek] ?? 1;
 
-      // First look for a session matching the current week AND day
       let [session] = await db.select().from(sessionsTable)
         .where(and(
           eq(sessionsTable.programId, program.id),
@@ -178,7 +224,6 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
           eq(sessionsTable.dayNumber, dayNum)
         ));
 
-      // Fall back to any session for this day number (handles single-week templates)
       if (!session) {
         [session] = await db.select().from(sessionsTable)
           .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
@@ -225,6 +270,9 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             .where(eq(sessionExercisesTable.variantId, variant.id))
             .orderBy(sessionExercisesTable.orderIndex);
 
+          const exerciseIds = exs.map(e => e.exerciseId);
+          const lastUsed = await getLastUsedLoads(athleteId, exerciseIds);
+
           exercises = exs.map(ex => ({
             id: ex.id,
             exerciseId: ex.exerciseId,
@@ -240,6 +288,8 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             adaptedLoadKg: calculateAdaptedLoad(ex.loadKg ? parseFloat(ex.loadKg) : null, forcedMode),
             restSeconds: ex.restSeconds ?? null,
             coachCue: ex.coachCue ?? null,
+            lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
+            lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
           }));
         }
       }
@@ -265,6 +315,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       adaptScore: checkin.adaptScore,
       overriddenByCoach: painAlerts.length > 0,
       athletePRs,
+      completedAt: null,
     });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
@@ -307,10 +358,23 @@ router.post("/sessions/:sessionId/complete", authenticate, requireRole("athlete"
 
   try {
     const sessionId = String(req.params["sessionId"]);
+    const completedAt = new Date();
+
+    const [existingLog] = await db.select({ startedAt: sessionLogsTable.startedAt })
+      .from(sessionLogsTable)
+      .where(and(
+        eq(sessionLogsTable.id, sessionId),
+        eq(sessionLogsTable.athleteId, req.user!.userId)
+      ));
+
+    const startedAt = existingLog?.startedAt;
+    const durationMin = startedAt
+      ? Math.max(1, Math.round((completedAt.getTime() - new Date(startedAt).getTime()) / 60000))
+      : null;
 
     await db.update(sessionLogsTable)
       .set({
-        completedAt: new Date(),
+        completedAt,
         rpe: parsed.data.rpe ?? null,
         perceivedDifficulty: parsed.data.perceivedDifficulty ?? null,
         athleteNotes: parsed.data.athleteNotes ?? null,
@@ -346,7 +410,7 @@ router.post("/sessions/:sessionId/complete", authenticate, requireRole("athlete"
       newBadges = await checkAfterSession(sessionLog.athleteId, sessionLog.variantMode, newPRs.length);
     }
 
-    res.json({ success: true, message: "Session completed", newPRs, newBadges });
+    res.json({ success: true, message: "Session completed", newPRs, newBadges, durationMin });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
@@ -397,16 +461,147 @@ router.post("/sessions/:sessionId/feedback", authenticate, requireRole("athlete"
   }
 });
 
+router.get("/sessions/missed", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+
+    const [program] = await db.select().from(programsTable)
+      .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)));
+
+    if (!program) {
+      res.json({ missed: [] });
+      return;
+    }
+
+    const now = new Date();
+    const missedSessions: Array<{
+      date: string;
+      sessionId: string;
+      sessionName: string;
+      estimatedDurationMin: number | null;
+    }> = [];
+
+    for (let daysAgo = 1; daysAgo <= 7; daysAgo++) {
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() - daysAgo);
+      const dateStr = targetDate.toISOString().split("T")[0]!;
+
+      const dayOfWeek = targetDate.getDay();
+      const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
+      const dayNum = dayMap[dayOfWeek] ?? 1;
+
+      const startDate = program.startDate ? new Date(program.startDate) : new Date();
+      const daysSinceStart = Math.floor((targetDate.getTime() - startDate.getTime()) / 86400000);
+      const trainingWeek = Math.min(Math.max(1, Math.floor(daysSinceStart / 7) + 1), program.durationWeeks ?? 1);
+
+      let [session] = await db.select().from(sessionsTable)
+        .where(and(
+          eq(sessionsTable.programId, program.id),
+          eq(sessionsTable.weekNumber, trainingWeek),
+          eq(sessionsTable.dayNumber, dayNum)
+        ));
+
+      if (!session) {
+        [session] = await db.select().from(sessionsTable)
+          .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
+      }
+
+      if (!session) continue;
+
+      const dayStart = new Date(dateStr + "T00:00:00.000Z");
+      const dayEnd = new Date(dateStr + "T23:59:59.999Z");
+
+      const completedLogs = await db.select({ id: sessionLogsTable.id })
+        .from(sessionLogsTable)
+        .where(and(
+          eq(sessionLogsTable.athleteId, athleteId),
+          eq(sessionLogsTable.sessionId, session.id),
+          gte(sessionLogsTable.createdAt, dayStart),
+          lt(sessionLogsTable.createdAt, dayEnd),
+          isNotNull(sessionLogsTable.completedAt)
+        ));
+
+      if (completedLogs.length === 0) {
+        missedSessions.push({
+          date: dateStr,
+          sessionId: session.id,
+          sessionName: session.name,
+          estimatedDurationMin: session.estimatedDurationMin ?? null,
+        });
+      }
+    }
+
+    res.json({ missed: missedSessions });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 router.get("/sessions/history", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
-    const logs = await db.select().from(sessionLogsTable)
+    const logs = await db
+      .select({
+        id: sessionLogsTable.id,
+        sessionId: sessionLogsTable.sessionId,
+        variantMode: sessionLogsTable.variantMode,
+        rpe: sessionLogsTable.rpe,
+        perceivedDifficulty: sessionLogsTable.perceivedDifficulty,
+        athleteNotes: sessionLogsTable.athleteNotes,
+        startedAt: sessionLogsTable.startedAt,
+        completedAt: sessionLogsTable.completedAt,
+        createdAt: sessionLogsTable.createdAt,
+        sessionName: sessionsTable.name,
+      })
+      .from(sessionLogsTable)
+      .leftJoin(sessionsTable, eq(sessionLogsTable.sessionId, sessionsTable.id))
       .where(and(
         eq(sessionLogsTable.athleteId, req.user!.userId),
         gte(sessionLogsTable.createdAt, thirtyDaysAgo)
       ))
       .orderBy(desc(sessionLogsTable.createdAt));
-    res.json(logs);
+
+    const enriched = await Promise.all(
+      logs.map(async (log) => {
+        const exerciseLogs = await db
+          .select({
+            exerciseId: exerciseLogsTable.exerciseId,
+            loadKgUsed: exerciseLogsTable.loadKgUsed,
+            setsCompleted: exerciseLogsTable.setsCompleted,
+            exerciseName: exercisesTable.name,
+          })
+          .from(exerciseLogsTable)
+          .leftJoin(exercisesTable, eq(exerciseLogsTable.exerciseId, exercisesTable.id))
+          .where(eq(exerciseLogsTable.sessionLogId, log.id));
+
+        const durationMin =
+          log.startedAt && log.completedAt
+            ? Math.max(1, Math.round((new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()) / 60000))
+            : null;
+
+        return {
+          id: log.id,
+          sessionId: log.sessionId,
+          sessionName: log.sessionName ?? "Session libre",
+          variantMode: log.variantMode,
+          rpe: log.rpe,
+          perceivedDifficulty: log.perceivedDifficulty,
+          athleteNotes: log.athleteNotes,
+          startedAt: log.startedAt,
+          completedAt: log.completedAt,
+          createdAt: log.createdAt,
+          durationMin,
+          exercises: exerciseLogs.map(e => ({
+            exerciseId: e.exerciseId,
+            exerciseName: e.exerciseName ?? "",
+            loadKgUsed: e.loadKgUsed ? parseFloat(e.loadKgUsed) : null,
+            setsCompleted: e.setsCompleted,
+          })),
+        };
+      })
+    );
+
+    res.json(enriched);
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

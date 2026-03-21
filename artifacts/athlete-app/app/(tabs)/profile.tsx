@@ -21,6 +21,7 @@ import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 const GOAL_LABELS: Record<string, string> = {
   strength: "Force",
@@ -41,7 +42,6 @@ const FITNESS_LABELS: Record<string, string> = {
 const GENDER_LABELS: Record<string, string> = {
   homme: "Homme",
   femme: "Femme",
-  autre: "Autre",
 };
 
 function computeAge(birthDate: string | null | undefined): number | null {
@@ -68,9 +68,8 @@ export default function ProfileScreen() {
   const [gender, setGender] = useState<string>(user?.gender ?? "");
   const [cycleTracking, setCycleTracking] = useState(user?.cycleTracking ?? false);
   const [weight, setWeight] = useState<string>("");
-  const [birthDay, setBirthDay] = useState<string>("");
-  const [birthMonth, setBirthMonth] = useState<string>("");
-  const [birthYear, setBirthYear] = useState<string>("");
+  const [birthDateValue, setBirthDateValue] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [coachCode, setCoachCode] = useState("");
   const [coachLinkError, setCoachLinkError] = useState("");
@@ -81,41 +80,32 @@ export default function ProfileScreen() {
     setFirstName(p?.firstName ?? "");
     setGender(p?.gender ?? "");
     setCycleTracking(p?.cycleTracking ?? false);
-    setWeight(p?.weightKg ? String(parseFloat(String(p.weightKg))) : "");
+    setWeight(p?.weightKg ? String(Math.round(parseFloat(String(p.weightKg)))) : "");
     if (p?.birthDate) {
-      const parts = String(p.birthDate).substring(0, 10).split("-");
-      setBirthYear(parts[0] ?? "");
-      setBirthMonth(parts[1] ? String(parseInt(parts[1], 10)) : "");
-      setBirthDay(parts[2] ? String(parseInt(parts[2], 10)) : "");
+      setBirthDateValue(new Date(String(p.birthDate).substring(0, 10) + "T12:00:00"));
     } else {
-      setBirthYear("");
-      setBirthMonth("");
-      setBirthDay("");
+      setBirthDateValue(null);
     }
     setEditing(true);
   };
 
   const handleSave = async () => {
     const parsedWeight = parseFloat(weight);
-    const parsedDay = parseInt(birthDay, 10);
-    const parsedMonth = parseInt(birthMonth, 10);
-    const parsedYear = parseInt(birthYear, 10);
-    const currentYear = new Date().getFullYear();
-    const isValidDate =
-      !isNaN(parsedDay) && parsedDay >= 1 && parsedDay <= 31 &&
-      !isNaN(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12 &&
-      !isNaN(parsedYear) && parsedYear >= 1920 && parsedYear <= currentYear - 5;
-    const hasAnyDateField = birthDay !== "" || birthMonth !== "" || birthYear !== "";
+    let birthDateStr: string | undefined;
+    if (birthDateValue != null) {
+      const y = birthDateValue.getFullYear();
+      const m = String(birthDateValue.getMonth() + 1).padStart(2, "0");
+      const d = String(birthDateValue.getDate()).padStart(2, "0");
+      birthDateStr = `${y}-${m}-${d}`;
+    }
     try {
       const updated = await updateMutation.mutateAsync({
         data: {
           firstName: firstName.trim() || undefined,
-          gender: (gender as "homme" | "femme" | "autre") || undefined,
+          gender: (gender as "homme" | "femme") || undefined,
           cycleTracking,
           weightKg: !isNaN(parsedWeight) && parsedWeight >= 20 ? parsedWeight : undefined,
-          birthDate: isValidDate
-            ? `${parsedYear}-${String(parsedMonth).padStart(2, "0")}-${String(parsedDay).padStart(2, "0")}`
-            : hasAnyDateField ? undefined : undefined,
+          birthDate: birthDateStr,
         },
       });
       updateUser(updated);
@@ -125,6 +115,31 @@ export default function ProfileScreen() {
       const msg = err instanceof Error ? err.message : "Impossible de mettre à jour le profil";
       Alert.alert("Erreur", msg);
     }
+  };
+
+  const handleUnlinkCoach = () => {
+    Alert.alert(
+      "Délier le coach",
+      "Es-tu sûr(e) de vouloir te délier de ton coach ? Tu ne recevras plus de programmes personnalisés.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Délier",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await fetch(`${process.env.EXPO_PUBLIC_API_URL ?? ""}/api/users/me/coach`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${user?.token ?? ""}` },
+              });
+              queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
+            } catch {
+              Alert.alert("Erreur", "Impossible de délier le coach");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLinkCoach = async () => {
@@ -220,7 +235,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
-              {profile.weightKg ?? "—"}
+              {profile.weightKg != null ? Math.round(parseFloat(String(profile.weightKg))) : "—"}
             </Text>
             <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>kg</Text>
           </View>
@@ -253,7 +268,7 @@ export default function ProfileScreen() {
           />
           <Text style={[styles.fieldLabel, { fontFamily: FONTS.body }]}>Genre</Text>
           <View style={styles.genderRow}>
-            {(["homme", "femme", "autre"] as const).map((g) => (
+            {(["homme", "femme"] as const).map((g) => (
               <TouchableOpacity
                 key={g}
                 onPress={() => {
@@ -304,38 +319,32 @@ export default function ProfileScreen() {
           <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 12, marginBottom: 6 }]}>
             Date de naissance
           </Text>
-          <View style={styles.rowInputs}>
-            <View style={{ flex: 1 }}>
-              <InputField
-                label="Jour"
-                value={birthDay}
-                onChangeText={setBirthDay}
-                keyboardType="number-pad"
-                placeholder="JJ"
-                maxLength={2}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <InputField
-                label="Mois"
-                value={birthMonth}
-                onChangeText={setBirthMonth}
-                keyboardType="number-pad"
-                placeholder="MM"
-                maxLength={2}
-              />
-            </View>
-            <View style={{ flex: 2 }}>
-              <InputField
-                label="Année"
-                value={birthYear}
-                onChangeText={setBirthYear}
-                keyboardType="number-pad"
-                placeholder="AAAA"
-                maxLength={4}
-              />
-            </View>
-          </View>
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            style={styles.datePicker}
+            activeOpacity={0.7}
+          >
+            <Feather name="calendar" size={16} color={COLORS.cyan} />
+            <Text style={[styles.datePickerText, { fontFamily: FONTS.body, color: birthDateValue ? COLORS.white : COLORS.textMuted }]}>
+              {birthDateValue
+                ? birthDateValue.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+                : "Sélectionner une date"}
+            </Text>
+            <Feather name="chevron-down" size={14} color={COLORS.textMuted} />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={birthDateValue ?? new Date(1990, 0, 1)}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              maximumDate={new Date(new Date().getFullYear() - 5, 11, 31)}
+              minimumDate={new Date(1920, 0, 1)}
+              onChange={(_event, date) => {
+                setShowDatePicker(Platform.OS === "ios");
+                if (date) setBirthDateValue(date);
+              }}
+            />
+          )}
           <GradientButton label="Enregistrer" onPress={handleSave} loading={updateMutation.isPending} />
         </GlowCard>
       ) : (
@@ -390,12 +399,15 @@ export default function ProfileScreen() {
             </View>
           )}
           {hasCoach && (
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { flexWrap: "wrap", gap: 8 }]}>
               <Feather name="users" size={16} color={COLORS.cyan} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Coach</Text>
-              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan }]}>
-                Connecté
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan, flex: 1 }]}>
+                {(profile as any)?.coachName ?? "Connecté"}
               </Text>
+              <TouchableOpacity onPress={handleUnlinkCoach} style={styles.unlinkBtn} activeOpacity={0.7}>
+                <Text style={[styles.unlinkText, { fontFamily: FONTS.mono }]}>Délier</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -634,4 +646,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.redDim,
   },
   logoutText: { fontSize: 16, color: COLORS.red },
+  datePicker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.bgInput,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  datePickerText: { flex: 1, fontSize: 15 },
+  unlinkBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.redDim,
+    backgroundColor: COLORS.redDim,
+  },
+  unlinkText: { fontSize: 11, color: COLORS.red, letterSpacing: 1 },
 });

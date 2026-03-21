@@ -155,7 +155,10 @@ export default function ExerciseScreen() {
     );
   }
 
-  const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? 0;
+  const lastUsedLoadKg = (exercise as any).lastUsedLoadKg as number | null;
+  const lastUsedDate = (exercise as any).lastUsedDate as string | null;
+
+  const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? lastUsedLoadKg ?? 0;
   const currentPR = athletePRs?.[exercise.exerciseId];
   const isAbovePR = currentPR != null && currentLoad > currentPR;
 
@@ -165,7 +168,22 @@ export default function ExerciseScreen() {
     return "Exercice suivant";
   };
 
-  const heroImage = exercise.category ? CATEGORY_IMAGES[exercise.category] : null;
+  const lastUsedLabel = React.useMemo(() => {
+    if (lastUsedLoadKg == null) return null;
+    if (!lastUsedDate) return `Dernière fois : ${lastUsedLoadKg} kg`;
+    const d = new Date(lastUsedDate);
+    const day = d.getDate();
+    const month = d.toLocaleDateString("fr-FR", { month: "short" });
+    return `Dernière fois : ${lastUsedLoadKg} kg · ${day} ${month}`;
+  }, [lastUsedLoadKg, lastUsedDate]);
+
+  const heroSource: { uri: string } | ReturnType<typeof require> | null =
+    exercise.imageUrl
+      ? { uri: exercise.imageUrl }
+      : exercise.category
+        ? CATEGORY_IMAGES[exercise.category] ?? null
+        : null;
+  const heroImage = heroSource;
 
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
@@ -287,6 +305,14 @@ export default function ExerciseScreen() {
               label="CHARGE"
               decimals={1}
             />
+            {lastUsedLabel != null && (
+              <View style={styles.lastUsedRow}>
+                <Feather name="clock" size={11} color={COLORS.textMuted} />
+                <Text style={[styles.lastUsedText, { fontFamily: FONTS.mono }]}>
+                  {lastUsedLabel}
+                </Text>
+              </View>
+            )}
             {isAbovePR && <PRPulse color={COLORS.green} />}
             {currentPR != null && !isAbovePR && (
               <View style={styles.prInfo}>
@@ -407,7 +433,14 @@ const styles = StyleSheet.create({
     gap: 24,
     paddingTop: 20,
   },
-  setLabel: { fontSize: 11, letterSpacing: 2, color: COLORS.textMuted },
+  setLabel: { fontSize: 18, letterSpacing: 2, color: COLORS.white, fontWeight: "700" },
+  lastUsedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: -6,
+  },
+  lastUsedText: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.3 },
   exerciseImage: {
     width: "100%",
     height: 200,

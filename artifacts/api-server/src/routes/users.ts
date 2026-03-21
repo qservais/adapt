@@ -36,7 +36,15 @@ router.get("/users/me", authenticate, async (req, res) => {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Utilisateur non trouvé" } });
       return;
     }
-    res.json(userProfile(user));
+    let coachName: string | null = null;
+    if (user.coachId) {
+      const [coach] = await db.select({ firstName: usersTable.firstName, lastName: usersTable.lastName })
+        .from(usersTable).where(eq(usersTable.id, user.coachId));
+      if (coach) {
+        coachName = `${coach.firstName} ${coach.lastName ?? ""}`.trim();
+      }
+    }
+    res.json({ ...userProfile(user), coachName });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
@@ -86,6 +94,26 @@ router.put("/users/me", authenticate, async (req, res) => {
       .returning();
 
     res.json(userProfile(user));
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.delete("/users/me/coach", authenticate, async (req, res) => {
+  try {
+    const [user] = await db.select({ id: usersTable.id, coachId: usersTable.coachId })
+      .from(usersTable).where(eq(usersTable.id, req.user!.userId));
+
+    if (!user || !user.coachId) {
+      res.status(400).json({ error: { code: "NO_COACH", message: "Aucun coach lié à ce compte" } });
+      return;
+    }
+
+    await db.update(usersTable)
+      .set({ coachId: null, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.userId));
+
+    res.json({ success: true, message: "Coach délié avec succès" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }

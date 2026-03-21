@@ -219,6 +219,58 @@ router.put("/programs/:programId", authenticate, requireRole("coach"), async (re
   }
 });
 
+function roundToHalf(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+interface ExerciseInput {
+  exerciseId: string;
+  orderIndex: number;
+  sets: number;
+  reps?: string;
+  loadKg?: number;
+  restSeconds?: number;
+  coachCue?: string;
+}
+
+function buildAutoVariants(normalExercises: ExerciseInput[]): Array<{
+  mode: "performance" | "adapt" | "recovery";
+  notes: string;
+  exercises: ExerciseInput[];
+}> {
+  return [
+    {
+      mode: "performance",
+      notes: "Auto-généré: charge ×1.05",
+      exercises: normalExercises.map(ex => ({
+        ...ex,
+        loadKg: ex.loadKg != null ? roundToHalf(ex.loadKg * 1.05) : ex.loadKg,
+      })),
+    },
+    {
+      mode: "adapt",
+      notes: "Auto-généré: charge ×0.75, séries -1",
+      exercises: normalExercises.map(ex => ({
+        ...ex,
+        sets: Math.max(2, (ex.sets ?? 3) - 1),
+        loadKg: ex.loadKg != null ? roundToHalf(ex.loadKg * 0.75) : ex.loadKg,
+      })),
+    },
+    {
+      mode: "recovery",
+      notes: "Auto-généré: charge ×0.30, 2 séries",
+      exercises: normalExercises.map(ex => ({
+        ...ex,
+        sets: 2,
+        reps: "12-15",
+        loadKg: ex.loadKg != null ? roundToHalf(ex.loadKg * 0.30) : ex.loadKg,
+        restSeconds: 60,
+        coachCue: "Mobilité et contrôle",
+      })),
+    },
+  ];
+}
+
 const createSessionSchema = z.object({
   weekNumber: z.number().int().min(1),
   dayNumber: z.number().int().min(1),
@@ -269,7 +321,20 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
     }).returning();
 
     if (parsed.data.variants) {
-      for (const variant of parsed.data.variants) {
+      const allVariantsToCreate = [...parsed.data.variants];
+
+      const normalVariant = parsed.data.variants.find(v => v.mode === "normal");
+      if (normalVariant && normalVariant.exercises && normalVariant.exercises.length > 0) {
+        const existingModes = new Set(parsed.data.variants.map(v => v.mode));
+        const autoVariants = buildAutoVariants(normalVariant.exercises);
+        for (const av of autoVariants) {
+          if (!existingModes.has(av.mode)) {
+            allVariantsToCreate.push(av);
+          }
+        }
+      }
+
+      for (const variant of allVariantsToCreate) {
         const [sv] = await db.insert(sessionVariantsTable).values({
           sessionId: session.id,
           mode: variant.mode,
@@ -293,7 +358,7 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
       }
     }
 
-    res.status(201).json({ success: true, sessionId: session.id, message: "Session added" });
+    res.status(201).json({ success: true, sessionId: session.id, message: "Session added", autoVariantsGenerated: true });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

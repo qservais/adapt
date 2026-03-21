@@ -11,13 +11,12 @@ import {
   addProgramSession,
   updateProgram,
   SessionWithVariants,
-  VariantWithExercises,
   ExerciseData,
   CreateSessionRequestVariantsItemMode,
 } from "@workspace/api-client-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,7 +54,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { fr } from "date-fns/locale";
 
 const MODE_STYLES: Record<string, { label: string; color: string; border: string; bg: string }> = {
   performance: { label: "Performance", color: "text-primary", border: "border-primary", bg: "bg-primary/10" },
@@ -80,59 +77,41 @@ interface ExerciseRow {
   coachCue: string;
 }
 
-interface VariantDraft {
-  mode: typeof MODES[number];
-  exercises: ExerciseRow[];
-}
-
 interface SessionDraft {
   name: string;
   type: typeof SESSION_TYPES[number];
   estimatedDurationMin: number;
   coachNotes: string;
-  variants: VariantDraft[];
+  normalExercises: ExerciseRow[];
 }
-
-const emptyVariant = (mode: typeof MODES[number]): VariantDraft => ({
-  mode,
-  exercises: [],
-});
 
 const emptySession = (): SessionDraft => ({
   name: "",
   type: "strength",
   estimatedDurationMin: 60,
   coachNotes: "",
-  variants: MODES.map(emptyVariant),
+  normalExercises: [],
 });
 
 function sessionToDraft(session: SessionWithVariants): SessionDraft {
-  const variantMap = new Map<string, VariantWithExercises>(
-    session.variants.map((v) => [v.mode, v])
-  );
+  const normalVariant = session.variants.find((v) => v.mode === "normal");
   return {
     name: session.name,
     type: session.type as typeof SESSION_TYPES[number],
     estimatedDurationMin: session.estimatedDurationMin || 60,
     coachNotes: session.coachNotes || "",
-    variants: MODES.map((mode) => {
-      const v = variantMap.get(mode);
-      return {
-        mode,
-        exercises: v
-          ? v.exercises.map((e) => ({
-              exerciseId: e.exerciseId,
-              exerciseName: e.exerciseName,
-              orderIndex: e.orderIndex,
-              sets: e.sets,
-              reps: e.reps || "",
-              loadKg: e.nominalLoadKg || 0,
-              restSeconds: e.restSeconds || 60,
-              coachCue: e.coachCue || "",
-            }))
-          : [],
-      };
-    }),
+    normalExercises: normalVariant
+      ? normalVariant.exercises.map((e) => ({
+          exerciseId: e.exerciseId,
+          exerciseName: e.exerciseName,
+          orderIndex: e.orderIndex,
+          sets: e.sets,
+          reps: e.reps || "",
+          loadKg: e.nominalLoadKg || 0,
+          restSeconds: e.restSeconds || 60,
+          coachCue: e.coachCue || "",
+        }))
+      : [],
   };
 }
 
@@ -183,56 +162,48 @@ function ExercisePicker({ onAdd }: ExercisePickerProps) {
   );
 }
 
-interface VariantEditorProps {
-  variant: VariantDraft;
-  onChange: (v: VariantDraft) => void;
+interface NormalEditorProps {
+  exercises: ExerciseRow[];
+  onChange: (exercises: ExerciseRow[]) => void;
 }
 
-function VariantEditor({ variant, onChange }: VariantEditorProps) {
+function NormalEditor({ exercises, onChange }: NormalEditorProps) {
   const addExercise = (ex: ExerciseData) => {
     const next: ExerciseRow = {
       exerciseId: ex.id,
       exerciseName: ex.name,
-      orderIndex: variant.exercises.length,
+      orderIndex: exercises.length,
       sets: 3,
       reps: "8-10",
       loadKg: 0,
       restSeconds: 90,
       coachCue: "",
     };
-    onChange({ ...variant, exercises: [...variant.exercises, next] });
+    onChange([...exercises, next]);
   };
 
   const updateExercise = (idx: number, patch: Partial<ExerciseRow>) => {
-    const exercises = variant.exercises.map((e, i) =>
-      i === idx ? { ...e, ...patch } : e
-    );
-    onChange({ ...variant, exercises });
+    onChange(exercises.map((e, i) => i === idx ? { ...e, ...patch } : e));
   };
 
   const removeExercise = (idx: number) => {
-    onChange({
-      ...variant,
-      exercises: variant.exercises
-        .filter((_, i) => i !== idx)
-        .map((e, i) => ({ ...e, orderIndex: i })),
-    });
+    onChange(exercises.filter((_, i) => i !== idx).map((e, i) => ({ ...e, orderIndex: i })));
   };
 
   const moveExercise = (idx: number, dir: -1 | 1) => {
-    const exercises = [...variant.exercises];
+    const next = [...exercises];
     const target = idx + dir;
-    if (target < 0 || target >= exercises.length) return;
-    [exercises[idx], exercises[target]] = [exercises[target], exercises[idx]];
-    onChange({ ...variant, exercises: exercises.map((e, i) => ({ ...e, orderIndex: i })) });
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next.map((e, i) => ({ ...e, orderIndex: i })));
   };
 
-  const style = MODE_STYLES[variant.mode];
+  const style = MODE_STYLES["normal"];
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        {variant.exercises.map((ex, idx) => (
+        {exercises.map((ex, idx) => (
           <div key={idx} className={`p-3 rounded-lg border ${style.border} ${style.bg} space-y-2`}>
             <div className="flex items-center justify-between gap-2">
               <span className={`font-medium text-sm ${style.color} truncate flex-1`}>{ex.exerciseName}</span>
@@ -251,57 +222,28 @@ function VariantEditor({ variant, onChange }: VariantEditorProps) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Sets</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={ex.sets}
-                  onChange={(e) => updateExercise(idx, { sets: +e.target.value })}
-                  className="h-7 text-xs bg-background border-border mt-0.5"
-                />
+                <Input type="number" min={1} value={ex.sets} onChange={(e) => updateExercise(idx, { sets: +e.target.value })} className="h-7 text-xs bg-background border-border mt-0.5" />
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
-                <Input
-                  value={ex.reps}
-                  onChange={(e) => updateExercise(idx, { reps: e.target.value })}
-                  placeholder="8-10"
-                  className="h-7 text-xs bg-background border-border mt-0.5"
-                />
+                <Input value={ex.reps} onChange={(e) => updateExercise(idx, { reps: e.target.value })} placeholder="8-10" className="h-7 text-xs bg-background border-border mt-0.5" />
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Charge (kg)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={ex.loadKg}
-                  onChange={(e) => updateExercise(idx, { loadKg: +e.target.value })}
-                  className="h-7 text-xs bg-background border-border mt-0.5"
-                />
+                <Input type="number" min={0} value={ex.loadKg} onChange={(e) => updateExercise(idx, { loadKg: +e.target.value })} className="h-7 text-xs bg-background border-border mt-0.5" />
               </div>
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Repos (s)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={ex.restSeconds}
-                  onChange={(e) => updateExercise(idx, { restSeconds: +e.target.value })}
-                  className="h-7 text-xs bg-background border-border mt-0.5"
-                />
+                <Input type="number" min={0} value={ex.restSeconds} onChange={(e) => updateExercise(idx, { restSeconds: +e.target.value })} className="h-7 text-xs bg-background border-border mt-0.5" />
               </div>
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Indication coach</label>
-              <Input
-                value={ex.coachCue}
-                onChange={(e) => updateExercise(idx, { coachCue: e.target.value })}
-                placeholder="Gainage serré, tempo 3-1-1..."
-                className="h-7 text-xs bg-background border-border mt-0.5"
-              />
+              <Input value={ex.coachCue} onChange={(e) => updateExercise(idx, { coachCue: e.target.value })} placeholder="Gainage serré, tempo 3-1-1..." className="h-7 text-xs bg-background border-border mt-0.5" />
             </div>
           </div>
         ))}
       </div>
-
       <div className="border border-dashed border-border rounded-lg p-3">
         <p className="text-xs font-mono text-muted-foreground mb-2 uppercase tracking-wider">Ajouter un exercice</p>
         <ExercisePicker onAdd={addExercise} />
@@ -324,7 +266,6 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
   const [draft, setDraft] = useState<SessionDraft>(() =>
     session ? sessionToDraft(session) : emptySession()
   );
-  const [activeMode, setActiveMode] = useState<string>("performance");
   const [isSaving, setIsSaving] = useState(false);
   const addMutation = useAddProgramSession();
   const updateMutation = useUpdateProgramSession();
@@ -346,20 +287,20 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
         type: draft.type,
         estimatedDurationMin: draft.estimatedDurationMin,
         coachNotes: draft.coachNotes,
-        variants: draft.variants
-          .filter((v) => v.exercises.length > 0)
-          .map((v) => ({
-            mode: v.mode as CreateSessionRequestVariantsItemMode,
-            exercises: v.exercises.map((e) => ({
-              exerciseId: e.exerciseId,
-              orderIndex: e.orderIndex,
-              sets: e.sets,
-              reps: e.reps,
-              loadKg: e.loadKg,
-              restSeconds: e.restSeconds,
-              coachCue: e.coachCue,
-            })),
-          })),
+        variants: draft.normalExercises.length > 0
+          ? [{
+              mode: "normal" as CreateSessionRequestVariantsItemMode,
+              exercises: draft.normalExercises.map((e) => ({
+                exerciseId: e.exerciseId,
+                orderIndex: e.orderIndex,
+                sets: e.sets,
+                reps: e.reps,
+                loadKg: e.loadKg,
+                restSeconds: e.restSeconds,
+                coachCue: e.coachCue,
+              })),
+            }]
+          : [],
       };
 
       if (isEdit && session) {
@@ -374,13 +315,6 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const updateVariant = (mode: string, v: VariantDraft) => {
-    setDraft((d) => ({
-      ...d,
-      variants: d.variants.map((vr) => (vr.mode === mode ? v : vr)),
-    }));
   };
 
   const dayName = DAY_NAMES[dayNumber - 1] || `Jour ${dayNumber}`;
@@ -446,41 +380,23 @@ function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Variantes par mode</p>
-            <Tabs value={activeMode} onValueChange={setActiveMode}>
-              <TabsList className="bg-background border border-border w-full grid grid-cols-4 h-9">
-                {MODES.map((m) => {
-                  const style = MODE_STYLES[m];
-                  const hasExercises = draft.variants.find((v) => v.mode === m)?.exercises.length || 0;
-                  return (
-                    <TabsTrigger
-                      key={m}
-                      value={m}
-                      className={`text-xs font-mono uppercase data-[state=active]:${style.color} data-[state=active]:bg-background relative`}
-                    >
-                      {style.label}
-                      {hasExercises > 0 && (
-                        <span className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[8px] flex items-center justify-center ${style.bg} ${style.color} font-bold`}>
-                          {hasExercises}
-                        </span>
-                      )}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-
-              {MODES.map((m) => {
-                const variant = draft.variants.find((v) => v.mode === m) || emptyVariant(m);
-                return (
-                  <TabsContent key={m} value={m} className="mt-4">
-                    <VariantEditor
-                      variant={variant}
-                      onChange={(v) => updateVariant(m, v)}
-                    />
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Exercices — Variante Normale</p>
+              <span className="text-[10px] font-mono text-muted-foreground">(référence)</span>
+            </div>
+            <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-primary/5 border border-primary/20">
+              <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <span className="text-primary font-medium">Variantes auto-générées</span> — À la sauvegarde, les variantes{" "}
+                <span className="text-white">Performance</span> (×1.05),{" "}
+                <span className="text-accent">Adapt</span> (×0.75, −1 série) et{" "}
+                <span className="text-violet-400">Recovery</span> (×0.30, 2×12-15) seront créées automatiquement.
+              </p>
+            </div>
+            <NormalEditor
+              exercises={draft.normalExercises}
+              onChange={(exercises) => setDraft((d) => ({ ...d, normalExercises: exercises }))}
+            />
           </div>
         </div>
 
