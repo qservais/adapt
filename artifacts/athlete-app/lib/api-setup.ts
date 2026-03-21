@@ -46,17 +46,24 @@ async function doRawRefresh(
 }
 
 async function refreshAccessToken(): Promise<string | null> {
+  // Queue concurrent refresh requests — lock BEFORE any await
   if (_isRefreshing) {
     return new Promise<string | null>((resolve) => {
       _refreshQueue.push(resolve);
     });
   }
 
-  const rt = await tokenStore.getRefresh();
-  if (!rt) return null;
-
   _isRefreshing = true;
+
   try {
+    const rt = await tokenStore.getRefresh();
+    if (!rt) {
+      await tokenStore.clear();
+      _refreshQueue.forEach((cb) => cb(null));
+      _refreshQueue = [];
+      return null;
+    }
+
     const result = await doRawRefresh(rt);
     if (!result) {
       await tokenStore.clear();
@@ -64,6 +71,7 @@ async function refreshAccessToken(): Promise<string | null> {
       _refreshQueue = [];
       return null;
     }
+
     await tokenStore.setTokens(result.accessToken, result.refreshToken);
     _refreshQueue.forEach((cb) => cb(result.accessToken));
     _refreshQueue = [];

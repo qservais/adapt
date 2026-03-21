@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +18,6 @@ import * as Haptics from "expo-haptics";
 import { useSubmitCheckin, useGetMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { AdaptSlider } from "@/components/ui/AdaptSlider";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 
 type IconName = "sun" | "zap" | "activity" | "thermometer" | "target" | "alert-triangle";
@@ -194,18 +194,27 @@ export default function CheckinScreen() {
           },
         });
       } catch (err: unknown) {
-        const code =
-          err !== null &&
-          typeof err === "object" &&
-          "code" in err &&
-          typeof (err as Record<string, unknown>).code === "string"
-            ? (err as Record<string, string>).code
-            : "";
+        const anyErr = err as Record<string, unknown>;
+        const errData = anyErr?.data as Record<string, unknown> | null | undefined;
+        const code = typeof errData?.code === "string" ? errData.code : "";
+        const status = typeof anyErr?.status === "number" ? anyErr.status : 0;
         if (code === "CHECKIN_CONFLICT") {
           router.replace("/checkin/result");
           return;
         }
-        router.replace("/");
+        if (status === 401) {
+          Alert.alert(
+            "Session expirée",
+            "Ta session a expiré. Reconnecte-toi.",
+            [{ text: "OK", onPress: () => router.replace("/auth/login") }]
+          );
+          return;
+        }
+        Alert.alert(
+          "Erreur",
+          "Une erreur est survenue. Réessaie.",
+          [{ text: "OK" }]
+        );
       }
       return;
     }
@@ -277,21 +286,50 @@ export default function CheckinScreen() {
         )}
 
         {currentStep.kind === "slider" && (
-          <View style={styles.sliderSection}>
-            <AdaptSlider
-              value={values[currentStep.key]}
-              min={1}
-              max={5}
-              step={1}
-              onChange={(v) => setValues((prev) => ({ ...prev, [currentStep.key]: v }))}
-              activeColor={currentStep.color}
-              labels={currentStep.labels}
-            />
-            <View style={[styles.selectedLabelWrap, { borderColor: `${currentStep.color}40`, backgroundColor: `${currentStep.color}10` }]}>
-              <Text style={[styles.selectedLabel, { fontFamily: FONTS.bodyMedium, color: currentStep.color }]}>
-                {currentStep.labels[values[currentStep.key] - 1]}
-              </Text>
-            </View>
+          <View style={styles.ratingSection}>
+            {currentStep.labels.map((label, idx) => {
+              const val = idx + 1;
+              const isSelected = values[currentStep.key] === val;
+              return (
+                <Pressable
+                  key={val}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setValues((prev) => ({ ...prev, [(currentStep as { key: string }).key]: val }));
+                  }}
+                  style={[
+                    styles.ratingCard,
+                    isSelected && {
+                      borderColor: currentStep.color,
+                      backgroundColor: `${currentStep.color}15`,
+                    },
+                  ]}
+                >
+                  <View style={[
+                    styles.ratingNum,
+                    { borderColor: isSelected ? currentStep.color : COLORS.border },
+                    isSelected && { backgroundColor: currentStep.color },
+                  ]}>
+                    <Text style={[
+                      styles.ratingNumText,
+                      { fontFamily: FONTS.mono, color: isSelected ? COLORS.bg : COLORS.textMuted },
+                    ]}>
+                      {val}
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.ratingLabel,
+                    { fontFamily: FONTS.bodyMedium },
+                    isSelected ? { color: currentStep.color } : { color: COLORS.textSecondary },
+                  ]}>
+                    {label}
+                  </Text>
+                  {isSelected && (
+                    <Feather name="check" size={18} color={currentStep.color} />
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
@@ -443,16 +481,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   welcomeLabel: { fontSize: 15, color: COLORS.textSecondary },
-  sliderSection: { width: "100%", gap: 20 },
-  selectedLabelWrap: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
+  ratingSection: { width: "100%", gap: 10 },
+  ratingCard: {
+    flexDirection: "row",
     alignItems: "center",
-    alignSelf: "center",
+    gap: 14,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  selectedLabel: { fontSize: 15 },
+  ratingNum: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ratingNumText: { fontSize: 14 },
+  ratingLabel: { flex: 1, fontSize: 15 },
   cycleSection: { width: "100%", gap: 10 },
   cycleBtn: {
     flexDirection: "row",
