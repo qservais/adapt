@@ -39,6 +39,10 @@ export function AdaptSlider({
   const trackRef = useRef(trackW);
   const lastVal = useRef(value);
 
+  // Update synchronously on every render so PanResponder always has the latest callback
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   const pct = (value - min) / (max - min);
 
   const getVal = useCallback(
@@ -59,7 +63,7 @@ export function AdaptSlider({
         if (v !== lastVal.current) {
           Haptics.selectionAsync();
           lastVal.current = v;
-          onChange(v);
+          onChangeRef.current(v);
         }
       },
       onPanResponderMove: (e) => {
@@ -67,7 +71,7 @@ export function AdaptSlider({
         if (v !== lastVal.current) {
           Haptics.selectionAsync();
           lastVal.current = v;
-          onChange(v);
+          onChangeRef.current(v);
         }
       },
     })

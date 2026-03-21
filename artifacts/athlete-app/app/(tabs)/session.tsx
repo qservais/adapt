@@ -143,12 +143,12 @@ export default function SessionTab() {
         </View>
       )}
 
-      {(historyQuery.data?.length ?? 0) > 0 && (
+      {(historyQuery.data?.filter((l) => l.completedAt != null).length ?? 0) > 0 && (
         <View style={styles.historySection}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             SÉANCES RÉCENTES
           </Text>
-          {historyQuery.data?.slice(0, 5).map((log) => {
+          {historyQuery.data?.filter((l) => l.completedAt != null).slice(0, 5).map((log) => {
             const mode = log.variantMode as SessionMode;
             const c = MODE_CONFIG[mode] ?? MODE_CONFIG.normal;
             return (

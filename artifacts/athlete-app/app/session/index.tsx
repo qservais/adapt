@@ -169,12 +169,21 @@ export default function SessionIntroScreen() {
         {startError ? (
           <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{startError}</Text>
         ) : null}
-        <GradientButton
-          label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
-          onPress={handleStart}
-          loading={startMutation.isPending}
-          icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
-        />
+        {(session.exercises?.length ?? 0) === 0 ? (
+          <View style={styles.noExCard}>
+            <Feather name="info" size={18} color={COLORS.textMuted} />
+            <Text style={[styles.noExText, { fontFamily: FONTS.body }]}>
+              Cette séance n'a aucun exercice. Contacte ton coach pour la compléter.
+            </Text>
+          </View>
+        ) : (
+          <GradientButton
+            label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
+            onPress={handleStart}
+            loading={startMutation.isPending}
+            icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
+          />
+        )}
       </View>
     </View>
   );
@@ -290,6 +299,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   errorText: { color: COLORS.red, fontSize: 13, textAlign: "center" },
+  noExCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  noExText: { flex: 1, fontSize: 14, color: COLORS.textMuted, lineHeight: 20 },
   emptyState: {
     flex: 1,
     alignItems: "center",

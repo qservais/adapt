@@ -149,7 +149,9 @@ export default function CheckinScreen() {
   const meQuery = useGetMe();
   const submitMutation = useSubmitCheckin();
 
-  const hasCycleTracking = meQuery.data?.cycleTracking ?? false;
+  const gender = meQuery.data?.gender;
+  const hasCycleTracking =
+    meQuery.data?.cycleTracking === true && gender !== "homme";
   const steps = hasCycleTracking
     ? ALL_STEPS
     : ALL_STEPS.filter((s) => s.kind !== "cycle");
