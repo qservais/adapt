@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useUpdateMe, useAthleteLink, useGetBadges } from "@workspace/api-client-react";
+import { useGetMe, useUpdateMe, useAthleteLink, useGetBadges, customFetch } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useScrollToTop } from "@react-navigation/native";
@@ -128,10 +128,7 @@ export default function ProfileScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await fetch(`${process.env.EXPO_PUBLIC_API_URL ?? ""}/api/users/me/coach`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${user?.token ?? ""}` },
-              });
+              await customFetch("/api/users/me/coach", { method: "DELETE" });
               queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
             } catch {
               Alert.alert("Erreur", "Impossible de délier le coach");

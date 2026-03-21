@@ -288,7 +288,7 @@ function SessionDoneCard({
         </View>
       </View>
       <TouchableOpacity
-        onPress={() => router.push("/history")}
+        onPress={() => router.push("/(tabs)/session")}
         style={[styles.doneHistBtn, { borderColor: `${modeColor}40` }]}
         activeOpacity={0.7}
       >

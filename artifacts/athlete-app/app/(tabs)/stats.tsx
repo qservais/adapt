@@ -190,7 +190,9 @@ function MonthCalendar({
   year: number;
   month: number;
 }) {
-  const firstDay = new Date(year, month, 1).getDay();
+  // French week starts on Monday: shift getDay() so that Mon=0, Tue=1, ..., Sun=6
+  const jsFirstDay = new Date(year, month, 1).getDay();
+  const firstDay = (jsFirstDay + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
 
@@ -217,7 +219,7 @@ function MonthCalendar({
         {monthName.toUpperCase()} {year}
       </Text>
       <View style={styles.calDayRow}>
-        {["D", "L", "M", "M", "J", "V", "S"].map((d, i) => (
+        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
           <Text key={i} style={[styles.calDayLabel, { fontFamily: FONTS.mono }]}>
             {d}
           </Text>

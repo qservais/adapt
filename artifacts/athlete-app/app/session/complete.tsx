@@ -39,16 +39,13 @@ export default function SessionCompleteScreen() {
     (completeMutation.data as any)?.newBadges ?? [];
   const hasPRs = newPRs.length > 0;
 
+  // Animations and session completion trigger
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     scale.value = withDelay(200, withSpring(1, { damping: 12, stiffness: 100 }));
     opacity.value = withDelay(100, withTiming(1, { duration: 400 }));
     statsY.value = withDelay(500, withTiming(0, { duration: 500 }));
     statsOpacity.value = withDelay(500, withTiming(1, { duration: 500 }));
-
-    if (hasPRs) {
-      setTimeout(() => confettiRef.current?.start(), 600);
-    }
 
     if (session?.sessionLogId != null) {
       completeMutation.mutate({
@@ -57,6 +54,13 @@ export default function SessionCompleteScreen() {
       });
     }
   }, []);
+
+  // Fire confetti once PRs are available (mutation resolves after mount)
+  useEffect(() => {
+    if (hasPRs) {
+      setTimeout(() => confettiRef.current?.start(), 300);
+    }
+  }, [hasPRs]);
 
   const celebrateStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

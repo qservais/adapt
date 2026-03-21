@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGetTodaySession, useSubmitSessionFeedback } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -43,6 +44,7 @@ function getRPELabel(rpe: number): string {
 
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const sessionQuery = useGetTodaySession();
   const feedbackMutation = useSubmitSessionFeedback();
 
@@ -70,6 +72,9 @@ export default function FeedbackScreen() {
           athleteNotes: notes.trim() || null,
         },
       });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sessions/today"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/checkins/today"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       router.replace("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Impossible d'envoyer le retour";
