@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -27,7 +27,7 @@ export default function ChatScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user } = useAuth();
   const [text, setText] = useState("");
-  const listRef = useRef<FlatList<MessageData>>(null);
+  const listRef = useRef<FlashList<MessageData>>(null);
 
   const userIdStr = userId ?? "";
   const messagesQuery = useGetThreadMessages(userIdStr);
@@ -88,9 +88,10 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <FlatList
+      <FlashList
         ref={listRef}
         data={messages}
+        estimatedItemSize={72}
         keyExtractor={(m) => m.id}
         contentContainerStyle={[
           styles.messageList,
@@ -163,7 +164,7 @@ export default function ChatScreen() {
           <View style={styles.emptyChat}>
             <Feather name="message-circle" size={32} color={COLORS.textMuted} />
             <Text style={[styles.emptyChatText, { fontFamily: FONTS.body }]}>
-              No messages yet. Say hello!
+              Pas encore de messages. Dis bonjour !
             </Text>
           </View>
         }

@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,6 +27,18 @@ import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme"
 import { CircularTimer, type CircularTimerRef } from "@/components/ui/CircularTimer";
 import { Stepper } from "@/components/ui/Stepper";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+
+const ENCOURAGEMENT = [
+  "Super série ! Reprends ton souffle.",
+  "C'est comme ça qu'on progresse !",
+  "Tu gères. Profite du repos.",
+  "Excellent effort. La prochaine sera encore meilleure.",
+  "Chaque répétition compte. Bravo !",
+  "Tu es plus fort(e) qu'hier.",
+  "Concentre-toi pour la prochaine série !",
+  "Le repos fait partie de l'entraînement.",
+  "Reste focalisé(e), tu y es presque !",
+];
 
 const CATEGORY_IMAGES: Record<string, ReturnType<typeof require>> = {
   compound: require("@/assets/images/categories/compound.png"),
@@ -85,6 +97,13 @@ export default function ExerciseScreen() {
   const [currentSet, setCurrentSet] = useState(1);
   const [showRest, setShowRest] = useState(false);
   const [loadAdjustments, setLoadAdjustments] = useState<Record<string, number>>({});
+
+  const encouragementMsg = useMemo(
+    () => ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)],
+    // Re-pick on each rest period
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [showRest]
+  );
 
   const exercise = exercises[exerciseIndex];
   const totalExercises = exercises.length;
@@ -190,7 +209,7 @@ export default function ExerciseScreen() {
       {/* Hero image with gradient overlay */}
       {heroImage ? (
         <View style={styles.heroContainer}>
-          <Image source={heroImage} style={styles.heroImage} resizeMode="cover" />
+          <Image source={heroImage} style={styles.heroImage} contentFit="cover" />
           <LinearGradient
             colors={["transparent", `${cfg.color}20`, COLORS.bg]}
             locations={[0, 0.6, 1]}
@@ -340,6 +359,22 @@ export default function ExerciseScreen() {
               onComplete={handleTimerComplete}
               autoStart={false}
             />
+            <View style={styles.encourageBox}>
+              <Text style={[styles.encourageText, { fontFamily: FONTS.bodyMedium }]}>
+                {encouragementMsg}
+              </Text>
+            </View>
+            {currentSet + 1 === exercise.sets && !isLast && exercises[exerciseIndex + 1] != null && (
+              <View style={styles.nextExBox}>
+                <Text style={[styles.nextExLabel, { fontFamily: FONTS.mono }]}>ENSUITE</Text>
+                <Text style={[styles.nextExName, { fontFamily: FONTS.bodyMedium }]}>
+                  {exercises[exerciseIndex + 1].exerciseName}
+                </Text>
+                <Text style={[styles.nextExDetail, { fontFamily: FONTS.mono }]}>
+                  {exercises[exerciseIndex + 1].sets}×{exercises[exerciseIndex + 1].reps}
+                </Text>
+              </View>
+            )}
             <TouchableOpacity onPress={handleSkipRest} style={styles.skipBtn}>
               <Text style={[styles.skipText, { fontFamily: FONTS.bodyMedium }]}>
                 Passer le repos
@@ -468,7 +503,31 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   cueText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
-  restContainer: { alignItems: "center", gap: 20 },
+  restContainer: { alignItems: "center", gap: 16 },
+  encourageBox: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignItems: "center",
+    maxWidth: 300,
+  },
+  encourageText: { fontSize: 14, color: COLORS.textSecondary, textAlign: "center", lineHeight: 20 },
+  nextExBox: {
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    alignItems: "center",
+    gap: 2,
+  },
+  nextExLabel: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
+  nextExName: { fontSize: 15, color: COLORS.white },
+  nextExDetail: { fontSize: 12, color: COLORS.textSecondary },
   skipBtn: {
     borderRadius: 10,
     paddingHorizontal: 24,

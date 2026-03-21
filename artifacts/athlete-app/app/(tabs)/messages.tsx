@@ -1,12 +1,12 @@
 import React, { useRef } from "react";
 import {
-  FlatList,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -17,7 +17,7 @@ import { useScrollToTop } from "@react-navigation/native";
 
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<React.ElementRef<typeof FlatList>>(null);
+  const scrollRef = useRef<FlashList<MessageThread>>(null);
   useScrollToTop(scrollRef);
   const threadsQuery = useGetMessageThreads();
 
@@ -44,9 +44,10 @@ export default function MessagesScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           ref={scrollRef}
           data={threads}
+          estimatedItemSize={72}
           keyExtractor={(item) => item.userId}
           contentContainerStyle={{ paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 20 }}
           renderItem={({ item }) => {

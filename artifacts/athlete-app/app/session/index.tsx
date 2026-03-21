@@ -1,13 +1,13 @@
 import React from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -139,7 +139,7 @@ export default function SessionIntroScreen() {
             return (
               <View key={ex.id} style={styles.exRow}>
                 {thumb ? (
-                  <Image source={thumb} style={styles.exThumb} resizeMode="cover" />
+                  <Image source={thumb} style={styles.exThumb} contentFit="cover" />
                 ) : (
                   <View style={styles.exThumbFallback}>
                     <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
