@@ -111,7 +111,11 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
   let sessionPreview = null;
   if (activeProgram.length > 0) {
     const dayOfWeek = new Date().getDay(); // 0=Sun,1=Mon,...
-    const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 }; // all days mapped to dayNumber
+    // Map JS getDay() (0=Sun..6=Sat) → dayNumber stored in DB (1=Lun..7=Dim).
+    // Tous les jours sont couverts intentionnellement : c'est la requête DB
+    // qui détermine si ce jour est un jour d'entraînement (session existante ou non).
+    // Si aucune séance n'existe pour ce dayNumber → sessionPreview reste null.
+    const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
     const dayNum = dayMap[dayOfWeek];
 
     if (dayNum !== undefined) {
