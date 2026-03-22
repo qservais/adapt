@@ -6,3 +6,9 @@ id = "8fJNM6xuHK_FN2ilY1OM3"
 uri = "file://ADAPT_Guide_Test_LMJ.md"
 type = "text"
 title = "Guide de test V1 — ADAPT by LMJ (liens production)"
+
+[[outputs]]
+id = "3E1IhVLqKB5NjGNP2OeOX"
+uri = "file://ADAPT_Guide_Test_LMJ.pdf"
+type = "pdf"
+title = "Guide de test V1 — ADAPT by LMJ"
