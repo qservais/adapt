@@ -18,7 +18,7 @@ Tu accèdes à deux interfaces distinctes :
 
 **URL :**
 ```
-https://971cbe58-3054-4fc7-a517-57cfa262a1f9-00-2ma14lu0ae9v5.worf.replit.dev/coach-dashboard
+https://adapt-hello3407.replit.app/coach-dashboard/
 ```
 
 **Tes identifiants :**
@@ -58,13 +58,13 @@ L'app athlète tourne sur **Expo Go** — une app gratuite qui permet de tester 
 
 ### Étape 2 — Ouvrir l'app de test
 
-Une fois Expo Go installé, ouvre le lien suivant depuis ton téléphone (ou scanne le QR dans le navigateur) :
+Une fois Expo Go installé, ouvre ce lien depuis ton téléphone — il affiche une page de lancement avec un bouton et un QR code pour ouvrir l'app directement dans Expo Go :
 
 ```
-https://971cbe58-3054-4fc7-a517-57cfa262a1f9-00-2ma14lu0ae9v5.expo.worf.replit.dev
+https://adapt-hello3407.replit.app
 ```
 
-> Si la connexion ne se lance pas directement, ouvre Expo Go → "Enter URL manually" → colle l'adresse ci-dessus.
+> Si le bouton ne fonctionne pas, ouvre Expo Go → "Enter URL manually" → colle `exp://adapt-hello3407.replit.app`.
 
 ### Étape 3 — Se connecter
 
@@ -128,7 +128,7 @@ Voici les aspects sur lesquels ton retour est le plus utile :
 
 ## 4. Informations techniques importantes
 
-> **Note :** L'app est en mode développement actif sur notre serveur. Elle fonctionne tant que le serveur est actif. Si tu tombes sur une page blanche ou une erreur de connexion, signale-le pour que je relance le serveur.
+> **Note :** L'app est déployée en production sur les serveurs Replit — elle est accessible 24h/24 sans intervention de ma part. Si tu tombes sur une erreur ou une page blanche, signale-le-moi avec un screenshot.
 
 > **Les données sont réelles** — tes actions (édition de programme, modification de charge, etc.) sont enregistrées en base de données. Tu peux tester librement, on pourra remettre à zéro à tout moment.
 
