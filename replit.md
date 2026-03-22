@@ -127,8 +127,14 @@ Tables: users, programs, sessions, session_variants, exercises, session_exercise
 ### Seed Script
 
 ```bash
-pnpm --filter @workspace/scripts run seed
+pnpm --filter @workspace/api-server run seed
 ```
+
+Two-step idempotent seed:
+1. `seed.sql` — base data (coach + Owen + 97 exercises + Owen's programs)
+2. `seed-patch.sql` — 6 demo athletes (Sara, Tom, Marie, Julien, Quentin×2) + their 4 programs + 52 sessions + 208 variants + 1248 session_exercises
+
+Both files use `ON CONFLICT (id) DO NOTHING` — safe to run multiple times.
 
 Demo accounts (all password: `Demo1234!`):
 - Coach: `coach@adapt.demo` (invite code: MARC01)
