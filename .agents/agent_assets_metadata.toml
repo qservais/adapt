@@ -12,3 +12,9 @@ id = "3E1IhVLqKB5NjGNP2OeOX"
 uri = "file://ADAPT_Guide_Test_LMJ.pdf"
 type = "pdf"
 title = "Guide de test V1 — ADAPT by LMJ"
+
+[[outputs]]
+id = "eHrJbP46ihnAA1CXnh5_i"
+uri = "file://ADAPT_Guide_Coach.md"
+type = "text"
+title = "ADAPT by LMJ — Guide pour le Coach"
