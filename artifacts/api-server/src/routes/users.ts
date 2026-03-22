@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, exercisesTable, sessionLogsTable, checkinsTable, exerciseLogsTable } from "@workspace/db";
+import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, exercisesTable, sessionLogsTable, checkinsTable, exerciseLogsTable, programsTable, sessionsTable } from "@workspace/db";
 import { eq, and, desc, gte, sql, count } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
@@ -258,17 +258,35 @@ router.get("/users/weekly-recap/latest", authenticate, async (req, res) => {
       };
     }
 
-    const [thisWeek, lastWeek] = await Promise.all([
-      getWeekStats(weekStart, weekEnd),
-      getWeekStats(prevWeekStart, prevWeekEnd),
+    const [[thisWeek, lastWeek], activePrograms] = await Promise.all([
+      Promise.all([
+        getWeekStats(weekStart, weekEnd),
+        getWeekStats(prevWeekStart, prevWeekEnd),
+      ]),
+      db.select({ id: programsTable.id, startDate: programsTable.startDate })
+        .from(programsTable)
+        .where(and(eq(programsTable.athleteId, userId), eq(programsTable.isActive, true)))
+        .limit(1),
     ]);
+
+    let sessionsPlanned = 0;
+    if (activePrograms.length > 0) {
+      const prog = activePrograms[0];
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      const startMs = prog.startDate ? new Date(prog.startDate).getTime() : weekStart.getTime();
+      const weekNum = Math.max(1, Math.floor((weekStart.getTime() - startMs) / msPerWeek) + 1);
+      const [planCount] = await db.select({ cnt: count() })
+        .from(sessionsTable)
+        .where(and(eq(sessionsTable.programId, prog.id), eq(sessionsTable.weekNumber, weekNum)));
+      sessionsPlanned = Number(planCount?.cnt ?? 0);
+    }
 
     res.json({
       recap: {
         weekStart: weekStart.toISOString().split("T")[0],
         weekEnd: weekEnd.toISOString().split("T")[0],
         sessionsCompleted: thisWeek.sessions,
-        sessionsPlanned: 3,
+        sessionsPlanned,
         avgAdaptScore: thisWeek.avgAdaptScore,
         avgRpe: thisWeek.avgRpe,
         totalVolumeKg: thisWeek.totalVolume,

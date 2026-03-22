@@ -43,7 +43,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     .from(checkinsTable)
     .where(and(eq(checkinsTable.athleteId, req.user!.userId), eq(checkinsTable.date, today)));
   if (existing.length > 0) {
-    res.status(409).json({ error: { code: "CHECKIN_ALREADY_EXISTS", message: "Already checked in today" } });
+    res.status(409).json({ error: { code: "CHECKIN_ALREADY_EXISTS", message: "Tu as déjà fait ton check-in aujourd'hui" } });
     return;
   }
 
@@ -111,36 +111,38 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
   let sessionPreview = null;
   if (activeProgram.length > 0) {
     const dayOfWeek = new Date().getDay(); // 0=Sun,1=Mon,...
-    const dayMap: Record<number, number> = { 1: 1, 3: 3, 5: 5 }; // Mon/Wed/Fri
-    const dayNum = dayMap[dayOfWeek] ?? 1;
+    const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 }; // all days mapped to dayNumber
+    const dayNum = dayMap[dayOfWeek];
 
-    const [session] = await db.select({
-      id: sessionsTable.id,
-      name: sessionsTable.name,
-      estimatedDurationMin: sessionsTable.estimatedDurationMin,
-    })
-      .from(sessionsTable)
-      .where(and(eq(sessionsTable.programId, activeProgram[0].id), eq(sessionsTable.dayNumber, dayNum)))
-      .limit(1);
+    if (dayNum !== undefined) {
+      const [session] = await db.select({
+        id: sessionsTable.id,
+        name: sessionsTable.name,
+        estimatedDurationMin: sessionsTable.estimatedDurationMin,
+      })
+        .from(sessionsTable)
+        .where(and(eq(sessionsTable.programId, activeProgram[0].id), eq(sessionsTable.dayNumber, dayNum)))
+        .limit(1);
 
-    if (session) {
-      const [variant] = await db.select({ id: sessionVariantsTable.id })
-        .from(sessionVariantsTable)
-        .where(and(eq(sessionVariantsTable.sessionId, session.id), eq(sessionVariantsTable.mode, sessionMode)));
+      if (session) {
+        const [variant] = await db.select({ id: sessionVariantsTable.id })
+          .from(sessionVariantsTable)
+          .where(and(eq(sessionVariantsTable.sessionId, session.id), eq(sessionVariantsTable.mode, sessionMode)));
 
-      let exerciseCount = 0;
-      if (variant) {
-        const exs = await db.select({ id: sessionExercisesTable.id })
-          .from(sessionExercisesTable)
-          .where(eq(sessionExercisesTable.variantId, variant.id));
-        exerciseCount = exs.length;
+        let exerciseCount = 0;
+        if (variant) {
+          const exs = await db.select({ id: sessionExercisesTable.id })
+            .from(sessionExercisesTable)
+            .where(eq(sessionExercisesTable.variantId, variant.id));
+          exerciseCount = exs.length;
+        }
+
+        sessionPreview = {
+          name: session.name,
+          estimatedDurationMin: session.estimatedDurationMin,
+          exerciseCount,
+        };
       }
-
-      sessionPreview = {
-        name: session.name,
-        estimatedDurationMin: session.estimatedDurationMin,
-        exerciseCount,
-      };
     }
   }
 
