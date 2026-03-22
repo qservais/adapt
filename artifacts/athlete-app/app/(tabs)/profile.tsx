@@ -400,7 +400,7 @@ export default function ProfileScreen() {
               <Feather name="users" size={16} color={COLORS.cyan} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Coach</Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan, flex: 1 }]}>
-                {(profile as any)?.coachName ?? "Connecté"}
+                {profile?.coachName ?? "Connecté"}
               </Text>
               <TouchableOpacity onPress={handleUnlinkCoach} style={styles.unlinkBtn} activeOpacity={0.7}>
                 <Text style={[styles.unlinkText, { fontFamily: FONTS.mono }]}>Délier</Text>

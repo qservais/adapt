@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -17,7 +17,7 @@ import { useScrollToTop } from "@react-navigation/native";
 
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<FlashList<MessageThread>>(null);
+  const scrollRef = useRef<FlashListRef<MessageThread>>(null);
   useScrollToTop(scrollRef);
   const threadsQuery = useGetMessageThreads();
 
@@ -45,9 +45,8 @@ export default function MessagesScreen() {
         </View>
       ) : (
         <FlashList
-          ref={scrollRef}
+          ref={scrollRef as any}
           data={threads}
-          estimatedItemSize={72}
           keyExtractor={(item) => item.userId}
           contentContainerStyle={{ paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 20 }}
           renderItem={({ item }) => {

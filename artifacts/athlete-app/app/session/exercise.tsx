@@ -174,8 +174,8 @@ export default function ExerciseScreen() {
     );
   }
 
-  const lastUsedLoadKg = (exercise as any).lastUsedLoadKg as number | null;
-  const lastUsedDate = (exercise as any).lastUsedDate as string | null;
+  const lastUsedLoadKg = exercise.lastUsedLoadKg ?? null;
+  const lastUsedDate = exercise.lastUsedDate ?? null;
 
   const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? lastUsedLoadKg ?? 0;
   const currentPR = athletePRs?.[exercise.exerciseId];

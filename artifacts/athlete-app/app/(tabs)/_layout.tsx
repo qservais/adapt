@@ -50,7 +50,7 @@ function TabIcon({
   return (
     <View style={tabIconStyles.wrapper}>
       {isIOS && sfSymbol ? (
-        <SymbolView name={sfSymbol} tintColor={color} size={22} />
+        <SymbolView name={sfSymbol as any} tintColor={color} size={22} />
       ) : (
         <Feather name={name} size={22} color={color} />
       )}

@@ -178,7 +178,7 @@ function StateCheckedIn({
 }) {
   const modeKey = checkin.sessionMode as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
-  const isCompleted = session != null && (session as any).completedAt != null;
+  const isCompleted = session != null && session.completedAt != null;
 
   return (
     <View style={styles.checkedContainer}>
@@ -244,7 +244,7 @@ function SessionDoneCard({
   modeColor: string;
   cfg: { color: string; label: string };
 }) {
-  const durationMin = (session as any).durationMin ?? session.estimatedDurationMin;
+  const durationMin = session.durationMin ?? session.estimatedDurationMin;
   const exCount = session.exercises?.length ?? 0;
 
   return (

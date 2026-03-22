@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -27,7 +27,7 @@ export default function ChatScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user } = useAuth();
   const [text, setText] = useState("");
-  const listRef = useRef<FlashList<MessageData>>(null);
+  const listRef = useRef<FlashListRef<MessageData>>(null);
 
   const userIdStr = userId ?? "";
   const messagesQuery = useGetThreadMessages(userIdStr);
@@ -89,9 +89,8 @@ export default function ChatScreen() {
       </View>
 
       <FlashList
-        ref={listRef}
+        ref={listRef as any}
         data={messages}
-        estimatedItemSize={72}
         keyExtractor={(m) => m.id}
         contentContainerStyle={[
           styles.messageList,

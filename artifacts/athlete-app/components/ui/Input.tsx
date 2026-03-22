@@ -16,7 +16,7 @@ interface InputProps extends TextInputProps {
   error?: string;
   hint?: string;
   secureToggle?: boolean;
-  style?: ViewStyle;
+  containerStyle?: ViewStyle;
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
 }
@@ -26,7 +26,7 @@ export function Input({
   error,
   hint,
   secureToggle,
-  style,
+  containerStyle,
   prefix,
   suffix,
   secureTextEntry,
@@ -42,7 +42,7 @@ export function Input({
     : COLORS.border;
 
   return (
-    <View style={[styles.wrapper, style]}>
+    <View style={[styles.wrapper, containerStyle]}>
       {label ? (
         <Text style={[styles.label, { fontFamily: FONTS.bodyMedium }]}>
           {label}

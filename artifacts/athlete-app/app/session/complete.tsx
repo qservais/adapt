@@ -12,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import ConfettiCannon from "react-native-confetti-cannon";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGetTodaySession, useCompleteSession } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -20,6 +21,7 @@ const { width } = Dimensions.get("window");
 
 export default function SessionCompleteScreen() {
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const sessionQuery = useGetTodaySession();
   const completeMutation = useCompleteSession();
   const confettiRef = useRef<any>(null);
@@ -33,10 +35,8 @@ export default function SessionCompleteScreen() {
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
 
-  const newPRs: Array<{ exerciseName: string; loadKg: number; previousLoadKg?: number | null }> =
-    (completeMutation.data as any)?.newPRs ?? [];
-  const newBadges: Array<{ code: string; name: string; icon: string }> =
-    (completeMutation.data as any)?.newBadges ?? [];
+  const newPRs = completeMutation.data?.newPRs ?? [];
+  const newBadges = completeMutation.data?.newBadges ?? [];
   const hasPRs = newPRs.length > 0;
 
   // Animations and session completion trigger
@@ -48,10 +48,14 @@ export default function SessionCompleteScreen() {
     statsOpacity.value = withDelay(500, withTiming(1, { duration: 500 }));
 
     if (session?.sessionLogId != null) {
-      completeMutation.mutate({
-        sessionId: session.sessionLogId,
-        data: { exercises: [] },
-      });
+      completeMutation.mutate(
+        { sessionId: session.sessionLogId, data: { exercises: [] } },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["/api/sessions/today"] });
+          },
+        }
+      );
     }
   }, []);
 
@@ -129,7 +133,7 @@ export default function SessionCompleteScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
-                {(completeMutation.data as any)?.durationMin ?? session.estimatedDurationMin ?? "—"}
+                {completeMutation.data?.durationMin ?? session.estimatedDurationMin ?? "—"}
               </Text>
               <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Min</Text>
             </View>

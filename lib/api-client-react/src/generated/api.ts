@@ -29,6 +29,8 @@ import type {
   ClientDetail,
   ClientSummary,
   CompleteSessionRequest,
+  CompleteSessionResponse,
+  MissedSessionsResponse,
   CreateExerciseRequest,
   CreateProgramRequest,
   CreateSessionRequest,
@@ -1111,8 +1113,8 @@ export const completeSession = async (
   sessionId: string,
   completeSessionRequest: CompleteSessionRequest,
   options?: RequestInit,
-): Promise<SuccessResponse> => {
-  return customFetch<SuccessResponse>(getCompleteSessionUrl(sessionId), {
+): Promise<CompleteSessionResponse> => {
+  return customFetch<CompleteSessionResponse>(getCompleteSessionUrl(sessionId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },

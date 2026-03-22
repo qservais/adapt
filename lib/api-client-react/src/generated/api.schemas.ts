@@ -67,6 +67,7 @@ export interface UserProfile {
   cycleTracking?: boolean;
   coachId?: string | null;
   inviteCode?: string | null;
+  coachName?: string | null;
 }
 
 export interface AuthResponse {
@@ -181,6 +182,8 @@ export interface SessionExerciseItem {
   adaptedLoadKg?: number | null;
   restSeconds?: number | null;
   coachCue?: string | null;
+  lastUsedLoadKg?: number | null;
+  lastUsedDate?: string | null;
 }
 
 export interface SessionDetail {
@@ -194,6 +197,34 @@ export interface SessionDetail {
   adaptScore: number;
   overriddenByCoach?: boolean;
   athletePRs?: Record<string, number>;
+  completedAt?: string | null;
+  durationMin?: number | null;
+}
+
+export interface CompleteSessionNewPR {
+  exerciseId: string;
+  exerciseName: string;
+  loadKg: number;
+  previousLoadKg?: number | null;
+}
+
+export interface CompleteSessionResponse {
+  success: boolean;
+  message?: string;
+  newPRs: CompleteSessionNewPR[];
+  newBadges: NewBadgeItem[];
+  durationMin?: number | null;
+}
+
+export interface MissedSessionItem {
+  date: string;
+  sessionId: string;
+  sessionName: string;
+  estimatedDurationMin?: number | null;
+}
+
+export interface MissedSessionsResponse {
+  missed: MissedSessionItem[];
 }
 
 export interface BadgeItem {
