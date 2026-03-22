@@ -18,3 +18,9 @@ id = "eHrJbP46ihnAA1CXnh5_i"
 uri = "file://ADAPT_Guide_Coach.md"
 type = "text"
 title = "ADAPT by LMJ — Guide pour le Coach"
+
+[[outputs]]
+id = "q_CsRmcJXZlaNYpH9p0ko"
+uri = "file://ADAPT_Guide_Coach.pdf"
+type = "pdf"
+title = "ADAPT by LMJ — Guide Coach (PDF)"
