@@ -55,6 +55,30 @@ async function buildSessionDetail(
   sessionLog: typeof sessionLogsTable.$inferSelect,
   checkin: typeof checkinsTable.$inferSelect
 ) {
+  let sessionName = "Séance du jour";
+  let coachNotes: string | null = null;
+  let estimatedDurationMin: number | null = null;
+
+  if (sessionLog.sessionId) {
+    const [sess] = await db.select({
+      name: sessionsTable.name,
+      coachNotes: sessionsTable.coachNotes,
+      estimatedDurationMin: sessionsTable.estimatedDurationMin,
+    }).from(sessionsTable).where(eq(sessionsTable.id, sessionLog.sessionId));
+    if (sess) {
+      sessionName = sess.name;
+      coachNotes = sess.coachNotes ?? null;
+      estimatedDurationMin = sess.estimatedDurationMin ?? null;
+    }
+  }
+
+  const durationMin =
+    sessionLog.startedAt && sessionLog.completedAt
+      ? Math.max(1, Math.round(
+          (new Date(sessionLog.completedAt).getTime() - new Date(sessionLog.startedAt).getTime()) / 60000
+        ))
+      : null;
+
   let exercises: {
     id: string;
     exerciseId: string;
@@ -137,9 +161,14 @@ async function buildSessionDetail(
   return {
     sessionLogId: sessionLog.id,
     sessionId: sessionLog.sessionId,
+    name: sessionName,
     mode: sessionLog.variantMode,
     adaptScore: checkin.adaptScore,
     completedAt: sessionLog.completedAt ?? null,
+    durationMin,
+    coachNotes,
+    estimatedDurationMin,
+    overriddenByCoach: false,
     exercises,
   };
 }
@@ -165,7 +194,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
 
     if (existingLog) {
       const detail = await buildSessionDetail(existingLog, checkin);
-      res.json({ ...detail, name: "Séance du jour", coachNotes: null, overriddenByCoach: false, estimatedDurationMin: null });
+      res.json(detail);
       return;
     }
 

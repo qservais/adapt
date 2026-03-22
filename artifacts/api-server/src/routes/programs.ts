@@ -375,7 +375,6 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
     const programId = String(req.params["programId"]);
     const sessionId = String(req.params["sessionId"]);
 
-    // Verify program belongs to authenticated coach
     const [program] = await db.select({ id: programsTable.id }).from(programsTable)
       .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
     if (!program) {
@@ -383,7 +382,6 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
       return;
     }
 
-    // Verify session belongs to this program
     const [session] = await db.select({ id: sessionsTable.id }).from(sessionsTable)
       .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.programId, programId)));
     if (!session) {
@@ -406,8 +404,60 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
     if (parsed.data.estimatedDurationMin !== undefined) updateData.estimatedDurationMin = parsed.data.estimatedDurationMin;
     if (parsed.data.coachNotes !== undefined) updateData.coachNotes = parsed.data.coachNotes;
 
-    await db.update(sessionsTable).set(updateData).where(eq(sessionsTable.id, sessionId));
-    res.json({ success: true, message: "Session updated" });
+    if (Object.keys(updateData).length > 0) {
+      await db.update(sessionsTable).set(updateData).where(eq(sessionsTable.id, sessionId));
+    }
+
+    if (parsed.data.variants !== undefined) {
+      const existingVariants = await db.select({ id: sessionVariantsTable.id })
+        .from(sessionVariantsTable)
+        .where(eq(sessionVariantsTable.sessionId, sessionId));
+
+      for (const v of existingVariants) {
+        await db.delete(sessionExercisesTable).where(eq(sessionExercisesTable.variantId, v.id));
+      }
+      if (existingVariants.length > 0) {
+        await db.delete(sessionVariantsTable)
+          .where(inArray(sessionVariantsTable.id, existingVariants.map(v => v.id)));
+      }
+
+      const allVariantsToCreate = [...parsed.data.variants];
+      const normalVariant = parsed.data.variants.find(v => v.mode === "normal");
+      if (normalVariant && normalVariant.exercises && normalVariant.exercises.length > 0) {
+        const existingModes = new Set(parsed.data.variants.map(v => v.mode));
+        const autoVariants = buildAutoVariants(normalVariant.exercises);
+        for (const av of autoVariants) {
+          if (!existingModes.has(av.mode)) {
+            allVariantsToCreate.push(av);
+          }
+        }
+      }
+
+      for (const variant of allVariantsToCreate) {
+        const [sv] = await db.insert(sessionVariantsTable).values({
+          sessionId,
+          mode: variant.mode,
+          notes: variant.notes,
+        }).returning();
+
+        if (variant.exercises) {
+          for (const ex of variant.exercises) {
+            await db.insert(sessionExercisesTable).values({
+              variantId: sv.id,
+              exerciseId: ex.exerciseId,
+              orderIndex: ex.orderIndex,
+              sets: ex.sets,
+              reps: ex.reps,
+              loadKg: ex.loadKg != null ? ex.loadKg.toString() : undefined,
+              restSeconds: ex.restSeconds,
+              coachCue: ex.coachCue,
+            });
+          }
+        }
+      }
+    }
+
+    res.json({ success: true, message: "Session updated", autoVariantsGenerated: parsed.data.variants !== undefined });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
