@@ -113,6 +113,8 @@ export default function ClientDetail() {
   });
   const [addSessionSlot, setAddSessionSlot] = useState<{ weekNumber: number; dayNumber: number } | null>(null);
   const [selectedCalSession, setSelectedCalSession] = useState<UpcomingSession | null>(null);
+  const [addDateOpen, setAddDateOpen] = useState(false);
+  const [addDateValue, setAddDateValue] = useState<string>(() => new Date().toISOString().split("T")[0]);
 
   const fetchSessionDetail = useCallback(async (sessionLogId: string) => {
     if (sessionDetails[sessionLogId]) return;
@@ -553,12 +555,18 @@ export default function ClientDetail() {
                     </CardTitle>
                     <div className="flex items-center gap-2 flex-wrap">
                       {activeProgram && (
-                        <Link href={`/programs/${activeProgram.id}`}>
-                          <Button size="sm" variant="outline" className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10 gap-1">
-                            <Plus className="w-3 h-3" />
-                            Ajouter une séance
-                          </Button>
-                        </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10 gap-1"
+                          onClick={() => {
+                            setAddDateValue(new Date().toISOString().split("T")[0]);
+                            setAddDateOpen(true);
+                          }}
+                        >
+                          <Plus className="w-3 h-3" />
+                          Ajouter une séance
+                        </Button>
                       )}
                       <button
                         onClick={() => setCalendarMonth(m => {
@@ -909,7 +917,71 @@ export default function ClientDetail() {
                 </DialogContent>
               </Dialog>
 
-              {/* Add session modal from calendar click */}
+              {/* Date picker dialog — "Ajouter une séance" button */}
+              <Dialog open={addDateOpen} onOpenChange={o => { if (!o) setAddDateOpen(false); }}>
+                <DialogContent className="bg-card border-border max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="text-white font-display text-lg flex items-center gap-2">
+                      <Plus className="w-5 h-5 text-primary" />
+                      Ajouter une séance
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm text-muted-foreground">Date de la séance</Label>
+                      <Input
+                        type="date"
+                        value={addDateValue}
+                        onChange={e => setAddDateValue(e.target.value)}
+                        className="bg-background border-border text-white"
+                        min={activeProgram?.startDate ?? undefined}
+                      />
+                    </div>
+                    {activeProgram?.startDate && addDateValue && (
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const progStart = new Date(activeProgram.startDate);
+                          progStart.setHours(0, 0, 0, 0);
+                          const target = new Date(addDateValue + "T12:00:00");
+                          target.setHours(0, 0, 0, 0);
+                          const diff = Math.floor((target.getTime() - progStart.getTime()) / 86400000);
+                          if (diff < 0) return "Date antérieure au début du programme";
+                          const weekNumber = Math.floor(diff / 7) + 1;
+                          const dayNumber = (diff % 7) + 1;
+                          return `Semaine ${weekNumber}, Jour ${dayNumber} du programme`;
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button size="sm" variant="ghost" onClick={() => setAddDateOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-primary text-black hover:bg-primary/90"
+                      disabled={!activeProgram?.startDate || !addDateValue}
+                      onClick={() => {
+                        if (!activeProgram?.startDate || !addDateValue) return;
+                        const progStart = new Date(activeProgram.startDate);
+                        progStart.setHours(0, 0, 0, 0);
+                        const target = new Date(addDateValue + "T12:00:00");
+                        target.setHours(0, 0, 0, 0);
+                        const diff = Math.floor((target.getTime() - progStart.getTime()) / 86400000);
+                        if (diff < 0) return;
+                        const weekNumber = Math.floor(diff / 7) + 1;
+                        const dayNumber = (diff % 7) + 1;
+                        setAddDateOpen(false);
+                        setAddSessionSlot({ weekNumber, dayNumber });
+                      }}
+                    >
+                      Continuer
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add session modal from calendar click or date picker */}
               {addSessionSlot && activeProgram && (
                 <SessionModal
                   programId={activeProgram.id}
