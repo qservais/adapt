@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { exercisesTable, sessionExercisesTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, isNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -22,7 +22,7 @@ router.get("/exercises", authenticate, async (req, res) => {
     const coachId = req.user!.userId;
     const exercises = await db.select(exerciseResponseFields)
       .from(exercisesTable)
-      .where(eq(exercisesTable.createdBy, coachId));
+      .where(or(isNull(exercisesTable.createdBy), eq(exercisesTable.createdBy, coachId)));
 
     let filtered = exercises;
     if (req.query["category"]) {
@@ -48,7 +48,7 @@ router.get("/exercises", authenticate, async (req, res) => {
 
 const createExerciseSchema = z.object({
   name: z.string().min(1),
-  category: z.enum(["compound", "isolation", "cardio", "mobility", "core", "power"]).optional(),
+  category: z.enum(["compound", "isolation", "cardio", "mobility", "core", "power", "plyometric"]).optional(),
   muscleGroups: z.array(z.string()).optional(),
   equipment: z.array(z.string()).optional(),
   description: z.string().optional(),

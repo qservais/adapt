@@ -7,7 +7,8 @@
     "dev": "NODE_ENV=development tsx ./src/index.ts",
     "build": "tsx ./build.ts",
     "seed": "tsx ./src/scripts/seed-prod.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:library": "tsx tests/exercises-library.test.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",

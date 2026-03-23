@@ -44,6 +44,7 @@ const CATEGORIES = [
   { value: "mobility", label: "Mobilité", color: "text-[#FFB800]", bg: "bg-[#FFB800]/10 border-[#FFB800]/30" },
   { value: "core", label: "Gainage/Core", color: "text-[#F97316]", bg: "bg-[#F97316]/10 border-[#F97316]/30" },
   { value: "power", label: "Puissance", color: "text-[#EF4444]", bg: "bg-[#EF4444]/10 border-[#EF4444]/30" },
+  { value: "plyometric", label: "Pliométrie", color: "text-[#FF8C42]", bg: "bg-[#FF8C42]/10 border-[#FF8C42]/30" },
 ];
 
 const MUSCLE_GROUPS = [
