@@ -22,8 +22,7 @@ export async function ensureAthleteInviteCodes(): Promise<void> {
     if (athletes.length === 0) return;
 
     const existingCodes = await db.select({ code: usersTable.inviteCode })
-      .from(usersTable)
-      .where(eq(usersTable.role, "athlete"));
+      .from(usersTable);
 
     const usedCodes = new Set(existingCodes.map(r => r.code).filter(Boolean));
 

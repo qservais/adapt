@@ -113,8 +113,13 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       const plannedSessions = await db.select().from(sessionsTable)
         .where(eq(sessionsTable.programId, activeProgram.id));
 
+      // Query all session logs for this program (no limit) for accurate completion status
+      const allProgramLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
+        .from(sessionLogsTable)
+        .where(eq(sessionLogsTable.athleteId, athlete.id));
+
       const completedSessionIds = new Set(
-        recentSessions.filter(s => s.sessionId).map(s => s.sessionId)
+        allProgramLogs.filter(s => s.sessionId).map(s => s.sessionId)
       );
 
       for (const session of plannedSessions) {
