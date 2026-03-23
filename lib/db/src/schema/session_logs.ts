@@ -29,6 +29,7 @@ export const exerciseLogsTable = pgTable("exercise_logs", {
   repsPerSet: jsonb("reps_per_set"),
   loadKgUsed: decimal("load_kg_used", { precision: 6, scale: 2 }),
   notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
 export const insertSessionLogSchema = createInsertSchema(sessionLogsTable).omit({ id: true, createdAt: true });

@@ -85,8 +85,8 @@ export default function ClientsOverview() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display text-white">VUE D'ENSEMBLE</h1>
-          <p className="text-muted-foreground text-sm">Surveillez la disponibilité et la compliance quotidienne des athlètes.</p>
+          <h1 className="text-3xl font-display text-white">ATHLÈTES</h1>
+          <p className="text-muted-foreground text-sm">Gestion des profils, alertes et check-ins quotidiens.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">

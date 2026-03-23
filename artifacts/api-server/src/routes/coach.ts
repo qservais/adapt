@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, checkinsTable, sessionLogsTable, alertsTable, programsTable, sessionsTable } from "@workspace/db";
-import { eq, and, desc, gte, inArray } from "drizzle-orm";
+import { eq, and, desc, gte, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -100,22 +100,21 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
     }
     weekSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
 
-    // Last 5 completed sessions across all athletes
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
-    const allRecentLogs = await db.select({
+    // Last 5 completed sessions — scoped to this coach's athletes at SQL level
+    const myLogs = athleteIds.length === 0 ? [] : await db.select({
       id: sessionLogsTable.id,
       athleteId: sessionLogsTable.athleteId,
       sessionId: sessionLogsTable.sessionId,
       variantMode: sessionLogsTable.variantMode,
       rpe: sessionLogsTable.rpe,
       completedAt: sessionLogsTable.completedAt,
-      createdAt: sessionLogsTable.createdAt,
     }).from(sessionLogsTable)
-      .where(gte(sessionLogsTable.createdAt, sevenDaysAgo))
-      .orderBy(desc(sessionLogsTable.createdAt))
-      .limit(20);
-
-    const myLogs = allRecentLogs.filter(l => athleteIds.includes(l.athleteId)).slice(0, 5);
+      .where(and(
+        inArray(sessionLogsTable.athleteId, athleteIds),
+        isNotNull(sessionLogsTable.completedAt),
+      ))
+      .orderBy(desc(sessionLogsTable.completedAt))
+      .limit(5);
     const sessionIds = myLogs.filter(l => l.sessionId).map(l => l.sessionId!);
     const sessionNames = sessionIds.length > 0
       ? await db.select({ id: sessionsTable.id, name: sessionsTable.name }).from(sessionsTable)
@@ -132,7 +131,7 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
         sessionName: log.sessionId ? (sessionNameMap.get(log.sessionId) ?? "Séance libre") : "Séance libre",
         variantMode: log.variantMode,
         rpe: log.rpe,
-        completedAt: (log.completedAt ?? log.createdAt)?.toISOString() ?? null,
+        completedAt: log.completedAt?.toISOString() ?? null,
       };
     });
 
