@@ -15,6 +15,7 @@ import {
   useGetCheckinHistory,
   useGetSessionHistory,
   useGetPersonalRecords,
+  useGetAthleteTests,
 } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useScrollToTop } from "@react-navigation/native";
@@ -289,6 +290,7 @@ export default function StatsScreen() {
   const checkinQuery = useGetCheckinHistory();
   const sessionQuery = useGetSessionHistory();
   const prQuery = useGetPersonalRecords();
+  const testsQuery = useGetAthleteTests();
 
   const days = parseInt(period);
   const cutoff = new Date();
@@ -399,6 +401,56 @@ export default function StatsScreen() {
           </GlowCard>
         </View>
       </View>
+
+      {(testsQuery.data?.length ?? 0) > 0 && (
+        <View style={styles.section}>
+          <GlowCard glowColor={COLORS.violet} style={styles.testsCard}>
+            <View style={styles.testsHeader}>
+              <Feather name="activity" size={14} color={COLORS.violet} />
+              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.violet }]}>
+                MES TESTS
+              </Text>
+            </View>
+            {testsQuery.data!.slice(0, 8).map((test, i) => {
+              const label = test.exerciseName ?? test.testType;
+              const prevTest = testsQuery.data!
+                .slice(i + 1)
+                .find(
+                  (t) =>
+                    (t.exerciseName ?? t.testType) === label
+                );
+              const delta = prevTest != null ? test.value - prevTest.value : null;
+              return (
+                <View key={test.id} style={[styles.testRow, i === 0 && styles.testRowFirst]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.testName, { fontFamily: FONTS.body }]} numberOfLines={1}>
+                      {label}
+                    </Text>
+                    <Text style={[styles.testDate, { fontFamily: FONTS.mono }]}>
+                      {new Date(test.testedAt).toLocaleDateString("fr-FR")}
+                    </Text>
+                  </View>
+                  <View style={styles.testRight}>
+                    {delta != null && (
+                      <Text
+                        style={[
+                          styles.testDelta,
+                          { fontFamily: FONTS.mono, color: delta >= 0 ? COLORS.green : COLORS.red },
+                        ]}
+                      >
+                        {delta >= 0 ? "+" : ""}{delta.toFixed(1)}
+                      </Text>
+                    )}
+                    <Text style={[styles.testVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
+                      {test.value} {test.unit}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </GlowCard>
+        </View>
+      )}
 
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
@@ -732,4 +784,19 @@ const styles = StyleSheet.create({
   modeCount: { fontSize: 12, color: COLORS.textMuted, minWidth: 20, textAlign: "right" },
   emptyWrap: { alignItems: "center", paddingTop: 60, gap: 16, paddingHorizontal: 40 },
   emptyText: { fontSize: 15, color: COLORS.textMuted, textAlign: "center", lineHeight: 22 },
+  testsCard: { gap: 0 },
+  testsHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  testRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  testRowFirst: { borderTopWidth: 0, paddingTop: 0 },
+  testName: { fontSize: 14, color: COLORS.white, marginBottom: 2 },
+  testDate: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
+  testRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  testDelta: { fontSize: 11 },
+  testVal: { fontSize: 15 },
 });

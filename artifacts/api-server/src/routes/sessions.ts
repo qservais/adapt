@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import {
   checkinsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable,
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
+  performanceTestsTable,
 } from "@workspace/db";
 import { eq, and, desc, gte, lt, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
@@ -562,6 +563,74 @@ router.get("/sessions/missed", authenticate, requireRole("athlete"), async (req,
 
     res.json({ missed: missedSessions });
   } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    const [activeProgram] = await db.select().from(programsTable)
+      .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)))
+      .limit(1);
+
+    if (!activeProgram?.startDate) {
+      res.json([]);
+      return;
+    }
+
+    const programStart = new Date(activeProgram.startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const in7Days = new Date(today);
+    in7Days.setDate(today.getDate() + 7);
+
+    const plannedSessions = await db.select().from(sessionsTable)
+      .where(eq(sessionsTable.programId, activeProgram.id));
+
+    const allLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
+      .from(sessionLogsTable)
+      .where(eq(sessionLogsTable.athleteId, athleteId));
+
+    const completedSessionIds = new Set(
+      allLogs.filter((l) => l.sessionId).map((l) => l.sessionId)
+    );
+
+    const result = [];
+    for (const session of plannedSessions) {
+      const sessionDate = new Date(programStart);
+      sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
+      sessionDate.setHours(0, 0, 0, 0);
+
+      if (sessionDate >= today && sessionDate <= in7Days) {
+        result.push({
+          sessionId: session.id,
+          sessionName: session.name,
+          sessionType: session.type,
+          weekNumber: session.weekNumber,
+          dayNumber: session.dayNumber,
+          scheduledDate: sessionDate.toISOString().split("T")[0],
+          estimatedDurationMin: session.estimatedDurationMin,
+          isCompleted: completedSessionIds.has(session.id),
+        });
+      }
+    }
+
+    result.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+    res.json(result);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/athlete/tests", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    const tests = await db.select().from(performanceTestsTable)
+      .where(eq(performanceTestsTable.athleteId, athleteId))
+      .orderBy(desc(performanceTestsTable.testedAt));
+    res.json(tests.map((t) => ({ ...t, value: parseFloat(String(t.value)) })));
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });

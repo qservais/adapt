@@ -292,15 +292,26 @@ export interface WeeklyRecapResponse {
   recap: WeeklyRecap;
 }
 
+export interface SessionExerciseLog {
+  exerciseId?: string | null;
+  exerciseName: string;
+  loadKgUsed?: number | null;
+  setsCompleted?: number | null;
+}
+
 export interface SessionLogSummary {
   id: string;
   sessionId?: string | null;
+  sessionName?: string | null;
   variantMode: string;
   startedAt?: string | null;
   completedAt?: string | null;
   rpe?: number | null;
   perceivedDifficulty?: string | null;
+  athleteNotes?: string | null;
+  durationMin?: number | null;
   createdAt?: string;
+  exercises: SessionExerciseLog[];
 }
 
 export type CompleteSessionRequestExercisesItem = {
@@ -618,4 +629,18 @@ export interface CoachLinkRequest {
 
 export interface CoachUnlinkRequest {
   athleteId: string;
+}
+
+export interface AthletePerformanceTest {
+  id: string;
+  athleteId: string;
+  coachId?: string | null;
+  testType: string;
+  exerciseId?: string | null;
+  exerciseName?: string | null;
+  value: number;
+  unit: string;
+  testedAt: string;
+  notes?: string | null;
+  createdAt?: string;
 }

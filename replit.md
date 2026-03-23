@@ -104,6 +104,9 @@ Express 5 API with helmet, pino logging, rate-limiting (200 req/min general, 20/
 - `GET /api/messages/:userId` — get conversation
 - `POST /api/messages` — send message
 - `PUT /api/messages/:userId/read` — mark messages as read
+- `GET /api/sessions/history` — session history (athlete, 30 days) including enriched fields: sessionName, durationMin, athleteNotes, exercises (exerciseId, exerciseName, loadKgUsed, setsCompleted)
+- `GET /api/athlete/upcoming-sessions` — upcoming sessions for next 7 days from athlete's active program (UpcomingSession[])
+- `GET /api/athlete/tests` — athlete's performance tests sorted by testedAt DESC (AthletePerformanceTest[])
 
 **Services:**
 - `adapt-engine.ts` — `calculateAdaptScore()` + `calculateAdaptedLoad()` (server-side only)

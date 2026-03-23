@@ -19,6 +19,7 @@ import type {
 import type {
   AlertData,
   AthleteLinkRequest,
+  AthletePerformanceTest,
   BadgesResponse,
   CoachLinkRequest,
   CoachUnlinkRequest,
@@ -57,6 +58,7 @@ import type {
   SessionLogSummary,
   SuccessResponse,
   UpdateProfileRequest,
+  UpcomingSession,
   UserProfile,
   WeeklyRecapResponse,
 } from "./api.schemas";
@@ -3660,3 +3662,80 @@ export const useCoachUpdateAthleteProfile = <
 > => {
   return useMutation(getCoachUpdateAthleteProfileMutationOptions(options));
 };
+
+export const getGetAthleteUpcomingSessionsUrl = () => `/api/athlete/upcoming-sessions`;
+
+export const getAthleteUpcomingSessions = async (
+  options?: RequestInit,
+): Promise<UpcomingSession[]> => {
+  return customFetch<UpcomingSession[]>(getGetAthleteUpcomingSessionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAthleteUpcomingSessionsQueryKey = () =>
+  ["getAthleteUpcomingSessions"] as const;
+
+export function useGetAthleteUpcomingSessions<
+  TData = Awaited<ReturnType<typeof getAthleteUpcomingSessions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteUpcomingSessions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetAthleteUpcomingSessionsQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAthleteUpcomingSessions>>> = ({
+    signal,
+  }) => getAthleteUpcomingSessions({ signal, ...requestOptions });
+  const query = useQuery({
+    queryKey,
+    queryFn,
+    ...queryOptions,
+  }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
+
+export const getGetAthleteTestsUrl = () => `/api/athlete/tests`;
+
+export const getAthleteTests = async (
+  options?: RequestInit,
+): Promise<AthletePerformanceTest[]> => {
+  return customFetch<AthletePerformanceTest[]>(getGetAthleteTestsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAthleteTestsQueryKey = () => ["getAthleteTests"] as const;
+
+export function useGetAthleteTests<
+  TData = Awaited<ReturnType<typeof getAthleteTests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteTests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetAthleteTestsQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAthleteTests>>> = ({
+    signal,
+  }) => getAthleteTests({ signal, ...requestOptions });
+  const query = useQuery({
+    queryKey,
+    queryFn,
+    ...queryOptions,
+  }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
