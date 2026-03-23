@@ -78,10 +78,20 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
+        const p = meQuery.data ?? user;
         setEditing(false);
         setShowDatePicker(false);
+        setFirstName(p?.firstName ?? "");
+        setGender(p?.gender ?? "");
+        setCycleTracking(p?.cycleTracking ?? false);
+        setWeight(p?.weightKg ? String(Math.round(parseFloat(String(p.weightKg)))) : "");
+        if (p?.birthDate) {
+          setBirthDateValue(new Date(String(p.birthDate).substring(0, 10) + "T12:00:00"));
+        } else {
+          setBirthDateValue(null);
+        }
       };
-    }, [])
+    }, [meQuery.data, user])
   );
 
   const startEditing = () => {

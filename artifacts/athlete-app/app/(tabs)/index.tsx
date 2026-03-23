@@ -94,7 +94,6 @@ export default function HomeScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. Header: name + date */}
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { fontFamily: FONTS.body }]}>
@@ -111,14 +110,11 @@ export default function HomeScreen() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : todayCheckin == null ? (
-        /* 2. Check-in card (when not done) */
         <StateNoPending onCheckin={() => router.push("/checkin")} />
       ) : (
-        /* 2. Score ADAPT + session state */
         <StateCheckedIn checkin={todayCheckin} session={todaySession} modeColor={modeColor} />
       )}
 
-      {/* Streak & badges — always at bottom */}
       {!isLoading && (
         <StreakSection streak={streak} onBadges={() => router.push("/badges")} />
       )}

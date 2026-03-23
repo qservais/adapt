@@ -401,43 +401,6 @@ export default function StatsScreen() {
         </View>
       </View>
 
-      {/* Records personnels */}
-      {(prQuery.data?.personalRecords?.length ?? 0) > 0 && (
-        <View style={styles.section}>
-          <GlowCard glowColor={COLORS.cyan} style={styles.prCard}>
-            <View style={styles.prCardHeader}>
-              <Feather name="trending-up" size={14} color={COLORS.cyan} />
-              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
-                MES RECORDS PERSONNELS
-              </Text>
-            </View>
-            {(prQuery.data?.personalRecords ?? []).slice(0, 8).map((pr) => (
-              <View key={pr.exerciseId} style={styles.prItemRow}>
-                <Text style={[styles.prItemName, { fontFamily: FONTS.body }]} numberOfLines={1}>
-                  {pr.exerciseName}
-                </Text>
-                <View style={styles.prItemRight}>
-                  {pr.isRecent && (
-                    <View style={styles.prNewBadge}>
-                      <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
-                    </View>
-                  )}
-                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
-                    {pr.loadKg} kg
-                  </Text>
-                </View>
-              </View>
-            ))}
-            {(prQuery.data?.total ?? 0) > 8 && (
-              <Text style={[{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body, textAlign: "center", marginTop: 4 }]}>
-                +{(prQuery.data?.total ?? 0) - 8} autres records
-              </Text>
-            )}
-          </GlowCard>
-        </View>
-      )}
-
-      {/* 2. Évolution ADAPT Score */}
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
           <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ÉVOLUTION ADAPT SCORE</Text>
@@ -445,7 +408,6 @@ export default function StatsScreen() {
         </GlowCard>
       </View>
 
-      {/* 3. Calendrier */}
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.border} style={styles.calCard}>
           <View style={styles.calHeader}>
@@ -477,7 +439,6 @@ export default function StatsScreen() {
         </GlowCard>
       </View>
 
-      {/* 4. Moyennes quotidiennes */}
       <View style={styles.section}>
         <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
           <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>MOYENNES QUOTIDIENNES</Text>
@@ -491,7 +452,6 @@ export default function StatsScreen() {
         </GlowCard>
       </View>
 
-      {/* 5. Bilan hebdomadaire */}
       <View style={styles.section}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => router.push("/weekly-recap")}>
           <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
@@ -530,7 +490,6 @@ export default function StatsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 6. Répartition des séances */}
       {Object.keys(modeCounts).length > 0 && (
         <View style={styles.section}>
           <GlowCard glowColor={COLORS.border} style={styles.modesCard}>
@@ -564,7 +523,6 @@ export default function StatsScreen() {
         </View>
       )}
 
-      {/* 7. Progression RPE — uniquement si ≥ 2 points */}
       {sortedRpe.length >= 2 && (
         <View style={styles.section}>
           <GlowCard glowColor={COLORS.amber} style={styles.chartCard}>
@@ -588,6 +546,41 @@ export default function StatsScreen() {
                 <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>10 Max</Text>
               </View>
             </View>
+          </GlowCard>
+        </View>
+      )}
+
+      {(prQuery.data?.personalRecords?.length ?? 0) > 0 && (
+        <View style={styles.section}>
+          <GlowCard glowColor={COLORS.cyan} style={styles.prCard}>
+            <View style={styles.prCardHeader}>
+              <Feather name="trending-up" size={14} color={COLORS.cyan} />
+              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
+                MES RECORDS PERSONNELS
+              </Text>
+            </View>
+            {(prQuery.data?.personalRecords ?? []).slice(0, 8).map((pr) => (
+              <View key={pr.exerciseId} style={styles.prItemRow}>
+                <Text style={[styles.prItemName, { fontFamily: FONTS.body }]} numberOfLines={1}>
+                  {pr.exerciseName}
+                </Text>
+                <View style={styles.prItemRight}>
+                  {pr.isRecent && (
+                    <View style={styles.prNewBadge}>
+                      <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+                    {pr.loadKg} kg
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {(prQuery.data?.total ?? 0) > 8 && (
+              <Text style={[{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body, textAlign: "center", marginTop: 4 }]}>
+                +{(prQuery.data?.total ?? 0) - 8} autres records
+              </Text>
+            )}
           </GlowCard>
         </View>
       )}
