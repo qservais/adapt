@@ -228,10 +228,15 @@ export default function Dashboard() {
                               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                               Check-in reçu
                             </div>
+                          ) : athlete.daysSinceCheckin !== null && athlete.daysSinceCheckin >= 3 ? (
+                            <div className="flex items-center gap-1.5 text-xs text-destructive">
+                              <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                              Inactif depuis {athlete.daysSinceCheckin}j
+                            </div>
                           ) : (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                              Pas de check-in
+                              Pas de check-in aujourd'hui
                             </div>
                           )}
                         </div>
