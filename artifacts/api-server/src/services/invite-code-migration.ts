@@ -41,7 +41,7 @@ export async function ensureAthleteInviteCodes(): Promise<void> {
         .set({ inviteCode: code })
         .where(eq(usersTable.id, athlete.id));
 
-      logger.info({ athleteId: athlete.id, inviteCode: code }, "Generated invite code for athlete");
+      logger.info({ athleteId: athlete.id }, "Generated invite code for athlete");
     }
 
     logger.info({ count: athletes.length }, "Invite code migration complete");

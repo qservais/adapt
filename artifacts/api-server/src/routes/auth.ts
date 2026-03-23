@@ -63,7 +63,7 @@ router.post("/auth/register", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     let inviteCode: string | undefined;
 
-    if (role === "coach") {
+    {
       let unique = false;
       while (!unique) {
         inviteCode = generateInviteCode();
