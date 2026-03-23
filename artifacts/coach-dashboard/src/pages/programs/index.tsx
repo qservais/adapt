@@ -6,6 +6,7 @@ import {
   useGetClients,
   useAddProgramSession,
   useGetExercises,
+  useCoachLink,
   getProgram,
   ProgramSummary,
   ProgramDetail,
@@ -13,7 +14,7 @@ import {
   ExerciseData,
   CreateSessionRequestVariantsItemMode,
 } from "@workspace/api-client-react";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -30,12 +31,16 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  UserPlus,
+  CheckCircle,
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -641,7 +646,34 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
 
 export default function ProgramsList() {
   const { data: programs, isLoading, refetch } = useGetPrograms();
+  const linkMutation = useCoachLink();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<"athletes" | "bibliotheque">("athletes");
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [linkError, setLinkError] = useState("");
+  const [linkSuccess, setLinkSuccess] = useState("");
+
+  const handleLink = async () => {
+    setLinkError("");
+    setLinkSuccess("");
+    const code = inviteCode.trim().toUpperCase();
+    if (code.length !== 6) {
+      setLinkError("Entrez les 6 caractères du code d'invitation de l'athlète.");
+      return;
+    }
+    try {
+      const res = await linkMutation.mutateAsync({ data: { inviteCode: code } });
+      setLinkSuccess(res.message ?? "Athlète lié avec succès !");
+      setInviteCode("");
+      queryClient.invalidateQueries({ queryKey: ["/api/coach/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      refetch();
+    } catch (err: unknown) {
+      const serverMsg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message;
+      setLinkError(serverMsg || "Code invalide ou athlète introuvable.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -672,15 +704,75 @@ export default function ProgramsList() {
             Gérez les protocoles par athlète et votre bibliothèque de blocs.
           </p>
         </div>
-        <NewProgramDialog
-          onCreated={refetch}
-          trigger={
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20">
-              <Plus className="w-4 h-4 mr-2" /> Nouveau programme
-            </Button>
-          }
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-primary/10 gap-1.5"
+            onClick={() => {
+              setInviteCode("");
+              setLinkError("");
+              setLinkSuccess("");
+              setLinkDialogOpen(true);
+            }}
+          >
+            <UserPlus className="w-4 h-4" />
+            Ajouter un athlète
+          </Button>
+          <NewProgramDialog
+            onCreated={refetch}
+            trigger={
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20">
+                <Plus className="w-4 h-4 mr-2" /> Nouveau programme
+              </Button>
+            }
+          />
+        </div>
       </div>
+
+      {/* Add athlete dialog */}
+      <Dialog open={linkDialogOpen} onOpenChange={o => { if (!o) { setLinkDialogOpen(false); setInviteCode(""); setLinkError(""); setLinkSuccess(""); } }}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white font-display text-lg flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-primary" />
+              Ajouter un athlète
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Entrez le code d'invitation de l'athlète (6 caractères) pour le lier à votre espace coach.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <Input
+              placeholder="CODE6C"
+              value={inviteCode}
+              onChange={e => setInviteCode(e.target.value.toUpperCase())}
+              maxLength={6}
+              className="bg-background border-border text-white uppercase tracking-widest font-mono text-center text-lg"
+              onKeyDown={e => e.key === "Enter" && handleLink()}
+            />
+            {linkError && <p className="text-xs text-destructive">{linkError}</p>}
+            {linkSuccess && (
+              <div className="flex items-center gap-2 text-primary text-sm">
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                {linkSuccess}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button size="sm" variant="ghost" onClick={() => setLinkDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              className="bg-primary text-black hover:bg-primary/90"
+              disabled={linkMutation.isPending || inviteCode.trim().length !== 6}
+              onClick={handleLink}
+            >
+              {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Lier l'athlète"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex gap-1 p-1 bg-card border border-border rounded-xl w-fit">
         <button
