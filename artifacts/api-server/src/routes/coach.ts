@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable } from "@workspace/db";
-import { eq, and, desc, gte, inArray, isNotNull } from "drizzle-orm";
+import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable } from "@workspace/db";
+import { eq, and, desc, asc, gte, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -772,6 +772,91 @@ router.post("/athlete/link", authenticate, requireRole("athlete"), async (req, r
     res.json({ success: true, message: "Linked to coach successfully" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+// ─── Performance Tests ─────────────────────────────────────────────────────────
+
+const createTestSchema = z.object({
+  testType: z.string().min(1).max(50),
+  exerciseId: z.string().uuid().optional(),
+  exerciseName: z.string().max(100).optional(),
+  value: z.number().positive(),
+  unit: z.string().min(1).max(20),
+  testedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notes: z.string().max(1000).optional(),
+});
+
+router.get("/coach/clients/:clientId/tests", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const clientId = String(req.params["clientId"]);
+    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
+    if (!athlete) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      return;
+    }
+    const tests = await db.select().from(performanceTestsTable)
+      .where(eq(performanceTestsTable.athleteId, clientId))
+      .orderBy(desc(performanceTestsTable.testedAt));
+    res.json(tests.map(t => ({ ...t, value: parseFloat(String(t.value)) })));
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.post("/coach/clients/:clientId/tests", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const clientId = String(req.params["clientId"]);
+    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
+    if (!athlete) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      return;
+    }
+    const parsed = createTestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+      return;
+    }
+    const { testType, exerciseId, exerciseName, value, unit, testedAt, notes } = parsed.data;
+    const [test] = await db.insert(performanceTestsTable).values({
+      athleteId: clientId,
+      coachId: req.user!.userId,
+      testType,
+      exerciseId: exerciseId ?? null,
+      exerciseName: exerciseName ?? null,
+      value: value.toString(),
+      unit,
+      testedAt,
+      notes: notes ?? null,
+    }).returning();
+    res.status(201).json({ ...test, value: parseFloat(String(test!.value)) });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.delete("/coach/clients/:clientId/tests/:testId", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const clientId = String(req.params["clientId"]);
+    const testId = String(req.params["testId"]);
+    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
+    if (!athlete) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      return;
+    }
+    const [test] = await db.select({ id: performanceTestsTable.id }).from(performanceTestsTable)
+      .where(and(eq(performanceTestsTable.id, testId), eq(performanceTestsTable.athleteId, clientId)));
+    if (!test) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Test introuvable" } });
+      return;
+    }
+    await db.delete(performanceTestsTable).where(eq(performanceTestsTable.id, testId));
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 

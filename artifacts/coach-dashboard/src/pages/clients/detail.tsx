@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { 
   useGetClientDetail, 
@@ -13,7 +13,7 @@ import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import { 
   Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
   Pencil, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Copy, Check,
-  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus
+  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus, Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -47,6 +47,36 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProgramGrid, SessionModal } from "@/components/program-editor";
+
+interface PerformanceTest {
+  id: string;
+  athleteId: string;
+  coachId: string | null;
+  testType: string;
+  exerciseId: string | null;
+  exerciseName: string | null;
+  value: number;
+  unit: string;
+  testedAt: string;
+  notes: string | null;
+  createdAt: string;
+}
+
+const PREDEFINED_TEST_TYPES = [
+  { value: "1rm_squat", label: "1RM Squat", unit: "kg" },
+  { value: "1rm_bench", label: "1RM Développé couché", unit: "kg" },
+  { value: "1rm_deadlift", label: "1RM Soulevé de terre", unit: "kg" },
+  { value: "1rm_clean", label: "1RM Épaulé-jeté", unit: "kg" },
+  { value: "1rm_press", label: "1RM Développé militaire", unit: "kg" },
+  { value: "max_pullups", label: "Max Tractions", unit: "reps" },
+  { value: "max_pushups", label: "Max Pompes", unit: "reps" },
+  { value: "cooper", label: "Test de Cooper (12 min)", unit: "m" },
+  { value: "sprint_30m", label: "Sprint 30m", unit: "s" },
+  { value: "sprint_100m", label: "Sprint 100m", unit: "s" },
+  { value: "vo2max", label: "VO2max estimé", unit: "ml/kg/min" },
+  { value: "jump_vertical", label: "Saut vertical", unit: "cm" },
+  { value: "custom", label: "Personnalisé", unit: "" },
+];
 
 interface SessionDetailExercise {
   exerciseId: string;
@@ -90,7 +120,7 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
   mixed: "Mixte",
 };
 
-type Tab = "apercu" | "programme";
+type Tab = "apercu" | "programme" | "tests";
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -116,6 +146,24 @@ export default function ClientDetail() {
   const [addDateOpen, setAddDateOpen] = useState(false);
   const [addDateValue, setAddDateValue] = useState<string>(() => new Date().toISOString().split("T")[0]);
 
+  // Tests state
+  const [tests, setTests] = useState<PerformanceTest[] | null>(null);
+  const [testsLoading, setTestsLoading] = useState(false);
+  const [addTestOpen, setAddTestOpen] = useState(false);
+  const [deleteTestId, setDeleteTestId] = useState<string | null>(null);
+  const [selectedTestType, setSelectedTestType] = useState<string | null>(null);
+  const [testForm, setTestForm] = useState({
+    testType: "1rm_squat",
+    customType: "",
+    exerciseName: "",
+    value: "",
+    unit: "kg",
+    testedAt: new Date().toISOString().split("T")[0],
+    notes: "",
+  });
+  const [testSaving, setTestSaving] = useState(false);
+  const [testDeleting, setTestDeleting] = useState(false);
+
   const fetchSessionDetail = useCallback(async (sessionLogId: string) => {
     if (sessionDetails[sessionLogId]) return;
     setSessionDetails(prev => ({ ...prev, [sessionLogId]: "loading" }));
@@ -131,6 +179,81 @@ export default function ClientDetail() {
       setSessionDetails(prev => ({ ...prev, [sessionLogId]: "error" }));
     }
   }, [id, sessionDetails]);
+
+  const fetchTests = useCallback(async () => {
+    setTestsLoading(true);
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch(`/api/coach/clients/${id}/tests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      const data: PerformanceTest[] = await res.json();
+      setTests(data);
+      if (data.length > 0 && !selectedTestType) {
+        setSelectedTestType(data[0].testType);
+      }
+    } catch {
+      setTests([]);
+    } finally {
+      setTestsLoading(false);
+    }
+  }, [id, selectedTestType]);
+
+  useEffect(() => {
+    if (activeTab === "tests" && tests === null) {
+      fetchTests();
+    }
+  }, [activeTab, tests, fetchTests]);
+
+  const handleAddTest = async () => {
+    const effectiveType = testForm.testType === "custom" ? testForm.customType.trim() : testForm.testType;
+    if (!effectiveType || !testForm.value || !testForm.unit) return;
+    setTestSaving(true);
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch(`/api/coach/clients/${id}/tests`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          testType: effectiveType,
+          exerciseName: testForm.exerciseName || undefined,
+          value: parseFloat(testForm.value),
+          unit: testForm.unit,
+          testedAt: testForm.testedAt,
+          notes: testForm.notes || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Test ajouté" });
+      setAddTestOpen(false);
+      setSelectedTestType(effectiveType);
+      await fetchTests();
+    } catch {
+      toast({ title: "Erreur lors de l'ajout", variant: "destructive" });
+    } finally {
+      setTestSaving(false);
+    }
+  };
+
+  const handleDeleteTest = async (testId: string) => {
+    setTestDeleting(true);
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch(`/api/coach/clients/${id}/tests/${testId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Test supprimé" });
+      setDeleteTestId(null);
+      await fetchTests();
+    } catch {
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
+    } finally {
+      setTestDeleting(false);
+    }
+  };
 
   const handleToggleSessionExpand = (sessionLogId: string) => {
     if (expandedSessionLogId === sessionLogId) {
@@ -250,6 +373,7 @@ export default function ClientDetail() {
   const tabs: { id: Tab; label: string; icon: typeof Calendar }[] = [
     { id: "apercu", label: "Aperçu", icon: CheckCircle2 },
     { id: "programme", label: "Programme", icon: Dumbbell },
+    { id: "tests", label: "Tests", icon: TrendingUp },
   ];
 
   return (
@@ -998,6 +1122,296 @@ export default function ClientDetail() {
             </div>
           </div>
         </>
+      )}
+
+      {/* TESTS TAB */}
+      {activeTab === "tests" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-display text-white">TESTS DE PERFORMANCE</h2>
+            <Button
+              onClick={() => {
+                setTestForm({ testType: "1rm_squat", customType: "", exerciseName: "", value: "", unit: "kg", testedAt: new Date().toISOString().split("T")[0], notes: "" });
+                setAddTestOpen(true);
+              }}
+              className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 gap-1.5"
+              size="sm"
+            >
+              <Plus className="w-4 h-4" /> Nouveau test
+            </Button>
+          </div>
+
+          {testsLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : tests !== null && tests.length === 0 ? (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
+              <p className="text-white font-medium mb-1">Aucun test enregistré</p>
+              <p className="text-muted-foreground text-sm">Ajoutez le premier test de performance pour commencer le suivi.</p>
+            </div>
+          ) : tests !== null && tests.length > 0 ? (() => {
+            const testTypes = Array.from(new Set(tests.map(t => t.testType)));
+            const activeType = selectedTestType ?? testTypes[0];
+            const typeTests = tests.filter(t => t.testType === activeType).sort((a, b) => a.testedAt.localeCompare(b.testedAt));
+            const chartData = typeTests.map(t => ({
+              date: format(new Date(t.testedAt + "T12:00:00"), 'd MMM yy', { locale: fr }),
+              value: t.value,
+              unit: t.unit,
+            }));
+            const predefined = PREDEFINED_TEST_TYPES.find(p => p.value === activeType);
+            const typeLabel = predefined?.label ?? activeType.replace(/_/g, " ");
+            const unit = typeTests[0]?.unit ?? "";
+            const latest = typeTests[typeTests.length - 1];
+            const prev = typeTests[typeTests.length - 2];
+            const delta = latest && prev ? latest.value - prev.value : null;
+
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                {/* Type selector sidebar */}
+                <div className="lg:col-span-1 space-y-1">
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Type de test</p>
+                  {testTypes.map(type => {
+                    const p = PREDEFINED_TEST_TYPES.find(pp => pp.value === type);
+                    const label = p?.label ?? type.replace(/_/g, " ");
+                    const typeRecords = tests.filter(t => t.testType === type);
+                    const lastRecord = typeRecords.sort((a, b) => b.testedAt.localeCompare(a.testedAt))[0];
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => setSelectedTestType(type)}
+                        className={cn(
+                          "w-full text-left p-3 rounded-lg border transition-all",
+                          activeType === type
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-border bg-card text-muted-foreground hover:text-white hover:border-white/20"
+                        )}
+                      >
+                        <p className="text-xs font-semibold">{label}</p>
+                        <p className="text-[10px] mt-0.5 font-mono">
+                          {lastRecord ? `${lastRecord.value} ${lastRecord.unit} · ${format(new Date(lastRecord.testedAt + "T12:00:00"), 'd MMM yy', { locale: fr })}` : "—"}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Chart + table */}
+                <div className="lg:col-span-3 space-y-4">
+                  <Card className="bg-card border-border">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-display text-white tracking-wider">{typeLabel}</CardTitle>
+                        {latest && (
+                          <div className="text-right">
+                            <div className="text-2xl font-display text-white">
+                              {latest.value}
+                              <span className="text-sm text-muted-foreground ml-1">{unit}</span>
+                            </div>
+                            {delta !== null && (
+                              <div className={cn("text-xs flex items-center justify-end gap-0.5 font-mono", delta > 0 ? "text-primary" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
+                                {delta > 0 ? <TrendingUp className="w-3 h-3" /> : delta < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                                {delta > 0 ? "+" : ""}{delta.toFixed(1)} vs précédent
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {chartData.length >= 2 ? (
+                        <div className="h-[200px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                              <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} tickMargin={8} axisLine={false} tickLine={false} />
+                              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} axisLine={false} tickLine={false} />
+                              <RechartsTooltip
+                                contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                                formatter={(v: number) => [`${v} ${unit}`, typeLabel]}
+                              />
+                              <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--background))', strokeWidth: 2 }} activeDot={{ r: 6, fill: 'hsl(var(--primary))' }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground italic">
+                          2 mesures minimum pour afficher le graphique
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* History table */}
+                  <Card className="bg-card border-border">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-mono text-muted-foreground uppercase tracking-wider">Historique</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 px-4 text-xs font-mono text-muted-foreground uppercase">Date</th>
+                              <th className="text-right py-2 px-4 text-xs font-mono text-muted-foreground uppercase">Résultat</th>
+                              <th className="text-right py-2 px-4 text-xs font-mono text-muted-foreground uppercase">Variation</th>
+                              <th className="py-2 px-4" />
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/30">
+                            {[...typeTests].reverse().map((test, i) => {
+                              const prevTest = [...typeTests].reverse()[i + 1];
+                              const d = prevTest ? test.value - prevTest.value : null;
+                              return (
+                                <tr key={test.id} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="py-2.5 px-4 text-muted-foreground text-sm">
+                                    {format(new Date(test.testedAt + "T12:00:00"), 'd MMMM yyyy', { locale: fr })}
+                                  </td>
+                                  <td className="py-2.5 px-4 text-right font-display text-white text-base">
+                                    {test.value} <span className="text-xs text-muted-foreground">{test.unit}</span>
+                                  </td>
+                                  <td className="py-2.5 px-4 text-right">
+                                    {d === null ? (
+                                      <span className="text-muted-foreground text-xs">—</span>
+                                    ) : d > 0 ? (
+                                      <span className="text-primary text-xs font-mono">+{d.toFixed(1)}</span>
+                                    ) : d < 0 ? (
+                                      <span className="text-destructive text-xs font-mono">{d.toFixed(1)}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">±0</span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-4 text-right">
+                                    <button
+                                      onClick={() => setDeleteTestId(test.id)}
+                                      className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            );
+          })() : null}
+
+          {/* Add test dialog */}
+          <Dialog open={addTestOpen} onOpenChange={o => !o && setAddTestOpen(false)}>
+            <DialogContent className="bg-card border-border max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-display text-xl text-white tracking-widest">NOUVEAU TEST</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Type de test</Label>
+                  <select
+                    value={testForm.testType}
+                    onChange={e => {
+                      const p = PREDEFINED_TEST_TYPES.find(pt => pt.value === e.target.value);
+                      setTestForm(f => ({ ...f, testType: e.target.value, unit: p?.unit || f.unit }));
+                    }}
+                    className="w-full bg-background border border-border rounded-md px-3 py-2 text-white text-sm"
+                  >
+                    {PREDEFINED_TEST_TYPES.map(p => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {testForm.testType === "custom" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">Nom du test</Label>
+                    <Input
+                      value={testForm.customType}
+                      onChange={e => setTestForm(f => ({ ...f, customType: e.target.value }))}
+                      placeholder="Ex: Test Yo-Yo"
+                      className="bg-background border-border text-white"
+                    />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">Résultat</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={testForm.value}
+                      onChange={e => setTestForm(f => ({ ...f, value: e.target.value }))}
+                      placeholder="0"
+                      className="bg-background border-border text-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">Unité</Label>
+                    <Input
+                      value={testForm.unit}
+                      onChange={e => setTestForm(f => ({ ...f, unit: e.target.value }))}
+                      placeholder="kg / reps / s / m"
+                      className="bg-background border-border text-white"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Date du test</Label>
+                  <Input
+                    type="date"
+                    value={testForm.testedAt}
+                    onChange={e => setTestForm(f => ({ ...f, testedAt: e.target.value }))}
+                    className="bg-background border-border text-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Notes (optionnel)</Label>
+                  <Input
+                    value={testForm.notes}
+                    onChange={e => setTestForm(f => ({ ...f, notes: e.target.value }))}
+                    placeholder="Conditions, observations…"
+                    className="bg-background border-border text-white"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddTestOpen(false)} className="border-border">Annuler</Button>
+                <Button
+                  onClick={handleAddTest}
+                  disabled={testSaving || !testForm.value || !testForm.unit}
+                  className="bg-primary text-black hover:bg-primary/90"
+                >
+                  {testSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Enregistrer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete test confirmation */}
+          <AlertDialog open={!!deleteTestId} onOpenChange={o => !o && setDeleteTestId(null)}>
+            <AlertDialogContent className="bg-card border-border">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white font-display">Supprimer ce test ?</AlertDialogTitle>
+                <AlertDialogDescription>Cette mesure sera définitivement supprimée.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                  onClick={() => deleteTestId && handleDeleteTest(deleteTestId)}
+                  disabled={testDeleting}
+                >
+                  {testDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       )}
 
       {/* PROGRAMME TAB */}

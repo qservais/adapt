@@ -49,6 +49,10 @@ import {
   Pencil,
   Clock,
   Dumbbell,
+  ClipboardPaste,
+  LayoutGrid,
+  CalendarDays,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -248,6 +252,7 @@ function EditorSessionCard({
   programAthleteId,
   durationWeeks,
   onRefetch,
+  onCopy,
 }: {
   session: SessionWithVariants;
   programId: string;
@@ -255,6 +260,7 @@ function EditorSessionCard({
   programAthleteId: string;
   durationWeeks: number;
   onRefetch: () => void;
+  onCopy?: (session: SessionWithVariants) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -294,6 +300,16 @@ function EditorSessionCard({
               {session.name}
             </p>
             <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              {onCopy && (
+                <button
+                  type="button"
+                  onClick={() => onCopy(session)}
+                  className="p-1 rounded hover:bg-accent/20 transition-colors"
+                  title="Copier dans le presse-papier"
+                >
+                  <ClipboardPaste className="w-3 h-3 text-accent" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setDupOpen(true)}
@@ -439,22 +455,58 @@ function AddSessionButton({
   weekNumber,
   dayNumber,
   onRefetch,
+  copiedSession,
+  onPaste,
 }: {
   programId: string;
   weekNumber: number;
   dayNumber: number;
   onRefetch: () => void;
+  copiedSession?: SessionWithVariants | null;
+  onPaste?: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [pasting, setPasting] = useState(false);
+
+  const handlePaste = async () => {
+    if (!onPaste) return;
+    setPasting(true);
+    try {
+      await onPaste();
+    } finally {
+      setPasting(false);
+    }
+  };
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full h-9 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all group flex items-center justify-center"
-      >
-        <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-      </button>
+      <div className="space-y-1">
+        {copiedSession && onPaste && (
+          <button
+            type="button"
+            onClick={handlePaste}
+            disabled={pasting}
+            className="w-full h-8 rounded-lg border border-dashed border-accent/40 hover:border-accent hover:bg-accent/10 transition-all group flex items-center justify-center gap-1"
+            title={`Coller « ${copiedSession.name} »`}
+          >
+            {pasting ? (
+              <Loader2 className="w-3 h-3 animate-spin text-accent" />
+            ) : (
+              <>
+                <ClipboardPaste className="w-3 h-3 text-accent group-hover:text-accent transition-colors" />
+                <span className="text-[10px] text-accent font-mono truncate max-w-[60px]">{copiedSession.name}</span>
+              </>
+            )}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full h-9 rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all group flex items-center justify-center"
+        >
+          <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+        </button>
+      </div>
       {open && (
         <SessionModal
           programId={programId}
@@ -484,6 +536,8 @@ export default function ProgramDetail() {
   const deleteProgramMutation = useDeleteProgram();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(1);
+  const [viewMode, setViewMode] = useState<"week" | "month">("week");
+  const [copiedSession, setCopiedSession] = useState<SessionWithVariants | null>(null);
   const { toast } = useToast();
 
   const totalWeeks = program?.durationWeeks ?? 1;
@@ -558,6 +612,37 @@ export default function ProgramDetail() {
       toast({ title: "Échec de la duplication", variant: "destructive" });
     }
   }, [program, programId, safeCurrentWeek, totalWeeks, refetch, toast]);
+
+  const handleCopySession = useCallback((session: SessionWithVariants) => {
+    setCopiedSession(session);
+    toast({ title: `« ${session.name} » copié`, description: "Cliquez sur une case vide pour coller." });
+  }, [toast]);
+
+  const makePasteHandler = useCallback((weekNumber: number, dayNumber: number) => async () => {
+    if (!copiedSession || !programId) return;
+    try {
+      if (weekNumber > totalWeeks) {
+        await updateProgram(programId, {
+          name: program!.name,
+          athleteId: program!.athleteId,
+          durationWeeks: weekNumber,
+        });
+      }
+      await addProgramSession(programId, {
+        weekNumber,
+        dayNumber,
+        name: copiedSession.name,
+        type: copiedSession.type as "strength" | "cardio" | "hybrid" | "mobility" | "athletic_development" | "running" | "conditioning",
+        estimatedDurationMin: copiedSession.estimatedDurationMin ?? undefined,
+        coachNotes: copiedSession.coachNotes ?? undefined,
+        blocks: sessionToBlocksPayload(copiedSession),
+      });
+      toast({ title: `« ${copiedSession.name} » collé → S${weekNumber} / ${DAY_NAMES[dayNumber - 1]}` });
+      refetch();
+    } catch {
+      toast({ title: "Échec du collage", variant: "destructive" });
+    }
+  }, [copiedSession, programId, program, totalWeeks, refetch, toast]);
 
   if (isLoading) {
     return (
@@ -640,100 +725,208 @@ export default function ProgramDetail() {
         </p>
       </div>
 
+      {/* Clipboard indicator */}
+      {copiedSession && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-accent/10 border border-accent/30 text-sm">
+          <ClipboardPaste className="w-4 h-4 text-accent shrink-0" />
+          <span className="text-accent font-medium flex-1">
+            « {copiedSession.name} » dans le presse-papier — cliquez sur <ClipboardPaste className="w-3 h-3 inline" /> d'une case vide pour coller
+          </span>
+          <button onClick={() => setCopiedSession(null)} className="text-muted-foreground hover:text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-border gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-white/5"
-              onClick={() => setCurrentWeek((w) => Math.max(1, w - 1))}
-              disabled={safeCurrentWeek <= 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
+            {viewMode === "week" && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-white/5"
+                  onClick={() => setCurrentWeek((w) => Math.max(1, w - 1))}
+                  disabled={safeCurrentWeek <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
 
-            <Select
-              value={String(safeCurrentWeek)}
-              onValueChange={(v) => setCurrentWeek(+v)}
-            >
-              <SelectTrigger className="bg-background border-border h-8 w-36 font-display tracking-wider text-white text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border max-h-56 overflow-y-auto">
-                {weeks.map((w) => (
-                  <SelectItem key={w} value={String(w)}>
-                    SEMAINE {w}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <Select
+                  value={String(safeCurrentWeek)}
+                  onValueChange={(v) => setCurrentWeek(+v)}
+                >
+                  <SelectTrigger className="bg-background border-border h-8 w-36 font-display tracking-wider text-white text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border max-h-56 overflow-y-auto">
+                    {weeks.map((w) => (
+                      <SelectItem key={w} value={String(w)}>
+                        SEMAINE {w}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-white/5"
-              onClick={() => setCurrentWeek((w) => Math.min(totalWeeks, w + 1))}
-              disabled={safeCurrentWeek >= totalWeeks}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hover:bg-white/5"
+                  onClick={() => setCurrentWeek((w) => Math.min(totalWeeks, w + 1))}
+                  disabled={safeCurrentWeek >= totalWeeks}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+            {viewMode === "month" && (
+              <span className="font-display tracking-wider text-white text-sm h-8 flex items-center px-2">
+                VUE MENSUELLE — {totalWeeks} semaines
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-white gap-1.5 text-xs h-7"
-              onClick={duplicateWeek}
-              title="Copier cette semaine à la fin du programme"
-            >
-              <Copy className="w-3.5 h-3.5" /> Dupliquer S{safeCurrentWeek}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-primary gap-1.5 text-xs h-7"
-              onClick={handleAddWeek}
-              title="Ajouter une semaine vide à la fin"
-            >
-              <Plus className="w-3.5 h-3.5" /> Semaine vide
-            </Button>
+            {viewMode === "week" && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-white gap-1.5 text-xs h-7"
+                  onClick={duplicateWeek}
+                  title="Copier cette semaine à la fin du programme"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Dupliquer S{safeCurrentWeek}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-primary gap-1.5 text-xs h-7"
+                  onClick={handleAddWeek}
+                  title="Ajouter une semaine vide à la fin"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Semaine vide
+                </Button>
+              </>
+            )}
+            {/* View toggle */}
+            <div className="flex items-center gap-1 bg-background border border-border rounded-md p-0.5">
+              <button
+                onClick={() => setViewMode("week")}
+                className={`p-1.5 rounded transition-colors ${viewMode === "week" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
+                title="Vue semaine"
+              >
+                <CalendarDays className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("month")}
+                className={`p-1.5 rounded transition-colors ${viewMode === "month" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
+                title="Vue mensuelle"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="p-3">
-          <div className="grid grid-cols-7 gap-1.5">
-            {DAY_NAMES.map((dayLabel, idx) => {
-              const dayNumber = idx + 1;
-              const daySessions = sessionMap.get(`${safeCurrentWeek}-${dayNumber}`) ?? [];
-              return (
-                <div key={dayNumber} className="space-y-1.5">
-                  <p className="text-center text-[10px] font-mono text-muted-foreground uppercase">
-                    {dayLabel}
-                  </p>
-                  {daySessions.map((session) => (
-                    <EditorSessionCard
-                      key={session.id}
-                      session={session}
+        {/* WEEK VIEW */}
+        {viewMode === "week" && (
+          <div className="p-3">
+            <div className="grid grid-cols-7 gap-1.5">
+              {DAY_NAMES.map((dayLabel, idx) => {
+                const dayNumber = idx + 1;
+                const daySessions = sessionMap.get(`${safeCurrentWeek}-${dayNumber}`) ?? [];
+                return (
+                  <div key={dayNumber} className="space-y-1.5">
+                    <p className="text-center text-[10px] font-mono text-muted-foreground uppercase">
+                      {dayLabel}
+                    </p>
+                    {daySessions.map((session) => (
+                      <EditorSessionCard
+                        key={session.id}
+                        session={session}
+                        programId={programId!}
+                        programName={program.name}
+                        programAthleteId={program.athleteId}
+                        durationWeeks={totalWeeks}
+                        onRefetch={refetch}
+                        onCopy={handleCopySession}
+                      />
+                    ))}
+                    <AddSessionButton
                       programId={programId!}
-                      programName={program.name}
-                      programAthleteId={program.athleteId}
-                      durationWeeks={totalWeeks}
+                      weekNumber={safeCurrentWeek}
+                      dayNumber={dayNumber}
                       onRefetch={refetch}
+                      copiedSession={copiedSession}
+                      onPaste={copiedSession ? makePasteHandler(safeCurrentWeek, dayNumber) : undefined}
                     />
-                  ))}
-                  <AddSessionButton
-                    programId={programId!}
-                    weekNumber={safeCurrentWeek}
-                    dayNumber={dayNumber}
-                    onRefetch={refetch}
-                  />
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* MONTH VIEW */}
+        {viewMode === "month" && (
+          <div className="overflow-x-auto">
+            <div className="min-w-[700px]">
+              {/* Header */}
+              <div className="grid grid-cols-8 border-b border-border bg-white/[0.02]">
+                <div className="px-3 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">Sem.</div>
+                {DAY_NAMES.map(d => (
+                  <div key={d} className="px-1 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">{d}</div>
+                ))}
+              </div>
+              {/* Week rows */}
+              <div className="divide-y divide-border/30">
+                {weeks.map(week => (
+                  <div key={week} className="grid grid-cols-8 min-h-[80px]">
+                    {/* Week number */}
+                    <div
+                      className="px-3 py-2 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
+                      onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
+                      title="Passer à cette semaine"
+                    >
+                      <span className="text-xs font-display text-muted-foreground hover:text-primary transition-colors">S{week}</span>
+                    </div>
+                    {/* Days */}
+                    {DAY_NAMES.map((_, dayIdx) => {
+                      const dayNumber = dayIdx + 1;
+                      const daySessions = sessionMap.get(`${week}-${dayNumber}`) ?? [];
+                      return (
+                        <div key={dayNumber} className="p-1 space-y-0.5 border-l border-border/20">
+                          {daySessions.map(session => (
+                            <div
+                              key={session.id}
+                              onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
+                              className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-mono leading-tight cursor-pointer hover:bg-primary/25 transition-colors truncate"
+                              title={session.name}
+                            >
+                              {session.name}
+                            </div>
+                          ))}
+                          {daySessions.length === 0 && copiedSession && (
+                            <button
+                              type="button"
+                              onClick={makePasteHandler(week, dayNumber)}
+                              className="w-full h-6 rounded border border-dashed border-accent/30 hover:border-accent hover:bg-accent/10 transition-all flex items-center justify-center"
+                              title={`Coller « ${copiedSession.name} »`}
+                            >
+                              <ClipboardPaste className="w-2.5 h-2.5 text-accent/60 hover:text-accent" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

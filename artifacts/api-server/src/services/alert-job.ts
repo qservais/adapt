@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { db } from "@workspace/db";
 import { checkinsTable, sessionLogsTable, alertsTable, usersTable, exerciseLogsTable, sessionExercisesTable, sessionVariantsTable } from "@workspace/db";
-import { eq, and, desc, gte, isNull, not, lt, sql } from "drizzle-orm";
+import { eq, and, desc, gte, isNull, not, lt, sql, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
 async function createAlertIfNotExists(
@@ -151,6 +151,60 @@ async function runAlertChecks(): Promise<void> {
           "p3",
           `${athlete.firstName} n'a pas progressé en charge sur les 4 dernières semaines (moy. ${avgOld.toFixed(1)} kg → ${avgNew.toFixed(1)} kg)`
         );
+      }
+    }
+  }
+
+  // ─── ALC-02: Fatigue/Soreness — ≥4/5 soreness OR ≤2/5 energy for 2+ consecutive days ──
+  // We look at the last 2 check-ins for each athlete
+  const twoDaysAgoDate = new Date(now.getTime() - 2 * 86400000).toISOString().split("T")[0];
+
+  for (const athlete of athletes) {
+    const coachId = athlete.coachId;
+    if (!coachId) continue;
+
+    const recentCheckinValues = await db.select({
+      date: checkinsTable.date,
+      soreness: checkinsTable.soreness,
+      energy: checkinsTable.energy,
+    })
+      .from(checkinsTable)
+      .where(and(
+        eq(checkinsTable.athleteId, athlete.id),
+        gte(checkinsTable.date, twoDaysAgoDate)
+      ))
+      .orderBy(desc(checkinsTable.date))
+      .limit(3);
+
+    if (recentCheckinValues.length >= 2) {
+      const lastTwo = recentCheckinValues.slice(0, 2);
+      const bothFatiguedOrSore = lastTwo.every(c =>
+        (c.soreness !== null && c.soreness >= 4) ||
+        (c.energy !== null && c.energy <= 2)
+      );
+
+      if (bothFatiguedOrSore) {
+        const reasons: string[] = [];
+        const latest = lastTwo[0];
+        if (latest && latest.soreness !== null && latest.soreness >= 4) reasons.push(`courbatures ${latest.soreness}/5`);
+        if (latest && latest.energy !== null && latest.energy <= 2) reasons.push(`énergie ${latest.energy}/5`);
+
+        await createAlertIfNotExists(
+          coachId,
+          athlete.id,
+          "fatigue",
+          "p1",
+          `${athlete.firstName} signale une fatigue élevée depuis 2+ jours (${reasons.join(", ")})`
+        );
+      } else {
+        // Auto-resolve fatigue alerts when values normalize
+        await db.update(alertsTable)
+          .set({ isResolved: true, resolvedAt: new Date() })
+          .where(and(
+            eq(alertsTable.athleteId, athlete.id),
+            eq(alertsTable.type, "fatigue"),
+            eq(alertsTable.isResolved, false)
+          ));
       }
     }
   }

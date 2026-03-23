@@ -107,11 +107,13 @@ Express 5 API with helmet, pino logging, rate-limiting (200 req/min general, 20/
 
 **Services:**
 - `adapt-engine.ts` — `calculateAdaptScore()` + `calculateAdaptedLoad()` (server-side only)
-- `alert-job.ts` — daily cron at 09:00 checking for: inactivity (3 days), low scores (<25 for 2 days), high RPE
+- `alert-job.ts` — daily cron at 09:00 checking for: inactivity (3 days), low scores (<25 for 2 days), high RPE (ALC-01), fatigue/soreness ≥4/5 for 2+ consecutive days (ALC-02)
 
 ### Database Schema (`lib/db`)
 
-Tables: users, programs, sessions, session_variants, exercises, session_exercises, checkins, session_logs, exercise_logs, alerts, messages, notifications
+Tables: users, programs, sessions, session_variants, exercises, session_exercises, checkins, session_logs, exercise_logs, alerts, messages, notifications, personal_records, performance_tests
+
+**performance_tests**: athlete_id (FK), coach_id (FK), test_type (varchar 50), exercise_id (nullable FK), exercise_name, value (decimal), unit, tested_at (date), notes, created_at
 
 **Push schema:** `pnpm --filter @workspace/db run push`
 
