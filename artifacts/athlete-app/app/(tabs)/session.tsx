@@ -60,6 +60,7 @@ export default function SessionTab() {
 
   const exercises = session?.exercises ?? [];
   const grouped = groupByCategory(exercises);
+  const exerciseIndexMap = new Map(exercises.map((ex, i) => [ex.id, i]));
 
   return (
     <ScrollView
@@ -120,7 +121,7 @@ export default function SessionTab() {
                     {CATEGORY_FR[category] ?? "GÉNÉRAL"}
                   </Text>
                   {exs.map((ex, i) => {
-                    const globalIndex = exercises.indexOf(ex);
+                    const globalIndex = exerciseIndexMap.get(ex.id) ?? 0;
                     return (
                       <View key={ex.id} style={[styles.exRow, i === exs.length - 1 && styles.exRowLast]}>
                         <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>

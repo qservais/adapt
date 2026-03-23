@@ -75,10 +75,13 @@ export default function ProfileScreen() {
   const [coachLinkError, setCoachLinkError] = useState("");
   const [coachLinked, setCoachLinked] = useState(false);
 
+  const blurResetRef = useRef({ meQuery, user });
+  blurResetRef.current = { meQuery, user };
+
   useFocusEffect(
     useCallback(() => {
       return () => {
-        const p = meQuery.data ?? user;
+        const p = blurResetRef.current.meQuery.data ?? blurResetRef.current.user;
         setEditing(false);
         setShowDatePicker(false);
         setFirstName(p?.firstName ?? "");
@@ -91,7 +94,7 @@ export default function ProfileScreen() {
           setBirthDateValue(null);
         }
       };
-    }, [meQuery.data, user])
+    }, [])
   );
 
   const startEditing = () => {
