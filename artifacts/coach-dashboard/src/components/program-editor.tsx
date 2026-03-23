@@ -107,13 +107,52 @@ interface ExercisePickerProps {
   onAdd: (ex: ExerciseData) => void;
 }
 
+const EXERCISE_CATEGORIES = [
+  { value: "compound", label: "Polyarticulaire" },
+  { value: "isolation", label: "Isolation" },
+  { value: "cardio", label: "Cardio" },
+  { value: "mobility", label: "Mobilité" },
+] as const;
+
 export function ExercisePicker({ onAdd }: ExercisePickerProps) {
   const [query, setQuery] = useState("");
-  const { data: exercises } = useGetExercises(
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCategory, setNewCategory] = useState<string>("compound");
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+  const { data: exercises, refetch } = useGetExercises(
     { q: query || undefined },
     { query: { queryKey: ["/api/exercises", query], enabled: true } }
   );
   const filtered = (exercises || []).slice(0, 8);
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch(`${import.meta.env.BASE_URL}api/exercises`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newName.trim(), category: newCategory }),
+      });
+      if (!res.ok) throw new Error();
+      const created: ExerciseData = await res.json();
+      toast({ title: `Exercice « ${created.name} » créé` });
+      onAdd(created);
+      setCreating(false);
+      setNewName("");
+      refetch();
+    } catch {
+      toast({ title: "Échec de la création", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -141,10 +180,59 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
             )}
           </button>
         ))}
-        {filtered.length === 0 && (
-          <p className="text-center py-4 text-sm text-muted-foreground">Aucun exercice trouvé</p>
+        {filtered.length === 0 && !creating && (
+          <p className="text-center py-2 text-sm text-muted-foreground">Aucun exercice trouvé</p>
         )}
       </div>
+
+      {!creating ? (
+        <button
+          type="button"
+          onClick={() => { setCreating(true); setNewName(query); }}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 hover:border-primary/60 rounded-lg transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Créer un nouvel exercice
+        </button>
+      ) : (
+        <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
+          <p className="text-[10px] font-mono text-primary uppercase tracking-wider">Nouvel exercice</p>
+          <Input
+            autoFocus
+            placeholder="Nom de l'exercice..."
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            className="h-8 text-sm bg-background border-border"
+          />
+          <select
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            className="w-full bg-background border border-border rounded-md px-2 py-1 text-white text-xs"
+          >
+            {EXERCISE_CATEGORIES.map(c => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCreating(false)}
+              className="flex-1 text-xs py-1.5 rounded border border-border text-muted-foreground hover:text-white transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={!newName.trim() || isSaving}
+              className="flex-1 text-xs py-1.5 rounded bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : "Créer"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

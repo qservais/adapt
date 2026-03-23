@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, checkinsTable, sessionLogsTable, alertsTable, programsTable, sessionsTable } from "@workspace/db";
+import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable } from "@workspace/db";
 import { eq, and, desc, gte, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
@@ -28,8 +28,26 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
       ));
     const checkinByAthlete = new Map(todayCheckins.filter(c => athleteIds.includes(c.athleteId)).map(c => [c.athleteId, c]));
 
+    // Most recent check-in date per athlete (for inactivity detection)
+    const allRecentCheckins = await db.select({
+      athleteId: checkinsTable.athleteId,
+      date: checkinsTable.date,
+    }).from(checkinsTable)
+      .where(inArray(checkinsTable.athleteId, athleteIds))
+      .orderBy(desc(checkinsTable.date));
+    const lastCheckinByAthlete = new Map<string, string>();
+    for (const c of allRecentCheckins) {
+      if (!lastCheckinByAthlete.has(c.athleteId)) {
+        lastCheckinByAthlete.set(c.athleteId, c.date);
+      }
+    }
+
     const todayAthletes = athletes.map(a => {
       const checkin = checkinByAthlete.get(a.id);
+      const lastCheckinDate = lastCheckinByAthlete.get(a.id) ?? null;
+      const daysSinceCheckin = lastCheckinDate
+        ? Math.floor((Date.now() - new Date(lastCheckinDate).getTime()) / 86400000)
+        : null;
       return {
         id: a.id,
         firstName: a.firstName,
@@ -37,6 +55,8 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
         adaptScore: checkin?.adaptScore ?? null,
         sessionMode: checkin?.sessionMode ?? null,
         hasCheckin: !!checkin,
+        lastCheckinDate,
+        daysSinceCheckin,
       };
     });
 
@@ -630,6 +650,105 @@ router.post("/athlete/link", authenticate, requireRole("athlete"), async (req, r
     res.json({ success: true, message: "Linked to coach successfully" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+// GET /coach/clients/:clientId/sessions/:sessionLogId — Charges réelles vs prescrites
+router.get("/coach/clients/:clientId/sessions/:sessionLogId", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const clientId = String(req.params["clientId"]);
+    const sessionLogId = String(req.params["sessionLogId"]);
+
+    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
+    if (!athlete) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      return;
+    }
+
+    const [sessionLog] = await db.select().from(sessionLogsTable)
+      .where(and(eq(sessionLogsTable.id, sessionLogId), eq(sessionLogsTable.athleteId, clientId)));
+    if (!sessionLog) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Journal de séance introuvable" } });
+      return;
+    }
+
+    let sessionName = "Séance libre";
+    const prescribedMap: Record<string, { sets: number; reps: string | null; loadKg: number | null; coachCue: string | null }> = {};
+
+    if (sessionLog.sessionId) {
+      const [sess] = await db.select({ name: sessionsTable.name }).from(sessionsTable)
+        .where(eq(sessionsTable.id, sessionLog.sessionId));
+      if (sess) sessionName = sess.name;
+
+      const [variant] = await db.select({ id: sessionVariantsTable.id }).from(sessionVariantsTable)
+        .where(and(
+          eq(sessionVariantsTable.sessionId, sessionLog.sessionId),
+          eq(sessionVariantsTable.mode, sessionLog.variantMode)
+        ));
+
+      if (variant) {
+        const prescribed = await db.select({
+          exerciseId: sessionExercisesTable.exerciseId,
+          sets: sessionExercisesTable.sets,
+          reps: sessionExercisesTable.reps,
+          loadKg: sessionExercisesTable.loadKg,
+          coachCue: sessionExercisesTable.coachCue,
+        }).from(sessionExercisesTable)
+          .where(eq(sessionExercisesTable.variantId, variant.id))
+          .orderBy(sessionExercisesTable.orderIndex);
+
+        for (const pe of prescribed) {
+          prescribedMap[pe.exerciseId] = {
+            sets: pe.sets,
+            reps: pe.reps ?? null,
+            loadKg: pe.loadKg != null ? parseFloat(String(pe.loadKg)) : null,
+            coachCue: pe.coachCue ?? null,
+          };
+        }
+      }
+    }
+
+    const actualLogs = await db.select({
+      exerciseId: exerciseLogsTable.exerciseId,
+      exerciseName: exercisesTable.name,
+      setsCompleted: exerciseLogsTable.setsCompleted,
+      repsPerSet: exerciseLogsTable.repsPerSet,
+      loadKgUsed: exerciseLogsTable.loadKgUsed,
+      notes: exerciseLogsTable.notes,
+    }).from(exerciseLogsTable)
+      .innerJoin(exercisesTable, eq(exerciseLogsTable.exerciseId, exercisesTable.id))
+      .where(eq(exerciseLogsTable.sessionLogId, sessionLogId));
+
+    const durationMin = sessionLog.startedAt && sessionLog.completedAt
+      ? Math.max(1, Math.round(
+          (new Date(sessionLog.completedAt).getTime() - new Date(sessionLog.startedAt).getTime()) / 60000
+        ))
+      : null;
+
+    const exercises = actualLogs.map(log => ({
+      exerciseId: log.exerciseId,
+      exerciseName: log.exerciseName,
+      prescribed: prescribedMap[log.exerciseId] ?? null,
+      actual: {
+        setsCompleted: log.setsCompleted,
+        repsPerSet: log.repsPerSet,
+        loadKgUsed: log.loadKgUsed != null ? parseFloat(String(log.loadKgUsed)) : null,
+        notes: log.notes,
+      },
+    }));
+
+    res.json({
+      id: sessionLog.id,
+      sessionName,
+      variantMode: sessionLog.variantMode,
+      rpe: sessionLog.rpe,
+      completedAt: sessionLog.completedAt?.toISOString() ?? null,
+      durationMin,
+      exercises,
+    });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { 
   useGetClientDetail, 
@@ -12,7 +12,8 @@ import {
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import { 
   Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
-  Pencil, Calendar, Clock, ChevronDown, ChevronUp, Copy, Check, Dumbbell, ExternalLink
+  Pencil, Calendar, Clock, ChevronDown, ChevronUp, Copy, Check, Dumbbell, ExternalLink,
+  TrendingUp, TrendingDown, Minus
 } from "lucide-react";
 import { format, parseISO, startOfWeek, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -46,6 +47,23 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProgramGrid } from "@/components/program-editor";
+
+interface SessionDetailExercise {
+  exerciseId: string;
+  exerciseName: string;
+  prescribed: { sets: number; reps: string | null; loadKg: number | null; coachCue: string | null } | null;
+  actual: { setsCompleted: number | null; repsPerSet: unknown; loadKgUsed: number | null; notes: string | null };
+}
+
+interface SessionDetail {
+  id: string;
+  sessionName: string;
+  variantMode: string;
+  rpe: number | null;
+  completedAt: string | null;
+  durationMin: number | null;
+  exercises: SessionDetailExercise[];
+}
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner: "Débutant",
@@ -99,6 +117,33 @@ export default function ClientDetail() {
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [sessionTimelineExpanded, setSessionTimelineExpanded] = useState(true);
+  const [expandedSessionLogId, setExpandedSessionLogId] = useState<string | null>(null);
+  const [sessionDetails, setSessionDetails] = useState<Record<string, SessionDetail | "loading" | "error">>({});
+
+  const fetchSessionDetail = useCallback(async (sessionLogId: string) => {
+    if (sessionDetails[sessionLogId]) return;
+    setSessionDetails(prev => ({ ...prev, [sessionLogId]: "loading" }));
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch(`${import.meta.env.BASE_URL}api/coach/clients/${id}/sessions/${sessionLogId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      const data: SessionDetail = await res.json();
+      setSessionDetails(prev => ({ ...prev, [sessionLogId]: data }));
+    } catch {
+      setSessionDetails(prev => ({ ...prev, [sessionLogId]: "error" }));
+    }
+  }, [id, sessionDetails]);
+
+  const handleToggleSessionExpand = (sessionLogId: string) => {
+    if (expandedSessionLogId === sessionLogId) {
+      setExpandedSessionLogId(null);
+    } else {
+      setExpandedSessionLogId(sessionLogId);
+      fetchSessionDetail(sessionLogId);
+    }
+  };
 
   const overrideMutation = useOverrideClientSession();
   const resolveMutation = useResolveAlert();
@@ -616,25 +661,122 @@ export default function ClientDetail() {
                     {client.recentSessions.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-border">
                         <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
-                          Séances récentes
+                          Séances récentes — Charges réelles vs prescrites
                         </div>
                         <div className="space-y-2">
-                          {client.recentSessions.slice(0, 5).map(session => (
-                            <div key={session.id} className="flex items-center justify-between p-2.5 rounded-lg bg-background border border-border">
-                              <div>
-                                <div className="text-xs font-medium text-white">
-                                  {session.completedAt ? format(new Date(session.completedAt), 'd MMM', { locale: fr }) : 'Incomplète'}
-                                </div>
-                                <div className="mt-0.5">
-                                  <ModeBadge mode={session.variantMode} />
-                                </div>
+                          {client.recentSessions.slice(0, 5).map(session => {
+                            const isExpanded = expandedSessionLogId === session.id;
+                            const detail = sessionDetails[session.id];
+                            return (
+                              <div key={session.id} className="rounded-lg bg-background border border-border overflow-hidden">
+                                <button
+                                  type="button"
+                                  className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 transition-colors text-left"
+                                  onClick={() => handleToggleSessionExpand(session.id)}
+                                >
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div>
+                                      <div className="text-xs font-medium text-white">
+                                        {session.completedAt ? format(new Date(session.completedAt), 'd MMM yyyy', { locale: fr }) : 'Incomplète'}
+                                      </div>
+                                      <div className="mt-0.5">
+                                        <ModeBadge mode={session.variantMode} />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4 shrink-0">
+                                    <div className="text-right">
+                                      <div className="text-[10px] text-muted-foreground uppercase">RPE</div>
+                                      <div className="text-sm font-mono text-white">{session.rpe || '--'}<span className="text-xs text-muted-foreground">/10</span></div>
+                                    </div>
+                                    {isExpanded
+                                      ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+                                      : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                                  </div>
+                                </button>
+
+                                {isExpanded && (
+                                  <div className="border-t border-border px-3 pb-3">
+                                    {detail === "loading" && (
+                                      <div className="flex items-center justify-center py-4">
+                                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                      </div>
+                                    )}
+                                    {detail === "error" && (
+                                      <p className="text-xs text-destructive py-3">Impossible de charger les détails.</p>
+                                    )}
+                                    {detail && detail !== "loading" && detail !== "error" && (
+                                      <div className="pt-3 space-y-3">
+                                        {detail.durationMin && (
+                                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <Clock className="w-3 h-3" />
+                                            Durée réelle : <span className="text-white font-medium">{detail.durationMin} min</span>
+                                          </div>
+                                        )}
+                                        {detail.exercises.length === 0 ? (
+                                          <p className="text-xs text-muted-foreground italic">Aucun exercice enregistré.</p>
+                                        ) : (
+                                          <div className="overflow-x-auto">
+                                            <table className="w-full text-xs">
+                                              <thead>
+                                                <tr className="text-muted-foreground font-mono uppercase text-[10px]">
+                                                  <th className="text-left pb-2 pr-3">Exercice</th>
+                                                  <th className="text-center pb-2 pr-2">Prescrit</th>
+                                                  <th className="text-center pb-2 pr-2">Réel</th>
+                                                  <th className="text-center pb-2">Écart</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody className="divide-y divide-border/30">
+                                                {detail.exercises.map(ex => {
+                                                  const presLoad = ex.prescribed?.loadKg ?? null;
+                                                  const realLoad = ex.actual.loadKgUsed ?? null;
+                                                  const diff = presLoad !== null && realLoad !== null ? realLoad - presLoad : null;
+                                                  return (
+                                                    <tr key={ex.exerciseId} className="hover:bg-white/[0.02]">
+                                                      <td className="py-2 pr-3 text-white font-medium truncate max-w-[120px]">{ex.exerciseName}</td>
+                                                      <td className="py-2 pr-2 text-center text-muted-foreground">
+                                                        {ex.prescribed
+                                                          ? <span>{ex.prescribed.sets}×{ex.prescribed.reps ?? '?'}{ex.prescribed.loadKg ? ` @${ex.prescribed.loadKg}kg` : ''}</span>
+                                                          : <span className="italic">—</span>}
+                                                      </td>
+                                                      <td className="py-2 pr-2 text-center">
+                                                        <span className="text-white">
+                                                          {ex.actual.setsCompleted ?? '?'}×
+                                                          {Array.isArray(ex.actual.repsPerSet)
+                                                            ? (ex.actual.repsPerSet as number[]).join(',')
+                                                            : '?'}
+                                                          {realLoad ? ` @${realLoad}kg` : ''}
+                                                        </span>
+                                                      </td>
+                                                      <td className="py-2 text-center">
+                                                        {diff === null ? (
+                                                          <Minus className="w-3 h-3 text-muted-foreground mx-auto" />
+                                                        ) : diff > 0 ? (
+                                                          <span className="flex items-center justify-center gap-0.5 text-primary font-semibold">
+                                                            <TrendingUp className="w-3 h-3" />+{diff.toFixed(1)}
+                                                          </span>
+                                                        ) : diff < 0 ? (
+                                                          <span className="flex items-center justify-center gap-0.5 text-destructive">
+                                                            <TrendingDown className="w-3 h-3" />{diff.toFixed(1)}
+                                                          </span>
+                                                        ) : (
+                                                          <span className="text-muted-foreground">0</span>
+                                                        )}
+                                                      </td>
+                                                    </tr>
+                                                  );
+                                                })}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                              <div className="text-right">
-                                <div className="text-xs text-muted-foreground uppercase">RPE</div>
-                                <div className="text-sm font-mono text-white">{session.rpe || '--'}<span className="text-xs text-muted-foreground">/10</span></div>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

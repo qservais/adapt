@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
@@ -13,6 +14,8 @@ interface DashboardAthlète {
   adaptScore: number | null;
   sessionMode: string | null;
   hasCheckin: boolean;
+  lastCheckinDate: string | null;
+  daysSinceCheckin: number | null;
 }
 
 interface DashboardSession {
@@ -72,7 +75,10 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
   mobility: "Mobilité",
 };
 
+type AthleteFilter = "tous" | "actif" | "inactif";
+
 export default function Dashboard() {
+  const [athleteFilter, setAthleteFilter] = useState<AthleteFilter>("tous");
   const { data, isLoading, error } = useQuery<DashboardData>({
     queryKey: ["/api/coach/dashboard"],
     queryFn: fetchDashboard,
@@ -100,6 +106,14 @@ export default function Dashboard() {
   }
 
   const { todayAthletes, weekSessions, recentCompleted } = data;
+
+  const inactiveAthletes = todayAthletes.filter(a => a.daysSinceCheckin === null || a.daysSinceCheckin >= 3);
+  const activeAthletes = todayAthletes.filter(a => a.hasCheckin);
+  const filteredAthletes = athleteFilter === "actif"
+    ? activeAthletes
+    : athleteFilter === "inactif"
+    ? inactiveAthletes
+    : todayAthletes;
 
   const totalCheckins = todayAthletes.filter(a => a.hasCheckin).length;
   const adaptCount = todayAthletes.filter(a => a.sessionMode === "adapt").length;
@@ -166,19 +180,39 @@ export default function Dashboard() {
         {/* Today's athletes */}
         <Card className="bg-card border-border shadow-lg">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              AUJOURD'HUI
-            </CardTitle>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                AUJOURD'HUI
+              </CardTitle>
+              <div className="flex items-center gap-1">
+                {(["tous", "actif", "inactif"] as AthleteFilter[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setAthleteFilter(f)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize",
+                      athleteFilter === f
+                        ? f === "inactif"
+                          ? "bg-destructive/20 text-destructive border border-destructive/30"
+                          : "bg-primary/20 text-primary border border-primary/30"
+                        : "text-muted-foreground hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    {f === "tous" ? `Tous (${todayAthletes.length})` : f === "actif" ? `Actifs (${activeAthletes.length})` : `Inactifs (${inactiveAthletes.length})`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {todayAthletes.length === 0 ? (
+            {filteredAthletes.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground text-sm italic">
-                Aucun athlète dans votre équipe.
+                {athleteFilter === "inactif" ? "Aucun athlète inactif — bravo !" : "Aucun athlète dans votre équipe."}
               </div>
             ) : (
               <div className="space-y-2">
-                {todayAthletes.map(athlete => (
+                {filteredAthletes.map(athlete => (
                   <Link key={athlete.id} href={`/clients/${athlete.id}`}>
                     <div className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors group border border-transparent hover:border-border cursor-pointer">
                       <div className="flex items-center gap-3">
