@@ -22,6 +22,7 @@ import type {
   BadgesResponse,
   CoachLinkRequest,
   CoachUnlinkRequest,
+  CoachUpdateAthleteRequest,
   AuthResponse,
   CheckinData,
   CheckinRequest,
@@ -3584,3 +3585,78 @@ export function useGetWeeklyRecap<
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export const getCoachUpdateAthleteProfileUrl = (clientId: string) =>
+  `/api/coach/clients/${clientId}/profile`;
+
+export const coachUpdateAthleteProfile = async (
+  clientId: string,
+  coachUpdateAthleteRequest: CoachUpdateAthleteRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getCoachUpdateAthleteProfileUrl(clientId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(coachUpdateAthleteRequest),
+  });
+};
+
+export const getCoachUpdateAthleteProfileMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachUpdateAthleteProfile>>,
+    TError,
+    { clientId: string; data: BodyType<CoachUpdateAthleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof coachUpdateAthleteProfile>>,
+  TError,
+  { clientId: string; data: BodyType<CoachUpdateAthleteRequest> },
+  TContext
+> => {
+  const mutationKey = ["coachUpdateAthleteProfile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof coachUpdateAthleteProfile>>,
+    { clientId: string; data: BodyType<CoachUpdateAthleteRequest> }
+  > = (props) => {
+    const { clientId, data } = props ?? {};
+    return coachUpdateAthleteProfile(clientId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CoachUpdateAthleteProfileMutationResult = NonNullable<Awaited<ReturnType<typeof coachUpdateAthleteProfile>>>;
+export type CoachUpdateAthleteProfileMutationBody = BodyType<CoachUpdateAthleteRequest>;
+export type CoachUpdateAthleteProfileMutationError = ErrorType<void>;
+
+export const useCoachUpdateAthleteProfile = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coachUpdateAthleteProfile>>,
+    TError,
+    { clientId: string; data: BodyType<CoachUpdateAthleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof coachUpdateAthleteProfile>>,
+  TError,
+  { clientId: string; data: BodyType<CoachUpdateAthleteRequest> },
+  TContext
+> => {
+  return useMutation(getCoachUpdateAthleteProfileMutationOptions(options));
+};

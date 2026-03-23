@@ -439,6 +439,26 @@ export interface AlertData {
   createdAt?: string;
 }
 
+export interface UpcomingSession {
+  sessionId: string;
+  sessionName: string;
+  sessionType: string;
+  weekNumber: number;
+  dayNumber: number;
+  scheduledDate: string;
+  estimatedDurationMin?: number | null;
+  isCompleted: boolean;
+}
+
+export interface CoachUpdateAthleteRequest {
+  heightCm?: number;
+  weightKg?: number;
+  fitnessLevel?: string;
+  primaryGoal?: string;
+  trainingFrequency?: number;
+  injuries?: string;
+}
+
 export interface ClientDetail {
   id: string;
   firstName: string;
@@ -450,9 +470,11 @@ export interface ClientDetail {
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   cycleTracking?: boolean;
+  inviteCode?: string | null;
   todayCheckin?: CheckinData | null;
   recentCheckins: CheckinData[];
   recentSessions: SessionLogSummary[];
+  upcomingSessions: UpcomingSession[];
   activeAlerts: AlertData[];
 }
 

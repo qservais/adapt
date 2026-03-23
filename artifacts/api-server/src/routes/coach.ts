@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, checkinsTable, sessionLogsTable, alertsTable, programsTable } from "@workspace/db";
+import { usersTable, checkinsTable, sessionLogsTable, alertsTable, programsTable, sessionsTable } from "@workspace/db";
 import { eq, and, desc, gte } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
@@ -88,6 +88,57 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       .where(and(eq(alertsTable.athleteId, athlete.id), eq(alertsTable.isResolved, false)))
       .orderBy(desc(alertsTable.createdAt));
 
+    // Upcoming planned sessions from active program
+    const [activeProgram] = await db.select().from(programsTable)
+      .where(and(eq(programsTable.athleteId, athlete.id), eq(programsTable.isActive, true)))
+      .limit(1);
+
+    let upcomingSessions: Array<{
+      sessionId: string;
+      sessionName: string;
+      sessionType: string;
+      weekNumber: number;
+      dayNumber: number;
+      scheduledDate: string;
+      estimatedDurationMin: number | null;
+      isCompleted: boolean;
+    }> = [];
+
+    if (activeProgram?.startDate) {
+      const programStart = new Date(activeProgram.startDate);
+      const now = new Date();
+      const fourWeeksFromNow = new Date(now.getTime() + 28 * 86400000);
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 86400000);
+
+      const plannedSessions = await db.select().from(sessionsTable)
+        .where(eq(sessionsTable.programId, activeProgram.id));
+
+      const completedSessionIds = new Set(
+        recentSessions.filter(s => s.sessionId).map(s => s.sessionId)
+      );
+
+      for (const session of plannedSessions) {
+        const sessionDate = new Date(programStart);
+        sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
+        sessionDate.setHours(0, 0, 0, 0);
+
+        if (sessionDate >= twoWeeksAgo && sessionDate <= fourWeeksFromNow) {
+          upcomingSessions.push({
+            sessionId: session.id,
+            sessionName: session.name,
+            sessionType: session.type,
+            weekNumber: session.weekNumber,
+            dayNumber: session.dayNumber,
+            scheduledDate: sessionDate.toISOString().split("T")[0],
+            estimatedDurationMin: session.estimatedDurationMin,
+            isCompleted: completedSessionIds.has(session.id),
+          });
+        }
+      }
+
+      upcomingSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+    }
+
     res.json({
       id: athlete.id,
       firstName: athlete.firstName,
@@ -99,9 +150,11 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       fitnessLevel: athlete.fitnessLevel,
       primaryGoal: athlete.primaryGoal,
       cycleTracking: athlete.cycleTracking,
+      inviteCode: athlete.inviteCode,
       todayCheckin: todayCheckin ?? null,
       recentCheckins,
       recentSessions,
+      upcomingSessions,
       activeAlerts: activeAlerts.map(a => ({
         id: a.id,
         athleteId: a.athleteId,
@@ -136,6 +189,51 @@ router.delete("/coach/clients/:clientId", authenticate, requireRole("coach"), as
     res.json({ success: true, message: "Client unlinked" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const coachUpdateAthleteSchema = z.object({
+  heightCm: z.number().int().min(50).max(300).optional(),
+  weightKg: z.number().min(20).max(500).optional(),
+  fitnessLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
+  trainingFrequency: z.number().int().min(1).max(14).optional(),
+  injuries: z.string().optional(),
+});
+
+router.patch("/coach/clients/:clientId/profile", authenticate, requireRole("coach"), async (req, res) => {
+  const clientId = String(req.params["clientId"]);
+  const parsed = coachUpdateAthleteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
+    if (!athlete) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlète non trouvé ou non lié" } });
+      return;
+    }
+    const data = parsed.data;
+    const [updated] = await db.update(usersTable).set({
+      ...(data.heightCm !== undefined && { heightCm: data.heightCm }),
+      ...(data.weightKg !== undefined && { weightKg: data.weightKg.toString() }),
+      ...(data.fitnessLevel !== undefined && { fitnessLevel: data.fitnessLevel }),
+      ...(data.primaryGoal !== undefined && { primaryGoal: data.primaryGoal }),
+      ...(data.trainingFrequency !== undefined && { trainingFrequency: data.trainingFrequency }),
+      ...(data.injuries !== undefined && { injuries: data.injuries }),
+      updatedAt: new Date(),
+    }).where(eq(usersTable.id, clientId)).returning({
+      id: usersTable.id,
+      heightCm: usersTable.heightCm,
+      weightKg: usersTable.weightKg,
+      fitnessLevel: usersTable.fitnessLevel,
+      primaryGoal: usersTable.primaryGoal,
+    });
+    res.json({ success: true, athlete: updated });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 

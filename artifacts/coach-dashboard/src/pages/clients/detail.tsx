@@ -5,17 +5,24 @@ import {
   useOverrideClientSession, 
   useResolveAlert,
   useCoachUnlink,
-  AlertData 
+  useCoachUpdateAthleteProfile,
+  AlertData,
+  UpcomingSession,
 } from "@workspace/api-client-react";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
-import { Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus } from "lucide-react";
-import { format } from "date-fns";
+import { 
+  Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
+  Pencil, Calendar, Clock, ChevronDown, ChevronUp, Copy, Check
+} from "lucide-react";
+import { format, parseISO, isToday, isFuture, isPast, startOfWeek, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
@@ -29,18 +36,76 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+
+const LEVEL_LABELS: Record<string, string> = {
+  beginner: "Débutant",
+  intermediate: "Intermédiaire",
+  advanced: "Avancé",
+  elite: "Élite",
+};
+const GOAL_LABELS: Record<string, string> = {
+  strength: "Force",
+  muscle: "Prise de masse",
+  fat_loss: "Perte de poids",
+  performance: "Performance",
+  health: "Santé",
+  aesthetic: "Esthétique",
+  fitness: "Forme générale",
+};
+const SESSION_TYPE_LABELS: Record<string, string> = {
+  strength: "Force",
+  cardio: "Cardio",
+  hiit: "HIIT",
+  mobility: "Mobilité",
+  recovery: "Récupération",
+  sport: "Sport",
+  mixed: "Mixte",
+};
+
+function groupByWeek(sessions: UpcomingSession[]) {
+  const groups: Record<string, UpcomingSession[]> = {};
+  for (const s of sessions) {
+    const date = parseISO(s.scheduledDate);
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+    const key = weekStart.toISOString().split("T")[0];
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(s);
+  }
+  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+}
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const { data: client, isLoading, refetch } = useGetClientDetail(id, { query: { queryKey: [`/api/coach/clients/${id}`], refetchInterval: 30000 }});
   const [chartRange, setChartRange] = useState<7 | 30>(7);
   const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [sessionTimelineExpanded, setSessionTimelineExpanded] = useState(true);
+
   const overrideMutation = useOverrideClientSession();
   const resolveMutation = useResolveAlert();
   const unlinkMutation = useCoachUnlink();
+  const updateProfileMutation = useCoachUpdateAthleteProfile();
   const { toast } = useToast();
+
+  const [profileForm, setProfileForm] = useState({
+    heightCm: "",
+    weightKg: "",
+    fitnessLevel: "",
+    primaryGoal: "",
+  });
 
   if (isLoading || !client) {
     return (
@@ -80,6 +145,43 @@ export default function ClientDetail() {
     }
   };
 
+  const openProfileDialog = () => {
+    setProfileForm({
+      heightCm: client.heightCm ? String(client.heightCm) : "",
+      weightKg: client.weightKg ? String(parseFloat(String(client.weightKg)).toFixed(1)) : "",
+      fitnessLevel: client.fitnessLevel ?? "",
+      primaryGoal: client.primaryGoal ?? "",
+    });
+    setProfileDialogOpen(true);
+  };
+
+  const handleSaveProfile = async () => {
+    const data: Record<string, number | string> = {};
+    const h = parseInt(profileForm.heightCm, 10);
+    if (!isNaN(h) && h >= 50 && h <= 300) data.heightCm = h;
+    const w = parseFloat(profileForm.weightKg);
+    if (!isNaN(w) && w >= 20 && w <= 500) data.weightKg = w;
+    if (profileForm.fitnessLevel) data.fitnessLevel = profileForm.fitnessLevel;
+    if (profileForm.primaryGoal) data.primaryGoal = profileForm.primaryGoal;
+
+    try {
+      await updateProfileMutation.mutateAsync({ clientId: id, data });
+      toast({ title: "Profil mis à jour" });
+      setProfileDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${id}`] });
+    } catch {
+      toast({ title: "Échec de la mise à jour", variant: "destructive" });
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (client.inviteCode) {
+      navigator.clipboard.writeText(client.inviteCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    }
+  };
+
   const chartData = client.recentCheckins
     .slice(0, chartRange)
     .reverse()
@@ -96,21 +198,12 @@ export default function ClientDetail() {
     { name: "Motivation", value: client.todayCheckin?.motivation },
   ];
 
-  const LEVEL_LABELS: Record<string, string> = {
-    beginner: "Débutant",
-    intermediate: "Intermédiaire",
-    advanced: "Avancé",
-    elite: "Élite",
-  };
-  const GOAL_LABELS: Record<string, string> = {
-    strength: "Force",
-    muscle: "Prise de masse",
-    fat_loss: "Perte de poids",
-    performance: "Performance",
-    health: "Santé",
-    aesthetic: "Esthétique",
-    fitness: "Forme générale",
-  };
+  const allSessionsTimeline: UpcomingSession[] = [...(client.upcomingSessions ?? [])].sort(
+    (a, b) => a.scheduledDate.localeCompare(b.scheduledDate)
+  );
+
+  const weekGroups = groupByWeek(allSessionsTimeline);
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -134,10 +227,31 @@ export default function ClientDetail() {
               {client.fitnessLevel && <span>• Niveau : <span className="text-white capitalize">{LEVEL_LABELS[client.fitnessLevel] ?? client.fitnessLevel}</span></span>}
               {client.primaryGoal && <span>• Objectif : <span className="text-white capitalize">{GOAL_LABELS[client.primaryGoal] ?? client.primaryGoal}</span></span>}
             </div>
+            <div className="flex flex-wrap gap-4 mt-3 text-sm">
+              {client.heightCm && (
+                <span className="text-muted-foreground">Taille : <span className="text-white font-medium">{client.heightCm} cm</span></span>
+              )}
+              {client.weightKg && (
+                <span className="text-muted-foreground">Poids : <span className="text-white font-medium">{parseFloat(String(client.weightKg)).toFixed(1)} kg</span></span>
+              )}
+              {client.inviteCode && (
+                <button
+                  onClick={handleCopyCode}
+                  className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors group"
+                  title="Copier le code d'invitation"
+                >
+                  Code : <span className="font-mono text-primary font-semibold tracking-widest">{client.inviteCode}</span>
+                  {codeCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="flex flex-col gap-3 shrink-0">
+          <Button variant="outline" onClick={openProfileDialog} className="w-full justify-start hover-elevate border-border">
+            <Pencil className="w-4 h-4 mr-2" /> Modifier le profil
+          </Button>
           <Link href={`/messages/${client.id}`}>
             <Button variant="outline" className="w-full justify-start hover-elevate">
               <MessageSquare className="w-4 h-4 mr-2" /> Envoyer un message
@@ -165,6 +279,87 @@ export default function ClientDetail() {
           </Button>
         </div>
       </div>
+
+      {/* Profile edit dialog */}
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white font-display text-xl">MODIFIER LE PROFIL</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Taille (cm)</Label>
+                <Input
+                  type="number"
+                  value={profileForm.heightCm}
+                  onChange={e => setProfileForm(p => ({ ...p, heightCm: e.target.value }))}
+                  placeholder="175"
+                  min={50}
+                  max={300}
+                  className="bg-background border-border text-white"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Poids (kg)</Label>
+                <Input
+                  type="number"
+                  value={profileForm.weightKg}
+                  onChange={e => setProfileForm(p => ({ ...p, weightKg: e.target.value }))}
+                  placeholder="70"
+                  min={20}
+                  max={500}
+                  step={0.1}
+                  className="bg-background border-border text-white"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Niveau de forme</Label>
+              <select
+                value={profileForm.fitnessLevel}
+                onChange={e => setProfileForm(p => ({ ...p, fitnessLevel: e.target.value }))}
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-white text-sm"
+              >
+                <option value="">-- Sélectionner --</option>
+                <option value="beginner">Débutant</option>
+                <option value="intermediate">Intermédiaire</option>
+                <option value="advanced">Avancé</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Objectif principal</Label>
+              <select
+                value={profileForm.primaryGoal}
+                onChange={e => setProfileForm(p => ({ ...p, primaryGoal: e.target.value }))}
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-white text-sm"
+              >
+                <option value="">-- Sélectionner --</option>
+                <option value="strength">Force</option>
+                <option value="muscle">Prise de masse</option>
+                <option value="fat_loss">Perte de poids</option>
+                <option value="performance">Performance</option>
+                <option value="health">Santé</option>
+                <option value="aesthetic">Esthétique</option>
+                <option value="fitness">Forme générale</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProfileDialogOpen(false)} className="border-border">
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSaveProfile}
+              disabled={updateProfileMutation.isPending}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Sauvegarder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={unlinkDialogOpen} onOpenChange={setUnlinkDialogOpen}>
         <AlertDialogContent className="bg-card border-border">
@@ -280,32 +475,137 @@ export default function ClientDetail() {
         </div>
 
         <div className="space-y-6">
-          <Card className="bg-card border-border shadow-lg h-full flex flex-col">
+          {/* Session timeline */}
+          <Card className="bg-card border-border shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xl font-display tracking-widest text-white">SÉANCES RÉCENTES</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  PLANNING
+                </CardTitle>
+                <button
+                  onClick={() => setSessionTimelineExpanded(e => !e)}
+                  className="text-muted-foreground hover:text-white transition-colors"
+                >
+                  {sessionTimelineExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+              </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-auto">
-              <div className="space-y-3 pr-2">
-                {client.recentSessions.length > 0 ? client.recentSessions.slice(0, 10).map(session => (
-                  <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-background border border-border hover:border-white/20 transition-colors">
-                    <div>
-                      <div className="text-sm font-medium text-white">
-                        {session.completedAt ? format(new Date(session.completedAt), 'd MMM', { locale: fr }) : 'Incomplète'}
-                      </div>
-                      <div className="mt-1">
-                        <ModeBadge mode={session.variantMode} />
-                      </div>
+            {sessionTimelineExpanded && (
+              <CardContent className="pt-0">
+                {weekGroups.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground text-sm italic">
+                    Aucun programme actif planifié.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {weekGroups.map(([weekStart, sessions]) => {
+                      const weekStartDate = parseISO(weekStart);
+                      const weekEnd = addDays(weekStartDate, 6);
+                      const isCurrentWeek = new Date() >= weekStartDate && new Date() <= weekEnd;
+
+                      return (
+                        <div key={weekStart}>
+                          <div className={cn(
+                            "text-xs font-mono uppercase tracking-wider mb-2 pb-1 border-b",
+                            isCurrentWeek ? "text-primary border-primary/30" : "text-muted-foreground border-border"
+                          )}>
+                            {isCurrentWeek ? "↗ Cette semaine — " : ""}
+                            {format(weekStartDate, 'd MMM', { locale: fr })} – {format(weekEnd, 'd MMM yyyy', { locale: fr })}
+                          </div>
+                          <div className="space-y-2">
+                            {sessions.map((session) => {
+                              const sessionDate = parseISO(session.scheduledDate);
+                              const isSessionToday = session.scheduledDate === today;
+                              const isPastSession = session.scheduledDate < today;
+                              const isUpcoming = session.scheduledDate > today;
+
+                              return (
+                                <div
+                                  key={session.sessionId}
+                                  className={cn(
+                                    "flex items-center justify-between p-2.5 rounded-lg border transition-colors",
+                                    session.isCompleted
+                                      ? "bg-primary/5 border-primary/20 opacity-70"
+                                      : isSessionToday
+                                      ? "bg-primary/10 border-primary/40"
+                                      : isPastSession && !session.isCompleted
+                                      ? "bg-destructive/5 border-destructive/20"
+                                      : "bg-background border-border hover:border-white/20"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className={cn(
+                                      "w-2 h-2 rounded-full shrink-0",
+                                      session.isCompleted ? "bg-primary" :
+                                      isSessionToday ? "bg-primary animate-pulse" :
+                                      isPastSession ? "bg-destructive" :
+                                      "bg-muted-foreground/40"
+                                    )} />
+                                    <div className="min-w-0">
+                                      <div className="text-xs font-medium text-white truncate">{session.sessionName}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {format(sessionDate, 'EEE d MMM', { locale: fr })}
+                                        {session.estimatedDurationMin && (
+                                          <span className="ml-1.5 inline-flex items-center gap-0.5">
+                                            <Clock className="w-3 h-3" />{session.estimatedDurationMin}min
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right shrink-0 ml-2">
+                                    <span className={cn(
+                                      "text-xs px-1.5 py-0.5 rounded font-mono",
+                                      session.isCompleted ? "bg-primary/20 text-primary" :
+                                      isPastSession ? "bg-destructive/20 text-destructive" :
+                                      isSessionToday ? "bg-primary/30 text-primary font-semibold" :
+                                      "bg-white/5 text-muted-foreground"
+                                    )}>
+                                      {session.isCompleted ? "✓ Fait" :
+                                       isPastSession ? "Manqué" :
+                                       isSessionToday ? "Auj." : 
+                                       SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Recent sessions not in the planned timeline */}
+                {client.recentSessions.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                      Séances récentes
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs text-muted-foreground uppercase">RPE</div>
-                      <div className="text-lg font-mono text-white">{session.rpe || '--'}<span className="text-xs text-muted-foreground">/10</span></div>
+                    <div className="space-y-2">
+                      {client.recentSessions.slice(0, 5).map(session => (
+                        <div key={session.id} className="flex items-center justify-between p-2.5 rounded-lg bg-background border border-border">
+                          <div>
+                            <div className="text-xs font-medium text-white">
+                              {session.completedAt ? format(new Date(session.completedAt), 'd MMM', { locale: fr }) : 'Incomplète'}
+                            </div>
+                            <div className="mt-0.5">
+                              <ModeBadge mode={session.variantMode} />
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground uppercase">RPE</div>
+                            <div className="text-sm font-mono text-white">{session.rpe || '--'}<span className="text-xs text-muted-foreground">/10</span></div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )) : (
-                  <div className="text-center text-muted-foreground text-sm italic py-8">Aucune séance récente.</div>
                 )}
-              </div>
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
         </div>
       </div>
