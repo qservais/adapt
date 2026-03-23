@@ -18,7 +18,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine
+  ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine, Cell
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -851,6 +851,77 @@ export default function ClientDetail() {
                             <p className="text-xs text-muted-foreground text-center mt-3 italic">
                               Le programme n'a pas de date de début définie.
                             </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Weekly volume chart + month comparison (MET-03) */}
+                    {client.recentSessions.length >= 2 && (() => {
+                      const now = new Date();
+                      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+                      const getIsoWeek = (d: Date) => {
+                        const tmp = new Date(d);
+                        tmp.setHours(0, 0, 0, 0);
+                        tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+                        const week1 = new Date(tmp.getFullYear(), 0, 4);
+                        return 1 + Math.round(((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+                      };
+
+                      const weekMap = new Map<string, number>();
+                      let thisMonthCount = 0;
+                      let lastMonthCount = 0;
+                      for (const s of client.recentSessions) {
+                        if (!s.completedAt) continue;
+                        const d = new Date(s.completedAt);
+                        const wk = `S${getIsoWeek(d)}`;
+                        weekMap.set(wk, (weekMap.get(wk) ?? 0) + 1);
+                        if (d >= thisMonthStart) thisMonthCount++;
+                        else if (d >= lastMonthStart && d <= lastMonthEnd) lastMonthCount++;
+                      }
+
+                      const weekData = Array.from(weekMap.entries()).slice(-6).map(([week, count]) => ({ week, count }));
+                      const trend = thisMonthCount > lastMonthCount ? "up" : thisMonthCount < lastMonthCount ? "down" : "same";
+
+                      return (
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">
+                            Volume hebdomadaire
+                          </div>
+                          <div className="flex items-center gap-4 mb-2">
+                            <div className="text-xs text-muted-foreground">
+                              Ce mois : <span className="text-white font-medium">{thisMonthCount}</span> séances
+                            </div>
+                            <div className={`flex items-center gap-1 text-xs ${trend === "up" ? "text-green-400" : trend === "down" ? "text-red-400" : "text-muted-foreground"}`}>
+                              {trend === "up" ? <TrendingUp className="w-3 h-3" /> : trend === "down" ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                              <span>vs mois précédent ({lastMonthCount})</span>
+                            </div>
+                          </div>
+                          {weekData.length >= 2 && (
+                            <div className="h-[80px] w-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={weekData} barSize={20} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+                                  <XAxis dataKey="week" tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                  <YAxis tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                  <RechartsTooltip
+                                    contentStyle={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
+                                    formatter={(v) => [`${v} séance${Number(v) > 1 ? "s" : ""}`, "Volume"]}
+                                    labelStyle={{ color: "#94a3b8" }}
+                                  />
+                                  <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                                    {weekData.map((entry, index) => (
+                                      <Cell
+                                        key={`cell-${index}`}
+                                        fill={index === weekData.length - 1 ? "#00F5A0" : "#00F5A040"}
+                                      />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
                           )}
                         </div>
                       );

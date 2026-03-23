@@ -177,48 +177,50 @@ async function runAlertChecks(): Promise<void> {
       .orderBy(desc(checkinsTable.date))
       .limit(3);
 
+    // Default: resolve stale fatigue alerts unless 2 strictly consecutive days with fatigue are detected
+    let shouldFire = false;
+
     if (recentCheckins.length >= 2) {
       const [c1, c2] = recentCheckins;
-      if (!c1 || !c2) continue;
+      if (c1 && c2) {
+        // Verify strictly consecutive (exactly 1 day apart)
+        const d1 = new Date(c1.date + "T12:00:00Z");
+        const d2 = new Date(c2.date + "T12:00:00Z");
+        const diffDays = Math.round((d1.getTime() - d2.getTime()) / 86400000);
+        const areConsecutive = diffDays === 1;
 
-      // Verify the two most recent check-ins are strictly consecutive (exactly 1 day apart)
-      const d1 = new Date(c1.date + "T12:00:00Z");
-      const d2 = new Date(c2.date + "T12:00:00Z");
-      const diffDays = Math.round((d1.getTime() - d2.getTime()) / 86400000);
-      const areConsecutive = diffDays === 1;
+        if (areConsecutive) {
+          const isFatiguedOrSore = (c: typeof c1) =>
+            (c.soreness !== null && c.soreness >= 4) || c.hasPain === true;
 
-      if (!areConsecutive) continue;
+          if (isFatiguedOrSore(c1) && isFatiguedOrSore(c2)) {
+            shouldFire = true;
+            const reasons: string[] = [];
+            if (c1.soreness !== null && c1.soreness >= 4) reasons.push(`courbatures ${c1.soreness}/5`);
+            if (c1.hasPain) reasons.push("douleur signalée");
+            if (c1.energy !== null && c1.energy <= 2) reasons.push(`énergie basse ${c1.energy}/5`);
 
-      // Fatigue defined as: soreness (courbatures) ≥4/5 OR hasPain === true for both days
-      const isFatiguedOrSore = (c: typeof c1) =>
-        (c.soreness !== null && c.soreness >= 4) ||
-        c.hasPain === true;
-
-      const bothFatiguedOrSore = isFatiguedOrSore(c1) && isFatiguedOrSore(c2);
-
-      if (bothFatiguedOrSore) {
-        const reasons: string[] = [];
-        if (c1.soreness !== null && c1.soreness >= 4) reasons.push(`courbatures ${c1.soreness}/5`);
-        if (c1.hasPain) reasons.push("douleur signalée");
-        if (c1.energy !== null && c1.energy <= 2) reasons.push(`énergie basse ${c1.energy}/5`);
-
-        await createAlertIfNotExists(
-          coachId,
-          athlete.id,
-          "fatigue",
-          "p1",
-          `${athlete.firstName} signale fatigue/douleur élevée depuis 2+ jours consécutifs (${reasons.join(", ")})`
-        );
-      } else {
-        // Auto-resolve fatigue alerts when values normalize
-        await db.update(alertsTable)
-          .set({ isResolved: true, resolvedAt: new Date() })
-          .where(and(
-            eq(alertsTable.athleteId, athlete.id),
-            eq(alertsTable.type, "fatigue"),
-            eq(alertsTable.isResolved, false)
-          ));
+            await createAlertIfNotExists(
+              coachId,
+              athlete.id,
+              "fatigue",
+              "p1",
+              `${athlete.firstName} signale fatigue/douleur élevée depuis 2+ jours consécutifs (${reasons.join(", ")})`
+            );
+          }
+        }
       }
+    }
+
+    if (!shouldFire) {
+      // Auto-resolve stale fatigue alerts when condition is not met (sparse check-ins or normal values)
+      await db.update(alertsTable)
+        .set({ isResolved: true, resolvedAt: new Date() })
+        .where(and(
+          eq(alertsTable.athleteId, athlete.id),
+          eq(alertsTable.type, "fatigue"),
+          eq(alertsTable.isResolved, false)
+        ));
     }
   }
 
