@@ -113,16 +113,12 @@ export default function SessionTab() {
               {exercises.length} exercice{exercises.length !== 1 ? "s" : ""}
             </Text>
 
-            {/* Exercises grouped by category */}
             <View style={styles.exerciseList}>
               {grouped.map(({ category, exercises: exs }, gi) => (
                 <View key={category} style={gi > 0 ? styles.groupBlock : undefined}>
-                  {/* Category header — only show if there's more than one group */}
-                  {grouped.length > 1 && (
-                    <Text style={[styles.groupHeader, { fontFamily: FONTS.mono }]}>
-                      {CATEGORY_FR[category] ?? category.toUpperCase()}
-                    </Text>
-                  )}
+                  <Text style={[styles.groupHeader, { fontFamily: FONTS.mono }]}>
+                    {CATEGORY_FR[category] ?? "GÉNÉRAL"}
+                  </Text>
                   {exs.map((ex, i) => {
                     const globalIndex = exercises.indexOf(ex);
                     return (
@@ -188,7 +184,7 @@ export default function SessionTab() {
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             SÉANCES RÉCENTES
           </Text>
-          {historyQuery.data?.filter((l) => l.completedAt != null).map((log) => {
+          {historyQuery.data?.filter((l) => l.completedAt != null).slice(0, 5).map((log) => {
             const mode = log.variantMode as SessionMode;
             const c = MODE_CONFIG[mode] ?? MODE_CONFIG.normal;
             return (

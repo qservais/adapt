@@ -377,7 +377,6 @@ export default function StatsScreen() {
         </View>
       </View>
 
-      {/* 1. KPIs */}
       <View style={styles.section}>
         <View style={styles.kpiRow}>
           <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>

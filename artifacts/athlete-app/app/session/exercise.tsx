@@ -187,7 +187,6 @@ export default function ExerciseScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
-      {/* Header: close + progress */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable
           onPress={() => {
@@ -221,7 +220,6 @@ export default function ExerciseScreen() {
         </View>
       </View>
 
-      {/* Exercise identity block */}
       <View style={styles.identityBlock}>
         <Text style={[styles.setLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
           SÉRIE {currentSet}/{exercise.sets}

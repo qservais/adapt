@@ -180,22 +180,17 @@ function StateCheckedIn({
 
   return (
     <View style={styles.checkedContainer}>
-      {/* Score ADAPT */}
       <View style={styles.scoreSection}>
         <ScoreCircle score={checkin.adaptScore} size="lg" color={cfg.color} />
         <ModeBadge mode={modeKey} size="md" style={{ marginTop: 16 }} />
       </View>
 
       {isCompleted ? (
-        /* Séance terminée */
         <SessionDoneCard session={session!} modeColor={modeColor} cfg={cfg} />
       ) : session != null ? (
-        /* Prochaine séance — carte avec ModeBadge */
         <View style={[styles.sessionCard, { borderColor: `${modeColor}30` }]}>
           <View style={styles.sessionTopRow}>
-            <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
-              {session.estimatedDurationMin != null ? `${session.estimatedDurationMin} MIN` : ""}
-            </Text>
+            <ModeBadge mode={modeKey} size="sm" />
             <View style={styles.exCountChip}>
               <Text style={[styles.exCountText, { fontFamily: FONTS.mono }]}>
                 {session.exercises?.length ?? 0} EXERCICES
@@ -225,7 +220,6 @@ function StateCheckedIn({
           </TouchableOpacity>
         </View>
       ) : (
-        /* Jour de repos */
         <View style={styles.noSessionCard}>
           <Feather name="calendar" size={28} color={COLORS.textMuted} />
           <Text style={[styles.noSessionText, { fontFamily: FONTS.body }]}>
