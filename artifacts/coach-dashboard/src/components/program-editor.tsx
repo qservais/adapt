@@ -524,6 +524,7 @@ interface SessionCellProps {
 export function SessionCell({ session, weekNumber, dayNumber, programId, onRefetch }: SessionCellProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const deleteMutation = useDeleteProgramSession();
   const { toast } = useToast();
 
@@ -565,32 +566,69 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
     return acc;
   }, {});
 
+  const normalVariant = session.variants.find((v) => v.mode === "normal");
+  const exercises = normalVariant?.exercises ?? [];
+
   return (
     <>
-      <div
-        className="group w-full min-h-[60px] rounded-lg border border-border bg-card hover:border-white/20 transition-all p-2 text-left relative overflow-hidden cursor-pointer"
-        onClick={() => setEditOpen(true)}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
-        <p className="text-xs font-semibold text-white truncate leading-tight mb-1">{session.name}</p>
-        <p className="text-[10px] font-mono text-muted-foreground capitalize mb-1.5">{SESSION_TYPE_LABELS[session.type] ?? session.type}</p>
-        <div className="flex gap-0.5 flex-wrap">
-          {MODES.filter((m) => modeStyles[m]).map((m) => (
-            <span
-              key={m}
-              className={`text-[8px] uppercase font-bold px-1 py-0.5 rounded-sm ${MODE_STYLES[m].bg} ${MODE_STYLES[m].color}`}
-            >
-              {m[0]}
-            </span>
-          ))}
+      <div className={`group w-full rounded-lg border bg-card transition-all relative overflow-hidden ${expanded ? "border-white/20" : "border-border hover:border-white/20"}`}>
+        <div
+          className="p-2 cursor-pointer"
+          onClick={() => setEditOpen(true)}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
+          <p className="text-xs font-semibold text-white truncate leading-tight mb-1 pr-5">{session.name}</p>
+          <p className="text-[10px] font-mono text-muted-foreground capitalize mb-1.5">{SESSION_TYPE_LABELS[session.type] ?? session.type}</p>
+          <div className="flex items-center justify-between gap-1">
+            <div className="flex gap-0.5 flex-wrap">
+              {MODES.filter((m) => modeStyles[m]).map((m) => (
+                <span
+                  key={m}
+                  className={`text-[8px] uppercase font-bold px-1 py-0.5 rounded-sm ${MODE_STYLES[m].bg} ${MODE_STYLES[m].color}`}
+                >
+                  {m[0]}
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0">
+              {session.estimatedDurationMin && (
+                <span className="text-[9px] text-muted-foreground font-mono">{session.estimatedDurationMin}m</span>
+              )}
+              {exercises.length > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+                  className="p-0.5 rounded hover:bg-white/10 transition-colors"
+                  title={expanded ? "Réduire" : "Voir les exercices"}
+                >
+                  {expanded
+                    ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                    : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-        {session.estimatedDurationMin && (
-          <p className="text-[9px] text-muted-foreground mt-1">{session.estimatedDurationMin}min</p>
+
+        {expanded && exercises.length > 0 && (
+          <div className="border-t border-border px-2 pb-2 pt-1.5 space-y-1">
+            {exercises.map((ex, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <Dumbbell className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                <span className="text-[10px] text-white truncate flex-1">{ex.exerciseName}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
+                  {ex.sets}×{ex.reps || "—"}
+                  {ex.nominalLoadKg ? ` @${ex.nominalLoadKg}kg` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
+
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
-          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/20 transition-all"
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/20 transition-all z-10"
         >
           <Trash2 className="w-3 h-3 text-destructive" />
         </button>

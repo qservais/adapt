@@ -42,8 +42,9 @@ export default function ClientsOverview() {
       setInviteCode("");
       queryClient.invalidateQueries({ queryKey: ['/api/coach/clients'] });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Code invalide ou athlète introuvable.";
-      setLinkError(msg);
+      const serverMsg =
+        (err as { data?: { error?: { message?: string } } })?.data?.error?.message;
+      setLinkError(serverMsg || "Code invalide ou athlète introuvable.");
     }
   };
 

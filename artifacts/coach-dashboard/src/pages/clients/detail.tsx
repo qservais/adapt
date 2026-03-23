@@ -12,10 +12,10 @@ import {
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import { 
   Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
-  Pencil, Calendar, Clock, ChevronDown, ChevronUp, Copy, Check, Dumbbell, ExternalLink,
-  TrendingUp, TrendingDown, Minus
+  Pencil, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Copy, Check,
+  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus
 } from "lucide-react";
-import { format, parseISO, startOfWeek, addDays } from "date-fns";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine
@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { ProgramGrid } from "@/components/program-editor";
+import { ProgramGrid, SessionModal } from "@/components/program-editor";
 
 interface SessionDetailExercise {
   exerciseId: string;
@@ -90,18 +90,6 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
   mixed: "Mixte",
 };
 
-function groupByWeek(sessions: UpcomingSession[]) {
-  const groups: Record<string, UpcomingSession[]> = {};
-  for (const s of sessions) {
-    const date = parseISO(s.scheduledDate);
-    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-    const key = weekStart.toISOString().split("T")[0];
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(s);
-  }
-  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-}
-
 type Tab = "apercu" | "programme";
 
 export default function ClientDetail() {
@@ -119,6 +107,12 @@ export default function ClientDetail() {
   const [sessionTimelineExpanded, setSessionTimelineExpanded] = useState(true);
   const [expandedSessionLogId, setExpandedSessionLogId] = useState<string | null>(null);
   const [sessionDetails, setSessionDetails] = useState<Record<string, SessionDetail | "loading" | "error">>({});
+  const [calendarMonth, setCalendarMonth] = useState<{ year: number; month: number }>(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
+  const [addSessionSlot, setAddSessionSlot] = useState<{ weekNumber: number; dayNumber: number } | null>(null);
+  const [selectedCalSession, setSelectedCalSession] = useState<UpcomingSession | null>(null);
 
   const fetchSessionDetail = useCallback(async (sessionLogId: string) => {
     if (sessionDetails[sessionLogId]) return;
@@ -250,13 +244,6 @@ export default function ClientDetail() {
     { name: "Courbatures", value: client.todayCheckin?.soreness },
     { name: "Motivation", value: client.todayCheckin?.motivation },
   ];
-
-  const allSessionsTimeline: UpcomingSession[] = [...(client.upcomingSessions ?? [])].sort(
-    (a, b) => a.scheduledDate.localeCompare(b.scheduledDate)
-  );
-
-  const weekGroups = groupByWeek(allSessionsTimeline);
-  const today = new Date().toISOString().split("T")[0];
 
   const tabs: { id: Tab; label: string; icon: typeof Calendar }[] = [
     { id: "apercu", label: "Aperçu", icon: CheckCircle2 },
@@ -556,110 +543,184 @@ export default function ClientDetail() {
             </div>
 
             <div className="space-y-6">
-              {/* Session timeline */}
+              {/* Monthly calendar planning */}
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-primary" />
                       PLANNING
                     </CardTitle>
-                    <button
-                      onClick={() => setSessionTimelineExpanded(e => !e)}
-                      className="text-muted-foreground hover:text-white transition-colors"
-                    >
-                      {sessionTimelineExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {activeProgram && (
+                        <Link href={`/programs/${activeProgram.id}`}>
+                          <Button size="sm" variant="outline" className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10 gap-1">
+                            <Plus className="w-3 h-3" />
+                            Ajouter une séance
+                          </Button>
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => setCalendarMonth(m => {
+                          const d = new Date(m.year, m.month - 1, 1);
+                          return { year: d.getFullYear(), month: d.getMonth() };
+                        })}
+                        className="p-1.5 rounded hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-sm font-mono text-white capitalize min-w-[120px] text-center">
+                        {format(new Date(calendarMonth.year, calendarMonth.month, 1), 'MMMM yyyy', { locale: fr })}
+                      </span>
+                      <button
+                        onClick={() => setCalendarMonth(m => {
+                          const d = new Date(m.year, m.month + 1, 1);
+                          return { year: d.getFullYear(), month: d.getMonth() };
+                        })}
+                        className="p-1.5 rounded hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setSessionTimelineExpanded(e => !e)}
+                        className="text-muted-foreground hover:text-white transition-colors ml-1"
+                      >
+                        {sessionTimelineExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </CardHeader>
                 {sessionTimelineExpanded && (
                   <CardContent className="pt-0">
-                    {weekGroups.length === 0 ? (
-                      <div className="py-8 text-center text-muted-foreground text-sm italic">
-                        Aucun programme actif planifié.
-                      </div>
-                    ) : (
-                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
-                        {weekGroups.map(([weekStart, sessions]) => {
-                          const weekStartDate = parseISO(weekStart);
-                          const weekEnd = addDays(weekStartDate, 6);
-                          const isCurrentWeek = new Date() >= weekStartDate && new Date() <= weekEnd;
+                    {/* Calendar grid */}
+                    {(() => {
+                      const { year, month } = calendarMonth;
+                      const firstOfMonth = new Date(year, month, 1);
+                      const lastOfMonth = new Date(year, month + 1, 0);
+                      const firstDow = firstOfMonth.getDay();
+                      const mondayOffset = firstDow === 0 ? -6 : 1 - firstDow;
+                      const calStart = new Date(firstOfMonth);
+                      calStart.setDate(firstOfMonth.getDate() + mondayOffset);
 
-                          return (
-                            <div key={weekStart}>
-                              <div className={cn(
-                                "text-xs font-mono uppercase tracking-wider mb-2 pb-1 border-b",
-                                isCurrentWeek ? "text-primary border-primary/30" : "text-muted-foreground border-border"
-                              )}>
-                                {isCurrentWeek ? "↗ Cette semaine — " : ""}
-                                {format(weekStartDate, 'd MMM', { locale: fr })} – {format(weekEnd, 'd MMM yyyy', { locale: fr })}
+                      const weeks: Date[][] = [];
+                      const d = new Date(calStart);
+                      while (d <= lastOfMonth) {
+                        const week: Date[] = [];
+                        for (let i = 0; i < 7; i++) {
+                          week.push(new Date(d));
+                          d.setDate(d.getDate() + 1);
+                        }
+                        weeks.push(week);
+                      }
+
+                      const sessionsByDate = new Map<string, UpcomingSession[]>();
+                      for (const s of client.upcomingSessions ?? []) {
+                        const arr = sessionsByDate.get(s.scheduledDate) ?? [];
+                        arr.push(s);
+                        sessionsByDate.set(s.scheduledDate, arr);
+                      }
+
+                      const todayStr = new Date().toISOString().split("T")[0];
+                      const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+                      const handleDayClick = (day: Date) => {
+                        if (!activeProgram?.startDate) return;
+                        const progStart = new Date(activeProgram.startDate);
+                        progStart.setHours(0, 0, 0, 0);
+                        const target = new Date(day);
+                        target.setHours(0, 0, 0, 0);
+                        const diff = Math.floor((target.getTime() - progStart.getTime()) / 86400000);
+                        if (diff < 0) return;
+                        const weekNumber = Math.floor(diff / 7) + 1;
+                        const dayNumber = (diff % 7) + 1;
+                        setAddSessionSlot({ weekNumber, dayNumber });
+                      };
+
+                      return (
+                        <div>
+                          <div className="grid grid-cols-7 gap-px mb-1">
+                            {DAY_HEADERS.map(h => (
+                              <div key={h} className="text-center text-[10px] font-mono text-muted-foreground uppercase py-1">
+                                {h}
                               </div>
-                              <div className="space-y-2">
-                                {sessions.map((session) => {
-                                  const sessionDate = parseISO(session.scheduledDate);
-                                  const isSessionToday = session.scheduledDate === today;
-                                  const isPastSession = session.scheduledDate < today;
+                            ))}
+                          </div>
+                          <div className="space-y-px">
+                            {weeks.map((week, wi) => (
+                              <div key={wi} className="grid grid-cols-7 gap-px">
+                                {week.map((day, di) => {
+                                  const dateStr = day.toISOString().split("T")[0];
+                                  const isCurrentMonth = day.getMonth() === month;
+                                  const isToday = dateStr === todayStr;
+                                  const isPast = dateStr < todayStr;
+                                  const daySessions = sessionsByDate.get(dateStr) ?? [];
+                                  const canAdd = !!activeProgram?.startDate && isCurrentMonth && !isPast;
 
                                   return (
                                     <div
-                                      key={session.sessionId}
+                                      key={di}
+                                      onClick={() => canAdd && handleDayClick(day)}
                                       className={cn(
-                                        "flex items-center justify-between p-2.5 rounded-lg border transition-colors",
-                                        session.isCompleted
-                                          ? "bg-primary/5 border-primary/20 opacity-70"
-                                          : isSessionToday
-                                          ? "bg-primary/10 border-primary/40"
-                                          : isPastSession && !session.isCompleted
-                                          ? "bg-destructive/5 border-destructive/20"
-                                          : "bg-background border-border hover:border-white/20"
+                                        "min-h-[64px] p-1 rounded-md transition-colors relative",
+                                        isCurrentMonth ? "bg-background" : "bg-transparent opacity-30",
+                                        isToday ? "ring-1 ring-primary/50 bg-primary/5" : "",
+                                        canAdd && daySessions.length === 0 ? "hover:bg-white/5 cursor-pointer group" : "",
+                                        !isCurrentMonth ? "pointer-events-none" : ""
                                       )}
                                     >
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className={cn(
-                                          "w-2 h-2 rounded-full shrink-0",
-                                          session.isCompleted ? "bg-primary" :
-                                          isSessionToday ? "bg-primary animate-pulse" :
-                                          isPastSession ? "bg-destructive" :
-                                          "bg-muted-foreground/40"
-                                        )} />
-                                        <div className="min-w-0">
-                                          <div className="text-xs font-medium text-white truncate">{session.sessionName}</div>
-                                          <div className="text-xs text-muted-foreground">
-                                            {format(sessionDate, 'EEE d MMM', { locale: fr })}
-                                            {session.estimatedDurationMin && (
-                                              <span className="ml-1.5 inline-flex items-center gap-0.5">
-                                                <Clock className="w-3 h-3" />{session.estimatedDurationMin}min
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
+                                      <div className={cn(
+                                        "text-[11px] font-mono mb-1 w-5 h-5 flex items-center justify-center rounded-full",
+                                        isToday ? "bg-primary text-black font-bold" :
+                                        isPast ? "text-muted-foreground" : "text-white"
+                                      )}>
+                                        {day.getDate()}
                                       </div>
-                                      <div className="text-right shrink-0 ml-2">
-                                        <span className={cn(
-                                          "text-xs px-1.5 py-0.5 rounded font-mono",
-                                          session.isCompleted ? "bg-primary/20 text-primary" :
-                                          isPastSession ? "bg-destructive/20 text-destructive" :
-                                          isSessionToday ? "bg-primary/30 text-primary font-semibold" :
-                                          "bg-white/5 text-muted-foreground"
-                                        )}>
-                                          {session.isCompleted ? "✓ Fait" :
-                                           isPastSession ? "Manqué" :
-                                           isSessionToday ? "Auj." : 
-                                           SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType}
-                                        </span>
+                                      <div className="space-y-0.5">
+                                        {daySessions.map(s => (
+                                          <div
+                                            key={s.sessionId}
+                                            onClick={e => { e.stopPropagation(); setSelectedCalSession(s); }}
+                                            className={cn(
+                                              "text-[9px] px-1 py-0.5 rounded truncate font-medium leading-tight cursor-pointer hover:opacity-80 transition-opacity",
+                                              s.isCompleted ? "bg-primary/20 text-primary" :
+                                              dateStr < todayStr ? "bg-destructive/20 text-destructive" :
+                                              dateStr === todayStr ? "bg-primary/30 text-primary" :
+                                              "bg-white/10 text-white"
+                                            )}
+                                            title={s.sessionName}
+                                          >
+                                            {s.isCompleted ? "✓ " : ""}{s.sessionName}
+                                          </div>
+                                        ))}
+                                        {canAdd && daySessions.length === 0 && (
+                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Plus className="w-3 h-3 text-primary mx-auto" />
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   );
                                 })}
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            ))}
+                          </div>
+                          {!activeProgram && (
+                            <p className="text-xs text-muted-foreground text-center mt-3 italic">
+                              Aucun programme actif — créez un programme pour planifier des séances.
+                            </p>
+                          )}
+                          {activeProgram && !activeProgram.startDate && (
+                            <p className="text-xs text-muted-foreground text-center mt-3 italic">
+                              Le programme n'a pas de date de début définie.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
 
+                    {/* Recent sessions */}
                     {client.recentSessions.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-border">
+                      <div className="mt-5 pt-4 border-t border-border">
                         <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
                           Séances récentes — Charges réelles vs prescrites
                         </div>
@@ -783,6 +844,80 @@ export default function ClientDetail() {
                   </CardContent>
                 )}
               </Card>
+
+              {/* Session info dialog — clicking existing calendar session */}
+              <Dialog open={!!selectedCalSession} onOpenChange={o => !o && setSelectedCalSession(null)}>
+                <DialogContent className="bg-card border-border max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="text-white font-display text-lg flex items-center gap-2">
+                      {selectedCalSession?.isCompleted ? (
+                        <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                      ) : selectedCalSession && selectedCalSession.scheduledDate < new Date().toISOString().split("T")[0] ? (
+                        <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+                      ) : (
+                        <Calendar className="w-5 h-5 text-accent shrink-0" />
+                      )}
+                      {selectedCalSession?.sessionName}
+                    </DialogTitle>
+                  </DialogHeader>
+                  {selectedCalSession && (
+                    <div className="space-y-3 py-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="w-4 h-4" />
+                        <span className="capitalize">
+                          {format(new Date(selectedCalSession.scheduledDate + "T12:00:00"), "EEEE d MMMM yyyy", { locale: fr })}
+                        </span>
+                      </div>
+                      {selectedCalSession.estimatedDurationMin && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          Durée estimée : <span className="text-white font-medium">{selectedCalSession.estimatedDurationMin} min</span>
+                        </div>
+                      )}
+                      <div className={cn(
+                        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium",
+                        selectedCalSession.isCompleted
+                          ? "text-primary border-primary/30 bg-primary/10"
+                          : selectedCalSession.scheduledDate < new Date().toISOString().split("T")[0]
+                          ? "text-destructive border-destructive/30 bg-destructive/10"
+                          : "text-accent border-accent/30 bg-accent/10"
+                      )}>
+                        {selectedCalSession.isCompleted ? "✓ Séance réalisée" :
+                         selectedCalSession.scheduledDate < new Date().toISOString().split("T")[0] ? "✗ Séance manquée" :
+                         "⏳ À venir"}
+                      </div>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    {activeProgram && (
+                      <Link href={`/programs/${activeProgram.id}`} onClick={() => setSelectedCalSession(null)}>
+                        <Button size="sm" variant="outline" className="border-border gap-1.5 text-muted-foreground hover:text-white">
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Modifier dans le programme
+                        </Button>
+                      </Link>
+                    )}
+                    <Button size="sm" onClick={() => setSelectedCalSession(null)} className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20">
+                      Fermer
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add session modal from calendar click */}
+              {addSessionSlot && activeProgram && (
+                <SessionModal
+                  programId={activeProgram.id}
+                  weekNumber={addSessionSlot.weekNumber}
+                  dayNumber={addSessionSlot.dayNumber}
+                  open={!!addSessionSlot}
+                  onClose={() => setAddSessionSlot(null)}
+                  onSaved={() => {
+                    setAddSessionSlot(null);
+                    refetch();
+                  }}
+                />
+              )}
             </div>
           </div>
         </>

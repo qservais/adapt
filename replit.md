@@ -91,6 +91,8 @@ Express 5 API with helmet, pino logging, rate-limiting (200 req/min general, 20/
 - `DELETE /api/coach/clients/:clientId` — remove athlete
 - `GET /api/coach/clients/:clientId/checkins` — athlete check-in history
 - `POST /api/coach/clients/:clientId/override` — override athlete mode
+- `GET /api/coach/dashboard` — operational dashboard (todayAthletes, upcomingSessions 7d, pastSessions 7d, recentCompleted, activeAlerts)
+- `GET /api/coach/calendar?year=YYYY&month=M` — all athletes' sessions for a given month (grouped by date)
 - `GET /api/coach/alerts` — get all active alerts
 - `PUT /api/coach/alerts/:alertId/resolve` — resolve alert
 - `GET /api/coach/invite-code` — get coach's invite code

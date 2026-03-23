@@ -14,7 +14,7 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
       .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete")));
 
     if (athletes.length === 0) {
-      res.json({ todayAthletes: [], weekSessions: [], recentCompleted: [] });
+      res.json({ todayAthletes: [], upcomingSessions: [], pastSessions: [], recentCompleted: [], activeAlerts: [] });
       return;
     }
 
@@ -60,21 +60,18 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
       };
     });
 
-    // This week's planned sessions from active programs
+    // Upcoming (today → +7 days) and past (-7 days → yesterday) planned sessions from active programs
     const now = new Date();
-    const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Mon
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - dayOfWeek);
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
+    const sevenDaysLater = new Date(now.getTime() + 7 * 86400000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const sevenDaysLaterStr = sevenDaysLater.toISOString().split("T")[0];
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
 
     const activePrograms = await db.select().from(programsTable)
       .where(eq(programsTable.isActive, true));
     const myPrograms = activePrograms.filter(p => athleteIds.includes(p.athleteId));
 
-    const weekSessions: Array<{
+    type SessionEntry = {
       athleteId: string;
       athleteName: string;
       sessionId: string;
@@ -83,7 +80,11 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
       scheduledDate: string;
       estimatedDurationMin: number | null;
       isCompleted: boolean;
-    }> = [];
+      isMissed: boolean;
+    };
+
+    const upcomingSessions: SessionEntry[] = [];
+    const pastSessions: SessionEntry[] = [];
 
     for (const program of myPrograms) {
       if (!program.startDate) continue;
@@ -106,22 +107,55 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
         const sessionDate = new Date(programStart);
         sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
         sessionDate.setHours(0, 0, 0, 0);
+        const dateStr = sessionDate.toISOString().split("T")[0];
+        const isCompleted = completedIds.has(session.id);
 
-        if (sessionDate >= weekStart && sessionDate <= weekEnd) {
-          weekSessions.push({
-            athleteId: athlete.id,
-            athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
-            sessionId: session.id,
-            sessionName: session.name,
-            sessionType: session.type,
-            scheduledDate: sessionDate.toISOString().split("T")[0],
-            estimatedDurationMin: session.estimatedDurationMin,
-            isCompleted: completedIds.has(session.id),
-          });
+        const entry: SessionEntry = {
+          athleteId: athlete.id,
+          athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
+          sessionId: session.id,
+          sessionName: session.name,
+          sessionType: session.type,
+          scheduledDate: dateStr,
+          estimatedDurationMin: session.estimatedDurationMin,
+          isCompleted,
+          isMissed: dateStr < today && !isCompleted,
+        };
+
+        if (dateStr >= today && dateStr <= sevenDaysLaterStr) {
+          upcomingSessions.push(entry);
+        } else if (dateStr >= sevenDaysAgoStr && dateStr < today) {
+          pastSessions.push(entry);
         }
       }
     }
-    weekSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+    upcomingSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+    pastSessions.sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate));
+
+    // Active (unresolved) alerts for this coach's athletes
+    const activeAlerts = athleteIds.length === 0 ? [] : await db.select({
+      id: alertsTable.id,
+      athleteId: alertsTable.athleteId,
+      type: alertsTable.type,
+      priority: alertsTable.priority,
+      message: alertsTable.message,
+      createdAt: alertsTable.createdAt,
+    }).from(alertsTable)
+      .where(and(
+        inArray(alertsTable.athleteId, athleteIds),
+        eq(alertsTable.isResolved, false),
+      ))
+      .orderBy(desc(alertsTable.createdAt))
+      .limit(5);
+
+    const activeAlertsWithName = activeAlerts.map(a => {
+      const athlete = athletes.find(x => x.id === a.athleteId);
+      return {
+        ...a,
+        createdAt: a.createdAt?.toISOString() ?? null,
+        athleteName: athlete ? `${athlete.firstName} ${athlete.lastName ?? ""}`.trim() : "Athlète",
+      };
+    });
 
     // Last 5 completed sessions — scoped to this coach's athletes at SQL level
     const myLogs = athleteIds.length === 0 ? [] : await db.select({
@@ -158,7 +192,99 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
       };
     });
 
-    res.json({ todayAthletes, weekSessions, recentCompleted });
+    res.json({ todayAthletes, upcomingSessions, pastSessions, recentCompleted, activeAlerts: activeAlertsWithName });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+// Calendar endpoint: returns all sessions for all athletes for a given month
+router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const year = parseInt(req.query.year as string);
+    const month = parseInt(req.query.month as string); // 1-based
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+      res.status(400).json({ error: { code: "INVALID_PARAMS", message: "year and month (1-12) required" } });
+      return;
+    }
+
+    const athletes = await db.select().from(usersTable)
+      .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete")));
+
+    if (athletes.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const athleteIds = athletes.map(a => a.id);
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0); // last day of month
+    const monthStartStr = monthStart.toISOString().split("T")[0];
+    const monthEndStr = monthEnd.toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const activePrograms = await db.select().from(programsTable)
+      .where(eq(programsTable.isActive, true));
+    const myPrograms = activePrograms.filter(p => athleteIds.includes(p.athleteId));
+
+    const sessionsByDate = new Map<string, Array<{
+      athleteId: string;
+      athleteName: string;
+      sessionId: string;
+      sessionName: string;
+      sessionType: string;
+      estimatedDurationMin: number | null;
+      isCompleted: boolean;
+      isMissed: boolean;
+    }>>();
+
+    for (const program of myPrograms) {
+      if (!program.startDate) continue;
+      const athlete = athletes.find(a => a.id === program.athleteId);
+      if (!athlete) continue;
+
+      const programSessions = await db.select().from(sessionsTable)
+        .where(eq(sessionsTable.programId, program.id));
+      const programStart = new Date(program.startDate);
+
+      const completedLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
+        .from(sessionLogsTable)
+        .where(and(
+          eq(sessionLogsTable.athleteId, athlete.id),
+          isNotNull(sessionLogsTable.completedAt),
+        ));
+      const completedIds = new Set(completedLogs.filter(l => l.sessionId).map(l => l.sessionId));
+
+      for (const session of programSessions) {
+        const sessionDate = new Date(programStart);
+        sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
+        sessionDate.setHours(0, 0, 0, 0);
+        const dateStr = sessionDate.toISOString().split("T")[0];
+
+        if (dateStr >= monthStartStr && dateStr <= monthEndStr) {
+          const isCompleted = completedIds.has(session.id);
+          const arr = sessionsByDate.get(dateStr) ?? [];
+          arr.push({
+            athleteId: athlete.id,
+            athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
+            sessionId: session.id,
+            sessionName: session.name,
+            sessionType: session.type,
+            estimatedDurationMin: session.estimatedDurationMin,
+            isCompleted,
+            isMissed: dateStr < todayStr && !isCompleted,
+          });
+          sessionsByDate.set(dateStr, arr);
+        }
+      }
+    }
+
+    const result = Array.from(sessionsByDate.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, sessions]) => ({ date, sessions }));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
