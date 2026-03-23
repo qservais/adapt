@@ -681,15 +681,20 @@ export default function ClientDetail() {
                                             key={s.sessionId}
                                             onClick={e => { e.stopPropagation(); setSelectedCalSession(s); }}
                                             className={cn(
-                                              "text-[9px] px-1 py-0.5 rounded truncate font-medium leading-tight cursor-pointer hover:opacity-80 transition-opacity",
+                                              "text-[9px] px-1 py-0.5 rounded font-medium leading-tight cursor-pointer hover:opacity-80 transition-opacity",
                                               s.isCompleted ? "bg-primary/20 text-primary" :
                                               dateStr < todayStr ? "bg-destructive/20 text-destructive" :
                                               dateStr === todayStr ? "bg-primary/30 text-primary" :
                                               "bg-white/10 text-white"
                                             )}
-                                            title={s.sessionName}
+                                            title={`${s.sessionName}${s.sessionType ? ` · ${SESSION_TYPE_LABELS[s.sessionType] ?? s.sessionType}` : ""}`}
                                           >
-                                            {s.isCompleted ? "✓ " : ""}{s.sessionName}
+                                            <div className="truncate">{s.isCompleted ? "✓ " : ""}{s.sessionName}</div>
+                                            {s.sessionType && (
+                                              <div className="text-[8px] opacity-60 font-mono truncate">
+                                                {SESSION_TYPE_LABELS[s.sessionType] ?? s.sessionType}
+                                              </div>
+                                            )}
                                           </div>
                                         ))}
                                         {canAdd && daySessions.length === 0 && (

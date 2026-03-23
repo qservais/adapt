@@ -611,15 +611,28 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
         </div>
 
         {expanded && exercises.length > 0 && (
-          <div className="border-t border-border px-2 pb-2 pt-1.5 space-y-1">
+          <div className="border-t border-border px-2 pb-2 pt-1.5 space-y-1.5">
             {exercises.map((ex, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <Dumbbell className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-                <span className="text-[10px] text-white truncate flex-1">{ex.exerciseName}</span>
-                <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
-                  {ex.sets}×{ex.reps || "—"}
-                  {ex.nominalLoadKg ? ` @${ex.nominalLoadKg}kg` : ""}
-                </span>
+              <div key={i} className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <Dumbbell className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                  <span className="text-[10px] text-white truncate flex-1">{ex.exerciseName}</span>
+                  <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
+                    {ex.sets}×{ex.reps || "—"}
+                    {ex.nominalLoadKg ? ` @${ex.nominalLoadKg}kg` : ""}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 pl-4">
+                  {ex.restSeconds != null && ex.restSeconds > 0 && (
+                    <span className="text-[9px] text-muted-foreground font-mono">
+                      <Clock className="w-2 h-2 inline mr-0.5" />
+                      {ex.restSeconds}s repos
+                    </span>
+                  )}
+                  {ex.coachCue && (
+                    <span className="text-[9px] text-primary/70 italic truncate">{ex.coachCue}</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
