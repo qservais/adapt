@@ -1,4 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor,
+  useSensor, useSensors, DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, sortableKeyboardCoordinates, useSortable,
+  verticalListSortingStrategy, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   useAddProgramSession,
   useUpdateProgramSession,
@@ -65,6 +74,16 @@ export const SESSION_TYPE_LABELS: Record<string, string> = {
   conditioning: "Conditionnement",
 };
 
+export const SESSION_TYPE_COLORS: Record<string, { dot: string; text: string; bg: string }> = {
+  strength:            { dot: "bg-[#00F0FF]",  text: "text-[#00F0FF]",  bg: "bg-[#00F0FF]/10" },
+  cardio:              { dot: "bg-[#FF6B6B]",  text: "text-[#FF6B6B]",  bg: "bg-[#FF6B6B]/10" },
+  hybrid:              { dot: "bg-[#A855F7]",  text: "text-[#A855F7]",  bg: "bg-[#A855F7]/10" },
+  mobility:            { dot: "bg-[#00F5A0]",  text: "text-[#00F5A0]",  bg: "bg-[#00F5A0]/10" },
+  athletic_development:{ dot: "bg-[#FFB800]",  text: "text-[#FFB800]",  bg: "bg-[#FFB800]/10" },
+  running:             { dot: "bg-[#FF8C42]",  text: "text-[#FF8C42]",  bg: "bg-[#FF8C42]/10" },
+  conditioning:        { dot: "bg-[#EC4899]",  text: "text-[#EC4899]",  bg: "bg-[#EC4899]/10" },
+};
+
 export const MODES = ["performance", "normal", "adapt", "recovery"] as const;
 export const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -104,6 +123,7 @@ export interface ExerciseRow {
 }
 
 export interface BlockDraft {
+  id: string;
   type: BlockType;
   orderIndex: number;
   name: string;
@@ -122,6 +142,7 @@ export interface SessionDraft {
 }
 
 export const emptyBlock = (orderIndex: number, type: BlockType = "strength"): BlockDraft => ({
+  id: Math.random().toString(36).slice(2, 8),
   type,
   orderIndex,
   name: BLOCK_TYPE_META[type].label,
@@ -177,6 +198,7 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
     blocks = serverBlocks
       .sort((a, b) => a.orderIndex - b.orderIndex)
       .map((b) => ({
+        id: b.id,
         type: b.type as BlockType,
         orderIndex: b.orderIndex,
         name: b.name ?? BLOCK_TYPE_META[b.type as BlockType]?.label ?? b.type,
@@ -187,6 +209,7 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
       }));
   } else if (noBlockExercises.length > 0) {
     blocks = [{
+      id: Math.random().toString(36).slice(2, 8),
       type: "strength",
       orderIndex: 0,
       name: "Force",
@@ -368,17 +391,24 @@ interface ExerciseRowCardProps {
   ex: ExerciseRow;
   idx: number;
   total: number;
+  blockType: BlockType;
   onChange: (patch: Partial<ExerciseRow>) => void;
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
   canSuperset?: boolean;
-  nextEx?: ExerciseRow;
   onLinkSuperset?: () => void;
+  onUnlinkSuperset?: () => void;
 }
 
-function ExerciseRowCard({ ex, idx, total, onChange, onRemove, onMove, canSuperset, nextEx, onLinkSuperset }: ExerciseRowCardProps) {
+function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove, canSuperset, onLinkSuperset, onUnlinkSuperset }: ExerciseRowCardProps) {
   const isInSuperset = !!ex.supersetGroup;
   const label = ex.supersetLabel || "";
+  const isSimple = blockType === "warm_up" || blockType === "cool_down";
+  const isCore = blockType === "core";
+  const isConditioning = blockType === "conditioning";
+
+  const fieldCls = "h-6 text-xs bg-background border-border mt-0.5 px-2";
+  const labelCls = "text-[9px] text-muted-foreground uppercase tracking-wider";
 
   return (
     <div className={cn(
@@ -394,11 +424,15 @@ function ExerciseRowCard({ ex, idx, total, onChange, onRemove, onMove, canSupers
         )}
         <span className="font-medium text-white truncate flex-1">{ex.exerciseName}</span>
         <div className="flex items-center gap-0.5 shrink-0">
-          {canSuperset && !isInSuperset && (
-            <button type="button" onClick={onLinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title="Créer superset">
+          {isInSuperset ? (
+            <button type="button" onClick={onUnlinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title="Dissocier superset">
+              <LinkIcon className="w-3 h-3 text-[#A855F7]/60" />
+            </button>
+          ) : (canSuperset && (
+            <button type="button" onClick={onLinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title="Créer superset avec suivant">
               <LinkIcon className="w-3 h-3 text-[#A855F7]" />
             </button>
-          )}
+          ))}
           <button type="button" onClick={() => onMove(-1)} disabled={idx === 0} className="p-0.5 rounded hover:bg-white/10 disabled:opacity-30">
             <ChevronUp className="w-3 h-3 text-muted-foreground" />
           </button>
@@ -410,34 +444,105 @@ function ExerciseRowCard({ ex, idx, total, onChange, onRemove, onMove, canSupers
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-1.5">
-        <div>
-          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Sets</label>
-          <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })}
-            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
+
+      {isSimple ? (
+        <div className="grid grid-cols-2 gap-1.5">
+          <div>
+            <label className={labelCls}>Durée (s)</label>
+            <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })}
+              className={fieldCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Indication</label>
+            <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
+              placeholder="Respiration, amplitude..." className={fieldCls} />
+          </div>
         </div>
-        <div>
-          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Reps</label>
-          <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="8-10"
-            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
-        </div>
-        <div>
-          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">kg</label>
-          <Input type="number" min={0} value={ex.loadKg} onChange={e => onChange({ loadKg: +e.target.value })}
-            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
-        </div>
-        <div>
-          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Repos(s)</label>
-          <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })}
-            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
-        </div>
-      </div>
-      <div>
-        <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Indication coach</label>
-        <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
-          placeholder="Gainage serré, tempo 3-1-1..."
-          className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
-      </div>
+      ) : isCore ? (
+        <>
+          <div className="grid grid-cols-3 gap-1.5">
+            <div>
+              <label className={labelCls}>Sets</label>
+              <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Durée / Reps</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="30s / 15" className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Repos (s)</label>
+              <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Indication coach</label>
+            <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
+              placeholder="Gainage serré, respiration..." className={fieldCls} />
+          </div>
+        </>
+      ) : isConditioning ? (
+        <>
+          <div className="grid grid-cols-3 gap-1.5">
+            <div>
+              <label className={labelCls}>Rds / Sets</label>
+              <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Dose / Reps</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="10 / 30s" className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Repos (s)</label>
+              <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Indication coach</label>
+            <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
+              placeholder="Intensité, technique..." className={fieldCls} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-4 gap-1.5">
+            <div>
+              <label className={labelCls}>Sets</label>
+              <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Reps</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="8-10" className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>kg</label>
+              <Input type="number" min={0} value={ex.loadKg} onChange={e => onChange({ loadKg: +e.target.value })} className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Repos (s)</label>
+              <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Indication coach</label>
+            <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
+              placeholder="Gainage serré, tempo 3-1-1..." className={fieldCls} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+type DragHandleProps = React.HTMLAttributes<HTMLElement>;
+function SortableBlockItem({ id, children }: { id: string; children: (handleProps: DragHandleProps) => React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={isDragging ? "opacity-50 z-10" : undefined}
+    >
+      {children({ ...listeners, ...attributes })}
     </div>
   );
 }
@@ -449,6 +554,21 @@ interface BlockEditorProps {
 
 export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
   const [pickerOpenIdx, setPickerOpenIdx] = useState<number | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleBlockDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = blocks.findIndex(b => b.id === active.id);
+    const newIdx = blocks.findIndex(b => b.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const reordered = arrayMove(blocks, oldIdx, newIdx);
+    onChange(reordered.map((b, i) => ({ ...b, orderIndex: i })));
+  }, [blocks, onChange]);
 
   const updateBlock = (bIdx: number, patch: Partial<BlockDraft>) => {
     onChange(blocks.map((b, i) => i === bIdx ? { ...b, ...patch } : b));
@@ -463,14 +583,6 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
   const removeBlock = (bIdx: number) => {
     onChange(blocks.filter((_, i) => i !== bIdx).map((b, i) => ({ ...b, orderIndex: i })));
     if (pickerOpenIdx === bIdx) setPickerOpenIdx(null);
-  };
-
-  const moveBlock = (bIdx: number, dir: -1 | 1) => {
-    const next = [...blocks];
-    const target = bIdx + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[bIdx], next[target]] = [next[target], next[bIdx]];
-    onChange(next.map((b, i) => ({ ...b, orderIndex: i })));
   };
 
   const addExercise = (bIdx: number, ex: ExerciseData) => {
@@ -536,143 +648,142 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
   };
 
   return (
-    <div className="space-y-3">
-      {blocks.map((block, bIdx) => {
-        const meta = BLOCK_TYPE_META[block.type] || BLOCK_TYPE_META.strength;
-        const Icon = meta.icon;
-        const isOpen = !block.collapsed;
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleBlockDragEnd}>
+      <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3">
+          {blocks.map((block, bIdx) => {
+            const meta = BLOCK_TYPE_META[block.type] || BLOCK_TYPE_META.strength;
+            const Icon = meta.icon;
+            const isOpen = !block.collapsed;
 
-        return (
-          <div key={bIdx} className={cn("rounded-xl border overflow-hidden transition-colors", meta.border, meta.bg)}>
-            {/* Block header */}
-            <div className="flex items-center gap-2 px-3 py-2">
-              <Icon className={cn("w-4 h-4 shrink-0", meta.color)} />
-              <select
-                value={block.type}
-                onChange={e => updateBlock(bIdx, { type: e.target.value as BlockType, name: BLOCK_TYPE_META[e.target.value as BlockType]?.label || block.name })}
-                className={cn("bg-transparent text-xs font-semibold border-none outline-none cursor-pointer", meta.color)}
-              >
-                {BLOCK_TYPES.map(bt => (
-                  <option key={bt} value={bt} className="text-white bg-[#1A1A1A]">{BLOCK_TYPE_META[bt].label}</option>
-                ))}
-              </select>
-              <Input
-                value={block.name}
-                onChange={e => updateBlock(bIdx, { name: e.target.value })}
-                placeholder="Nom du bloc..."
-                className="h-6 text-xs bg-transparent border-transparent hover:border-border focus:border-border focus:bg-background/80 px-2 flex-1 min-w-0 transition-colors"
-              />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    min={1}
-                    value={block.estimatedDurationMin}
-                    onChange={e => updateBlock(bIdx, { estimatedDurationMin: +e.target.value })}
-                    className="h-6 w-12 text-xs bg-background/60 border-border px-1 text-center"
-                  />
-                  <span className="text-[10px] text-muted-foreground">min</span>
-                </div>
-                {block.type === "conditioning" && (
-                  <select
-                    value={block.conditioningFormat || ""}
-                    onChange={e => updateBlock(bIdx, { conditioningFormat: e.target.value || undefined })}
-                    className="h-6 bg-background/60 border border-border rounded text-[10px] text-white px-1"
-                  >
-                    <option value="">Format</option>
-                    {CONDITIONING_FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                  </select>
-                )}
-                <button type="button" onClick={() => moveBlock(bIdx, -1)} disabled={bIdx === 0}
-                  className="p-0.5 rounded hover:bg-white/10 disabled:opacity-20 transition-colors">
-                  <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                </button>
-                <button type="button" onClick={() => moveBlock(bIdx, 1)} disabled={bIdx === blocks.length - 1}
-                  className="p-0.5 rounded hover:bg-white/10 disabled:opacity-20 transition-colors">
-                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                </button>
-                <button type="button" onClick={() => updateBlock(bIdx, { collapsed: isOpen })}
-                  className="p-0.5 rounded hover:bg-white/10 transition-colors">
-                  {isOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
-                </button>
-                <button type="button" onClick={() => removeBlock(bIdx)}
-                  className="p-0.5 rounded hover:bg-destructive/20 transition-colors">
-                  <Trash2 className="w-3 h-3 text-destructive" />
-                </button>
-              </div>
-            </div>
-
-            {isOpen && (
-              <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
-                {/* Exercise list */}
-                <div className="space-y-1.5">
-                  {block.exercises.map((ex, eIdx) => (
-                    <ExerciseRowCard
-                      key={eIdx}
-                      ex={ex}
-                      idx={eIdx}
-                      total={block.exercises.length}
-                      onChange={patch => updateExercise(bIdx, eIdx, patch)}
-                      onRemove={() => removeExercise(bIdx, eIdx)}
-                      onMove={dir => moveExercise(bIdx, eIdx, dir)}
-                      canSuperset={
-                        (block.type === "strength" || block.type === "power") &&
-                        eIdx < block.exercises.length - 1 &&
-                        !block.exercises[eIdx + 1].supersetGroup
-                      }
-                      nextEx={block.exercises[eIdx + 1]}
-                      onLinkSuperset={() =>
-                        ex.supersetGroup ? unlinkSuperset(bIdx, eIdx) : linkSuperset(bIdx, eIdx)
-                      }
-                    />
-                  ))}
-                </div>
-
-                {/* Picker toggle */}
-                {pickerOpenIdx === bIdx ? (
-                  <div className="border border-dashed border-border rounded-lg p-2.5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Ajouter un exercice</p>
-                      <button type="button" onClick={() => setPickerOpenIdx(null)} className="p-0.5 rounded hover:bg-white/10">
-                        <X className="w-3 h-3 text-muted-foreground" />
-                      </button>
+            return (
+              <SortableBlockItem key={block.id} id={block.id}>
+                {(dragHandleProps) => (
+                  <div className={cn("rounded-xl border overflow-hidden transition-colors", meta.border, meta.bg)}>
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <div {...dragHandleProps} className="cursor-grab touch-none p-0.5" title="Glisser pour réordonner">
+                        <GripVertical className={cn("w-4 h-4 shrink-0", meta.color, "opacity-60")} />
+                      </div>
+                      <Icon className={cn("w-4 h-4 shrink-0", meta.color)} />
+                      <select
+                        value={block.type}
+                        onChange={e => updateBlock(bIdx, { type: e.target.value as BlockType, name: BLOCK_TYPE_META[e.target.value as BlockType]?.label || block.name })}
+                        className={cn("bg-transparent text-xs font-semibold border-none outline-none cursor-pointer", meta.color)}
+                      >
+                        {BLOCK_TYPES.map(bt => (
+                          <option key={bt} value={bt} className="text-white bg-[#1A1A1A]">{BLOCK_TYPE_META[bt].label}</option>
+                        ))}
+                      </select>
+                      <Input
+                        value={block.name}
+                        onChange={e => updateBlock(bIdx, { name: e.target.value })}
+                        placeholder="Nom du bloc..."
+                        className="h-6 text-xs bg-transparent border-transparent hover:border-border focus:border-border focus:bg-background/80 px-2 flex-1 min-w-0 transition-colors"
+                      />
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            min={1}
+                            value={block.estimatedDurationMin}
+                            onChange={e => updateBlock(bIdx, { estimatedDurationMin: +e.target.value })}
+                            className="h-6 w-12 text-xs bg-background/60 border-border px-1 text-center"
+                          />
+                          <span className="text-[10px] text-muted-foreground">min</span>
+                        </div>
+                        {block.type === "conditioning" && (
+                          <select
+                            value={block.conditioningFormat || ""}
+                            onChange={e => updateBlock(bIdx, { conditioningFormat: e.target.value || undefined })}
+                            className="h-6 bg-background/60 border border-border rounded text-[10px] text-white px-1"
+                          >
+                            <option value="">Format</option>
+                            {CONDITIONING_FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                          </select>
+                        )}
+                        <button type="button" onClick={() => updateBlock(bIdx, { collapsed: isOpen })}
+                          className="p-0.5 rounded hover:bg-white/10 transition-colors">
+                          {isOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+                        </button>
+                        <button type="button" onClick={() => removeBlock(bIdx)}
+                          className="p-0.5 rounded hover:bg-destructive/20 transition-colors">
+                          <Trash2 className="w-3 h-3 text-destructive" />
+                        </button>
+                      </div>
                     </div>
-                    <ExercisePicker
-                      compact
-                      onAdd={ex => { addExercise(bIdx, ex); setPickerOpenIdx(null); }}
-                    />
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setPickerOpenIdx(bIdx)}
-                    className={cn(
-                      "w-full flex items-center justify-center gap-1.5 py-1.5 text-xs rounded-lg border border-dashed transition-colors",
-                      meta.border.replace("border-", "border-"),
-                      meta.color,
-                      "hover:opacity-80"
-                    )}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Ajouter un exercice
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
 
-      <button
-        type="button"
-        onClick={addBlock}
-        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-border text-muted-foreground hover:text-white hover:border-white/20 text-xs transition-colors"
-      >
-        <Plus className="w-4 h-4" />
-        Ajouter un bloc
-      </button>
-    </div>
+                    {isOpen && (
+                      <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
+                        <div className="space-y-1.5">
+                          {block.exercises.map((ex, eIdx) => {
+                            const supportsSuperset = block.type === "strength" || block.type === "power";
+                            const canLink = supportsSuperset && eIdx < block.exercises.length - 1 && !block.exercises[eIdx + 1]?.supersetGroup;
+                            return (
+                              <ExerciseRowCard
+                                key={eIdx}
+                                ex={ex}
+                                idx={eIdx}
+                                total={block.exercises.length}
+                                blockType={block.type}
+                                onChange={patch => updateExercise(bIdx, eIdx, patch)}
+                                onRemove={() => removeExercise(bIdx, eIdx)}
+                                onMove={dir => moveExercise(bIdx, eIdx, dir)}
+                                canSuperset={canLink}
+                                onLinkSuperset={() => linkSuperset(bIdx, eIdx)}
+                                onUnlinkSuperset={() => unlinkSuperset(bIdx, eIdx)}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {pickerOpenIdx === bIdx ? (
+                          <div className="border border-dashed border-border rounded-lg p-2.5 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Ajouter un exercice</p>
+                              <button type="button" onClick={() => setPickerOpenIdx(null)} className="p-0.5 rounded hover:bg-white/10">
+                                <X className="w-3 h-3 text-muted-foreground" />
+                              </button>
+                            </div>
+                            <ExercisePicker
+                              compact
+                              onAdd={ex => { addExercise(bIdx, ex); setPickerOpenIdx(null); }}
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setPickerOpenIdx(bIdx)}
+                            className={cn(
+                              "w-full flex items-center justify-center gap-1.5 py-1.5 text-xs rounded-lg border border-dashed transition-colors",
+                              meta.border,
+                              meta.color,
+                              "hover:opacity-80"
+                            )}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Ajouter un exercice
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SortableBlockItem>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={addBlock}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-border text-muted-foreground hover:text-white hover:border-white/20 text-xs transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter un bloc
+          </button>
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -921,6 +1032,7 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
 
   const normalVariant = session.variants.find((v) => v.mode === "normal");
   const exercises = normalVariant?.exercises ?? [];
+  const typeColor = SESSION_TYPE_COLORS[session.type] ?? SESSION_TYPE_COLORS.strength;
 
   return (
     <>
@@ -928,10 +1040,11 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
         "group w-full rounded-lg border bg-card transition-all relative overflow-hidden",
         expanded ? "border-white/20" : "border-border hover:border-white/20"
       )}>
-        <div className="p-2 cursor-pointer" onClick={() => setEditOpen(true)}>
+        <div className={cn("absolute top-0 left-0 w-0.5 h-full", typeColor.dot)} />
+        <div className="p-2 pl-3 cursor-pointer" onClick={() => setEditOpen(true)}>
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
           <p className="text-xs font-semibold text-white truncate leading-tight mb-1 pr-5">{session.name}</p>
-          <p className="text-[10px] font-mono text-muted-foreground capitalize mb-1.5">
+          <p className={cn("text-[10px] font-mono capitalize mb-1.5", typeColor.text)}>
             {SESSION_TYPE_LABELS[session.type] ?? session.type}
           </p>
           <div className="flex items-center justify-between gap-1">

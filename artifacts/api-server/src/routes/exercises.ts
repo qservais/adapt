@@ -19,7 +19,10 @@ const exerciseResponseFields = {
 
 router.get("/exercises", authenticate, async (req, res) => {
   try {
-    const exercises = await db.select(exerciseResponseFields).from(exercisesTable);
+    const coachId = req.user!.userId;
+    const exercises = await db.select(exerciseResponseFields)
+      .from(exercisesTable)
+      .where(eq(exercisesTable.createdBy, coachId));
 
     let filtered = exercises;
     if (req.query["category"]) {
