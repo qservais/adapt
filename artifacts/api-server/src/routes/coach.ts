@@ -76,7 +76,10 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
 
       const completedLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
         .from(sessionLogsTable)
-        .where(eq(sessionLogsTable.athleteId, athlete.id));
+        .where(and(
+          eq(sessionLogsTable.athleteId, athlete.id),
+          isNotNull(sessionLogsTable.completedAt),
+        ));
       const completedIds = new Set(completedLogs.filter(l => l.sessionId).map(l => l.sessionId));
 
       for (const session of programSessions) {
