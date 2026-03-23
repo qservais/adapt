@@ -33,9 +33,10 @@ import { GradientButton } from "@/components/ui/GradientButton";
 
 const { width } = Dimensions.get("window");
 
+type FeatherIconName = keyof typeof Feather.glyphMap;
 type Difficulty = "too_easy" | "well_calibrated" | "too_hard";
 
-const DIFFICULTY_OPTIONS: { key: Difficulty; label: string; icon: string; color: string }[] = [
+const DIFFICULTY_OPTIONS: { key: Difficulty; label: string; icon: FeatherIconName; color: string }[] = [
   { key: "too_easy", label: "Trop facile", icon: "thumbs-up", color: COLORS.cyan },
   { key: "well_calibrated", label: "Parfait", icon: "check-circle", color: COLORS.green },
   { key: "too_hard", label: "Trop dur", icon: "alert-triangle", color: COLORS.red },
@@ -298,7 +299,7 @@ export default function SessionCompleteScreen() {
                 ]}
               >
                 <Feather
-                  name={opt.icon as any}
+                  name={opt.icon}
                   size={13}
                   color={difficulty === opt.key ? opt.color : COLORS.textMuted}
                 />

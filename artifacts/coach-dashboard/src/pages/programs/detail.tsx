@@ -547,16 +547,24 @@ function DraggableSession({ session, children }: { session: SessionWithVariants;
   );
 }
 
-function DroppableDay({ id, isToday, children }: { id: string; isToday?: boolean; children: React.ReactNode }) {
+function DroppableDay({ id, isToday, compact, children }: { id: string; isToday?: boolean; compact?: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div
       ref={setNodeRef}
-      className={`space-y-1.5 min-h-[40px] rounded-md p-0.5 transition-colors ${isOver ? "ring-1 ring-primary/50 bg-primary/5" : ""} ${isToday ? "ring-1 ring-cyan-400/30" : ""}`}
+      className={
+        compact
+          ? `p-1 space-y-0.5 border-l border-border/20 min-h-[40px] transition-colors ${isTodayCell(isToday)} ${isOver ? "ring-1 ring-primary/50 bg-primary/5" : ""}`
+          : `space-y-1.5 min-h-[40px] rounded-md p-0.5 transition-colors ${isOver ? "ring-1 ring-primary/50 bg-primary/5" : ""} ${isToday ? "ring-1 ring-cyan-400/30" : ""}`
+      }
     >
       {children}
     </div>
   );
+}
+
+function isTodayCell(isToday?: boolean): string {
+  return isToday ? "bg-cyan-400/10" : "";
 }
 
 export default function ProgramDetail() {
@@ -949,10 +957,11 @@ export default function ProgramDetail() {
           </div>
         </div>
 
-        {/* WEEK VIEW */}
-        {viewMode === "week" && (
-          <div className="p-3">
-            <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        {/* WEEK + MONTH VIEWS — shared DndContext */}
+        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          {/* WEEK VIEW */}
+          {viewMode === "week" && (
+            <div className="p-3">
               <div className="grid grid-cols-7 gap-1.5">
                 {DAY_NAMES.map((dayLabel, idx) => {
                   const dayNumber = idx + 1;
@@ -990,84 +999,83 @@ export default function ProgramDetail() {
                   );
                 })}
               </div>
-              <DragOverlay>
-                {draggingSession && (
-                  <div className="px-2.5 py-1.5 rounded-lg bg-card border border-primary/60 text-xs font-medium text-white shadow-xl opacity-95 cursor-grabbing max-w-[120px] truncate">
-                    {draggingSession.name}
-                  </div>
-                )}
-              </DragOverlay>
-            </DndContext>
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* MONTH VIEW */}
-        {viewMode === "month" && (
-          <div className="overflow-x-auto">
-            <div className="min-w-[700px]">
-              {/* Header */}
-              <div className="grid grid-cols-8 border-b border-border bg-white/[0.02]">
-                <div className="px-3 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">Sem.</div>
-                {DAY_NAMES.map(d => (
-                  <div key={d} className="px-1 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">{d}</div>
-                ))}
-              </div>
-              {/* Week rows */}
-              <div className="divide-y divide-border/30">
-                {weeks.map(week => {
-                  const isCurrentWeekRow = !!(todayInfo && todayInfo.week === week);
-                  return (
-                    <div key={week} className={`grid grid-cols-8 min-h-[80px] ${isCurrentWeekRow ? "bg-cyan-400/[0.03]" : ""}`}>
-                      {/* Week number */}
-                      <div
-                        className="px-3 py-2 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
-                        onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
-                        title="Passer à cette semaine"
-                      >
-                        <span className={`text-xs font-display transition-colors ${isCurrentWeekRow ? "text-cyan-400" : "text-muted-foreground hover:text-primary"}`}>
-                          S{week}{isCurrentWeekRow ? " •" : ""}
-                        </span>
+          {/* MONTH VIEW */}
+          {viewMode === "month" && (
+            <div className="overflow-x-auto">
+              <div className="min-w-[700px]">
+                {/* Header */}
+                <div className="grid grid-cols-8 border-b border-border bg-white/[0.02]">
+                  <div className="px-3 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">Sem.</div>
+                  {DAY_NAMES.map(d => (
+                    <div key={d} className="px-1 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">{d}</div>
+                  ))}
+                </div>
+                {/* Week rows */}
+                <div className="divide-y divide-border/30">
+                  {weeks.map(week => {
+                    const isCurrentWeekRow = !!(todayInfo && todayInfo.week === week);
+                    return (
+                      <div key={week} className={`grid grid-cols-8 min-h-[80px] ${isCurrentWeekRow ? "bg-cyan-400/[0.03]" : ""}`}>
+                        {/* Week number */}
+                        <div
+                          className="px-3 py-2 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
+                          onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
+                          title="Passer à cette semaine"
+                        >
+                          <span className={`text-xs font-display transition-colors ${isCurrentWeekRow ? "text-cyan-400" : "text-muted-foreground hover:text-primary"}`}>
+                            S{week}{isCurrentWeekRow ? " •" : ""}
+                          </span>
+                        </div>
+                        {/* Days */}
+                        {DAY_NAMES.map((_, dayIdx) => {
+                          const dayNumber = dayIdx + 1;
+                          const daySessions = sessionMap.get(`${week}-${dayNumber}`) ?? [];
+                          const isTodayCell = !!(todayInfo && todayInfo.week === week && todayInfo.dayNumber === dayNumber);
+                          return (
+                            <DroppableDay key={dayNumber} id={`cell-${week}-${dayNumber}`} isToday={isTodayCell} compact>
+                              {daySessions.map(session => (
+                                <DraggableSession key={session.id} session={session}>
+                                  <div
+                                    onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
+                                    className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-mono leading-tight cursor-grab hover:bg-primary/25 transition-colors truncate"
+                                    title={session.name}
+                                  >
+                                    {session.name}
+                                  </div>
+                                </DraggableSession>
+                              ))}
+                              {daySessions.length === 0 && copiedSession && (
+                                <button
+                                  type="button"
+                                  onClick={makePasteHandler(week, dayNumber)}
+                                  className="w-full h-6 rounded border border-dashed border-accent/30 hover:border-accent hover:bg-accent/10 transition-all flex items-center justify-center"
+                                  title={`Coller « ${copiedSession.name} »`}
+                                >
+                                  <ClipboardPaste className="w-2.5 h-2.5 text-accent/60 hover:text-accent" />
+                                </button>
+                              )}
+                            </DroppableDay>
+                          );
+                        })}
                       </div>
-                      {/* Days */}
-                      {DAY_NAMES.map((_, dayIdx) => {
-                        const dayNumber = dayIdx + 1;
-                        const daySessions = sessionMap.get(`${week}-${dayNumber}`) ?? [];
-                        const isTodayCell = !!(todayInfo && todayInfo.week === week && todayInfo.dayNumber === dayNumber);
-                        return (
-                          <div
-                            key={dayNumber}
-                            className={`p-1 space-y-0.5 border-l border-border/20 ${isTodayCell ? "bg-cyan-400/10" : ""}`}
-                          >
-                            {daySessions.map(session => (
-                              <div
-                                key={session.id}
-                                onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
-                                className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-mono leading-tight cursor-pointer hover:bg-primary/25 transition-colors truncate"
-                                title={session.name}
-                              >
-                                {session.name}
-                              </div>
-                            ))}
-                            {daySessions.length === 0 && copiedSession && (
-                              <button
-                                type="button"
-                                onClick={makePasteHandler(week, dayNumber)}
-                                className="w-full h-6 rounded border border-dashed border-accent/30 hover:border-accent hover:bg-accent/10 transition-all flex items-center justify-center"
-                                title={`Coller « ${copiedSession.name} »`}
-                              >
-                                <ClipboardPaste className="w-2.5 h-2.5 text-accent/60 hover:text-accent" />
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          <DragOverlay>
+            {draggingSession && (
+              <div className="px-2.5 py-1.5 rounded-lg bg-card border border-primary/60 text-xs font-medium text-white shadow-xl opacity-95 cursor-grabbing max-w-[120px] truncate">
+                {draggingSession.name}
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
