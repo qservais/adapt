@@ -23,6 +23,7 @@ import {
   Sparkles, Plus, Trash2, Loader2, Dumbbell, Search, X,
   ChevronDown, ChevronUp, Clock, Flame, Zap, Activity,
   Shield, Wind, GripVertical, Link as LinkIcon,
+  Heart, Timer, PersonStanding,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,16 @@ export const SESSION_TYPE_COLORS: Record<string, { dot: string; text: string; bg
   conditioning:        { dot: "bg-[#EC4899]",  text: "text-[#EC4899]",  bg: "bg-[#EC4899]/10" },
 };
 
+export const SESSION_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  strength:            Dumbbell,
+  cardio:              Heart,
+  hybrid:              Zap,
+  mobility:            Wind,
+  athletic_development:Flame,
+  running:             PersonStanding,
+  conditioning:        Activity,
+};
+
 export const MODES = ["performance", "normal", "adapt", "recovery"] as const;
 export const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -118,6 +129,7 @@ export interface ExerciseRow {
   loadKg: number;
   restSeconds: number;
   coachCue: string;
+  tempo: string;
   supersetGroup?: string;
   supersetLabel?: string;
 }
@@ -177,6 +189,7 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
       loadKg: e.nominalLoadKg || 0,
       restSeconds: e.restSeconds || 60,
       coachCue: e.coachCue || "",
+      tempo: (e as { tempo?: string }).tempo || "",
       supersetGroup: e.supersetGroup ?? undefined,
       supersetLabel: e.supersetLabel ?? undefined,
     };
@@ -514,18 +527,25 @@ function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove
               <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="8-10" className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>kg</label>
-              <Input type="number" min={0} value={ex.loadKg} onChange={e => onChange({ loadKg: +e.target.value })} className={fieldCls} />
+              <label className={labelCls}>Charge (kg / %1RM)</label>
+              <Input type="number" min={0} value={ex.loadKg} onChange={e => onChange({ loadKg: +e.target.value })} className={fieldCls} placeholder="80" />
             </div>
             <div>
               <label className={labelCls}>Repos (s)</label>
               <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
             </div>
           </div>
-          <div>
-            <label className={labelCls}>Indication coach</label>
-            <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
-              placeholder="Gainage serré, tempo 3-1-1..." className={fieldCls} />
+          <div className="grid grid-cols-2 gap-1.5">
+            <div>
+              <label className={labelCls}>Tempo (exc-pause-ret)</label>
+              <Input value={ex.tempo} onChange={e => onChange({ tempo: e.target.value })}
+                placeholder="3-1-1" className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Indication coach</label>
+              <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
+                placeholder="Serré en bas..." className={fieldCls} />
+            </div>
           </div>
         </>
       )}
@@ -596,6 +616,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
       loadKg: 0,
       restSeconds: 90,
       coachCue: "",
+      tempo: "",
     };
     updateBlock(bIdx, { exercises: [...block.exercises, newEx] });
   };
@@ -629,9 +650,18 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     const cur = exercises[eIdx];
     const next = exercises[eIdx + 1];
     if (!next) return;
-    const groupId = Math.random().toString(36).slice(2, 6);
-    exercises[eIdx] = { ...cur, supersetGroup: groupId, supersetLabel: "A1" };
-    exercises[eIdx + 1] = { ...next, supersetGroup: groupId, supersetLabel: "A2" };
+    if (cur.supersetGroup) {
+      // Extend existing superset: add next exercise as A3, A4, etc.
+      const groupId = cur.supersetGroup;
+      const groupMembers = exercises.filter(e => e.supersetGroup === groupId);
+      const nextLabel = `A${groupMembers.length + 1}`;
+      exercises[eIdx + 1] = { ...next, supersetGroup: groupId, supersetLabel: nextLabel };
+    } else {
+      // Create new A1/A2 superset group
+      const groupId = Math.random().toString(36).slice(2, 6);
+      exercises[eIdx] = { ...cur, supersetGroup: groupId, supersetLabel: "A1" };
+      exercises[eIdx + 1] = { ...next, supersetGroup: groupId, supersetLabel: "A2" };
+    }
     updateBlock(bIdx, { exercises: exercises.map((e, i) => ({ ...e, orderIndex: i })) });
   };
 
@@ -839,6 +869,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
           loadKg: ex.loadKg,
           restSeconds: ex.restSeconds,
           coachCue: ex.coachCue,
+          tempo: ex.tempo || undefined,
           supersetGroup: ex.supersetGroup,
           supersetLabel: ex.supersetLabel,
         })),
@@ -1033,6 +1064,7 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
   const normalVariant = session.variants.find((v) => v.mode === "normal");
   const exercises = normalVariant?.exercises ?? [];
   const typeColor = SESSION_TYPE_COLORS[session.type] ?? SESSION_TYPE_COLORS.strength;
+  const TypeIcon = SESSION_TYPE_ICONS[session.type] ?? Dumbbell;
 
   return (
     <>
@@ -1044,9 +1076,10 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
         <div className="p-2 pl-3 cursor-pointer" onClick={() => setEditOpen(true)}>
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
           <p className="text-xs font-semibold text-white truncate leading-tight mb-1 pr-5">{session.name}</p>
-          <p className={cn("text-[10px] font-mono capitalize mb-1.5", typeColor.text)}>
-            {SESSION_TYPE_LABELS[session.type] ?? session.type}
-          </p>
+          <div className={cn("flex items-center gap-1 mb-1.5", typeColor.text)}>
+            <TypeIcon className="w-2.5 h-2.5 shrink-0" />
+            <span className="text-[10px] font-mono capitalize">{SESSION_TYPE_LABELS[session.type] ?? session.type}</span>
+          </div>
           <div className="flex items-center justify-between gap-1">
             <div className="flex gap-0.5 flex-wrap">
               {MODES.filter((m) => modeStyles[m]).map((m) => (

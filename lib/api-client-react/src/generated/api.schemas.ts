@@ -185,6 +185,7 @@ export interface SessionExerciseItem {
   lastUsedLoadKg?: number | null;
   lastUsedDate?: string | null;
   blockId?: string | null;
+  tempo?: string | null;
   supersetGroup?: string | null;
   supersetLabel?: string | null;
 }
@@ -431,6 +432,7 @@ export type CreateSessionRequestBlocksItemExercisesItem = {
   loadKg?: number;
   restSeconds?: number;
   coachCue?: string;
+  tempo?: string;
   supersetGroup?: string;
   supersetLabel?: string;
 };

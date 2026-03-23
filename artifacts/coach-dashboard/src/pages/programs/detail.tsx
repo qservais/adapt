@@ -8,7 +8,7 @@ import {
   useDeleteProgramSession,
   addProgramSession,
   updateProgram,
-  CreateSessionRequestVariantsItemMode,
+  CreateSessionRequestBlocksItem,
   SessionWithVariants,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,62 @@ import {
   SessionModal,
 } from "@/components/program-editor";
 
+function sessionToBlocksPayload(session: SessionWithVariants): CreateSessionRequestBlocksItem[] {
+  const normalVariant = session.variants.find((v) => v.mode === "normal");
+  const exercises = normalVariant?.exercises ?? [];
+  const exByBlock = new Map<string, typeof exercises>();
+  const noBlockExercises: typeof exercises = [];
+  for (const ex of exercises) {
+    if (ex.blockId) {
+      if (!exByBlock.has(ex.blockId)) exByBlock.set(ex.blockId, []);
+      exByBlock.get(ex.blockId)!.push(ex);
+    } else {
+      noBlockExercises.push(ex);
+    }
+  }
+  if (session.blocks && session.blocks.length > 0) {
+    return session.blocks.map((b, bIdx) => ({
+      type: b.type,
+      orderIndex: bIdx,
+      name: b.name ?? "",
+      estimatedDurationMin: b.estimatedDurationMin ?? undefined,
+      conditioningFormat: b.conditioningFormat ?? undefined,
+      exercises: (exByBlock.get(b.id) ?? []).map((ex, eIdx) => ({
+        exerciseId: ex.exerciseId,
+        orderIndex: eIdx,
+        sets: ex.sets,
+        reps: ex.reps ?? undefined,
+        loadKg: ex.nominalLoadKg ?? undefined,
+        restSeconds: ex.restSeconds ?? undefined,
+        coachCue: ex.coachCue ?? undefined,
+        tempo: ex.tempo ?? undefined,
+        supersetGroup: ex.supersetGroup ?? undefined,
+        supersetLabel: ex.supersetLabel ?? undefined,
+      })),
+    }));
+  }
+  if (noBlockExercises.length > 0) {
+    return [{
+      type: "strength",
+      orderIndex: 0,
+      name: "Principal",
+      exercises: noBlockExercises.map((ex, eIdx) => ({
+        exerciseId: ex.exerciseId,
+        orderIndex: eIdx,
+        sets: ex.sets,
+        reps: ex.reps ?? undefined,
+        loadKg: ex.nominalLoadKg ?? undefined,
+        restSeconds: ex.restSeconds ?? undefined,
+        coachCue: ex.coachCue ?? undefined,
+        tempo: ex.tempo ?? undefined,
+        supersetGroup: ex.supersetGroup ?? undefined,
+        supersetLabel: ex.supersetLabel ?? undefined,
+      })),
+    }];
+  }
+  return [];
+}
+
 function DuplicateDialog({
   session,
   programId,
@@ -98,23 +154,10 @@ function DuplicateDialog({
           weekNumber: targetWeek,
           dayNumber: targetDay,
           name: session.name,
-          type: session.type as "strength" | "cardio" | "hybrid" | "mobility",
+          type: session.type as "strength" | "cardio" | "hybrid" | "mobility" | "athletic_development" | "running" | "conditioning",
           estimatedDurationMin: session.estimatedDurationMin ?? undefined,
           coachNotes: session.coachNotes ?? undefined,
-          variants: session.variants
-            .filter((v) => v.exercises.length > 0)
-            .map((v) => ({
-              mode: v.mode as CreateSessionRequestVariantsItemMode,
-              exercises: v.exercises.map((e) => ({
-                exerciseId: e.exerciseId,
-                orderIndex: e.orderIndex,
-                sets: e.sets,
-                reps: e.reps ?? undefined,
-                loadKg: e.nominalLoadKg ?? undefined,
-                restSeconds: e.restSeconds ?? undefined,
-                coachCue: e.coachCue ?? undefined,
-              })),
-            })),
+          blocks: sessionToBlocksPayload(session),
         },
       });
       toast({ title: `« ${session.name} » → S${targetWeek} / ${DAY_NAMES[targetDay - 1]}` });
@@ -502,23 +545,10 @@ export default function ProgramDetail() {
           weekNumber: nextWeek,
           dayNumber: s.dayNumber,
           name: s.name,
-          type: s.type as "strength" | "cardio" | "hybrid" | "mobility",
+          type: s.type as "strength" | "cardio" | "hybrid" | "mobility" | "athletic_development" | "running" | "conditioning",
           estimatedDurationMin: s.estimatedDurationMin ?? undefined,
           coachNotes: s.coachNotes ?? undefined,
-          variants: s.variants
-            .filter((v) => v.exercises.length > 0)
-            .map((v) => ({
-              mode: v.mode as CreateSessionRequestVariantsItemMode,
-              exercises: v.exercises.map((e) => ({
-                exerciseId: e.exerciseId,
-                orderIndex: e.orderIndex,
-                sets: e.sets,
-                reps: e.reps ?? undefined,
-                loadKg: e.nominalLoadKg ?? undefined,
-                restSeconds: e.restSeconds ?? undefined,
-                coachCue: e.coachCue ?? undefined,
-              })),
-            })),
+          blocks: sessionToBlocksPayload(s),
         });
       }
       toast({ title: `Semaine ${safeCurrentWeek} → S${nextWeek}` });
