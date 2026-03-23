@@ -191,10 +191,17 @@ function StateCheckedIn({
         <View style={[styles.sessionCard, { borderColor: `${modeColor}30` }]}>
           <View style={styles.sessionTopRow}>
             <ModeBadge mode={modeKey} size="sm" />
-            <View style={styles.exCountChip}>
-              <Text style={[styles.exCountText, { fontFamily: FONTS.mono }]}>
-                {session.exercises?.length ?? 0} EXERCICES
-              </Text>
+            <View style={styles.sessionMeta}>
+              {session.estimatedDurationMin != null && (
+                <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
+                  {session.estimatedDurationMin} MIN
+                </Text>
+              )}
+              <View style={styles.exCountChip}>
+                <Text style={[styles.exCountText, { fontFamily: FONTS.mono }]}>
+                  {session.exercises?.length ?? 0} EX.
+                </Text>
+              </View>
             </View>
           </View>
           <Text style={[styles.sessionName, { fontFamily: FONTS.title, color: modeColor }]}>
@@ -377,7 +384,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sessionTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sessionDuration: { fontSize: 12, color: COLORS.textMuted, letterSpacing: 1 },
+  sessionMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
+  sessionDuration: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.5, fontFamily: FONTS.mono },
   exCountChip: {
     backgroundColor: COLORS.bgElevated,
     borderRadius: 8,
