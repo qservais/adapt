@@ -15,6 +15,7 @@ const exerciseResponseFields = {
   equipment: exercisesTable.equipment,
   description: exercisesTable.description,
   demoUrl: exercisesTable.demoUrl,
+  createdBy: exercisesTable.createdBy,
 } as const;
 
 router.get("/exercises", authenticate, async (req, res) => {

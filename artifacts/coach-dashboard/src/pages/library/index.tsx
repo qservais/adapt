@@ -35,6 +35,7 @@ interface ExerciseItem {
   equipment: string[] | null;
   description: string | null;
   demoUrl: string | null;
+  createdBy: string | null;
 }
 
 const CATEGORIES = [
@@ -328,22 +329,28 @@ export default function LibraryPage() {
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => openEdit(ex)}
-                        className="p-1 rounded hover:bg-white/10 transition-colors"
-                        title="Modifier"
-                      >
-                        <Pencil className="w-3.5 h-3.5 text-white" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(ex)}
-                        className="p-1 rounded hover:bg-destructive/20 transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                      </button>
-                    </div>
+                    {ex.createdBy !== null ? (
+                      <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEdit(ex)}
+                          className="p-1 rounded hover:bg-white/10 transition-colors"
+                          title="Modifier"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-white" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(ex)}
+                          className="p-1 rounded hover:bg-destructive/20 transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] font-mono text-muted-foreground/50 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity px-1">
+                        Global
+                      </span>
+                    )}
                   </div>
 
                   {mgs.length > 0 && (
