@@ -184,6 +184,19 @@ export interface SessionExerciseItem {
   coachCue?: string | null;
   lastUsedLoadKg?: number | null;
   lastUsedDate?: string | null;
+  blockId?: string | null;
+  supersetGroup?: string | null;
+  supersetLabel?: string | null;
+}
+
+export interface SessionBlockItem {
+  id: string;
+  type: string;
+  orderIndex: number;
+  name: string | null;
+  notes?: string | null;
+  estimatedDurationMin?: number | null;
+  conditioningFormat?: string | null;
 }
 
 export interface SessionDetail {
@@ -348,6 +361,7 @@ export interface SessionWithVariants {
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   variants: VariantWithExercises[];
+  blocks?: SessionBlockItem[];
 }
 
 export interface ProgramDetail {
@@ -377,6 +391,9 @@ export const CreateSessionRequestType = {
   cardio: "cardio",
   hybrid: "hybrid",
   mobility: "mobility",
+  athletic_development: "athletic_development",
+  running: "running",
+  conditioning: "conditioning",
 } as const;
 
 export type CreateSessionRequestVariantsItemMode =
@@ -397,11 +414,34 @@ export type CreateSessionRequestVariantsItemExercisesItem = {
   loadKg?: number;
   restSeconds?: number;
   coachCue?: string;
+  supersetGroup?: string;
+  supersetLabel?: string;
 };
 
 export type CreateSessionRequestVariantsItem = {
   mode?: CreateSessionRequestVariantsItemMode;
   exercises?: CreateSessionRequestVariantsItemExercisesItem[];
+};
+
+export type CreateSessionRequestBlocksItemExercisesItem = {
+  exerciseId: string;
+  orderIndex: number;
+  sets: number;
+  reps?: string;
+  loadKg?: number;
+  restSeconds?: number;
+  coachCue?: string;
+  supersetGroup?: string;
+  supersetLabel?: string;
+};
+
+export type CreateSessionRequestBlocksItem = {
+  type: string;
+  orderIndex: number;
+  name: string;
+  estimatedDurationMin?: number;
+  conditioningFormat?: string;
+  exercises?: CreateSessionRequestBlocksItemExercisesItem[];
 };
 
 export interface CreateSessionRequest {
@@ -412,6 +452,7 @@ export interface CreateSessionRequest {
   estimatedDurationMin?: number;
   coachNotes?: string;
   variants?: CreateSessionRequestVariantsItem[];
+  blocks?: CreateSessionRequestBlocksItem[];
 }
 
 export interface ClientSummary {

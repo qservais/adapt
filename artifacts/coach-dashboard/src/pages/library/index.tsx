@@ -59,11 +59,12 @@ const getCategoryStyle = (cat: string | null) => {
   return CATEGORIES.find(c => c.value === cat) ?? { color: "text-muted-foreground", bg: "bg-white/5 border-white/10", label: cat ?? "Autre" };
 };
 
-async function fetchExercises(q: string, cat: string): Promise<ExerciseItem[]> {
+async function fetchExercises(q: string, cat: string, muscleGroup: string): Promise<ExerciseItem[]> {
   const token = localStorage.getItem("adapt_coach_access");
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (cat) params.set("category", cat);
+  if (muscleGroup) params.set("muscleGroup", muscleGroup);
   const res = await fetch(`/api/exercises?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -92,6 +93,7 @@ const emptyForm = (): ExerciseFormData => ({
 export default function LibraryPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [muscleGroupFilter, setMuscleGroupFilter] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editExercise, setEditExercise] = useState<ExerciseItem | null>(null);
   const [form, setForm] = useState<ExerciseFormData>(emptyForm());
@@ -100,8 +102,8 @@ export default function LibraryPage() {
   const { toast } = useToast();
 
   const { data: exercises, isLoading } = useQuery<ExerciseItem[]>({
-    queryKey: ["/api/exercises", search, categoryFilter],
-    queryFn: () => fetchExercises(search, categoryFilter),
+    queryKey: ["/api/exercises", search, categoryFilter, muscleGroupFilter],
+    queryFn: () => fetchExercises(search, categoryFilter, muscleGroupFilter),
     staleTime: 10000,
   });
 
@@ -275,6 +277,25 @@ export default function LibraryPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Muscle group quick-filter */}
+      <div className="flex gap-1.5 flex-wrap items-center">
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono shrink-0">Muscle :</span>
+        {["", ...MUSCLE_GROUPS].map(mg => (
+          <button
+            key={mg}
+            onClick={() => setMuscleGroupFilter(mg)}
+            className={cn(
+              "px-2 py-0.5 rounded text-[10px] border transition-colors",
+              muscleGroupFilter === mg
+                ? "bg-accent/15 border-accent/40 text-accent"
+                : "text-muted-foreground border-border hover:text-white hover:bg-white/5"
+            )}
+          >
+            {mg === "" ? "Tous" : mg}
+          </button>
+        ))}
       </div>
 
       {/* Exercise grid */}

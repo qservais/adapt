@@ -1,42 +1,44 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { exercisesTable, sessionExercisesTable } from "@workspace/db";
-import { eq, ilike, and, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
 const router = Router();
 
+const exerciseResponseFields = {
+  id: exercisesTable.id,
+  name: exercisesTable.name,
+  category: exercisesTable.category,
+  muscleGroups: exercisesTable.muscleGroups,
+  equipment: exercisesTable.equipment,
+  description: exercisesTable.description,
+  demoUrl: exercisesTable.demoUrl,
+} as const;
+
 router.get("/exercises", authenticate, async (req, res) => {
   try {
-    const exercises = await db.select().from(exercisesTable);
+    const exercises = await db.select(exerciseResponseFields).from(exercisesTable);
 
     let filtered = exercises;
-    if (req.query.category) {
-      filtered = filtered.filter(e => e.category === req.query.category);
+    if (req.query["category"]) {
+      filtered = filtered.filter(e => e.category === req.query["category"]);
     }
-    if (req.query.muscleGroup) {
-      const mg = (req.query.muscleGroup as string).toLowerCase();
+    if (req.query["muscleGroup"]) {
+      const mg = (req.query["muscleGroup"] as string).toLowerCase();
       filtered = filtered.filter(e => {
         const mgs = e.muscleGroups as string[] | null;
-        return mgs && mgs.some(m => m.toLowerCase().includes(mg));
+        return mgs != null && mgs.some(m => m.toLowerCase().includes(mg));
       });
     }
-    if (req.query.q) {
-      const q = (req.query.q as string).toLowerCase();
+    if (req.query["q"]) {
+      const q = (req.query["q"] as string).toLowerCase();
       filtered = filtered.filter(e => e.name.toLowerCase().includes(q));
     }
 
-    res.json(filtered.map(e => ({
-      id: e.id,
-      name: e.name,
-      category: e.category,
-      muscleGroups: e.muscleGroups,
-      equipment: e.equipment,
-      description: (e as unknown as { description?: string }).description ?? null,
-      demoUrl: e.demoUrl,
-    })));
-  } catch (err) {
+    res.json(filtered);
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
@@ -47,7 +49,7 @@ const createExerciseSchema = z.object({
   muscleGroups: z.array(z.string()).optional(),
   equipment: z.array(z.string()).optional(),
   description: z.string().optional(),
-  demoUrl: z.string().optional(),
+  demoUrl: z.string().url().optional().or(z.literal("")),
 });
 
 router.post("/exercises", authenticate, requireRole("coach"), async (req, res) => {
@@ -63,20 +65,13 @@ router.post("/exercises", authenticate, requireRole("coach"), async (req, res) =
       category: parsed.data.category,
       muscleGroups: parsed.data.muscleGroups ?? null,
       equipment: parsed.data.equipment ?? null,
-      demoUrl: parsed.data.demoUrl,
+      description: parsed.data.description ?? null,
+      demoUrl: parsed.data.demoUrl || null,
       createdBy: req.user!.userId,
-    }).returning();
+    }).returning(exerciseResponseFields);
 
-    res.status(201).json({
-      id: exercise.id,
-      name: exercise.name,
-      category: exercise.category,
-      muscleGroups: exercise.muscleGroups,
-      equipment: exercise.equipment,
-      description: null,
-      demoUrl: exercise.demoUrl,
-    });
-  } catch (err) {
+    res.status(201).json(exercise);
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
@@ -96,26 +91,19 @@ router.put("/exercises/:exerciseId", authenticate, requireRole("coach"), async (
         category: parsed.data.category,
         muscleGroups: parsed.data.muscleGroups ?? null,
         equipment: parsed.data.equipment ?? null,
-        demoUrl: parsed.data.demoUrl,
+        description: parsed.data.description ?? null,
+        demoUrl: parsed.data.demoUrl || null,
       })
       .where(eq(exercisesTable.id, exerciseId))
-      .returning();
+      .returning(exerciseResponseFields);
 
     if (!exercise) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercise not found" } });
       return;
     }
 
-    res.json({
-      id: exercise.id,
-      name: exercise.name,
-      category: exercise.category,
-      muscleGroups: exercise.muscleGroups,
-      equipment: exercise.equipment,
-      description: null,
-      demoUrl: exercise.demoUrl,
-    });
-  } catch (err) {
+    res.json(exercise);
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
@@ -135,7 +123,7 @@ router.delete("/exercises/:exerciseId", authenticate, requireRole("coach"), asyn
 
     await db.delete(exercisesTable).where(eq(exercisesTable.id, exerciseId));
     res.json({ success: true });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });

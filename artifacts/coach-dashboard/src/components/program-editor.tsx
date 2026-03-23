@@ -8,11 +8,13 @@ import {
   SessionWithVariants,
   ExerciseData,
   CreateSessionRequestVariantsItemMode,
+  CreateSessionRequest,
+  CreateSessionRequestBlocksItem,
 } from "@workspace/api-client-react";
 import {
   Sparkles, Plus, Trash2, Loader2, Dumbbell, Search, X,
   ChevronDown, ChevronUp, Clock, Flame, Zap, Activity,
-  Shield, Wind, Minus, GripVertical, Link as LinkIcon,
+  Shield, Wind, GripVertical, Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,12 +159,12 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
       loadKg: e.nominalLoadKg || 0,
       restSeconds: e.restSeconds || 60,
       coachCue: e.coachCue || "",
-      supersetGroup: (e as any).supersetGroup || undefined,
-      supersetLabel: (e as any).supersetLabel || undefined,
+      supersetGroup: e.supersetGroup ?? undefined,
+      supersetLabel: e.supersetLabel ?? undefined,
     };
 
-    if ((e as any).blockId) {
-      const bid = (e as any).blockId as string;
+    if (e.blockId) {
+      const bid = e.blockId;
       if (!blockMap.has(bid)) blockMap.set(bid, []);
       blockMap.get(bid)!.push(row);
     } else {
@@ -171,10 +173,7 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
   }
 
   // If we have server-side blocks on the session (extended response)
-  const serverBlocks = (session as any).blocks as Array<{
-    id: string; type: string; orderIndex: number; name: string;
-    estimatedDurationMin?: number; conditioningFormat?: string;
-  }> | undefined;
+  const serverBlocks = session.blocks;
 
   let blocks: BlockDraft[] = [];
   if (serverBlocks && serverBlocks.length > 0) {
@@ -183,10 +182,10 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
       .map((b) => ({
         type: b.type as BlockType,
         orderIndex: b.orderIndex,
-        name: b.name,
+        name: b.name ?? BLOCK_TYPE_META[b.type as BlockType]?.label ?? b.type,
         estimatedDurationMin: b.estimatedDurationMin || 15,
-        conditioningFormat: b.conditioningFormat || undefined,
-        exercises: (blockMap.get(b.id) || []).sort((a, b) => a.orderIndex - b.orderIndex),
+        conditioningFormat: b.conditioningFormat ?? undefined,
+        exercises: (blockMap.get(b.id) || []).sort((a, c) => a.orderIndex - c.orderIndex),
         collapsed: true,
       }));
   } else if (noBlockExercises.length > 0) {
@@ -230,14 +229,15 @@ interface ExercisePickerProps {
 
 export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
   const [query, setQuery] = useState("");
+  const [catFilter, setCatFilter] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<string>("compound");
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { data: exercises, refetch } = useGetExercises(
-    { q: query || undefined },
-    { query: { queryKey: ["/api/exercises", query], enabled: true } }
+    { q: query || undefined, category: catFilter || undefined },
+    { query: { queryKey: ["/api/exercises", query, catFilter], enabled: true } }
   );
   const filtered = (exercises || []).slice(0, compact ? 6 : 8);
 
@@ -276,7 +276,27 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
           className="pl-9 bg-background border-border h-8 text-xs"
         />
       </div>
-      <div className={cn("space-y-0.5 overflow-y-auto", compact ? "max-h-36" : "max-h-44")}>
+      <div className="flex gap-1 flex-wrap">
+        {["", ...EXERCISE_CATEGORIES.map(c => c.value)].map((cat) => {
+          const label = cat === "" ? "Tous" : EXERCISE_CATEGORIES.find(c => c.value === cat)?.label ?? cat;
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCatFilter(cat)}
+              className={cn(
+                "px-1.5 py-0.5 rounded text-[10px] border transition-colors",
+                catFilter === cat
+                  ? "bg-primary/15 border-primary/40 text-primary"
+                  : "text-muted-foreground border-border hover:text-white hover:bg-white/5"
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <div className={cn("space-y-0.5 overflow-y-auto", compact ? "max-h-32" : "max-h-40")}>
         {filtered.map((ex) => (
           <button
             key={ex.id}
@@ -716,31 +736,33 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
         }))
       );
 
-      const payload: any = {
+      const blocks: CreateSessionRequestBlocksItem[] = draft.blocks.map((b, bIdx) => ({
+        type: b.type,
+        orderIndex: bIdx,
+        name: b.name,
+        estimatedDurationMin: b.estimatedDurationMin,
+        conditioningFormat: b.conditioningFormat || undefined,
+        exercises: b.exercises.map((ex, eIdx) => ({
+          exerciseId: ex.exerciseId,
+          orderIndex: eIdx,
+          sets: ex.sets,
+          reps: ex.reps,
+          loadKg: ex.loadKg,
+          restSeconds: ex.restSeconds,
+          coachCue: ex.coachCue,
+          supersetGroup: ex.supersetGroup,
+          supersetLabel: ex.supersetLabel,
+        })),
+      }));
+
+      const payload: CreateSessionRequest = {
         weekNumber,
         dayNumber,
         name: draft.name,
-        type: draft.type,
+        type: draft.type as CreateSessionRequest["type"],
         estimatedDurationMin: autoDurationMin ?? draft.estimatedDurationMin,
         coachNotes: draft.coachNotes,
-        blocks: draft.blocks.map((b, bIdx) => ({
-          type: b.type,
-          orderIndex: bIdx,
-          name: b.name,
-          estimatedDurationMin: b.estimatedDurationMin,
-          conditioningFormat: b.conditioningFormat || undefined,
-          exercises: b.exercises.map((ex, eIdx) => ({
-            exerciseId: ex.exerciseId,
-            orderIndex: eIdx,
-            sets: ex.sets,
-            reps: ex.reps,
-            loadKg: ex.loadKg,
-            restSeconds: ex.restSeconds,
-            coachCue: ex.coachCue,
-            supersetGroup: ex.supersetGroup,
-            supersetLabel: ex.supersetLabel,
-          })),
-        })),
+        blocks,
         variants: allExercises.length > 0
           ? [{
               mode: "normal" as CreateSessionRequestVariantsItemMode,
