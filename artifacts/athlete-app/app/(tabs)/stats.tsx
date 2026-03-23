@@ -190,7 +190,6 @@ function MonthCalendar({
   year: number;
   month: number;
 }) {
-  // French week starts on Monday: shift getDay() so that Mon=0, Tue=1, ..., Sun=6
   const jsFirstDay = new Date(year, month, 1).getDay();
   const firstDay = (jsFirstDay + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -378,6 +377,7 @@ export default function StatsScreen() {
         </View>
       </View>
 
+      {/* 1. KPIs */}
       <View style={styles.section}>
         <View style={styles.kpiRow}>
           <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
@@ -401,6 +401,97 @@ export default function StatsScreen() {
         </View>
       </View>
 
+      {/* Records personnels */}
+      {(prQuery.data?.personalRecords?.length ?? 0) > 0 && (
+        <View style={styles.section}>
+          <GlowCard glowColor={COLORS.cyan} style={styles.prCard}>
+            <View style={styles.prCardHeader}>
+              <Feather name="trending-up" size={14} color={COLORS.cyan} />
+              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
+                MES RECORDS PERSONNELS
+              </Text>
+            </View>
+            {(prQuery.data?.personalRecords ?? []).slice(0, 8).map((pr) => (
+              <View key={pr.exerciseId} style={styles.prItemRow}>
+                <Text style={[styles.prItemName, { fontFamily: FONTS.body }]} numberOfLines={1}>
+                  {pr.exerciseName}
+                </Text>
+                <View style={styles.prItemRight}>
+                  {pr.isRecent && (
+                    <View style={styles.prNewBadge}>
+                      <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+                    {pr.loadKg} kg
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {(prQuery.data?.total ?? 0) > 8 && (
+              <Text style={[{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body, textAlign: "center", marginTop: 4 }]}>
+                +{(prQuery.data?.total ?? 0) - 8} autres records
+              </Text>
+            )}
+          </GlowCard>
+        </View>
+      )}
+
+      {/* 2. Évolution ADAPT Score */}
+      <View style={styles.section}>
+        <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ÉVOLUTION ADAPT SCORE</Text>
+          <ScoreTrendChart data={sortedScores} color={COLORS.cyan} />
+        </GlowCard>
+      </View>
+
+      {/* 3. Calendrier */}
+      <View style={styles.section}>
+        <GlowCard glowColor={COLORS.border} style={styles.calCard}>
+          <View style={styles.calHeader}>
+            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>CALENDRIER</Text>
+            <View style={styles.calNav}>
+              <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
+                <Feather name="chevron-left" size={18} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={nextMonth} style={styles.calNavBtn}>
+                <Feather name="chevron-right" size={18} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <MonthCalendar
+            checkins={allCheckins}
+            year={calMonth.year}
+            month={calMonth.month}
+          />
+          <View style={styles.calLegend}>
+            {Object.entries(MODE_CONFIG).map(([key, cfg]) => (
+              <View key={key} style={styles.calLegendItem}>
+                <View style={[styles.calLegendDot, { backgroundColor: cfg.color }]} />
+                <Text style={[styles.calLegendText, { fontFamily: FONTS.mono, color: cfg.color }]}>
+                  {cfg.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </GlowCard>
+      </View>
+
+      {/* 4. Moyennes quotidiennes */}
+      <View style={styles.section}>
+        <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>MOYENNES QUOTIDIENNES</Text>
+          <View style={styles.barList}>
+            <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sommeil" />
+            <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Énergie" />
+            <ScoreBar value={avg("stress")} max={5} color={COLORS.amber} label="Stress" />
+            <ScoreBar value={avg("soreness")} max={5} color={COLORS.red} label="Courbat." />
+            <ScoreBar value={avg("motivation")} max={5} color={COLORS.violet} label="Motivat." />
+          </View>
+        </GlowCard>
+      </View>
+
+      {/* 5. Bilan hebdomadaire */}
       <View style={styles.section}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => router.push("/weekly-recap")}>
           <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
@@ -439,117 +530,7 @@ export default function StatsScreen() {
         </TouchableOpacity>
       </View>
 
-      {(prQuery.data?.personalRecords?.length ?? 0) > 0 && (
-        <View style={styles.section}>
-          <GlowCard glowColor={COLORS.cyan} style={styles.prCard}>
-            <View style={styles.prCardHeader}>
-              <Feather name="trending-up" size={14} color={COLORS.cyan} />
-              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
-                MES RECORDS PERSONNELS
-              </Text>
-            </View>
-            {(prQuery.data?.personalRecords ?? []).slice(0, 8).map((pr) => (
-              <View key={pr.exerciseId} style={styles.prItemRow}>
-                <Text style={[styles.prItemName, { fontFamily: FONTS.body }]} numberOfLines={1}>
-                  {pr.exerciseName}
-                </Text>
-                <View style={styles.prItemRight}>
-                  {pr.isRecent && (
-                    <View style={styles.prNewBadge}>
-                      <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
-                    </View>
-                  )}
-                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
-                    {pr.loadKg} kg
-                  </Text>
-                </View>
-              </View>
-            ))}
-            {(prQuery.data?.total ?? 0) > 8 && (
-              <Text style={[{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body, textAlign: "center", marginTop: 4 }]}>
-                +{(prQuery.data?.total ?? 0) - 8} autres records
-              </Text>
-            )}
-          </GlowCard>
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ÉVOLUTION ADAPT SCORE</Text>
-          <ScoreTrendChart data={sortedScores} color={COLORS.cyan} />
-        </GlowCard>
-      </View>
-
-      <View style={styles.section}>
-        <GlowCard glowColor={COLORS.amber} style={styles.chartCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>PROGRESSION D'EFFORT (RPE)</Text>
-          <ScoreTrendChart data={sortedRpe} color={COLORS.amber} />
-          <View style={styles.rpeScaleRow}>
-            <View style={styles.rpeScaleItem}>
-              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.cyan }]} />
-              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>1-4 Facile</Text>
-            </View>
-            <View style={styles.rpeScaleItem}>
-              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.green }]} />
-              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>5-7 Modéré</Text>
-            </View>
-            <View style={styles.rpeScaleItem}>
-              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.amber }]} />
-              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>8-9 Difficile</Text>
-            </View>
-            <View style={styles.rpeScaleItem}>
-              <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.red }]} />
-              <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>10 Max</Text>
-            </View>
-          </View>
-        </GlowCard>
-      </View>
-
-      <View style={styles.section}>
-        <GlowCard glowColor={COLORS.border} style={styles.calCard}>
-          <View style={styles.calHeader}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>CALENDRIER</Text>
-            <View style={styles.calNav}>
-              <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
-                <Feather name="chevron-left" size={18} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={nextMonth} style={styles.calNavBtn}>
-                <Feather name="chevron-right" size={18} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <MonthCalendar
-            checkins={allCheckins}
-            year={calMonth.year}
-            month={calMonth.month}
-          />
-          <View style={styles.calLegend}>
-            {Object.entries(MODE_CONFIG).map(([key, cfg]) => (
-              <View key={key} style={styles.calLegendItem}>
-                <View style={[styles.calLegendDot, { backgroundColor: cfg.color }]} />
-                <Text style={[styles.calLegendText, { fontFamily: FONTS.mono, color: cfg.color }]}>
-                  {cfg.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </GlowCard>
-      </View>
-
-      <View style={styles.section}>
-        <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>MOYENNES QUOTIDIENNES</Text>
-          <View style={styles.barList}>
-            <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sommeil" />
-            <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Énergie" />
-            <ScoreBar value={avg("stress")} max={5} color={COLORS.amber} label="Stress" />
-            <ScoreBar value={avg("soreness")} max={5} color={COLORS.red} label="Courbat." />
-            <ScoreBar value={avg("motivation")} max={5} color={COLORS.violet} label="Motivat." />
-          </View>
-        </GlowCard>
-      </View>
-
+      {/* 6. Répartition des séances */}
       {Object.keys(modeCounts).length > 0 && (
         <View style={styles.section}>
           <GlowCard glowColor={COLORS.border} style={styles.modesCard}>
@@ -563,7 +544,10 @@ export default function StatsScreen() {
                 return (
                   <View key={mode} style={styles.modeRow}>
                     <View style={[styles.modeDot, { backgroundColor: cfg.color }]} />
-                    <Text style={[styles.modeLabel, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}>
+                    <Text
+                      style={[styles.modeLabel, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}
+                      numberOfLines={1}
+                    >
                       {cfg.label}
                     </Text>
                     <View style={styles.modeBar}>
@@ -575,6 +559,34 @@ export default function StatsScreen() {
                   </View>
                 );
               })}
+            </View>
+          </GlowCard>
+        </View>
+      )}
+
+      {/* 7. Progression RPE — uniquement si ≥ 2 points */}
+      {sortedRpe.length >= 2 && (
+        <View style={styles.section}>
+          <GlowCard glowColor={COLORS.amber} style={styles.chartCard}>
+            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>PROGRESSION D'EFFORT (RPE)</Text>
+            <ScoreTrendChart data={sortedRpe} color={COLORS.amber} />
+            <View style={styles.rpeScaleRow}>
+              <View style={styles.rpeScaleItem}>
+                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.cyan }]} />
+                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>1-4 Facile</Text>
+              </View>
+              <View style={styles.rpeScaleItem}>
+                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.green }]} />
+                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>5-7 Modéré</Text>
+              </View>
+              <View style={styles.rpeScaleItem}>
+                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.amber }]} />
+                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>8-9 Difficile</Text>
+              </View>
+              <View style={styles.rpeScaleItem}>
+                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.red }]} />
+                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>10 Max</Text>
+              </View>
             </View>
           </GlowCard>
         </View>
@@ -715,8 +727,8 @@ const styles = StyleSheet.create({
   barList: { gap: 12 },
   modesList: { gap: 10 },
   modeRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  modeDot: { width: 8, height: 8, borderRadius: 4 },
-  modeLabel: { fontSize: 13, width: 90 },
+  modeDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  modeLabel: { fontSize: 13, width: 86, flexShrink: 1 },
   modeBar: {
     flex: 1,
     height: 6,

@@ -20,6 +20,29 @@ import { useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
 
+const CATEGORY_FR: Record<string, string> = {
+  compound: "POLYARTICULAIRE",
+  isolation: "ISOLATION",
+  cardio: "CARDIO",
+  mobility: "MOBILITÉ",
+  plyometric: "PLIOMÉTRIQUE",
+  strength: "FORCE",
+  warmup: "ÉCHAUFFEMENT",
+  cool_down: "RÉCUPÉRATION",
+};
+
+function groupByCategory<T extends { category?: string | null }>(
+  items: T[]
+): { category: string; exercises: T[] }[] {
+  const map = new Map<string, T[]>();
+  for (const item of items) {
+    const cat = item.category ?? "general";
+    if (!map.has(cat)) map.set(cat, []);
+    map.get(cat)!.push(item);
+  }
+  return Array.from(map.entries()).map(([category, exercises]) => ({ category, exercises }));
+}
+
 export default function SessionTab() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
@@ -34,6 +57,9 @@ export default function SessionTab() {
   const cfg = MODE_CONFIG[modeKey];
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+
+  const exercises = session?.exercises ?? [];
+  const grouped = groupByCategory(exercises);
 
   return (
     <ScrollView
@@ -84,46 +110,60 @@ export default function SessionTab() {
               {session.name}
             </Text>
             <Text style={[styles.exerciseCount, { fontFamily: FONTS.body }]}>
-              {session.exercises?.length ?? 0} exercices
+              {exercises.length} exercice{exercises.length !== 1 ? "s" : ""}
             </Text>
 
-            <View style={styles.exercisePreview}>
-              {session.exercises?.slice(0, 4).map((ex, i) => (
-                <View key={ex.id} style={styles.exRow}>
-                  <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-                    {String(i + 1).padStart(2, "0")}
-                  </Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
-                      {ex.exerciseName}
+            {/* Exercises grouped by category */}
+            <View style={styles.exerciseList}>
+              {grouped.map(({ category, exercises: exs }, gi) => (
+                <View key={category} style={gi > 0 ? styles.groupBlock : undefined}>
+                  {/* Category header — only show if there's more than one group */}
+                  {grouped.length > 1 && (
+                    <Text style={[styles.groupHeader, { fontFamily: FONTS.mono }]}>
+                      {CATEGORY_FR[category] ?? category.toUpperCase()}
                     </Text>
-                    <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
-                      {ex.sets}×{ex.reps}
-                      {ex.adaptedLoadKg != null ? ` @ ${ex.adaptedLoadKg}kg` : ""}
-                    </Text>
-                  </View>
+                  )}
+                  {exs.map((ex, i) => {
+                    const globalIndex = exercises.indexOf(ex);
+                    return (
+                      <View key={ex.id} style={[styles.exRow, i === exs.length - 1 && styles.exRowLast]}>
+                        <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                          {String(globalIndex + 1).padStart(2, "0")}
+                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
+                            {ex.exerciseName}
+                          </Text>
+                          <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                            {ex.sets}×{ex.reps}
+                            {ex.adaptedLoadKg != null ? ` @ ${ex.adaptedLoadKg} kg` : ""}
+                          </Text>
+                          <Text style={[styles.exRest, { fontFamily: FONTS.mono }]}>
+                            {(ex.restSeconds ?? 0) > 0
+                              ? `Repos : ${ex.restSeconds}s`
+                              : "Enchaîner"}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
               ))}
-              {(session.exercises?.length ?? 0) > 4 && (
-                <Text style={[styles.moreEx, { fontFamily: FONTS.body }]}>
-                  +{session.exercises!.length - 4} de plus
-                </Text>
-              )}
             </View>
 
             <TouchableOpacity
-              onPress={() => (session.exercises?.length ?? 0) > 0 ? router.push("/session") : undefined}
+              onPress={() => exercises.length > 0 ? router.push("/session") : undefined}
               style={[
                 styles.startBtn,
                 { backgroundColor: cfg.color },
-                (session.exercises?.length ?? 0) === 0 && { backgroundColor: COLORS.border, opacity: 0.5 },
+                exercises.length === 0 && { backgroundColor: COLORS.border, opacity: 0.5 },
               ]}
-              disabled={(session.exercises?.length ?? 0) === 0}
+              disabled={exercises.length === 0}
             >
               <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                {(session.exercises?.length ?? 0) === 0 ? "AUCUN EXERCICE" : "DÉMARRER LA SÉANCE"}
+                {exercises.length === 0 ? "AUCUN EXERCICE" : "DÉMARRER LA SÉANCE"}
               </Text>
-              {(session.exercises?.length ?? 0) > 0 && <Feather name="arrow-right" size={18} color={COLORS.bg} />}
+              {exercises.length > 0 && <Feather name="arrow-right" size={18} color={COLORS.bg} />}
             </TouchableOpacity>
           </GlowCard>
         </View>
@@ -148,7 +188,7 @@ export default function SessionTab() {
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             SÉANCES RÉCENTES
           </Text>
-          {historyQuery.data?.filter((l) => l.completedAt != null).slice(0, 5).map((log) => {
+          {historyQuery.data?.filter((l) => l.completedAt != null).map((log) => {
             const mode = log.variantMode as SessionMode;
             const c = MODE_CONFIG[mode] ?? MODE_CONFIG.normal;
             return (
@@ -212,20 +252,31 @@ const styles = StyleSheet.create({
   },
   durationText: { fontSize: 12, color: COLORS.textSecondary },
   sessionName: { fontSize: 38, letterSpacing: 2, lineHeight: 42, marginBottom: 4 },
-  exerciseCount: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 20 },
-  exercisePreview: { gap: 12, marginBottom: 24 },
+  exerciseCount: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 16 },
+  exerciseList: { gap: 0, marginBottom: 24 },
+  groupBlock: { marginTop: 12 },
+  groupHeader: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    letterSpacing: 2,
+    marginBottom: 6,
+    marginTop: 4,
+  },
   exRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  exRowLast: {
+    borderBottomWidth: 0,
+  },
   exNum: { fontSize: 12, color: COLORS.textMuted, marginTop: 2, minWidth: 24 },
   exName: { fontSize: 15, color: COLORS.white, marginBottom: 2 },
-  exDetail: { fontSize: 12, color: COLORS.textSecondary },
-  moreEx: { fontSize: 13, color: COLORS.textMuted, textAlign: "center" },
+  exDetail: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 1 },
+  exRest: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
   startBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -233,6 +284,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 12,
     paddingVertical: 16,
+    marginTop: 8,
   },
   startBtnText: { fontSize: 15, letterSpacing: 1.5, color: COLORS.bg },
   historySection: { paddingHorizontal: 20 },

@@ -9,8 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -39,14 +37,6 @@ const ENCOURAGEMENT = [
   "Le repos fait partie de l'entraînement.",
   "Reste focalisé(e), tu y es presque !",
 ];
-
-const CATEGORY_IMAGES: Record<string, ReturnType<typeof require>> = {
-  compound: require("@/assets/images/categories/compound.png"),
-  isolation: require("@/assets/images/categories/isolation.png"),
-  cardio: require("@/assets/images/categories/cardio.png"),
-  mobility: require("@/assets/images/categories/mobility.png"),
-  plyometric: require("@/assets/images/categories/plyometric.png"),
-};
 
 function PRPulse({ color }: { color: string }) {
   const scale = useSharedValue(1);
@@ -100,7 +90,6 @@ export default function ExerciseScreen() {
 
   const encouragementMsg = useMemo(
     () => ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)],
-    // Re-pick on each rest period
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [showRest]
   );
@@ -196,122 +185,59 @@ export default function ExerciseScreen() {
     return `Dernière fois : ${lastUsedLoadKg} kg · ${day} ${month}`;
   }, [lastUsedLoadKg, lastUsedDate]);
 
-  const heroSource: { uri: string } | ReturnType<typeof require> | null =
-    exercise.imageUrl
-      ? { uri: exercise.imageUrl }
-      : exercise.category
-        ? CATEGORY_IMAGES[exercise.category] ?? null
-        : null;
-  const heroImage = heroSource;
-
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
-      {/* Hero image with gradient overlay */}
-      {heroImage ? (
-        <View style={styles.heroContainer}>
-          <Image source={heroImage} style={styles.heroImage} contentFit="cover" />
-          <LinearGradient
-            colors={["transparent", `${cfg.color}20`, COLORS.bg]}
-            locations={[0, 0.6, 1]}
-            style={styles.heroGradient}
+      {/* Header: close + progress */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Pressable
+          onPress={() => {
+            Alert.alert(
+              "Quitter la séance ?",
+              "Ta progression sera perdue.",
+              [
+                { text: "Continuer", style: "cancel" },
+                { text: "Quitter", style: "destructive", onPress: () => router.back() },
+              ]
+            );
+          }}
+          style={styles.closeBtn}
+        >
+          <View style={styles.closeBtnBg}>
+            <Feather name="x" size={18} color={COLORS.white} />
+          </View>
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <ProgressBar
+            progress={exerciseIndex}
+            total={totalExercises}
+            color={cfg.color}
+            height={4}
           />
-          {/* Progress bar + header on top of image */}
-          <View style={[styles.headerOverlay, { paddingTop: insets.top + 12 }]}>
-            <Pressable
-              onPress={() => {
-                Alert.alert(
-                  "Quitter la séance ?",
-                  "Ta progression sera perdue.",
-                  [
-                    { text: "Continuer", style: "cancel" },
-                    { text: "Quitter", style: "destructive", onPress: () => router.back() },
-                  ]
-                );
-              }}
-              style={styles.closeBtn}
-            >
-              <View style={styles.closeBtnBg}>
-                <Feather name="x" size={18} color={COLORS.white} />
-              </View>
-            </Pressable>
-            <View style={{ flex: 1 }}>
-              <ProgressBar
-                progress={exerciseIndex}
-                total={totalExercises}
-                color={cfg.color}
-                height={3}
-              />
-            </View>
-            <View style={styles.progressChip}>
-              <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
-                {exerciseIndex + 1}/{totalExercises}
-              </Text>
-            </View>
-          </View>
-          {/* Exercise name over image bottom */}
-          <View style={styles.heroBottom}>
-            <Text style={[styles.setLabel, { fontFamily: FONTS.mono }]}>
-              SÉRIE {currentSet}/{exercise.sets}
-            </Text>
-            <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
-              {exercise.exerciseName}
-            </Text>
-            <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
-              {exercise.reps} REPS
-            </Text>
-          </View>
         </View>
-      ) : (
-        /* Fallback header without image */
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <Pressable
-            onPress={() => {
-              Alert.alert(
-                "Quitter la séance ?",
-                "Ta progression sera perdue.",
-                [
-                  { text: "Continuer", style: "cancel" },
-                  { text: "Quitter", style: "destructive", onPress: () => router.back() },
-                ]
-              );
-            }}
-            style={styles.closeBtn}
-          >
-            <Feather name="x" size={22} color={COLORS.textSecondary} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <ProgressBar
-              progress={exerciseIndex}
-              total={totalExercises}
-              color={cfg.color}
-              height={4}
-            />
-          </View>
+        <View style={styles.progressChip}>
           <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
             {exerciseIndex + 1}/{totalExercises}
           </Text>
         </View>
-      )}
+      </View>
+
+      {/* Exercise identity block */}
+      <View style={styles.identityBlock}>
+        <Text style={[styles.setLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+          SÉRIE {currentSet}/{exercise.sets}
+        </Text>
+        <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
+          {exercise.exerciseName}
+        </Text>
+        <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
+          {exercise.reps} REPS
+        </Text>
+      </View>
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Name section if no image hero */}
-        {!heroImage && (
-          <>
-            <Text style={[styles.setLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
-              SÉRIE {currentSet}/{exercise.sets}
-            </Text>
-            <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
-              {exercise.exerciseName}
-            </Text>
-            <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
-              {exercise.reps} REPS
-            </Text>
-          </>
-        )}
-
         {currentLoad > 0 && (
           <View style={styles.loadSection}>
             <Stepper
@@ -403,72 +329,48 @@ export default function ExerciseScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  heroContainer: {
-    width: "100%",
-    height: 300,
-    position: "relative",
-  },
-  heroImage: {
-    width: "100%",
-    height: "100%",
-  },
-  heroGradient: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "100%",
-  },
-  headerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
+  header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingBottom: 12,
     gap: 12,
+    backgroundColor: COLORS.bg,
   },
+  closeBtn: { padding: 4 },
   closeBtnBg: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: COLORS.bgElevated,
     alignItems: "center",
     justifyContent: "center",
   },
-  heroBottom: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    gap: 4,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    gap: 12,
-  },
-  closeBtn: { padding: 4 },
   progressChip: {
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: COLORS.bgElevated,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   progressText: { fontSize: 12, color: COLORS.white },
+  identityBlock: {
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 4,
+    backgroundColor: COLORS.bg,
+  },
+  setLabel: { fontSize: 13, letterSpacing: 3 },
+  exerciseName: { fontSize: 42, letterSpacing: 2, textAlign: "center", lineHeight: 48 },
+  repsText: { fontSize: 26, color: COLORS.white, letterSpacing: 4 },
   content: {
     paddingHorizontal: 24,
     alignItems: "center",
     gap: 24,
     paddingTop: 20,
   },
-  setLabel: { fontSize: 18, letterSpacing: 2, color: COLORS.white, fontWeight: "700" },
+  loadSection: { alignItems: "center", gap: 14, width: "100%" },
   lastUsedRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -476,15 +378,6 @@ const styles = StyleSheet.create({
     marginTop: -6,
   },
   lastUsedText: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.3 },
-  exerciseImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: COLORS.bgCard,
-  },
-  exerciseName: { fontSize: 44, letterSpacing: 2, textAlign: "center", lineHeight: 48 },
-  repsText: { fontSize: 28, color: COLORS.white, letterSpacing: 4 },
-  loadSection: { alignItems: "center", gap: 14, width: "100%" },
   prInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -498,51 +391,40 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cyanDim,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: `${COLORS.cyan}40`,
+    borderColor: `${COLORS.cyan}30`,
     padding: 14,
     width: "100%",
   },
-  cueText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
-  restContainer: { alignItems: "center", gap: 16 },
+  cueText: { flex: 1, fontSize: 14, color: COLORS.white, lineHeight: 20 },
+  restContainer: { alignItems: "center", gap: 20, width: "100%" },
   encourageBox: {
     backgroundColor: COLORS.bgCard,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderRadius: 12,
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    alignItems: "center",
-    maxWidth: 300,
+    paddingVertical: 14,
+    width: "100%",
   },
-  encourageText: { fontSize: 14, color: COLORS.textSecondary, textAlign: "center", lineHeight: 20 },
+  encourageText: { fontSize: 15, color: COLORS.white, textAlign: "center", lineHeight: 22 },
   nextExBox: {
+    width: "100%",
     backgroundColor: COLORS.bgElevated,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    alignItems: "center",
-    gap: 2,
+    padding: 16,
+    gap: 4,
   },
   nextExLabel: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
-  nextExName: { fontSize: 15, color: COLORS.white },
+  nextExName: { fontSize: 16, color: COLORS.white },
   nextExDetail: { fontSize: 12, color: COLORS.textSecondary },
   skipBtn: {
-    borderRadius: 10,
     paddingHorizontal: 24,
-    paddingVertical: 10,
-    backgroundColor: COLORS.bgElevated,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   skipText: { fontSize: 14, color: COLORS.textSecondary },
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 12,
     backgroundColor: COLORS.bg,
     borderTopWidth: 1,
@@ -553,15 +435,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    borderRadius: 16,
+    borderRadius: 14,
     paddingVertical: 18,
   },
-  doneBtnText: { fontSize: 16, color: COLORS.bg, letterSpacing: 0.5 },
+  doneBtnText: { fontSize: 16, color: COLORS.bg, letterSpacing: 1 },
   backHomeBtn: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: COLORS.bgCard,
     borderWidth: 1,
     borderColor: COLORS.border,
   },

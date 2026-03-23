@@ -94,6 +94,7 @@ export default function HomeScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
+      {/* 1. Header: name + date */}
       <View style={styles.header}>
         <View>
           <Text style={[styles.greeting, { fontFamily: FONTS.body }]}>
@@ -105,20 +106,21 @@ export default function HomeScreen() {
               .toUpperCase()}
           </Text>
         </View>
-        {streak > 1 && (
-          <View style={styles.streakBadge}>
-            <Feather name="zap" size={14} color={COLORS.amber} />
-            <Text style={[styles.streakText, { fontFamily: FONTS.monoBold }]}>{streak}</Text>
-          </View>
-        )}
       </View>
 
       {isLoading ? (
         <LoadingSkeleton />
       ) : todayCheckin == null ? (
+        /* 2. Check-in card (when not done) */
         <StateNoPending onCheckin={() => router.push("/checkin")} />
       ) : (
+        /* 2. Score ADAPT + session state */
         <StateCheckedIn checkin={todayCheckin} session={todaySession} modeColor={modeColor} />
+      )}
+
+      {/* Streak & badges — always at bottom */}
+      {!isLoading && (
+        <StreakSection streak={streak} onBadges={() => router.push("/badges")} />
       )}
     </ScrollView>
   );
@@ -182,14 +184,17 @@ function StateCheckedIn({
 
   return (
     <View style={styles.checkedContainer}>
+      {/* Score ADAPT */}
       <View style={styles.scoreSection}>
         <ScoreCircle score={checkin.adaptScore} size="lg" color={cfg.color} />
         <ModeBadge mode={modeKey} size="md" style={{ marginTop: 16 }} />
       </View>
 
       {isCompleted ? (
+        /* Séance terminée */
         <SessionDoneCard session={session!} modeColor={modeColor} cfg={cfg} />
       ) : session != null ? (
+        /* Prochaine séance — carte avec ModeBadge */
         <View style={[styles.sessionCard, { borderColor: `${modeColor}30` }]}>
           <View style={styles.sessionTopRow}>
             <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
@@ -224,6 +229,7 @@ function StateCheckedIn({
           </TouchableOpacity>
         </View>
       ) : (
+        /* Jour de repos */
         <View style={styles.noSessionCard}>
           <Feather name="calendar" size={28} color={COLORS.textMuted} />
           <Text style={[styles.noSessionText, { fontFamily: FONTS.body }]}>
@@ -301,6 +307,30 @@ function SessionDoneCard({
   );
 }
 
+function StreakSection({ streak, onBadges }: { streak: number; onBadges: () => void }) {
+  return (
+    <View style={styles.streakSection}>
+      <TouchableOpacity style={styles.streakCard} onPress={onBadges} activeOpacity={0.8}>
+        <View style={styles.streakLeft}>
+          <Feather name="zap" size={18} color={COLORS.amber} />
+          <View>
+            <Text style={[styles.streakValue, { fontFamily: FONTS.monoBold }]}>
+              {streak > 0 ? streak : "0"}
+            </Text>
+            <Text style={[styles.streakLabel, { fontFamily: FONTS.body }]}>
+              jour{streak !== 1 ? "s" : ""} d'affilée
+            </Text>
+          </View>
+        </View>
+        <View style={styles.badgesLink}>
+          <Text style={[styles.badgesText, { fontFamily: FONTS.bodyMedium }]}>Mes badges</Text>
+          <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingHorizontal: 20, gap: 0 },
@@ -312,18 +342,6 @@ const styles = StyleSheet.create({
   },
   greeting: { fontSize: 17, color: COLORS.textSecondary },
   date: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1, marginTop: 3 },
-  streakBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: COLORS.amberDim,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: COLORS.amber,
-  },
-  streakText: { color: COLORS.amber, fontSize: 14 },
   pendingContainer: { gap: 16 },
   checkinCard: {
     backgroundColor: COLORS.bgCard,
@@ -442,4 +460,41 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   doneHistBtnText: { fontSize: 14 },
+  streakSection: {
+    marginTop: 28,
+  },
+  streakCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  streakLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  streakValue: {
+    fontSize: 22,
+    color: COLORS.amber,
+  },
+  streakLabel: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 1,
+  },
+  badgesLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  badgesText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
 });

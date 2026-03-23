@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   Platform,
@@ -17,7 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useUpdateMe, useAthleteLink, useGetBadges, customFetch } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -74,6 +74,15 @@ export default function ProfileScreen() {
   const [coachCode, setCoachCode] = useState("");
   const [coachLinkError, setCoachLinkError] = useState("");
   const [coachLinked, setCoachLinked] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setEditing(false);
+        setShowDatePicker(false);
+      };
+    }, [])
+  );
 
   const startEditing = () => {
     const p = meQuery.data ?? user;
