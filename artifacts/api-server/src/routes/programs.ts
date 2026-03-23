@@ -617,6 +617,52 @@ router.delete("/programs/:programId", authenticate, requireRole("coach"), async 
   }
 });
 
+// PATCH /programs/:programId/sessions/:sessionId/position — Move session to a new week/day (DnD)
+router.patch("/programs/:programId/sessions/:sessionId/position", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const programId = String(req.params["programId"]);
+    const sessionId = String(req.params["sessionId"]);
+
+    const schema = z.object({
+      weekNumber: z.number().int().min(1),
+      dayNumber: z.number().int().min(1).max(7),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "weekNumber et dayNumber sont requis" } });
+      return;
+    }
+    const { weekNumber, dayNumber } = parsed.data;
+
+    const [program] = await db.select({ id: programsTable.id, durationWeeks: programsTable.durationWeeks })
+      .from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
+    if (!program) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Programme introuvable ou non autorisé" } });
+      return;
+    }
+    if (weekNumber > program.durationWeeks) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Semaine hors limites du programme" } });
+      return;
+    }
+
+    const [session] = await db.select({ id: sessionsTable.id }).from(sessionsTable)
+      .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.programId, programId)));
+    if (!session) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Séance introuvable dans ce programme" } });
+      return;
+    }
+
+    await db.update(sessionsTable)
+      .set({ weekNumber, dayNumber })
+      .where(eq(sessionsTable.id, sessionId));
+
+    res.json({ success: true, weekNumber, dayNumber });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 router.delete("/programs/:programId/sessions/:sessionId", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const programId = String(req.params["programId"]);

@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
+import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useParams, Link, useLocation } from "wouter";
 import {
   useGetProgram,
@@ -53,6 +54,8 @@ import {
   LayoutGrid,
   CalendarDays,
   X,
+  GripVertical,
+  CalendarSearch,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -524,6 +527,38 @@ function AddSessionButton({
   );
 }
 
+function DraggableSession({ session, children }: { session: SessionWithVariants; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({ id: session.id });
+  return (
+    <div ref={setNodeRef} style={{ opacity: isDragging ? 0.35 : 1 }} className="relative group/drag">
+      <button
+        ref={setActivatorNodeRef}
+        {...listeners}
+        {...attributes}
+        className="absolute top-1 right-6 z-10 opacity-0 group-hover/drag:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-white/10"
+        title="Glisser pour déplacer"
+        onClick={(e) => e.stopPropagation()}
+        tabIndex={-1}
+      >
+        <GripVertical className="w-3 h-3 text-muted-foreground" />
+      </button>
+      {children}
+    </div>
+  );
+}
+
+function DroppableDay({ id, isToday, children }: { id: string; isToday?: boolean; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`space-y-1.5 min-h-[40px] rounded-md p-0.5 transition-colors ${isOver ? "ring-1 ring-primary/50 bg-primary/5" : ""} ${isToday ? "ring-1 ring-cyan-400/30" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function ProgramDetail() {
   const { id: programId } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -538,6 +573,7 @@ export default function ProgramDetail() {
   const [currentWeek, setCurrentWeek] = useState(1);
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [copiedSession, setCopiedSession] = useState<SessionWithVariants | null>(null);
+  const [draggingSession, setDraggingSession] = useState<SessionWithVariants | null>(null);
   const { toast } = useToast();
 
   const totalWeeks = program?.durationWeeks ?? 1;
@@ -554,6 +590,66 @@ export default function ProgramDetail() {
     }
     return map;
   }, [program]);
+
+  const todayInfo = useMemo(() => {
+    if (!program?.startDate) return null;
+    const start = new Date(program.startDate + "T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today.getTime() - start.getTime()) / 86400000);
+    if (diffDays < 0) return null;
+    const week = Math.floor(diffDays / 7) + 1;
+    if (week > totalWeeks) return null;
+    const todayDow = today.getDay();
+    const dayNumber = todayDow === 0 ? 7 : todayDow;
+    return { week, dayNumber };
+  }, [program?.startDate, totalWeeks]);
+
+  const handleGoToDate = useCallback((dateStr: string) => {
+    if (!dateStr || !program?.startDate) return;
+    const start = new Date(program.startDate + "T00:00:00");
+    const target = new Date(dateStr + "T00:00:00");
+    const diffDays = Math.floor((target.getTime() - start.getTime()) / 86400000);
+    if (diffDays < 0) return;
+    const weekNum = Math.floor(diffDays / 7) + 1;
+    if (weekNum > totalWeeks) return;
+    setCurrentWeek(weekNum);
+    setViewMode("week");
+  }, [program?.startDate, totalWeeks]);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const session = program?.sessions.find(s => s.id === String(event.active.id));
+    if (session) setDraggingSession(session);
+  }, [program]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setDraggingSession(null);
+    const { active, over } = event;
+    if (!over || !programId) return;
+    const sessionId = String(active.id);
+    const overId = String(over.id);
+    const parts = overId.split("-");
+    if (parts.length !== 3) return;
+    const weekNumber = parseInt(parts[1]!);
+    const dayNumber = parseInt(parts[2]!);
+    if (isNaN(weekNumber) || isNaN(dayNumber)) return;
+    const session = program?.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    if (session.weekNumber === weekNumber && session.dayNumber === dayNumber) return;
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch(`/api/programs/${programId}/sessions/${sessionId}/position`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+        body: JSON.stringify({ weekNumber, dayNumber }),
+      });
+      if (!res.ok) throw new Error("Erreur serveur");
+      toast({ title: `Séance déplacée → S${weekNumber} / ${DAY_NAMES[dayNumber - 1]}` });
+      refetch();
+    } catch {
+      toast({ title: "Échec du déplacement", variant: "destructive" });
+    }
+  }, [programId, program, refetch, toast]);
 
   const handleDeleteProgram = async () => {
     try {
@@ -787,7 +883,7 @@ export default function ProgramDetail() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {viewMode === "week" && (
               <>
                 <Button
@@ -808,6 +904,29 @@ export default function ProgramDetail() {
                 >
                   <Plus className="w-3.5 h-3.5" /> Semaine vide
                 </Button>
+                {todayInfo && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-cyan-400/80 hover:text-cyan-400 gap-1.5 text-xs h-7"
+                    onClick={() => setCurrentWeek(todayInfo.week)}
+                    title="Aller à la semaine courante"
+                  >
+                    Aujourd'hui
+                  </Button>
+                )}
+                {program?.startDate && (
+                  <label className="flex items-center gap-1.5 text-muted-foreground hover:text-white cursor-pointer h-7">
+                    <CalendarSearch className="w-3.5 h-3.5 shrink-0" />
+                    <input
+                      type="date"
+                      min={program.startDate}
+                      className="bg-transparent text-xs border-none outline-none w-[7rem] text-muted-foreground cursor-pointer"
+                      onChange={(e) => handleGoToDate(e.target.value)}
+                      title="Aller à une date"
+                    />
+                  </label>
+                )}
               </>
             )}
             {/* View toggle */}
@@ -833,39 +952,52 @@ export default function ProgramDetail() {
         {/* WEEK VIEW */}
         {viewMode === "week" && (
           <div className="p-3">
-            <div className="grid grid-cols-7 gap-1.5">
-              {DAY_NAMES.map((dayLabel, idx) => {
-                const dayNumber = idx + 1;
-                const daySessions = sessionMap.get(`${safeCurrentWeek}-${dayNumber}`) ?? [];
-                return (
-                  <div key={dayNumber} className="space-y-1.5">
-                    <p className="text-center text-[10px] font-mono text-muted-foreground uppercase">
-                      {dayLabel}
-                    </p>
-                    {daySessions.map((session) => (
-                      <EditorSessionCard
-                        key={session.id}
-                        session={session}
-                        programId={programId!}
-                        programName={program.name}
-                        programAthleteId={program.athleteId}
-                        durationWeeks={totalWeeks}
-                        onRefetch={refetch}
-                        onCopy={handleCopySession}
-                      />
-                    ))}
-                    <AddSessionButton
-                      programId={programId!}
-                      weekNumber={safeCurrentWeek}
-                      dayNumber={dayNumber}
-                      onRefetch={refetch}
-                      copiedSession={copiedSession}
-                      onPaste={copiedSession ? makePasteHandler(safeCurrentWeek, dayNumber) : undefined}
-                    />
+            <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-7 gap-1.5">
+                {DAY_NAMES.map((dayLabel, idx) => {
+                  const dayNumber = idx + 1;
+                  const daySessions = sessionMap.get(`${safeCurrentWeek}-${dayNumber}`) ?? [];
+                  const isToday = !!(todayInfo && todayInfo.week === safeCurrentWeek && todayInfo.dayNumber === dayNumber);
+                  return (
+                    <div key={dayNumber}>
+                      <p className={`text-center text-[10px] font-mono uppercase mb-1.5 ${isToday ? "text-cyan-400 font-bold" : "text-muted-foreground"}`}>
+                        {dayLabel}{isToday ? " •" : ""}
+                      </p>
+                      <DroppableDay id={`cell-${safeCurrentWeek}-${dayNumber}`} isToday={isToday}>
+                        {daySessions.map((session) => (
+                          <DraggableSession key={session.id} session={session}>
+                            <EditorSessionCard
+                              session={session}
+                              programId={programId!}
+                              programName={program.name}
+                              programAthleteId={program.athleteId}
+                              durationWeeks={totalWeeks}
+                              onRefetch={refetch}
+                              onCopy={handleCopySession}
+                            />
+                          </DraggableSession>
+                        ))}
+                        <AddSessionButton
+                          programId={programId!}
+                          weekNumber={safeCurrentWeek}
+                          dayNumber={dayNumber}
+                          onRefetch={refetch}
+                          copiedSession={copiedSession}
+                          onPaste={copiedSession ? makePasteHandler(safeCurrentWeek, dayNumber) : undefined}
+                        />
+                      </DroppableDay>
+                    </div>
+                  );
+                })}
+              </div>
+              <DragOverlay>
+                {draggingSession && (
+                  <div className="px-2.5 py-1.5 rounded-lg bg-card border border-primary/60 text-xs font-medium text-white shadow-xl opacity-95 cursor-grabbing max-w-[120px] truncate">
+                    {draggingSession.name}
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </DragOverlay>
+            </DndContext>
           </div>
         )}
 
@@ -882,47 +1014,56 @@ export default function ProgramDetail() {
               </div>
               {/* Week rows */}
               <div className="divide-y divide-border/30">
-                {weeks.map(week => (
-                  <div key={week} className="grid grid-cols-8 min-h-[80px]">
-                    {/* Week number */}
-                    <div
-                      className="px-3 py-2 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
-                      onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
-                      title="Passer à cette semaine"
-                    >
-                      <span className="text-xs font-display text-muted-foreground hover:text-primary transition-colors">S{week}</span>
+                {weeks.map(week => {
+                  const isCurrentWeekRow = !!(todayInfo && todayInfo.week === week);
+                  return (
+                    <div key={week} className={`grid grid-cols-8 min-h-[80px] ${isCurrentWeekRow ? "bg-cyan-400/[0.03]" : ""}`}>
+                      {/* Week number */}
+                      <div
+                        className="px-3 py-2 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
+                        onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
+                        title="Passer à cette semaine"
+                      >
+                        <span className={`text-xs font-display transition-colors ${isCurrentWeekRow ? "text-cyan-400" : "text-muted-foreground hover:text-primary"}`}>
+                          S{week}{isCurrentWeekRow ? " •" : ""}
+                        </span>
+                      </div>
+                      {/* Days */}
+                      {DAY_NAMES.map((_, dayIdx) => {
+                        const dayNumber = dayIdx + 1;
+                        const daySessions = sessionMap.get(`${week}-${dayNumber}`) ?? [];
+                        const isTodayCell = !!(todayInfo && todayInfo.week === week && todayInfo.dayNumber === dayNumber);
+                        return (
+                          <div
+                            key={dayNumber}
+                            className={`p-1 space-y-0.5 border-l border-border/20 ${isTodayCell ? "bg-cyan-400/10" : ""}`}
+                          >
+                            {daySessions.map(session => (
+                              <div
+                                key={session.id}
+                                onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
+                                className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-mono leading-tight cursor-pointer hover:bg-primary/25 transition-colors truncate"
+                                title={session.name}
+                              >
+                                {session.name}
+                              </div>
+                            ))}
+                            {daySessions.length === 0 && copiedSession && (
+                              <button
+                                type="button"
+                                onClick={makePasteHandler(week, dayNumber)}
+                                className="w-full h-6 rounded border border-dashed border-accent/30 hover:border-accent hover:bg-accent/10 transition-all flex items-center justify-center"
+                                title={`Coller « ${copiedSession.name} »`}
+                              >
+                                <ClipboardPaste className="w-2.5 h-2.5 text-accent/60 hover:text-accent" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    {/* Days */}
-                    {DAY_NAMES.map((_, dayIdx) => {
-                      const dayNumber = dayIdx + 1;
-                      const daySessions = sessionMap.get(`${week}-${dayNumber}`) ?? [];
-                      return (
-                        <div key={dayNumber} className="p-1 space-y-0.5 border-l border-border/20">
-                          {daySessions.map(session => (
-                            <div
-                              key={session.id}
-                              onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
-                              className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-mono leading-tight cursor-pointer hover:bg-primary/25 transition-colors truncate"
-                              title={session.name}
-                            >
-                              {session.name}
-                            </div>
-                          ))}
-                          {daySessions.length === 0 && copiedSession && (
-                            <button
-                              type="button"
-                              onClick={makePasteHandler(week, dayNumber)}
-                              className="w-full h-6 rounded border border-dashed border-accent/30 hover:border-accent hover:bg-accent/10 transition-all flex items-center justify-center"
-                              title={`Coller « ${copiedSession.name} »`}
-                            >
-                              <ClipboardPaste className="w-2.5 h-2.5 text-accent/60 hover:text-accent" />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

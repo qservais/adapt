@@ -90,6 +90,7 @@ interface SessionDetail {
   sessionName: string;
   variantMode: string;
   rpe: number | null;
+  athleteNotes: string | null;
   completedAt: string | null;
   durationMin: number | null;
   exercises: SessionDetailExercise[];
@@ -909,6 +910,12 @@ export default function ClientDetail() {
                                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                             <Clock className="w-3 h-3" />
                                             Durée réelle : <span className="text-white font-medium">{detail.durationMin} min</span>
+                                          </div>
+                                        )}
+                                        {detail.athleteNotes && (
+                                          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                                            <span className="mt-0.5">📝</span>
+                                            <span>Notes athlète : <span className="text-white/80 italic">"{detail.athleteNotes}"</span></span>
                                           </div>
                                         )}
                                         {detail.exercises.length === 0 ? (

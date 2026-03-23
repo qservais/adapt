@@ -950,6 +950,7 @@ router.get("/coach/clients/:clientId/sessions/:sessionLogId", authenticate, requ
       sessionName,
       variantMode: sessionLog.variantMode,
       rpe: sessionLog.rpe,
+      athleteNotes: sessionLog.athleteNotes ?? null,
       completedAt: sessionLog.completedAt?.toISOString() ?? null,
       durationMin,
       exercises,
