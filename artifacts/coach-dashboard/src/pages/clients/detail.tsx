@@ -125,7 +125,7 @@ export default function ClientDetail() {
     setSessionDetails(prev => ({ ...prev, [sessionLogId]: "loading" }));
     try {
       const token = localStorage.getItem("adapt_coach_access");
-      const res = await fetch(`${import.meta.env.BASE_URL}api/coach/clients/${id}/sessions/${sessionLogId}`, {
+      const res = await fetch(`/api/coach/clients/${id}/sessions/${sessionLogId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();

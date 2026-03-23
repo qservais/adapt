@@ -132,7 +132,7 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
     setIsSaving(true);
     try {
       const token = localStorage.getItem("adapt_coach_access");
-      const res = await fetch(`${import.meta.env.BASE_URL}api/exercises`, {
+      const res = await fetch(`/api/exercises`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

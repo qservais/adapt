@@ -47,7 +47,7 @@ interface DashboardData {
 
 async function fetchDashboard(): Promise<DashboardData> {
   const token = localStorage.getItem("adapt_coach_access");
-  const res = await fetch(`${import.meta.env.BASE_URL}api/coach/dashboard`, {
+  const res = await fetch(`/api/coach/dashboard`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Erreur chargement dashboard");
