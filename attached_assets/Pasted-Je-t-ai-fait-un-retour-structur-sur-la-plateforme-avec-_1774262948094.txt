@@ -1,0 +1,208 @@
+Je t’ai fait un retour structuré sur la plateforme avec :  
+- ce qui fonctionne bien  
+- les points bloquants  
+- les améliorations importantes  
+- la vision globale  
+
+L’objectif est d’aller vers un outil plus fluide, plus intelligent et plus premium pour le coaching.
+
+---
+
+## ✅ Ce qui fonctionne bien
+- Code couleur intuitif  
+- Vue d’ensemble claire  
+- Check-in simple et efficace  
+- Adaptation en direct intéressante  
+- Navigation globale assez intuitive  
+
+---
+
+## ❌ Points bloquants / bugs
+
+### Dashboard
+- Confusion entre Dashboard et Athlètes → à différencier  
+- Manque une vue claire avec :
+  - séances passées  
+  - séances à venir  
+  - calendrier  
+
+- Depuis un athlète : pouvoir voir + modifier directement ses séances
+
+---
+
+### Programme / éditeur
+- Bug ajouter client → http404  
+- Impossible ou pas clair de :
+  - ajouter une séance sur un jour précis  
+  - ajouter une séance le jour même  
+
+- Impossible de :
+  - voir le détail d’un bloc  
+  - copier / coller une séance  
+  - déplacer une séance (drag & drop)  
+
+- Calendrier limité à la semaine → impossible d’aller à une date précise (ex : 23/12)  
+
+- Le temps total de séance devrait se calculer automatiquement  
+
+---
+
+### Profil client
+- Champ taille ne fonctionne pas  
+- Les séances ne s’affichent pas dans le calendrier  
+
+---
+
+## 🚀 Améliorations importantes
+
+### 1. Structure des séances
+Ajouter des types de séances plus précis :
+
+- Développement athlétique  
+  (force, puissance, plyo, vitesse, COD, mobilité…)  
+
+- Running / Engine  
+- Conditioning (Hyrox, circuits…)  
+- Strength  
+
+---
+
+### 2. Système modulaire
+Chaque séance = blocs :
+- warm-up  
+- strength  
+- power  
+- conditioning  
+- core  
+- cool down  
+
+---
+
+### 3. Bibliothèque exercices
+- Ajouter / modifier exercices  
+- Les voir facilement  
+- Les assigner directement  
+
+---
+
+### 4. Superset
+Pouvoir associer plusieurs exercices (A1/A2, circuits…)
+
+---
+
+### 5. Gestion planning
+- Ajouter plusieurs séances sur un jour  
+- Drag & drop  
+- Copier / dupliquer séances  
+
+---
+
+### 6. RDV coach / client
+Pouvoir intégrer :
+- séances 1:1  
+- rendez-vous  
+
+---
+
+### 7. Vidéo
+Permettre à l’athlète d’envoyer une vidéo (feedback technique)
+
+---
+
+### 8. Photo profil
+Ajouter photo athlète  
+
+---
+
+### 9. Guides
+Créer une section avec :
+- RPE  
+- tempo  
+- choix des charges  
+- récupération  
+
+---
+
+### 10. Tests performance
+Ex :
+- 1RM  
+- pompes  
+- tractions  
+- running  
+
+→ + suivi dans le temps (graphique)
+
+---
+
+### 11. Nutrition (optionnel)
+- repas  
+- hydratation  
+
+---
+
+### 12. Connexion montre
+- activité  
+- FC  
+- calories  
+
+---
+
+## 🤖 Système d’alertes
+
+### Athlète
+- Rappel séance  
+- Encouragement  
+- Check-in  
+- ⚠️ Alerte baisse de performance  
+
+---
+
+### Coach
+- Baisse / hausse performance  
+- Fatigue / douleur  
+- Inactivité  
+
+---
+
+## 🧠 Programmes intelligents
+
+### Starter automatique
+Si pas de programme :
+→ séance générée automatiquement  
+
+---
+
+### Onboarding intelligent
+Questionnaire → génère programme de base (1 à 2 semaines)
+
+---
+
+## 🎯 Offre automatisée
+Pouvoir offrir automatiquement :
+→ 1 mois de programme  
+
+Basé sur :
+- objectif  
+- profil  
+
+(ex : pack 10 séances → 1 mois offert)
+
+---
+
+## 📊 Métriques à ajouter
+- temps  
+- distance  
+- calories  
+- rounds  
+- charges  
+- graphique évolution  
+
+---
+
+## ⭐️ Points essentiels pour ce type d’app
+1. Simplicité  
+2. Adaptation intelligente  
+3. Autonomie athlète  
+4. Feedback & engagement  
+
+---
