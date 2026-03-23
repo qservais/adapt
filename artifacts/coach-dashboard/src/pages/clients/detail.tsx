@@ -6,15 +6,15 @@ import {
   useResolveAlert,
   useCoachUnlink,
   useCoachUpdateAthleteProfile,
-  AlertData,
+  useGetPrograms,
   UpcomingSession,
 } from "@workspace/api-client-react";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import { 
   Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
-  Pencil, Calendar, Clock, ChevronDown, ChevronUp, Copy, Check
+  Pencil, Calendar, Clock, ChevronDown, ChevronUp, Copy, Check, Dumbbell, ExternalLink
 } from "lucide-react";
-import { format, parseISO, isToday, isFuture, isPast, startOfWeek, addDays } from "date-fns";
+import { format, parseISO, startOfWeek, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine
@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { ProgramGrid } from "@/components/program-editor";
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner: "Débutant",
@@ -83,11 +84,16 @@ function groupByWeek(sessions: UpcomingSession[]) {
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
 }
 
+type Tab = "apercu" | "programme";
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { data: client, isLoading, refetch } = useGetClientDetail(id, { query: { queryKey: [`/api/coach/clients/${id}`], refetchInterval: 30000 }});
+  const { data: allPrograms } = useGetPrograms({ query: { queryKey: ["/api/programs"] } });
+
+  const [activeTab, setActiveTab] = useState<Tab>("apercu");
   const [chartRange, setChartRange] = useState<7 | 30>(7);
   const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
@@ -114,6 +120,8 @@ export default function ClientDetail() {
       </div>
     );
   }
+
+  const activeProgram = allPrograms?.find(p => p.athleteId === id && p.isActive);
 
   const handleOverride = async (mode: 'performance' | 'normal' | 'adapt' | 'recovery') => {
     try {
@@ -205,14 +213,20 @@ export default function ClientDetail() {
   const weekGroups = groupByWeek(allSessionsTimeline);
   const today = new Date().toISOString().split("T")[0];
 
+  const tabs: { id: Tab; label: string; icon: typeof Calendar }[] = [
+    { id: "apercu", label: "Aperçu", icon: CheckCircle2 },
+    { id: "programme", label: "Programme", icon: Dumbbell },
+  ];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <Link href="/clients" className="hover:text-white flex items-center gap-1 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Retour au roster
+          <ArrowLeft className="w-4 h-4" /> Retour aux athlètes
         </Link>
       </div>
 
+      {/* Athlete header card */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 bg-card border border-border p-6 rounded-2xl shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-secondary" />
         
@@ -278,6 +292,25 @@ export default function ClientDetail() {
             <UserMinus className="w-4 h-4 mr-2" /> Délier l'athlète
           </Button>
         </div>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex gap-1 bg-card border border-border rounded-xl p-1 w-fit">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+              activeTab === tab.id
+                ? "bg-primary/15 text-primary border border-primary/30"
+                : "text-muted-foreground hover:text-white hover:bg-white/5"
+            )}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Profile edit dialog */}
@@ -383,232 +416,272 @@ export default function ClientDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {client.activeAlerts.length > 0 && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2 text-destructive font-bold uppercase tracking-wider">
-            <AlertTriangle className="w-5 h-5" /> Alertes actives
-          </div>
-          <div className="grid gap-2">
-            {client.activeAlerts.map(alert => (
-              <div key={alert.id} className="flex items-center justify-between bg-background/50 p-3 rounded-lg border border-destructive/20">
-                <div>
-                  <span className="text-xs font-mono text-destructive uppercase mr-2">[{alert.priority}]</span>
-                  <span className="text-sm text-white">{alert.message}</span>
-                </div>
-                <Button size="sm" variant="ghost" className="text-xs text-muted-foreground hover:text-white" onClick={() => handleResolveAlert(alert.id)}>
-                  Résoudre <CheckCircle2 className="w-3 h-3 ml-1" />
-                </Button>
+      {/* APERÇU TAB */}
+      {activeTab === "apercu" && (
+        <>
+          {client.activeAlerts.length > 0 && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2 text-destructive font-bold uppercase tracking-wider">
+                <AlertTriangle className="w-5 h-5" /> Alertes actives
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-card border-border shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl font-display tracking-widest text-white">ÉVOLUTION ADAPT SCORE</CardTitle>
-              <div className="flex items-center gap-1 bg-background p-1 rounded-md border border-border">
-                <button 
-                  onClick={() => setChartRange(7)} 
-                  className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 7 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
-                >
-                  7J
-                </button>
-                <button 
-                  onClick={() => setChartRange(30)} 
-                  className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 30 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
-                >
-                  30J
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {chartData.length > 0 ? (
-                <div className="h-[250px] w-full mt-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickMargin={10} axisLine={false} tickLine={false} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} axisLine={false} tickLine={false} />
-                      <RechartsTooltip 
-                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-                        itemStyle={{ color: 'hsl(var(--primary))', fontWeight: 'bold' }}
-                      />
-                      <ReferenceLine y={60} stroke="hsl(var(--primary))" strokeDasharray="3 3" opacity={0.3} />
-                      <ReferenceLine y={40} stroke="hsl(var(--accent))" strokeDasharray="3 3" opacity={0.3} />
-                      <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--background))', strokeWidth: 2 }} activeDot={{ r: 6, fill: 'hsl(var(--primary))' }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">Pas encore assez de données</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <div>
-            <h3 className="text-sm font-display text-muted-foreground tracking-widest mb-3 uppercase">Forme du jour</h3>
-            {client.todayCheckin ? (
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {metrics.map(m => {
-                  const val = m.value || 0;
-                  const color = val >= 4 ? 'bg-primary' : val >= 3 ? 'bg-accent' : 'bg-destructive';
-                  return (
-                    <div key={m.name} className="bg-background border border-border p-3 rounded-xl flex flex-col items-center justify-center text-center hover-elevate">
-                      <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{m.name}</span>
-                      <span className="text-2xl font-display text-white">{val}<span className="text-xs text-muted-foreground">/5</span></span>
-                      <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
-                        <div className={cn("h-full rounded-full", color)} style={{ width: `${(val / 5) * 100}%` }} />
-                      </div>
+              <div className="grid gap-2">
+                {client.activeAlerts.map(alert => (
+                  <div key={alert.id} className="flex items-center justify-between bg-background/50 p-3 rounded-lg border border-destructive/20">
+                    <div>
+                      <span className="text-xs font-mono text-destructive uppercase mr-2">[{alert.priority}]</span>
+                      <span className="text-sm text-white">{alert.message}</span>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="bg-background border border-border p-6 rounded-xl text-center text-muted-foreground italic text-sm">
-                Aucun check-in soumis aujourd'hui.
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          {/* Session timeline */}
-          <Card className="bg-card border-border shadow-lg">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  PLANNING
-                </CardTitle>
-                <button
-                  onClick={() => setSessionTimelineExpanded(e => !e)}
-                  className="text-muted-foreground hover:text-white transition-colors"
-                >
-                  {sessionTimelineExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-              </div>
-            </CardHeader>
-            {sessionTimelineExpanded && (
-              <CardContent className="pt-0">
-                {weekGroups.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground text-sm italic">
-                    Aucun programme actif planifié.
+                    <Button size="sm" variant="ghost" className="text-xs text-muted-foreground hover:text-white" onClick={() => handleResolveAlert(alert.id)}>
+                      Résoudre <CheckCircle2 className="w-3 h-3 ml-1" />
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {weekGroups.map(([weekStart, sessions]) => {
-                      const weekStartDate = parseISO(weekStart);
-                      const weekEnd = addDays(weekStartDate, 6);
-                      const isCurrentWeek = new Date() >= weekStartDate && new Date() <= weekEnd;
+                ))}
+              </div>
+            </div>
+          )}
 
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="bg-card border-border shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xl font-display tracking-widest text-white">ÉVOLUTION ADAPT SCORE</CardTitle>
+                  <div className="flex items-center gap-1 bg-background p-1 rounded-md border border-border">
+                    <button 
+                      onClick={() => setChartRange(7)} 
+                      className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 7 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
+                    >
+                      7J
+                    </button>
+                    <button 
+                      onClick={() => setChartRange(30)} 
+                      className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 30 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
+                    >
+                      30J
+                    </button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {chartData.length > 0 ? (
+                    <div className="h-[250px] w-full mt-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                          <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickMargin={10} axisLine={false} tickLine={false} />
+                          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} axisLine={false} tickLine={false} />
+                          <RechartsTooltip 
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                            itemStyle={{ color: 'hsl(var(--primary))', fontWeight: 'bold' }}
+                          />
+                          <ReferenceLine y={60} stroke="hsl(var(--primary))" strokeDasharray="3 3" opacity={0.3} />
+                          <ReferenceLine y={40} stroke="hsl(var(--accent))" strokeDasharray="3 3" opacity={0.3} />
+                          <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--background))', strokeWidth: 2 }} activeDot={{ r: 6, fill: 'hsl(var(--primary))' }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-[250px] flex items-center justify-center text-muted-foreground">Pas encore assez de données</div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div>
+                <h3 className="text-sm font-display text-muted-foreground tracking-widest mb-3 uppercase">Forme du jour</h3>
+                {client.todayCheckin ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {metrics.map(m => {
+                      const val = m.value || 0;
+                      const color = val >= 4 ? 'bg-primary' : val >= 3 ? 'bg-accent' : 'bg-destructive';
                       return (
-                        <div key={weekStart}>
-                          <div className={cn(
-                            "text-xs font-mono uppercase tracking-wider mb-2 pb-1 border-b",
-                            isCurrentWeek ? "text-primary border-primary/30" : "text-muted-foreground border-border"
-                          )}>
-                            {isCurrentWeek ? "↗ Cette semaine — " : ""}
-                            {format(weekStartDate, 'd MMM', { locale: fr })} – {format(weekEnd, 'd MMM yyyy', { locale: fr })}
-                          </div>
-                          <div className="space-y-2">
-                            {sessions.map((session) => {
-                              const sessionDate = parseISO(session.scheduledDate);
-                              const isSessionToday = session.scheduledDate === today;
-                              const isPastSession = session.scheduledDate < today;
-                              const isUpcoming = session.scheduledDate > today;
-
-                              return (
-                                <div
-                                  key={session.sessionId}
-                                  className={cn(
-                                    "flex items-center justify-between p-2.5 rounded-lg border transition-colors",
-                                    session.isCompleted
-                                      ? "bg-primary/5 border-primary/20 opacity-70"
-                                      : isSessionToday
-                                      ? "bg-primary/10 border-primary/40"
-                                      : isPastSession && !session.isCompleted
-                                      ? "bg-destructive/5 border-destructive/20"
-                                      : "bg-background border-border hover:border-white/20"
-                                  )}
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className={cn(
-                                      "w-2 h-2 rounded-full shrink-0",
-                                      session.isCompleted ? "bg-primary" :
-                                      isSessionToday ? "bg-primary animate-pulse" :
-                                      isPastSession ? "bg-destructive" :
-                                      "bg-muted-foreground/40"
-                                    )} />
-                                    <div className="min-w-0">
-                                      <div className="text-xs font-medium text-white truncate">{session.sessionName}</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        {format(sessionDate, 'EEE d MMM', { locale: fr })}
-                                        {session.estimatedDurationMin && (
-                                          <span className="ml-1.5 inline-flex items-center gap-0.5">
-                                            <Clock className="w-3 h-3" />{session.estimatedDurationMin}min
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-right shrink-0 ml-2">
-                                    <span className={cn(
-                                      "text-xs px-1.5 py-0.5 rounded font-mono",
-                                      session.isCompleted ? "bg-primary/20 text-primary" :
-                                      isPastSession ? "bg-destructive/20 text-destructive" :
-                                      isSessionToday ? "bg-primary/30 text-primary font-semibold" :
-                                      "bg-white/5 text-muted-foreground"
-                                    )}>
-                                      {session.isCompleted ? "✓ Fait" :
-                                       isPastSession ? "Manqué" :
-                                       isSessionToday ? "Auj." : 
-                                       SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                        <div key={m.name} className="bg-background border border-border p-3 rounded-xl flex flex-col items-center justify-center text-center hover-elevate">
+                          <span className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{m.name}</span>
+                          <span className="text-2xl font-display text-white">{val}<span className="text-xs text-muted-foreground">/5</span></span>
+                          <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
+                            <div className={cn("h-full rounded-full", color)} style={{ width: `${(val / 5) * 100}%` }} />
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
-
-                {/* Recent sessions not in the planned timeline */}
-                {client.recentSessions.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
-                      Séances récentes
-                    </div>
-                    <div className="space-y-2">
-                      {client.recentSessions.slice(0, 5).map(session => (
-                        <div key={session.id} className="flex items-center justify-between p-2.5 rounded-lg bg-background border border-border">
-                          <div>
-                            <div className="text-xs font-medium text-white">
-                              {session.completedAt ? format(new Date(session.completedAt), 'd MMM', { locale: fr }) : 'Incomplète'}
-                            </div>
-                            <div className="mt-0.5">
-                              <ModeBadge mode={session.variantMode} />
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-xs text-muted-foreground uppercase">RPE</div>
-                            <div className="text-sm font-mono text-white">{session.rpe || '--'}<span className="text-xs text-muted-foreground">/10</span></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                ) : (
+                  <div className="bg-background border border-border p-6 rounded-xl text-center text-muted-foreground italic text-sm">
+                    Aucun check-in soumis aujourd'hui.
                   </div>
                 )}
-              </CardContent>
-            )}
-          </Card>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Session timeline */}
+              <Card className="bg-card border-border shadow-lg">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      PLANNING
+                    </CardTitle>
+                    <button
+                      onClick={() => setSessionTimelineExpanded(e => !e)}
+                      className="text-muted-foreground hover:text-white transition-colors"
+                    >
+                      {sessionTimelineExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </CardHeader>
+                {sessionTimelineExpanded && (
+                  <CardContent className="pt-0">
+                    {weekGroups.length === 0 ? (
+                      <div className="py-8 text-center text-muted-foreground text-sm italic">
+                        Aucun programme actif planifié.
+                      </div>
+                    ) : (
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                        {weekGroups.map(([weekStart, sessions]) => {
+                          const weekStartDate = parseISO(weekStart);
+                          const weekEnd = addDays(weekStartDate, 6);
+                          const isCurrentWeek = new Date() >= weekStartDate && new Date() <= weekEnd;
+
+                          return (
+                            <div key={weekStart}>
+                              <div className={cn(
+                                "text-xs font-mono uppercase tracking-wider mb-2 pb-1 border-b",
+                                isCurrentWeek ? "text-primary border-primary/30" : "text-muted-foreground border-border"
+                              )}>
+                                {isCurrentWeek ? "↗ Cette semaine — " : ""}
+                                {format(weekStartDate, 'd MMM', { locale: fr })} – {format(weekEnd, 'd MMM yyyy', { locale: fr })}
+                              </div>
+                              <div className="space-y-2">
+                                {sessions.map((session) => {
+                                  const sessionDate = parseISO(session.scheduledDate);
+                                  const isSessionToday = session.scheduledDate === today;
+                                  const isPastSession = session.scheduledDate < today;
+
+                                  return (
+                                    <div
+                                      key={session.sessionId}
+                                      className={cn(
+                                        "flex items-center justify-between p-2.5 rounded-lg border transition-colors",
+                                        session.isCompleted
+                                          ? "bg-primary/5 border-primary/20 opacity-70"
+                                          : isSessionToday
+                                          ? "bg-primary/10 border-primary/40"
+                                          : isPastSession && !session.isCompleted
+                                          ? "bg-destructive/5 border-destructive/20"
+                                          : "bg-background border-border hover:border-white/20"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className={cn(
+                                          "w-2 h-2 rounded-full shrink-0",
+                                          session.isCompleted ? "bg-primary" :
+                                          isSessionToday ? "bg-primary animate-pulse" :
+                                          isPastSession ? "bg-destructive" :
+                                          "bg-muted-foreground/40"
+                                        )} />
+                                        <div className="min-w-0">
+                                          <div className="text-xs font-medium text-white truncate">{session.sessionName}</div>
+                                          <div className="text-xs text-muted-foreground">
+                                            {format(sessionDate, 'EEE d MMM', { locale: fr })}
+                                            {session.estimatedDurationMin && (
+                                              <span className="ml-1.5 inline-flex items-center gap-0.5">
+                                                <Clock className="w-3 h-3" />{session.estimatedDurationMin}min
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0 ml-2">
+                                        <span className={cn(
+                                          "text-xs px-1.5 py-0.5 rounded font-mono",
+                                          session.isCompleted ? "bg-primary/20 text-primary" :
+                                          isPastSession ? "bg-destructive/20 text-destructive" :
+                                          isSessionToday ? "bg-primary/30 text-primary font-semibold" :
+                                          "bg-white/5 text-muted-foreground"
+                                        )}>
+                                          {session.isCompleted ? "✓ Fait" :
+                                           isPastSession ? "Manqué" :
+                                           isSessionToday ? "Auj." : 
+                                           SESSION_TYPE_LABELS[session.sessionType] ?? session.sessionType}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {client.recentSessions.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                          Séances récentes
+                        </div>
+                        <div className="space-y-2">
+                          {client.recentSessions.slice(0, 5).map(session => (
+                            <div key={session.id} className="flex items-center justify-between p-2.5 rounded-lg bg-background border border-border">
+                              <div>
+                                <div className="text-xs font-medium text-white">
+                                  {session.completedAt ? format(new Date(session.completedAt), 'd MMM', { locale: fr }) : 'Incomplète'}
+                                </div>
+                                <div className="mt-0.5">
+                                  <ModeBadge mode={session.variantMode} />
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xs text-muted-foreground uppercase">RPE</div>
+                                <div className="text-sm font-mono text-white">{session.rpe || '--'}<span className="text-xs text-muted-foreground">/10</span></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* PROGRAMME TAB */}
+      {activeTab === "programme" && (
+        <div className="space-y-4">
+          {activeProgram ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-display text-white">{activeProgram.name}</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {activeProgram.durationWeeks} semaine{activeProgram.durationWeeks !== 1 ? "s" : ""}
+                    {activeProgram.startDate && ` · Démarré le ${format(new Date(activeProgram.startDate), 'd MMMM yyyy', { locale: fr })}`}
+                  </p>
+                </div>
+                <Link href={`/programs/${activeProgram.id}`}>
+                  <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:text-white gap-1.5">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Vue complète
+                  </Button>
+                </Link>
+              </div>
+              <ProgramGrid programId={activeProgram.id} />
+            </>
+          ) : (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <Dumbbell className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
+              <p className="text-white font-medium mb-1">Aucun programme actif</p>
+              <p className="text-muted-foreground text-sm mb-6">Créez un programme depuis la page Programmes pour le retrouver ici.</p>
+              <Link href="/programs">
+                <Button className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20">
+                  Voir les programmes
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

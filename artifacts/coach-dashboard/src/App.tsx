@@ -7,6 +7,7 @@ import { AppLayout } from "./components/layout/app-layout";
 import "./lib/api-setup";
 
 import LoginPage from "./pages/login";
+import Dashboard from "./pages/dashboard/index";
 import ClientsOverview from "./pages/clients/index";
 import ClientDetail from "./pages/clients/detail";
 import ProgramsList from "./pages/programs/index";
@@ -60,7 +61,7 @@ function AppRouter() {
   return (
     <AppLayout>
       <Switch>
-        <Route path="/" component={() => <Redirect to="/clients" />} />
+        <Route path="/" component={Dashboard} />
         <Route path="/clients" component={ClientsOverview} />
         <Route path="/clients/:id" component={ClientDetail} />
         <Route path="/programs" component={ProgramsList} />

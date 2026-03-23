@@ -1,11 +1,146 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, checkinsTable, sessionLogsTable, alertsTable, programsTable, sessionsTable } from "@workspace/db";
-import { eq, and, desc, gte } from "drizzle-orm";
+import { eq, and, desc, gte, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
 const router = Router();
+
+router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const athletes = await db.select().from(usersTable)
+      .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete")));
+
+    if (athletes.length === 0) {
+      res.json({ todayAthletes: [], weekSessions: [], recentCompleted: [] });
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const athleteIds = athletes.map(a => a.id);
+
+    // Today's check-ins
+    const todayCheckins = await db.select().from(checkinsTable)
+      .where(and(
+        eq(checkinsTable.date, today),
+      ));
+    const checkinByAthlete = new Map(todayCheckins.filter(c => athleteIds.includes(c.athleteId)).map(c => [c.athleteId, c]));
+
+    const todayAthletes = athletes.map(a => {
+      const checkin = checkinByAthlete.get(a.id);
+      return {
+        id: a.id,
+        firstName: a.firstName,
+        lastName: a.lastName,
+        adaptScore: checkin?.adaptScore ?? null,
+        sessionMode: checkin?.sessionMode ?? null,
+        hasCheckin: !!checkin,
+      };
+    });
+
+    // This week's planned sessions from active programs
+    const now = new Date();
+    const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Mon
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - dayOfWeek);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const activePrograms = await db.select().from(programsTable)
+      .where(eq(programsTable.isActive, true));
+    const myPrograms = activePrograms.filter(p => athleteIds.includes(p.athleteId));
+
+    const weekSessions: Array<{
+      athleteId: string;
+      athleteName: string;
+      sessionId: string;
+      sessionName: string;
+      sessionType: string;
+      scheduledDate: string;
+      estimatedDurationMin: number | null;
+      isCompleted: boolean;
+    }> = [];
+
+    for (const program of myPrograms) {
+      if (!program.startDate) continue;
+      const athlete = athletes.find(a => a.id === program.athleteId);
+      if (!athlete) continue;
+
+      const programSessions = await db.select().from(sessionsTable)
+        .where(eq(sessionsTable.programId, program.id));
+      const programStart = new Date(program.startDate);
+
+      const completedLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
+        .from(sessionLogsTable)
+        .where(eq(sessionLogsTable.athleteId, athlete.id));
+      const completedIds = new Set(completedLogs.filter(l => l.sessionId).map(l => l.sessionId));
+
+      for (const session of programSessions) {
+        const sessionDate = new Date(programStart);
+        sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
+        sessionDate.setHours(0, 0, 0, 0);
+
+        if (sessionDate >= weekStart && sessionDate <= weekEnd) {
+          weekSessions.push({
+            athleteId: athlete.id,
+            athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
+            sessionId: session.id,
+            sessionName: session.name,
+            sessionType: session.type,
+            scheduledDate: sessionDate.toISOString().split("T")[0],
+            estimatedDurationMin: session.estimatedDurationMin,
+            isCompleted: completedIds.has(session.id),
+          });
+        }
+      }
+    }
+    weekSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+
+    // Last 5 completed sessions across all athletes
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const allRecentLogs = await db.select({
+      id: sessionLogsTable.id,
+      athleteId: sessionLogsTable.athleteId,
+      sessionId: sessionLogsTable.sessionId,
+      variantMode: sessionLogsTable.variantMode,
+      rpe: sessionLogsTable.rpe,
+      completedAt: sessionLogsTable.completedAt,
+      createdAt: sessionLogsTable.createdAt,
+    }).from(sessionLogsTable)
+      .where(gte(sessionLogsTable.createdAt, sevenDaysAgo))
+      .orderBy(desc(sessionLogsTable.createdAt))
+      .limit(20);
+
+    const myLogs = allRecentLogs.filter(l => athleteIds.includes(l.athleteId)).slice(0, 5);
+    const sessionIds = myLogs.filter(l => l.sessionId).map(l => l.sessionId!);
+    const sessionNames = sessionIds.length > 0
+      ? await db.select({ id: sessionsTable.id, name: sessionsTable.name }).from(sessionsTable)
+        .where(inArray(sessionsTable.id, sessionIds))
+      : [];
+    const sessionNameMap = new Map(sessionNames.map(s => [s.id, s.name]));
+
+    const recentCompleted = myLogs.map(log => {
+      const athlete = athletes.find(a => a.id === log.athleteId);
+      return {
+        id: log.id,
+        athleteId: log.athleteId,
+        athleteName: athlete ? `${athlete.firstName} ${athlete.lastName ?? ""}`.trim() : "Athlète",
+        sessionName: log.sessionId ? (sessionNameMap.get(log.sessionId) ?? "Séance libre") : "Séance libre",
+        variantMode: log.variantMode,
+        rpe: log.rpe,
+        completedAt: (log.completedAt ?? log.createdAt)?.toISOString() ?? null,
+      };
+    });
+
+    res.json({ todayAthletes, weekSessions, recentCompleted });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
 
 router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res) => {
   try {
