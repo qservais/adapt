@@ -600,14 +600,12 @@ export function ProgramGrid({ programId }: ProgramGridProps) {
                         onRefetch={refetch}
                       />
                     ))}
-                    {daySessions.length === 0 && (
-                      <SessionCell
-                        weekNumber={week}
-                        dayNumber={dayNumber}
-                        programId={programId}
-                        onRefetch={refetch}
-                      />
-                    )}
+                    <SessionCell
+                      weekNumber={week}
+                      dayNumber={dayNumber}
+                      programId={programId}
+                      onRefetch={refetch}
+                    />
                   </div>
                 );
               })}
