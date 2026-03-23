@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { exercisesTable, sessionExercisesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -84,7 +84,22 @@ router.put("/exercises/:exerciseId", authenticate, requireRole("coach"), async (
     return;
   }
 
+  const coachId = req.user!.userId;
   try {
+    const existing = await db.select({ id: exercisesTable.id, createdBy: exercisesTable.createdBy })
+      .from(exercisesTable)
+      .where(eq(exercisesTable.id, exerciseId))
+      .limit(1);
+
+    if (!existing[0]) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+      return;
+    }
+    if (existing[0].createdBy !== coachId) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Vous ne pouvez modifier que vos propres exercices" } });
+      return;
+    }
+
     const [exercise] = await db.update(exercisesTable)
       .set({
         name: parsed.data.name,
@@ -94,11 +109,11 @@ router.put("/exercises/:exerciseId", authenticate, requireRole("coach"), async (
         description: parsed.data.description ?? null,
         demoUrl: parsed.data.demoUrl || null,
       })
-      .where(eq(exercisesTable.id, exerciseId))
+      .where(and(eq(exercisesTable.id, exerciseId), eq(exercisesTable.createdBy, coachId)))
       .returning(exerciseResponseFields);
 
     if (!exercise) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercise not found" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
       return;
     }
 
@@ -110,7 +125,22 @@ router.put("/exercises/:exerciseId", authenticate, requireRole("coach"), async (
 
 router.delete("/exercises/:exerciseId", authenticate, requireRole("coach"), async (req, res) => {
   const exerciseId = String(req.params["exerciseId"]);
+  const coachId = req.user!.userId;
   try {
+    const existing = await db.select({ id: exercisesTable.id, createdBy: exercisesTable.createdBy })
+      .from(exercisesTable)
+      .where(eq(exercisesTable.id, exerciseId))
+      .limit(1);
+
+    if (!existing[0]) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+      return;
+    }
+    if (existing[0].createdBy !== coachId) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Vous ne pouvez supprimer que vos propres exercices" } });
+      return;
+    }
+
     const usedInSessions = await db.select({ id: sessionExercisesTable.id })
       .from(sessionExercisesTable)
       .where(eq(sessionExercisesTable.exerciseId, exerciseId))
@@ -121,7 +151,9 @@ router.delete("/exercises/:exerciseId", authenticate, requireRole("coach"), asyn
       return;
     }
 
-    await db.delete(exercisesTable).where(eq(exercisesTable.id, exerciseId));
+    await db.delete(exercisesTable).where(
+      and(eq(exercisesTable.id, exerciseId), eq(exercisesTable.createdBy, coachId))
+    );
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });

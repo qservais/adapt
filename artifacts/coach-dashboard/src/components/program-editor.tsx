@@ -7,7 +7,6 @@ import {
   useGetExercises,
   SessionWithVariants,
   ExerciseData,
-  CreateSessionRequestVariantsItemMode,
   CreateSessionRequest,
   CreateSessionRequestBlocksItem,
 } from "@workspace/api-client-react";
@@ -69,7 +68,6 @@ export const SESSION_TYPE_LABELS: Record<string, string> = {
 export const MODES = ["performance", "normal", "adapt", "recovery"] as const;
 export const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-// ─── Block types ────────────────────────────────────────────────────────────
 export const BLOCK_TYPES = [
   "warm_up", "strength", "power", "conditioning", "core", "cool_down",
 ] as const;
@@ -92,7 +90,6 @@ export const CONDITIONING_FORMATS = [
   { value: "tabata", label: "Tabata" },
 ];
 
-// ─── Data interfaces ─────────────────────────────────────────────────────────
 export interface ExerciseRow {
   exerciseId: string;
   exerciseName: string;
@@ -212,7 +209,6 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
   };
 }
 
-// ─── ExercisePicker ──────────────────────────────────────────────────────────
 const EXERCISE_CATEGORIES = [
   { value: "compound", label: "Polyarticulaire" },
   { value: "isolation", label: "Isolation" },
@@ -368,7 +364,6 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
   );
 }
 
-// ─── ExerciseRowCard ─────────────────────────────────────────────────────────
 interface ExerciseRowCardProps {
   ex: ExerciseRow;
   idx: number;
@@ -447,7 +442,6 @@ function ExerciseRowCard({ ex, idx, total, onChange, onRemove, onMove, canSupers
   );
 }
 
-// ─── BlockEditor ─────────────────────────────────────────────────────────────
 interface BlockEditorProps {
   blocks: BlockDraft[];
   onChange: (blocks: BlockDraft[]) => void;
@@ -523,7 +517,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     const cur = exercises[eIdx];
     const next = exercises[eIdx + 1];
     if (!next) return;
-    const groupId = `ss_${Date.now()}`;
+    const groupId = Math.random().toString(36).slice(2, 6);
     exercises[eIdx] = { ...cur, supersetGroup: groupId, supersetLabel: "A1" };
     exercises[eIdx + 1] = { ...next, supersetGroup: groupId, supersetLabel: "A2" };
     updateBlock(bIdx, { exercises: exercises.map((e, i) => ({ ...e, orderIndex: i })) });
@@ -682,7 +676,6 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
   );
 }
 
-// ─── SessionModal ─────────────────────────────────────────────────────────────
 interface SessionModalProps {
   programId: string;
   weekNumber: number;
@@ -721,22 +714,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
     }
     setIsSaving(true);
     try {
-      // Build all exercises flat for normal variant (with blockId resolved server-side via blocks)
-      const allExercises = draft.blocks.flatMap((b, bIdx) =>
-        b.exercises.map((ex, eIdx) => ({
-          exerciseId: ex.exerciseId,
-          orderIndex: bIdx * 100 + eIdx,
-          sets: ex.sets,
-          reps: ex.reps,
-          loadKg: ex.loadKg,
-          restSeconds: ex.restSeconds,
-          coachCue: ex.coachCue,
-          supersetGroup: ex.supersetGroup,
-          supersetLabel: ex.supersetLabel,
-        }))
-      );
-
-      const blocks: CreateSessionRequestBlocksItem[] = draft.blocks.map((b, bIdx) => ({
+      const blocksPayload: CreateSessionRequestBlocksItem[] = draft.blocks.map((b, bIdx) => ({
         type: b.type,
         orderIndex: bIdx,
         name: b.name,
@@ -755,6 +733,8 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
         })),
       }));
 
+      // Send only blocks — server synthesizes the normal variant with correct blockIds.
+      // Do NOT send explicit variants together with blocks or exercises will have null blockId.
       const payload: CreateSessionRequest = {
         weekNumber,
         dayNumber,
@@ -762,13 +742,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
         type: draft.type as CreateSessionRequest["type"],
         estimatedDurationMin: autoDurationMin ?? draft.estimatedDurationMin,
         coachNotes: draft.coachNotes,
-        blocks,
-        variants: allExercises.length > 0
-          ? [{
-              mode: "normal" as CreateSessionRequestVariantsItemMode,
-              exercises: allExercises,
-            }]
-          : [],
+        blocks: blocksPayload,
       };
 
       if (isEdit && session) {
@@ -892,7 +866,6 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
   );
 }
 
-// ─── SessionCell ──────────────────────────────────────────────────────────────
 interface SessionCellProps {
   session?: SessionWithVariants;
   weekNumber: number;
@@ -1062,7 +1035,6 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
   );
 }
 
-// ─── ProgramGrid ──────────────────────────────────────────────────────────────
 interface ProgramGridProps {
   programId: string;
 }
