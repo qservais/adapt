@@ -1,5 +1,15 @@
-import React, { useEffect, useRef } from "react";
-import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -13,18 +23,42 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetTodaySession, useCompleteSession } from "@workspace/api-client-react";
+import {
+  useGetTodaySession,
+  useCompleteSession,
+  useSubmitSessionFeedback,
+} from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
 
 const { width } = Dimensions.get("window");
+
+type Difficulty = "too_easy" | "well_calibrated" | "too_hard";
+
+const DIFFICULTY_OPTIONS: { key: Difficulty; label: string; icon: string; color: string }[] = [
+  { key: "too_easy", label: "Trop facile", icon: "thumbs-up", color: COLORS.cyan },
+  { key: "well_calibrated", label: "Parfait", icon: "check-circle", color: COLORS.green },
+  { key: "too_hard", label: "Trop dur", icon: "alert-triangle", color: COLORS.red },
+];
+
+function getRPEColor(rpe: number): string {
+  if (rpe <= 4) return COLORS.green;
+  if (rpe <= 7) return COLORS.cyan;
+  return COLORS.red;
+}
 
 export default function SessionCompleteScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const sessionQuery = useGetTodaySession();
   const completeMutation = useCompleteSession();
+  const feedbackMutation = useSubmitSessionFeedback();
   const confettiRef = useRef<any>(null);
+
+  const [rpe, setRpe] = useState(6);
+  const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
+  const [notes, setNotes] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
@@ -39,7 +73,6 @@ export default function SessionCompleteScreen() {
   const newBadges = completeMutation.data?.newBadges ?? [];
   const hasPRs = newPRs.length > 0;
 
-  // Animations and session completion trigger
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     scale.value = withDelay(200, withSpring(1, { damping: 12, stiffness: 100 }));
@@ -59,12 +92,31 @@ export default function SessionCompleteScreen() {
     }
   }, []);
 
-  // Fire confetti once PRs are available (mutation resolves after mount)
   useEffect(() => {
     if (hasPRs) {
       setTimeout(() => confettiRef.current?.start(), 300);
     }
   }, [hasPRs]);
+
+  const handleFeedback = async () => {
+    if (session?.sessionLogId == null || feedbackSubmitted) {
+      router.replace("/");
+      return;
+    }
+    try {
+      await feedbackMutation.mutateAsync({
+        sessionId: session.sessionLogId,
+        data: { rpe, perceivedDifficulty: difficulty, athleteNotes: notes.trim() || null },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sessions/today"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
+      setFeedbackSubmitted(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/");
+    } catch {
+      router.replace("/");
+    }
+  };
 
   const celebrateStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -76,8 +128,13 @@ export default function SessionCompleteScreen() {
     opacity: statsOpacity.value,
   }));
 
+  const rpeColor = getRPEColor(rpe);
+
   return (
-    <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: COLORS.bg }]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       {hasPRs && (
         <ConfettiCannon
           ref={confettiRef}
@@ -97,6 +154,7 @@ export default function SessionCompleteScreen() {
           { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 40 },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <Animated.View style={[styles.trophy, celebrateStyle]}>
           <View
@@ -194,20 +252,92 @@ export default function SessionCompleteScreen() {
           </Animated.View>
         )}
 
+        {/* RPE + Notes inline capture (MET-01) */}
+        <Animated.View style={[styles.section, statsStyle]}>
+          <View style={styles.sectionHeader}>
+            <Feather name="star" size={16} color={COLORS.amber} />
+            <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold, color: COLORS.amber }]}>
+              MON RESSENTI
+            </Text>
+          </View>
+
+          {/* RPE selector */}
+          <Text style={[styles.rpeLabel, { fontFamily: FONTS.body }]}>
+            Effort ressenti (RPE){" "}
+            <Text style={[styles.rpeBig, { fontFamily: FONTS.monoBold, color: rpeColor }]}>
+              {rpe}/10
+            </Text>
+          </Text>
+          <View style={styles.rpeRow}>
+            {[1,2,3,4,5,6,7,8,9,10].map(v => (
+              <TouchableOpacity
+                key={v}
+                onPress={() => setRpe(v)}
+                style={[
+                  styles.rpeBtn,
+                  { backgroundColor: rpe >= v ? `${getRPEColor(v)}30` : `${COLORS.border}` },
+                  rpe === v && { borderColor: getRPEColor(v), borderWidth: 1.5 },
+                ]}
+              >
+                <Text style={[styles.rpeBtnText, { fontFamily: FONTS.mono, color: rpe >= v ? getRPEColor(v) : COLORS.textMuted }]}>
+                  {v}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Difficulty */}
+          <View style={styles.diffRow}>
+            {DIFFICULTY_OPTIONS.map(opt => (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => setDifficulty(opt.key)}
+                style={[
+                  styles.diffChip,
+                  difficulty === opt.key && { backgroundColor: `${opt.color}20`, borderColor: opt.color },
+                ]}
+              >
+                <Feather
+                  name={opt.icon as any}
+                  size={13}
+                  color={difficulty === opt.key ? opt.color : COLORS.textMuted}
+                />
+                <Text style={[
+                  styles.diffLabel,
+                  { fontFamily: FONTS.body, color: difficulty === opt.key ? opt.color : COLORS.textMuted },
+                ]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Notes */}
+          <TextInput
+            style={[styles.notesInput, { fontFamily: FONTS.body }]}
+            placeholder="Commentaire libre (optionnel)..."
+            placeholderTextColor={COLORS.textMuted}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            maxLength={500}
+          />
+        </Animated.View>
+
         <Animated.View style={[styles.actions, statsStyle]}>
           <GradientButton
-            label="Donner un retour"
-            onPress={() => router.replace("/session/feedback")}
-            icon={<Feather name="star" size={18} color={COLORS.textInverse} />}
+            label={feedbackMutation.isPending ? "Enregistrement..." : "Enregistrer mon ressenti"}
+            onPress={handleFeedback}
+            icon={<Feather name="check" size={18} color={COLORS.textInverse} />}
           />
           <TouchableOpacity onPress={() => router.replace("/")} style={styles.homeBtn}>
             <Text style={[styles.homeBtnText, { fontFamily: FONTS.body }]}>
-              Retour à l'accueil
+              Passer
             </Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -282,6 +412,44 @@ const styles = StyleSheet.create({
   },
   badgeIcon: { fontSize: 16 },
   badgeName: { fontSize: 12, color: COLORS.white },
+  rpeLabel: { fontSize: 13, color: COLORS.textSecondary },
+  rpeBig: { fontSize: 15 },
+  rpeRow: { flexDirection: "row", gap: 4, justifyContent: "center", flexWrap: "wrap" },
+  rpeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  rpeBtnText: { fontSize: 12 },
+  diffRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  diffChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: "transparent",
+  },
+  diffLabel: { fontSize: 12 },
+  notesInput: {
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: COLORS.white,
+    fontSize: 14,
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
   actions: { width: "100%", gap: 12 },
   homeBtn: { alignItems: "center", paddingVertical: 14 },
   homeBtnText: { fontSize: 15, color: COLORS.textSecondary },

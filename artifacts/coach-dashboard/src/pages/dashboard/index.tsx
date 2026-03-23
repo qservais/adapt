@@ -4,11 +4,14 @@ import { Link } from "wouter";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import {
   Loader2, Calendar, CheckCircle2, Clock, Zap, Users, TrendingUp,
-  AlertTriangle, ChevronLeft, ChevronRight, X
+  AlertTriangle, ChevronLeft, ChevronRight, X, BarChart2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
+} from "recharts";
 
 interface DashboardAthlète {
   id: string;
@@ -95,6 +98,17 @@ async function fetchCalendar(year: number, month: number): Promise<CalendarDay[]
   return res.json();
 }
 
+interface WeeklyVolume { week: string; count: number; }
+
+async function fetchWeeklyVolume(): Promise<WeeklyVolume[]> {
+  const token = localStorage.getItem("adapt_coach_access");
+  const res = await fetch(`/api/coach/volume-weekly`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error();
+  return res.json();
+}
+
 const MODE_BG: Record<string, string> = {
   performance: "bg-[#00F5A0]/10 border-[#00F5A0]/30",
   normal: "bg-[#00F0FF]/10 border-[#00F0FF]/30",
@@ -137,6 +151,12 @@ export default function Dashboard() {
   const { data: calendarData } = useQuery<CalendarDay[]>({
     queryKey: ["/api/coach/calendar", calendarMonth.year, calendarMonth.month],
     queryFn: () => fetchCalendar(calendarMonth.year, calendarMonth.month),
+  });
+
+  const { data: weeklyVolumeRaw } = useQuery<WeeklyVolume[]>({
+    queryKey: ["/api/coach/volume-weekly"],
+    queryFn: fetchWeeklyVolume,
+    staleTime: 60000,
   });
 
   const today = new Date();
@@ -182,6 +202,14 @@ export default function Dashboard() {
   const completionRate = upcomingSessions.length > 0
     ? Math.round((upcomingSessions.filter(s => s.isCompleted).length / upcomingSessions.length) * 100)
     : null;
+
+  // Weekly volume chart data: format IYYY-IW → "Sem. N"
+  const weeklyVolumeData = (weeklyVolumeRaw ?? []).map(row => {
+    const [, weekNum] = row.week.split("-W").length > 1
+      ? row.week.split("-W")
+      : row.week.split("-");
+    return { semaine: `S${weekNum ?? row.week}`, séances: row.count };
+  });
 
   // Calendar grid computation
   const { year, month } = calendarMonth;
@@ -583,6 +611,38 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* MET-03: Weekly volume chart */}
+      <Card className="bg-card border-border shadow-lg">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
+            <BarChart2 className="w-5 h-5 text-[#A855F7]" />
+            VOLUME HEBDOMADAIRE
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {weeklyVolumeData.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground text-sm italic">
+              Aucune séance complétée ces 8 dernières semaines.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={weeklyVolumeData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff12" />
+                <XAxis dataKey="semaine" tick={{ fill: "#9CA3AF", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#9CA3AF", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#1A1A1A", border: "1px solid #333", borderRadius: 8 }}
+                  labelStyle={{ color: "#fff", fontSize: 12 }}
+                  itemStyle={{ color: "#A855F7" }}
+                  formatter={(v: number) => [`${v} séance${v > 1 ? "s" : ""}`, "Volume"]}
+                />
+                <Bar dataKey="séances" fill="#A855F7" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </CardContent>
       </Card>

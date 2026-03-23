@@ -210,6 +210,11 @@ export default function ClientDetail() {
   const handleAddTest = async () => {
     const effectiveType = testForm.testType === "custom" ? testForm.customType.trim() : testForm.testType;
     if (!effectiveType || !testForm.value || !testForm.unit) return;
+    // For predefined types, use the label as exerciseName; for custom, use the user-provided name
+    const predefined = PREDEFINED_TEST_TYPES.find(p => p.value === testForm.testType);
+    const effectiveExerciseName = testForm.testType === "custom"
+      ? (testForm.exerciseName.trim() || testForm.customType.trim() || undefined)
+      : (predefined?.label || undefined);
     setTestSaving(true);
     try {
       const token = localStorage.getItem("adapt_coach_access");
@@ -218,7 +223,7 @@ export default function ClientDetail() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           testType: effectiveType,
-          exerciseName: testForm.exerciseName || undefined,
+          exerciseName: effectiveExerciseName,
           value: parseFloat(testForm.value),
           unit: testForm.unit,
           testedAt: testForm.testedAt,

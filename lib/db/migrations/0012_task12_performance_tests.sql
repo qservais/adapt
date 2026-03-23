@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS performance_tests (
   coach_id uuid NOT NULL REFERENCES users(id),
   test_type varchar(50) NOT NULL,
   exercise_id uuid REFERENCES exercises(id),
-  exercise_name varchar(255) NOT NULL,
+  exercise_name varchar(100),
   value decimal(10, 2) NOT NULL,
   unit varchar(30) NOT NULL,
   tested_at date NOT NULL,

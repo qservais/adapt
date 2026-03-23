@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable } from "@workspace/db";
-import { eq, and, desc, asc, gte, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -772,6 +772,43 @@ router.post("/athlete/link", authenticate, requireRole("athlete"), async (req, r
     res.json({ success: true, message: "Linked to coach successfully" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+// ─── Weekly Volume ─────────────────────────────────────────────────────────────
+
+router.get("/coach/volume-weekly", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const athletes = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete")));
+    if (athletes.length === 0) {
+      res.json([]);
+      return;
+    }
+    const athleteIds = athletes.map(a => a.id);
+    const eightWeeksAgo = new Date();
+    eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+
+    const rows = await db
+      .select({
+        week: sql<string>`to_char(date_trunc('week', ${sessionLogsTable.completedAt}), 'IYYY-IW')`.as("week"),
+        count: sql<number>`count(*)::int`.as("count"),
+      })
+      .from(sessionLogsTable)
+      .where(
+        and(
+          inArray(sessionLogsTable.athleteId, athleteIds),
+          isNotNull(sessionLogsTable.completedAt),
+          gte(sessionLogsTable.completedAt, eightWeeksAgo),
+        )
+      )
+      .groupBy(sql`date_trunc('week', ${sessionLogsTable.completedAt})`)
+      .orderBy(sql`date_trunc('week', ${sessionLogsTable.completedAt})`);
+
+    res.json(rows);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 
