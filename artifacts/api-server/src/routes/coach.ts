@@ -389,14 +389,11 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
 
     if (activeProgram?.startDate) {
       const programStart = new Date(activeProgram.startDate);
-      const now = new Date();
-      const fourWeeksFromNow = new Date(now.getTime() + 28 * 86400000);
-      const twoWeeksAgo = new Date(now.getTime() - 14 * 86400000);
 
       const plannedSessions = await db.select().from(sessionsTable)
         .where(eq(sessionsTable.programId, activeProgram.id));
 
-      // Query all session logs for this program (no limit) for accurate completion status
+      // Query all session logs for this program for accurate completion status
       const allProgramLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
         .from(sessionLogsTable)
         .where(eq(sessionLogsTable.athleteId, athlete.id));
@@ -410,18 +407,17 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
         sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
         sessionDate.setHours(0, 0, 0, 0);
 
-        if (sessionDate >= twoWeeksAgo && sessionDate <= fourWeeksFromNow) {
-          upcomingSessions.push({
-            sessionId: session.id,
-            sessionName: session.name,
-            sessionType: session.type,
-            weekNumber: session.weekNumber,
-            dayNumber: session.dayNumber,
-            scheduledDate: sessionDate.toISOString().split("T")[0],
-            estimatedDurationMin: session.estimatedDurationMin,
-            isCompleted: completedSessionIds.has(session.id),
-          });
-        }
+        // Return ALL program sessions (no date window) so monthly calendar navigation works
+        upcomingSessions.push({
+          sessionId: session.id,
+          sessionName: session.name,
+          sessionType: session.type,
+          weekNumber: session.weekNumber,
+          dayNumber: session.dayNumber,
+          scheduledDate: sessionDate.toISOString().split("T")[0],
+          estimatedDurationMin: session.estimatedDurationMin,
+          isCompleted: completedSessionIds.has(session.id),
+        });
       }
 
       upcomingSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
