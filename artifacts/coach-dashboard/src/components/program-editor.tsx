@@ -565,9 +565,12 @@ export function ProgramGrid({ programId }: ProgramGridProps) {
     );
   }
 
-  const sessionMap = new Map<string, SessionWithVariants>();
+  const sessionMap = new Map<string, SessionWithVariants[]>();
   program.sessions.forEach((s) => {
-    sessionMap.set(`${s.weekNumber}-${s.dayNumber}`, s);
+    const key = `${s.weekNumber}-${s.dayNumber}`;
+    const existing = sessionMap.get(key) ?? [];
+    existing.push(s);
+    sessionMap.set(key, existing);
   });
 
   const weeks = Array.from({ length: program.durationWeeks }, (_, i) => i + 1);
@@ -583,17 +586,28 @@ export function ProgramGrid({ programId }: ProgramGridProps) {
             <div className="grid grid-cols-7 gap-1.5">
               {DAY_NAMES.map((dayLabel, idx) => {
                 const dayNumber = idx + 1;
-                const session = sessionMap.get(`${week}-${dayNumber}`);
+                const daySessions = sessionMap.get(`${week}-${dayNumber}`) ?? [];
                 return (
                   <div key={dayNumber} className="space-y-1">
                     <p className="text-center text-[10px] font-mono text-muted-foreground uppercase">{dayLabel}</p>
-                    <SessionCell
-                      session={session}
-                      weekNumber={week}
-                      dayNumber={dayNumber}
-                      programId={programId}
-                      onRefetch={refetch}
-                    />
+                    {daySessions.map((session) => (
+                      <SessionCell
+                        key={session.id}
+                        session={session}
+                        weekNumber={week}
+                        dayNumber={dayNumber}
+                        programId={programId}
+                        onRefetch={refetch}
+                      />
+                    ))}
+                    {daySessions.length === 0 && (
+                      <SessionCell
+                        weekNumber={week}
+                        dayNumber={dayNumber}
+                        programId={programId}
+                        onRefetch={refetch}
+                      />
+                    )}
                   </div>
                 );
               })}
