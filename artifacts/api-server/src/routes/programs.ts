@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, exercisesTable, usersTable } from "@workspace/db";
+import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
+
+const ALL_SESSION_TYPES = ["strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning"] as const;
+type SessionType = typeof ALL_SESSION_TYPES[number];
 
 const router = Router();
 
@@ -103,6 +106,10 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
       .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
 
     const sessionsWithVariants = await Promise.all(sessions.map(async (session) => {
+      const blocks = await db.select().from(sessionBlocksTable)
+        .where(eq(sessionBlocksTable.sessionId, session.id))
+        .orderBy(sessionBlocksTable.orderIndex);
+
       const variants = await db.select().from(sessionVariantsTable)
         .where(eq(sessionVariantsTable.sessionId, session.id));
 
@@ -110,12 +117,15 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
         const exercises = await db.select({
           id: sessionExercisesTable.id,
           exerciseId: sessionExercisesTable.exerciseId,
+          blockId: sessionExercisesTable.blockId,
           orderIndex: sessionExercisesTable.orderIndex,
           sets: sessionExercisesTable.sets,
           reps: sessionExercisesTable.reps,
           loadKg: sessionExercisesTable.loadKg,
           restSeconds: sessionExercisesTable.restSeconds,
           coachCue: sessionExercisesTable.coachCue,
+          supersetGroup: sessionExercisesTable.supersetGroup,
+          supersetLabel: sessionExercisesTable.supersetLabel,
           exerciseName: exercisesTable.name,
         })
           .from(sessionExercisesTable)
@@ -132,6 +142,7 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
           exercises: exercises.map(ex => ({
             id: ex.id,
             exerciseId: ex.exerciseId,
+            blockId: ex.blockId,
             exerciseName: ex.exerciseName,
             orderIndex: ex.orderIndex,
             sets: ex.sets,
@@ -139,6 +150,8 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
             nominalLoadKg: ex.loadKg ? parseFloat(ex.loadKg) : null,
             restSeconds: ex.restSeconds,
             coachCue: ex.coachCue,
+            supersetGroup: ex.supersetGroup,
+            supersetLabel: ex.supersetLabel,
           })),
         };
       }));
@@ -151,6 +164,15 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
         type: session.type,
         estimatedDurationMin: session.estimatedDurationMin,
         coachNotes: session.coachNotes,
+        blocks: blocks.map(b => ({
+          id: b.id,
+          type: b.type,
+          orderIndex: b.orderIndex,
+          name: b.name,
+          notes: b.notes,
+          estimatedDurationMin: b.estimatedDurationMin,
+          conditioningFormat: b.conditioningFormat,
+        })),
         variants: variantsWithExercises,
       };
     }));
@@ -271,25 +293,41 @@ function buildAutoVariants(normalExercises: ExerciseInput[]): Array<{
   ];
 }
 
+const exerciseInputSchema = z.object({
+  exerciseId: z.string().uuid(),
+  orderIndex: z.number().int(),
+  sets: z.number().int(),
+  reps: z.string().optional(),
+  loadKg: z.number().optional(),
+  restSeconds: z.number().int().optional(),
+  coachCue: z.string().optional(),
+  blockId: z.string().uuid().optional(),
+  supersetGroup: z.string().optional(),
+  supersetLabel: z.string().optional(),
+});
+
+const blockInputSchema = z.object({
+  type: z.enum(["warm_up", "strength", "power", "conditioning", "core", "cool_down"]),
+  orderIndex: z.number().int(),
+  name: z.string().optional(),
+  notes: z.string().optional(),
+  estimatedDurationMin: z.number().int().optional(),
+  conditioningFormat: z.enum(["amrap", "emom", "for_time", "tabata"]).optional(),
+  exercises: z.array(exerciseInputSchema).optional(),
+});
+
 const createSessionSchema = z.object({
   weekNumber: z.number().int().min(1),
   dayNumber: z.number().int().min(1),
   name: z.string().min(1),
-  type: z.enum(["strength", "cardio", "hybrid", "mobility"]),
+  type: z.enum(["strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning"]),
   estimatedDurationMin: z.number().int().optional(),
   coachNotes: z.string().optional(),
+  blocks: z.array(blockInputSchema).optional(),
   variants: z.array(z.object({
     mode: z.enum(["performance", "normal", "adapt", "recovery"]),
     notes: z.string().optional(),
-    exercises: z.array(z.object({
-      exerciseId: z.string().uuid(),
-      orderIndex: z.number().int(),
-      sets: z.number().int(),
-      reps: z.string().optional(),
-      loadKg: z.number().optional(),
-      restSeconds: z.number().int().optional(),
-      coachCue: z.string().optional(),
-    })).optional(),
+    exercises: z.array(exerciseInputSchema).optional(),
   })).optional(),
 });
 
@@ -320,40 +358,75 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
       coachNotes: parsed.data.coachNotes,
     }).returning();
 
-    if (parsed.data.variants) {
-      const allVariantsToCreate = [...parsed.data.variants];
+    // Create blocks and collect all exercises for variant creation
+    const blockIdMap = new Map<number, string>(); // orderIndex -> blockId
+    if (parsed.data.blocks && parsed.data.blocks.length > 0) {
+      for (const block of parsed.data.blocks) {
+        const [sb] = await db.insert(sessionBlocksTable).values({
+          sessionId: session.id,
+          type: block.type,
+          orderIndex: block.orderIndex,
+          name: block.name,
+          notes: block.notes,
+          estimatedDurationMin: block.estimatedDurationMin,
+          conditioningFormat: block.conditioningFormat,
+        }).returning();
+        blockIdMap.set(block.orderIndex, sb.id);
+      }
+    }
 
-      const normalVariant = parsed.data.variants.find(v => v.mode === "normal");
-      if (normalVariant && normalVariant.exercises && normalVariant.exercises.length > 0) {
-        const existingModes = new Set(parsed.data.variants.map(v => v.mode));
-        const autoVariants = buildAutoVariants(normalVariant.exercises);
-        for (const av of autoVariants) {
-          if (!existingModes.has(av.mode)) {
-            allVariantsToCreate.push(av);
+    // Collect exercises from blocks (normal variant)
+    let allBlockExercises: typeof exerciseInputSchema._type[] = [];
+    if (parsed.data.blocks) {
+      for (const block of parsed.data.blocks) {
+        if (block.exercises) {
+          for (const ex of block.exercises) {
+            allBlockExercises.push({ ...ex, blockId: blockIdMap.get(block.orderIndex) });
           }
         }
       }
+    }
 
-      for (const variant of allVariantsToCreate) {
-        const [sv] = await db.insert(sessionVariantsTable).values({
-          sessionId: session.id,
-          mode: variant.mode,
-          notes: variant.notes,
-        }).returning();
+    const allVariantsToCreate = parsed.data.variants ? [...parsed.data.variants] : [];
 
-        if (variant.exercises) {
-          for (const ex of variant.exercises) {
-            await db.insert(sessionExercisesTable).values({
-              variantId: sv.id,
-              exerciseId: ex.exerciseId,
-              orderIndex: ex.orderIndex,
-              sets: ex.sets,
-              reps: ex.reps,
-              loadKg: ex.loadKg != null ? ex.loadKg.toString() : undefined,
-              restSeconds: ex.restSeconds,
-              coachCue: ex.coachCue,
-            });
-          }
+    // If blocks provided, synthesize a "normal" variant from block exercises (if no explicit variants)
+    if (allBlockExercises.length > 0 && !allVariantsToCreate.find(v => v.mode === "normal")) {
+      allVariantsToCreate.push({ mode: "normal", exercises: allBlockExercises });
+    }
+
+    const normalVariant = allVariantsToCreate.find(v => v.mode === "normal");
+    if (normalVariant && normalVariant.exercises && normalVariant.exercises.length > 0) {
+      const existingModes = new Set(allVariantsToCreate.map(v => v.mode));
+      const autoVariants = buildAutoVariants(normalVariant.exercises);
+      for (const av of autoVariants) {
+        if (!existingModes.has(av.mode)) {
+          allVariantsToCreate.push(av);
+        }
+      }
+    }
+
+    for (const variant of allVariantsToCreate) {
+      const [sv] = await db.insert(sessionVariantsTable).values({
+        sessionId: session.id,
+        mode: variant.mode,
+        notes: variant.notes,
+      }).returning();
+
+      if (variant.exercises) {
+        for (const ex of variant.exercises) {
+          await db.insert(sessionExercisesTable).values({
+            variantId: sv.id,
+            blockId: ex.blockId ?? null,
+            exerciseId: ex.exerciseId,
+            orderIndex: ex.orderIndex,
+            sets: ex.sets,
+            reps: ex.reps,
+            loadKg: ex.loadKg != null ? ex.loadKg.toString() : undefined,
+            restSeconds: ex.restSeconds,
+            coachCue: ex.coachCue,
+            supersetGroup: ex.supersetGroup ?? null,
+            supersetLabel: ex.supersetLabel ?? null,
+          });
         }
       }
     }
@@ -408,7 +481,9 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
       await db.update(sessionsTable).set(updateData).where(eq(sessionsTable.id, sessionId));
     }
 
-    if (parsed.data.variants !== undefined) {
+    const hasVariantOrBlockUpdate = parsed.data.variants !== undefined || parsed.data.blocks !== undefined;
+
+    if (hasVariantOrBlockUpdate) {
       const existingVariants = await db.select({ id: sessionVariantsTable.id })
         .from(sessionVariantsTable)
         .where(eq(sessionVariantsTable.sessionId, sessionId));
@@ -421,10 +496,44 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
           .where(inArray(sessionVariantsTable.id, existingVariants.map(v => v.id)));
       }
 
-      const allVariantsToCreate = [...parsed.data.variants];
-      const normalVariant = parsed.data.variants.find(v => v.mode === "normal");
+      // Delete and recreate blocks
+      await db.delete(sessionBlocksTable).where(eq(sessionBlocksTable.sessionId, sessionId));
+
+      const blockIdMap = new Map<number, string>();
+      if (parsed.data.blocks && parsed.data.blocks.length > 0) {
+        for (const block of parsed.data.blocks) {
+          const [sb] = await db.insert(sessionBlocksTable).values({
+            sessionId,
+            type: block.type,
+            orderIndex: block.orderIndex,
+            name: block.name,
+            notes: block.notes,
+            estimatedDurationMin: block.estimatedDurationMin,
+            conditioningFormat: block.conditioningFormat,
+          }).returning();
+          blockIdMap.set(block.orderIndex, sb.id);
+        }
+      }
+
+      let allBlockExercises: typeof exerciseInputSchema._type[] = [];
+      if (parsed.data.blocks) {
+        for (const block of parsed.data.blocks) {
+          if (block.exercises) {
+            for (const ex of block.exercises) {
+              allBlockExercises.push({ ...ex, blockId: blockIdMap.get(block.orderIndex) });
+            }
+          }
+        }
+      }
+
+      const allVariantsToCreate = parsed.data.variants ? [...parsed.data.variants] : [];
+      if (allBlockExercises.length > 0 && !allVariantsToCreate.find(v => v.mode === "normal")) {
+        allVariantsToCreate.push({ mode: "normal", exercises: allBlockExercises });
+      }
+
+      const normalVariant = allVariantsToCreate.find(v => v.mode === "normal");
       if (normalVariant && normalVariant.exercises && normalVariant.exercises.length > 0) {
-        const existingModes = new Set(parsed.data.variants.map(v => v.mode));
+        const existingModes = new Set(allVariantsToCreate.map(v => v.mode));
         const autoVariants = buildAutoVariants(normalVariant.exercises);
         for (const av of autoVariants) {
           if (!existingModes.has(av.mode)) {
@@ -444,6 +553,7 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
           for (const ex of variant.exercises) {
             await db.insert(sessionExercisesTable).values({
               variantId: sv.id,
+              blockId: ex.blockId ?? null,
               exerciseId: ex.exerciseId,
               orderIndex: ex.orderIndex,
               sets: ex.sets,
@@ -451,13 +561,15 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
               loadKg: ex.loadKg != null ? ex.loadKg.toString() : undefined,
               restSeconds: ex.restSeconds,
               coachCue: ex.coachCue,
+              supersetGroup: ex.supersetGroup ?? null,
+              supersetLabel: ex.supersetLabel ?? null,
             });
           }
         }
       }
     }
 
-    res.json({ success: true, message: "Session updated", autoVariantsGenerated: parsed.data.variants !== undefined });
+    res.json({ success: true, message: "Session updated", autoVariantsGenerated: hasVariantOrBlockUpdate });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
@@ -475,7 +587,7 @@ router.delete("/programs/:programId", authenticate, requireRole("coach"), async 
       return;
     }
 
-    // Cascade: delete session exercises, variants, sessions, then program
+    // Cascade: delete session exercises, variants, blocks, sessions, then program
     const sessions = await db.select({ id: sessionsTable.id }).from(sessionsTable)
       .where(eq(sessionsTable.programId, programId));
     const sessionIds = sessions.map(s => s.id);
@@ -489,6 +601,7 @@ router.delete("/programs/:programId", authenticate, requireRole("coach"), async 
         await db.delete(sessionExercisesTable).where(inArray(sessionExercisesTable.variantId, variantIds));
         await db.delete(sessionVariantsTable).where(inArray(sessionVariantsTable.id, variantIds));
       }
+      await db.delete(sessionBlocksTable).where(inArray(sessionBlocksTable.sessionId, sessionIds));
       await db.delete(sessionsTable).where(inArray(sessionsTable.id, sessionIds));
     }
 
@@ -520,7 +633,7 @@ router.delete("/programs/:programId/sessions/:sessionId", authenticate, requireR
       return;
     }
 
-    // Delete exercises for all variants of this session, then variants, then session
+    // Delete exercises for all variants, then variants, then blocks, then session
     const variants = await db.select({ id: sessionVariantsTable.id }).from(sessionVariantsTable)
       .where(eq(sessionVariantsTable.sessionId, sessionId));
 
@@ -530,6 +643,7 @@ router.delete("/programs/:programId/sessions/:sessionId", authenticate, requireR
     for (const variant of variants) {
       await db.delete(sessionVariantsTable).where(eq(sessionVariantsTable.id, variant.id));
     }
+    await db.delete(sessionBlocksTable).where(eq(sessionBlocksTable.sessionId, sessionId));
     await db.delete(sessionsTable).where(eq(sessionsTable.id, sessionId));
 
     res.json({ success: true, message: "Session deleted" });

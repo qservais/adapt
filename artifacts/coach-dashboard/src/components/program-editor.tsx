@@ -9,7 +9,11 @@ import {
   ExerciseData,
   CreateSessionRequestVariantsItemMode,
 } from "@workspace/api-client-react";
-import { Sparkles, Plus, Trash2, Loader2, Dumbbell, Search, X, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import {
+  Sparkles, Plus, Trash2, Loader2, Dumbbell, Search, X,
+  ChevronDown, ChevronUp, Clock, Flame, Zap, Activity,
+  Shield, Wind, Minus, GripVertical, Link as LinkIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/components/ui/mode-badge";
 
 export const MODE_STYLES: Record<string, { label: string; color: string; border: string; bg: string }> = {
   performance: { label: "Performance", color: "text-primary", border: "border-primary", bg: "bg-primary/10" },
@@ -44,16 +49,48 @@ export const MODE_STYLES: Record<string, { label: string; color: string; border:
   recovery: { label: "Récupération", color: "text-violet-400", border: "border-violet-400", bg: "bg-violet-400/10" },
 };
 
-export const SESSION_TYPES = ["strength", "cardio", "hybrid", "mobility"] as const;
+export const SESSION_TYPES = [
+  "strength", "cardio", "hybrid", "mobility",
+  "athletic_development", "running", "conditioning",
+] as const;
+
 export const SESSION_TYPE_LABELS: Record<string, string> = {
   strength: "Force",
   cardio: "Cardio",
   hybrid: "Hybride",
   mobility: "Mobilité",
+  athletic_development: "Dév. athlétique",
+  running: "Course",
+  conditioning: "Conditionnement",
 };
+
 export const MODES = ["performance", "normal", "adapt", "recovery"] as const;
 export const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
+// ─── Block types ────────────────────────────────────────────────────────────
+export const BLOCK_TYPES = [
+  "warm_up", "strength", "power", "conditioning", "core", "cool_down",
+] as const;
+
+export type BlockType = typeof BLOCK_TYPES[number];
+
+export const BLOCK_TYPE_META: Record<BlockType, { label: string; color: string; bg: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
+  warm_up:       { label: "Échauffement", color: "text-[#FFB800]",  bg: "bg-[#FFB800]/10",  border: "border-[#FFB800]/30", icon: Flame },
+  strength:      { label: "Force",         color: "text-[#00F0FF]",  bg: "bg-[#00F0FF]/10",  border: "border-[#00F0FF]/30", icon: Dumbbell },
+  power:         { label: "Puissance",     color: "text-[#A855F7]",  bg: "bg-[#A855F7]/10",  border: "border-[#A855F7]/30", icon: Zap },
+  conditioning:  { label: "Conditioning",  color: "text-[#EF4444]",  bg: "bg-[#EF4444]/10",  border: "border-[#EF4444]/30", icon: Activity },
+  core:          { label: "Gainage/Core",  color: "text-[#00F5A0]",  bg: "bg-[#00F5A0]/10",  border: "border-[#00F5A0]/30", icon: Shield },
+  cool_down:     { label: "Récupération",  color: "text-[#94A3B8]",  bg: "bg-[#94A3B8]/10",  border: "border-[#94A3B8]/30", icon: Wind },
+};
+
+export const CONDITIONING_FORMATS = [
+  { value: "amrap", label: "AMRAP" },
+  { value: "emom", label: "EMOM" },
+  { value: "for_time", label: "For Time" },
+  { value: "tabata", label: "Tabata" },
+];
+
+// ─── Data interfaces ─────────────────────────────────────────────────────────
 export interface ExerciseRow {
   exerciseId: string;
   exerciseName: string;
@@ -63,6 +100,18 @@ export interface ExerciseRow {
   loadKg: number;
   restSeconds: number;
   coachCue: string;
+  supersetGroup?: string;
+  supersetLabel?: string;
+}
+
+export interface BlockDraft {
+  type: BlockType;
+  orderIndex: number;
+  name: string;
+  estimatedDurationMin: number;
+  conditioningFormat?: string;
+  exercises: ExerciseRow[];
+  collapsed?: boolean;
 }
 
 export interface SessionDraft {
@@ -70,51 +119,116 @@ export interface SessionDraft {
   type: typeof SESSION_TYPES[number];
   estimatedDurationMin: number;
   coachNotes: string;
-  normalExercises: ExerciseRow[];
+  blocks: BlockDraft[];
 }
+
+export const emptyBlock = (orderIndex: number, type: BlockType = "strength"): BlockDraft => ({
+  type,
+  orderIndex,
+  name: BLOCK_TYPE_META[type].label,
+  estimatedDurationMin: 15,
+  exercises: [],
+  collapsed: false,
+});
 
 export const emptySession = (): SessionDraft => ({
   name: "",
   type: "strength",
   estimatedDurationMin: 60,
   coachNotes: "",
-  normalExercises: [],
+  blocks: [emptyBlock(0, "warm_up"), emptyBlock(1, "strength")],
 });
 
 export function sessionToDraft(session: SessionWithVariants): SessionDraft {
   const normalVariant = session.variants.find((v) => v.mode === "normal");
+  const exercises = normalVariant?.exercises ?? [];
+
+  // Rebuild blocks from blockId groupings or create a single default block
+  const blockMap = new Map<string, ExerciseRow[]>();
+  const noBlockExercises: ExerciseRow[] = [];
+
+  for (const e of exercises) {
+    const row: ExerciseRow = {
+      exerciseId: e.exerciseId,
+      exerciseName: e.exerciseName,
+      orderIndex: e.orderIndex,
+      sets: e.sets,
+      reps: e.reps || "",
+      loadKg: e.nominalLoadKg || 0,
+      restSeconds: e.restSeconds || 60,
+      coachCue: e.coachCue || "",
+      supersetGroup: (e as any).supersetGroup || undefined,
+      supersetLabel: (e as any).supersetLabel || undefined,
+    };
+
+    if ((e as any).blockId) {
+      const bid = (e as any).blockId as string;
+      if (!blockMap.has(bid)) blockMap.set(bid, []);
+      blockMap.get(bid)!.push(row);
+    } else {
+      noBlockExercises.push(row);
+    }
+  }
+
+  // If we have server-side blocks on the session (extended response)
+  const serverBlocks = (session as any).blocks as Array<{
+    id: string; type: string; orderIndex: number; name: string;
+    estimatedDurationMin?: number; conditioningFormat?: string;
+  }> | undefined;
+
+  let blocks: BlockDraft[] = [];
+  if (serverBlocks && serverBlocks.length > 0) {
+    blocks = serverBlocks
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((b) => ({
+        type: b.type as BlockType,
+        orderIndex: b.orderIndex,
+        name: b.name,
+        estimatedDurationMin: b.estimatedDurationMin || 15,
+        conditioningFormat: b.conditioningFormat || undefined,
+        exercises: (blockMap.get(b.id) || []).sort((a, b) => a.orderIndex - b.orderIndex),
+        collapsed: true,
+      }));
+  } else if (noBlockExercises.length > 0) {
+    blocks = [{
+      type: "strength",
+      orderIndex: 0,
+      name: "Force",
+      estimatedDurationMin: 30,
+      exercises: noBlockExercises.sort((a, b) => a.orderIndex - b.orderIndex),
+      collapsed: false,
+    }];
+  }
+
+  if (blocks.length === 0) {
+    blocks = [emptyBlock(0, "warm_up"), emptyBlock(1, "strength")];
+  }
+
   return {
     name: session.name,
     type: session.type as typeof SESSION_TYPES[number],
     estimatedDurationMin: session.estimatedDurationMin || 60,
     coachNotes: session.coachNotes || "",
-    normalExercises: normalVariant
-      ? normalVariant.exercises.map((e) => ({
-          exerciseId: e.exerciseId,
-          exerciseName: e.exerciseName,
-          orderIndex: e.orderIndex,
-          sets: e.sets,
-          reps: e.reps || "",
-          loadKg: e.nominalLoadKg || 0,
-          restSeconds: e.restSeconds || 60,
-          coachCue: e.coachCue || "",
-        }))
-      : [],
+    blocks,
   };
 }
 
-interface ExercisePickerProps {
-  onAdd: (ex: ExerciseData) => void;
-}
-
+// ─── ExercisePicker ──────────────────────────────────────────────────────────
 const EXERCISE_CATEGORIES = [
   { value: "compound", label: "Polyarticulaire" },
   { value: "isolation", label: "Isolation" },
   { value: "cardio", label: "Cardio" },
   { value: "mobility", label: "Mobilité" },
+  { value: "core", label: "Core" },
+  { value: "power", label: "Puissance" },
 ] as const;
 
-export function ExercisePicker({ onAdd }: ExercisePickerProps) {
+interface ExercisePickerProps {
+  onAdd: (ex: ExerciseData) => void;
+  compact?: boolean;
+}
+
+export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -125,7 +239,7 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
     { q: query || undefined },
     { query: { queryKey: ["/api/exercises", query], enabled: true } }
   );
-  const filtered = (exercises || []).slice(0, 8);
+  const filtered = (exercises || []).slice(0, compact ? 6 : 8);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -134,10 +248,7 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
       const token = localStorage.getItem("adapt_coach_access");
       const res = await fetch(`/api/exercises`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: newName.trim(), category: newCategory }),
       });
       if (!res.ok) throw new Error();
@@ -162,26 +273,26 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
           placeholder="Rechercher un exercice..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-9 bg-background border-border h-9 text-sm"
+          className="pl-9 bg-background border-border h-8 text-xs"
         />
       </div>
-      <div className="space-y-1 max-h-48 overflow-y-auto">
+      <div className={cn("space-y-0.5 overflow-y-auto", compact ? "max-h-36" : "max-h-44")}>
         {filtered.map((ex) => (
           <button
             key={ex.id}
             type="button"
             onClick={() => onAdd(ex)}
-            className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 text-sm flex items-center gap-2 group transition-colors"
+            className="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/5 text-xs flex items-center gap-2 group transition-colors"
           >
-            <Dumbbell className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary shrink-0" />
+            <Dumbbell className="w-3 h-3 text-muted-foreground group-hover:text-primary shrink-0" />
             <span className="text-white truncate">{ex.name}</span>
             {ex.category && (
-              <span className="text-xs text-muted-foreground ml-auto shrink-0">{ex.category}</span>
+              <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{ex.category}</span>
             )}
           </button>
         ))}
         {filtered.length === 0 && !creating && (
-          <p className="text-center py-2 text-sm text-muted-foreground">Aucun exercice trouvé</p>
+          <p className="text-center py-2 text-xs text-muted-foreground">Aucun exercice trouvé</p>
         )}
       </div>
 
@@ -189,36 +300,36 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
         <button
           type="button"
           onClick={() => { setCreating(true); setNewName(query); }}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 hover:border-primary/60 rounded-lg transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-1 text-[11px] text-primary hover:text-primary/80 border border-dashed border-primary/30 hover:border-primary/60 rounded transition-colors"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-3 h-3" />
           Créer un nouvel exercice
         </button>
       ) : (
-        <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
+        <div className="border border-primary/30 rounded p-2 space-y-1.5 bg-primary/5">
           <p className="text-[10px] font-mono text-primary uppercase tracking-wider">Nouvel exercice</p>
           <Input
             autoFocus
-            placeholder="Nom de l'exercice..."
+            placeholder="Nom..."
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            className="h-8 text-sm bg-background border-border"
+            className="h-7 text-xs bg-background border-border"
           />
           <select
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            className="w-full bg-background border border-border rounded-md px-2 py-1 text-white text-xs"
+            className="w-full bg-background border border-border rounded px-2 py-1 text-white text-xs"
           >
             {EXERCISE_CATEGORIES.map(c => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button
               type="button"
               onClick={() => setCreating(false)}
-              className="flex-1 text-xs py-1.5 rounded border border-border text-muted-foreground hover:text-white transition-colors"
+              className="flex-1 text-xs py-1 rounded border border-border text-muted-foreground hover:text-white transition-colors"
             >
               Annuler
             </button>
@@ -226,7 +337,7 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
               type="button"
               onClick={handleCreate}
               disabled={!newName.trim() || isSaving}
-              className="flex-1 text-xs py-1.5 rounded bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-50"
+              className="flex-1 text-xs py-1 rounded bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-50"
             >
               {isSaving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : "Créer"}
             </button>
@@ -237,95 +348,321 @@ export function ExercisePicker({ onAdd }: ExercisePickerProps) {
   );
 }
 
-interface NormalEditorProps {
-  exercises: ExerciseRow[];
-  onChange: (exercises: ExerciseRow[]) => void;
+// ─── ExerciseRowCard ─────────────────────────────────────────────────────────
+interface ExerciseRowCardProps {
+  ex: ExerciseRow;
+  idx: number;
+  total: number;
+  onChange: (patch: Partial<ExerciseRow>) => void;
+  onRemove: () => void;
+  onMove: (dir: -1 | 1) => void;
+  canSuperset?: boolean;
+  nextEx?: ExerciseRow;
+  onLinkSuperset?: () => void;
 }
 
-export function NormalEditor({ exercises, onChange }: NormalEditorProps) {
-  const addExercise = (ex: ExerciseData) => {
-    onChange([...exercises, {
-      exerciseId: ex.id,
-      exerciseName: ex.name,
-      orderIndex: exercises.length,
-      sets: 3,
-      reps: "8-10",
-      loadKg: 0,
-      restSeconds: 90,
-      coachCue: "",
-    }]);
-  };
-
-  const updateExercise = (idx: number, patch: Partial<ExerciseRow>) => {
-    onChange(exercises.map((e, i) => i === idx ? { ...e, ...patch } : e));
-  };
-
-  const removeExercise = (idx: number) => {
-    onChange(exercises.filter((_, i) => i !== idx).map((e, i) => ({ ...e, orderIndex: i })));
-  };
-
-  const moveExercise = (idx: number, dir: -1 | 1) => {
-    const next = [...exercises];
-    const target = idx + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[idx], next[target]] = [next[target], next[idx]];
-    onChange(next.map((e, i) => ({ ...e, orderIndex: i })));
-  };
-
-  const style = MODE_STYLES["normal"];
+function ExerciseRowCard({ ex, idx, total, onChange, onRemove, onMove, canSuperset, nextEx, onLinkSuperset }: ExerciseRowCardProps) {
+  const isInSuperset = !!ex.supersetGroup;
+  const label = ex.supersetLabel || "";
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        {exercises.map((ex, idx) => (
-          <div key={idx} className={`p-3 rounded-lg border ${style.border} ${style.bg} space-y-2`}>
-            <div className="flex items-center justify-between gap-2">
-              <span className={`font-medium text-sm ${style.color} truncate flex-1`}>{ex.exerciseName}</span>
-              <div className="flex items-center gap-1 shrink-0">
-                <button type="button" onClick={() => moveExercise(idx, -1)} className="p-1 hover:bg-white/10 rounded">
-                  <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                </button>
-                <button type="button" onClick={() => moveExercise(idx, 1)} className="p-1 hover:bg-white/10 rounded">
-                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                </button>
-                <button type="button" onClick={() => removeExercise(idx)} className="p-1 hover:bg-destructive/20 rounded">
-                  <X className="w-3 h-3 text-destructive" />
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Sets</label>
-                <Input type="number" min={1} value={ex.sets} onChange={(e) => updateExercise(idx, { sets: +e.target.value })} className="h-7 text-xs bg-background border-border mt-0.5" />
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
-                <Input value={ex.reps} onChange={(e) => updateExercise(idx, { reps: e.target.value })} placeholder="8-10" className="h-7 text-xs bg-background border-border mt-0.5" />
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Charge (kg)</label>
-                <Input type="number" min={0} value={ex.loadKg} onChange={(e) => updateExercise(idx, { loadKg: +e.target.value })} className="h-7 text-xs bg-background border-border mt-0.5" />
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Repos (s)</label>
-                <Input type="number" min={0} value={ex.restSeconds} onChange={(e) => updateExercise(idx, { restSeconds: +e.target.value })} className="h-7 text-xs bg-background border-border mt-0.5" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Indication coach</label>
-              <Input value={ex.coachCue} onChange={(e) => updateExercise(idx, { coachCue: e.target.value })} placeholder="Gainage serré, tempo 3-1-1..." className="h-7 text-xs bg-background border-border mt-0.5" />
-            </div>
-          </div>
-        ))}
+    <div className={cn(
+      "rounded-lg border p-2.5 space-y-2 text-xs transition-colors",
+      isInSuperset
+        ? "border-[#A855F7]/30 bg-[#A855F7]/5"
+        : "border-border bg-background/50"
+    )}>
+      <div className="flex items-center gap-1.5">
+        <GripVertical className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+        {isInSuperset && (
+          <span className="font-mono font-bold text-[#A855F7] text-[10px] bg-[#A855F7]/20 px-1 rounded">{label}</span>
+        )}
+        <span className="font-medium text-white truncate flex-1">{ex.exerciseName}</span>
+        <div className="flex items-center gap-0.5 shrink-0">
+          {canSuperset && !isInSuperset && (
+            <button type="button" onClick={onLinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title="Créer superset">
+              <LinkIcon className="w-3 h-3 text-[#A855F7]" />
+            </button>
+          )}
+          <button type="button" onClick={() => onMove(-1)} disabled={idx === 0} className="p-0.5 rounded hover:bg-white/10 disabled:opacity-30">
+            <ChevronUp className="w-3 h-3 text-muted-foreground" />
+          </button>
+          <button type="button" onClick={() => onMove(1)} disabled={idx === total - 1} className="p-0.5 rounded hover:bg-white/10 disabled:opacity-30">
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          </button>
+          <button type="button" onClick={onRemove} className="p-0.5 rounded hover:bg-destructive/20">
+            <X className="w-3 h-3 text-destructive" />
+          </button>
+        </div>
       </div>
-      <div className="border border-dashed border-border rounded-lg p-3">
-        <p className="text-xs font-mono text-muted-foreground mb-2 uppercase tracking-wider">Ajouter un exercice</p>
-        <ExercisePicker onAdd={addExercise} />
+      <div className="grid grid-cols-4 gap-1.5">
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Sets</label>
+          <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })}
+            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Reps</label>
+          <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="8-10"
+            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">kg</label>
+          <Input type="number" min={0} value={ex.loadKg} onChange={e => onChange({ loadKg: +e.target.value })}
+            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Repos(s)</label>
+          <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })}
+            className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
+        </div>
+      </div>
+      <div>
+        <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Indication coach</label>
+        <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
+          placeholder="Gainage serré, tempo 3-1-1..."
+          className="h-6 text-xs bg-background border-border mt-0.5 px-2" />
       </div>
     </div>
   );
 }
 
+// ─── BlockEditor ─────────────────────────────────────────────────────────────
+interface BlockEditorProps {
+  blocks: BlockDraft[];
+  onChange: (blocks: BlockDraft[]) => void;
+}
+
+export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
+  const [pickerOpenIdx, setPickerOpenIdx] = useState<number | null>(null);
+
+  const updateBlock = (bIdx: number, patch: Partial<BlockDraft>) => {
+    onChange(blocks.map((b, i) => i === bIdx ? { ...b, ...patch } : b));
+  };
+
+  const addBlock = () => {
+    const order = blocks.length;
+    const newBlock = emptyBlock(order, "strength");
+    onChange([...blocks, newBlock]);
+  };
+
+  const removeBlock = (bIdx: number) => {
+    onChange(blocks.filter((_, i) => i !== bIdx).map((b, i) => ({ ...b, orderIndex: i })));
+    if (pickerOpenIdx === bIdx) setPickerOpenIdx(null);
+  };
+
+  const moveBlock = (bIdx: number, dir: -1 | 1) => {
+    const next = [...blocks];
+    const target = bIdx + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[bIdx], next[target]] = [next[target], next[bIdx]];
+    onChange(next.map((b, i) => ({ ...b, orderIndex: i })));
+  };
+
+  const addExercise = (bIdx: number, ex: ExerciseData) => {
+    const block = blocks[bIdx];
+    const newEx: ExerciseRow = {
+      exerciseId: ex.id,
+      exerciseName: ex.name,
+      orderIndex: block.exercises.length,
+      sets: 3,
+      reps: "8-10",
+      loadKg: 0,
+      restSeconds: 90,
+      coachCue: "",
+    };
+    updateBlock(bIdx, { exercises: [...block.exercises, newEx] });
+  };
+
+  const updateExercise = (bIdx: number, eIdx: number, patch: Partial<ExerciseRow>) => {
+    const block = blocks[bIdx];
+    updateBlock(bIdx, {
+      exercises: block.exercises.map((e, i) => i === eIdx ? { ...e, ...patch } : e),
+    });
+  };
+
+  const removeExercise = (bIdx: number, eIdx: number) => {
+    const block = blocks[bIdx];
+    updateBlock(bIdx, {
+      exercises: block.exercises.filter((_, i) => i !== eIdx).map((e, i) => ({ ...e, orderIndex: i })),
+    });
+  };
+
+  const moveExercise = (bIdx: number, eIdx: number, dir: -1 | 1) => {
+    const block = blocks[bIdx];
+    const next = [...block.exercises];
+    const target = eIdx + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[eIdx], next[target]] = [next[target], next[eIdx]];
+    updateBlock(bIdx, { exercises: next.map((e, i) => ({ ...e, orderIndex: i })) });
+  };
+
+  const linkSuperset = (bIdx: number, eIdx: number) => {
+    const block = blocks[bIdx];
+    const exercises = [...block.exercises];
+    const cur = exercises[eIdx];
+    const next = exercises[eIdx + 1];
+    if (!next) return;
+    const groupId = `ss_${Date.now()}`;
+    exercises[eIdx] = { ...cur, supersetGroup: groupId, supersetLabel: "A1" };
+    exercises[eIdx + 1] = { ...next, supersetGroup: groupId, supersetLabel: "A2" };
+    updateBlock(bIdx, { exercises: exercises.map((e, i) => ({ ...e, orderIndex: i })) });
+  };
+
+  const unlinkSuperset = (bIdx: number, eIdx: number) => {
+    const block = blocks[bIdx];
+    const ex = block.exercises[eIdx];
+    const groupId = ex.supersetGroup;
+    if (!groupId) return;
+    updateBlock(bIdx, {
+      exercises: block.exercises.map(e =>
+        e.supersetGroup === groupId ? { ...e, supersetGroup: undefined, supersetLabel: undefined } : e
+      ),
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, bIdx) => {
+        const meta = BLOCK_TYPE_META[block.type] || BLOCK_TYPE_META.strength;
+        const Icon = meta.icon;
+        const isOpen = !block.collapsed;
+
+        return (
+          <div key={bIdx} className={cn("rounded-xl border overflow-hidden transition-colors", meta.border, meta.bg)}>
+            {/* Block header */}
+            <div className="flex items-center gap-2 px-3 py-2">
+              <Icon className={cn("w-4 h-4 shrink-0", meta.color)} />
+              <select
+                value={block.type}
+                onChange={e => updateBlock(bIdx, { type: e.target.value as BlockType, name: BLOCK_TYPE_META[e.target.value as BlockType]?.label || block.name })}
+                className={cn("bg-transparent text-xs font-semibold border-none outline-none cursor-pointer", meta.color)}
+              >
+                {BLOCK_TYPES.map(bt => (
+                  <option key={bt} value={bt} className="text-white bg-[#1A1A1A]">{BLOCK_TYPE_META[bt].label}</option>
+                ))}
+              </select>
+              <Input
+                value={block.name}
+                onChange={e => updateBlock(bIdx, { name: e.target.value })}
+                placeholder="Nom du bloc..."
+                className="h-6 text-xs bg-transparent border-transparent hover:border-border focus:border-border focus:bg-background/80 px-2 flex-1 min-w-0 transition-colors"
+              />
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min={1}
+                    value={block.estimatedDurationMin}
+                    onChange={e => updateBlock(bIdx, { estimatedDurationMin: +e.target.value })}
+                    className="h-6 w-12 text-xs bg-background/60 border-border px-1 text-center"
+                  />
+                  <span className="text-[10px] text-muted-foreground">min</span>
+                </div>
+                {block.type === "conditioning" && (
+                  <select
+                    value={block.conditioningFormat || ""}
+                    onChange={e => updateBlock(bIdx, { conditioningFormat: e.target.value || undefined })}
+                    className="h-6 bg-background/60 border border-border rounded text-[10px] text-white px-1"
+                  >
+                    <option value="">Format</option>
+                    {CONDITIONING_FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  </select>
+                )}
+                <button type="button" onClick={() => moveBlock(bIdx, -1)} disabled={bIdx === 0}
+                  className="p-0.5 rounded hover:bg-white/10 disabled:opacity-20 transition-colors">
+                  <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                </button>
+                <button type="button" onClick={() => moveBlock(bIdx, 1)} disabled={bIdx === blocks.length - 1}
+                  className="p-0.5 rounded hover:bg-white/10 disabled:opacity-20 transition-colors">
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                </button>
+                <button type="button" onClick={() => updateBlock(bIdx, { collapsed: isOpen })}
+                  className="p-0.5 rounded hover:bg-white/10 transition-colors">
+                  {isOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
+                </button>
+                <button type="button" onClick={() => removeBlock(bIdx)}
+                  className="p-0.5 rounded hover:bg-destructive/20 transition-colors">
+                  <Trash2 className="w-3 h-3 text-destructive" />
+                </button>
+              </div>
+            </div>
+
+            {isOpen && (
+              <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
+                {/* Exercise list */}
+                <div className="space-y-1.5">
+                  {block.exercises.map((ex, eIdx) => (
+                    <ExerciseRowCard
+                      key={eIdx}
+                      ex={ex}
+                      idx={eIdx}
+                      total={block.exercises.length}
+                      onChange={patch => updateExercise(bIdx, eIdx, patch)}
+                      onRemove={() => removeExercise(bIdx, eIdx)}
+                      onMove={dir => moveExercise(bIdx, eIdx, dir)}
+                      canSuperset={
+                        (block.type === "strength" || block.type === "power") &&
+                        eIdx < block.exercises.length - 1 &&
+                        !block.exercises[eIdx + 1].supersetGroup
+                      }
+                      nextEx={block.exercises[eIdx + 1]}
+                      onLinkSuperset={() =>
+                        ex.supersetGroup ? unlinkSuperset(bIdx, eIdx) : linkSuperset(bIdx, eIdx)
+                      }
+                    />
+                  ))}
+                </div>
+
+                {/* Picker toggle */}
+                {pickerOpenIdx === bIdx ? (
+                  <div className="border border-dashed border-border rounded-lg p-2.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Ajouter un exercice</p>
+                      <button type="button" onClick={() => setPickerOpenIdx(null)} className="p-0.5 rounded hover:bg-white/10">
+                        <X className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    </div>
+                    <ExercisePicker
+                      compact
+                      onAdd={ex => { addExercise(bIdx, ex); setPickerOpenIdx(null); }}
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpenIdx(bIdx)}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-1.5 py-1.5 text-xs rounded-lg border border-dashed transition-colors",
+                      meta.border.replace("border-", "border-"),
+                      meta.color,
+                      "hover:opacity-80"
+                    )}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Ajouter un exercice
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <button
+        type="button"
+        onClick={addBlock}
+        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-border text-muted-foreground hover:text-white hover:border-white/20 text-xs transition-colors"
+      >
+        <Plus className="w-4 h-4" />
+        Ajouter un bloc
+      </button>
+    </div>
+  );
+}
+
+// ─── SessionModal ─────────────────────────────────────────────────────────────
 interface SessionModalProps {
   programId: string;
   weekNumber: number;
@@ -349,14 +686,13 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
   const dayName = DAY_NAMES[dayNumber - 1] || `Jour ${dayNumber}`;
 
   const autoDurationMin = useMemo(() => {
-    if (draft.normalExercises.length === 0) return null;
-    const totalSeconds = draft.normalExercises.reduce((sum, ex) => {
-      const sets = Math.max(ex.sets || 1, 1);
-      const rest = Math.max(ex.restSeconds || 60, 0);
-      return sum + sets * rest;
+    const allExercises = draft.blocks.flatMap(b => b.exercises);
+    if (allExercises.length === 0) return null;
+    const totalSeconds = allExercises.reduce((sum, ex) => {
+      return sum + Math.max(ex.sets || 1, 1) * Math.max(ex.restSeconds || 60, 0);
     }, 0);
     return Math.max(1, Math.round(totalSeconds / 60));
-  }, [draft.normalExercises]);
+  }, [draft.blocks]);
 
   const handleSave = async () => {
     if (!draft.name.trim()) {
@@ -365,25 +701,50 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
     }
     setIsSaving(true);
     try {
-      const payload = {
+      // Build all exercises flat for normal variant (with blockId resolved server-side via blocks)
+      const allExercises = draft.blocks.flatMap((b, bIdx) =>
+        b.exercises.map((ex, eIdx) => ({
+          exerciseId: ex.exerciseId,
+          orderIndex: bIdx * 100 + eIdx,
+          sets: ex.sets,
+          reps: ex.reps,
+          loadKg: ex.loadKg,
+          restSeconds: ex.restSeconds,
+          coachCue: ex.coachCue,
+          supersetGroup: ex.supersetGroup,
+          supersetLabel: ex.supersetLabel,
+        }))
+      );
+
+      const payload: any = {
         weekNumber,
         dayNumber,
         name: draft.name,
         type: draft.type,
         estimatedDurationMin: autoDurationMin ?? draft.estimatedDurationMin,
         coachNotes: draft.coachNotes,
-        variants: draft.normalExercises.length > 0
+        blocks: draft.blocks.map((b, bIdx) => ({
+          type: b.type,
+          orderIndex: bIdx,
+          name: b.name,
+          estimatedDurationMin: b.estimatedDurationMin,
+          conditioningFormat: b.conditioningFormat || undefined,
+          exercises: b.exercises.map((ex, eIdx) => ({
+            exerciseId: ex.exerciseId,
+            orderIndex: eIdx,
+            sets: ex.sets,
+            reps: ex.reps,
+            loadKg: ex.loadKg,
+            restSeconds: ex.restSeconds,
+            coachCue: ex.coachCue,
+            supersetGroup: ex.supersetGroup,
+            supersetLabel: ex.supersetLabel,
+          })),
+        })),
+        variants: allExercises.length > 0
           ? [{
               mode: "normal" as CreateSessionRequestVariantsItemMode,
-              exercises: draft.normalExercises.map((e) => ({
-                exerciseId: e.exerciseId,
-                orderIndex: e.orderIndex,
-                sets: e.sets,
-                reps: e.reps,
-                loadKg: e.loadKg,
-                restSeconds: e.restSeconds,
-                coachCue: e.coachCue,
-              })),
+              exercises: allExercises,
             }]
           : [],
       };
@@ -412,6 +773,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 space-y-5 pr-1">
+          {/* Session metadata */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Nom de la séance</label>
@@ -428,12 +790,12 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
                 value={draft.type}
                 onValueChange={(v) => setDraft((d) => ({ ...d, type: v as typeof SESSION_TYPES[number] }))}
               >
-                <SelectTrigger className="bg-background border-border capitalize">
+                <SelectTrigger className="bg-background border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   {SESSION_TYPES.map((t) => (
-                    <SelectItem key={t} value={t} className="capitalize">{SESSION_TYPE_LABELS[t] ?? t}</SelectItem>
+                    <SelectItem key={t} value={t}>{SESSION_TYPE_LABELS[t] ?? t}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -458,11 +820,6 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
                   </div>
                 )}
               </div>
-              {autoDurationMin !== null && (
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Calculé automatiquement : {autoDurationMin} min (sets × repos)
-                </p>
-              )}
             </div>
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Notes coach</label>
@@ -475,23 +832,23 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
             </div>
           </div>
 
+          {/* Auto-variant banner */}
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+            <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <span className="text-primary font-medium">Variantes auto-générées</span> — Les variantes{" "}
+              <span className="text-white">Performance</span> (×1.05),{" "}
+              <span className="text-accent">Adapt</span> (×0.75) et{" "}
+              <span className="text-violet-400">Récupération</span> (×0.30) seront créées automatiquement.
+            </p>
+          </div>
+
+          {/* Block editor */}
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Exercices — Variante Normale</p>
-              <span className="text-[10px] font-mono text-muted-foreground">(référence)</span>
-            </div>
-            <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-primary/5 border border-primary/20">
-              <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                <span className="text-primary font-medium">Variantes auto-générées</span> — À la sauvegarde, les variantes{" "}
-                <span className="text-white">Performance</span> (×1.05),{" "}
-                <span className="text-accent">Adapt</span> (×0.75, −1 série) et{" "}
-                <span className="text-violet-400">Récupération</span> (×0.30, 2×12-15) seront créées automatiquement.
-              </p>
-            </div>
-            <NormalEditor
-              exercises={draft.normalExercises}
-              onChange={(exercises) => setDraft((d) => ({ ...d, normalExercises: exercises }))}
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Structure de la séance</p>
+            <BlockEditor
+              blocks={draft.blocks}
+              onChange={(blocks) => setDraft((d) => ({ ...d, blocks }))}
             />
           </div>
         </div>
@@ -513,6 +870,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
   );
 }
 
+// ─── SessionCell ──────────────────────────────────────────────────────────────
 interface SessionCellProps {
   session?: SessionWithVariants;
   weekNumber: number;
@@ -571,14 +929,16 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
 
   return (
     <>
-      <div className={`group w-full rounded-lg border bg-card transition-all relative overflow-hidden ${expanded ? "border-white/20" : "border-border hover:border-white/20"}`}>
-        <div
-          className="p-2 cursor-pointer"
-          onClick={() => setEditOpen(true)}
-        >
+      <div className={cn(
+        "group w-full rounded-lg border bg-card transition-all relative overflow-hidden",
+        expanded ? "border-white/20" : "border-border hover:border-white/20"
+      )}>
+        <div className="p-2 cursor-pointer" onClick={() => setEditOpen(true)}>
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
           <p className="text-xs font-semibold text-white truncate leading-tight mb-1 pr-5">{session.name}</p>
-          <p className="text-[10px] font-mono text-muted-foreground capitalize mb-1.5">{SESSION_TYPE_LABELS[session.type] ?? session.type}</p>
+          <p className="text-[10px] font-mono text-muted-foreground capitalize mb-1.5">
+            {SESSION_TYPE_LABELS[session.type] ?? session.type}
+          </p>
           <div className="flex items-center justify-between gap-1">
             <div className="flex gap-0.5 flex-wrap">
               {MODES.filter((m) => modeStyles[m]).map((m) => (
@@ -599,7 +959,6 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
                   className="p-0.5 rounded hover:bg-white/10 transition-colors"
-                  title={expanded ? "Réduire" : "Voir les exercices"}
                 >
                   {expanded
                     ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
@@ -611,7 +970,7 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
         </div>
 
         {expanded && exercises.length > 0 && (
-          <div className="border-t border-border px-2 pb-2 pt-1.5 space-y-1.5">
+          <div className="border-t border-border px-2 pb-2 pt-1.5 space-y-1">
             {exercises.map((ex, i) => (
               <div key={i} className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
@@ -661,7 +1020,9 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-xl text-white">Supprimer la séance ?</AlertDialogTitle>
-            <AlertDialogDescription>Cette action supprimera définitivement « {session.name} » du programme.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Cette action supprimera définitivement « {session.name} » du programme.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
@@ -679,6 +1040,7 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
   );
 }
 
+// ─── ProgramGrid ──────────────────────────────────────────────────────────────
 interface ProgramGridProps {
   programId: string;
 }

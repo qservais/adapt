@@ -4,6 +4,9 @@ import { usersTable } from "./users";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+export const SESSION_BLOCK_TYPES = ["warm_up", "strength", "power", "conditioning", "core", "cool_down"] as const;
+export type SessionBlockType = typeof SESSION_BLOCK_TYPES[number];
+
 export const programsTable = pgTable("programs", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   coachId: uuid("coach_id").references(() => usersTable.id),
@@ -38,12 +41,26 @@ export const sessionVariantsTable = pgTable("session_variants", {
   notes: text("notes"),
 });
 
+export const sessionBlocksTable = pgTable("session_blocks", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").references(() => sessionsTable.id).notNull(),
+  type: varchar("type", { length: 30 }).notNull(),
+  orderIndex: integer("order_index").notNull(),
+  name: varchar("name", { length: 255 }),
+  notes: text("notes"),
+  estimatedDurationMin: integer("estimated_duration_min"),
+  conditioningFormat: varchar("conditioning_format", { length: 20 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 export const insertProgramSchema = createInsertSchema(programsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertSessionSchema = createInsertSchema(sessionsTable).omit({ id: true, createdAt: true });
 export const insertSessionVariantSchema = createInsertSchema(sessionVariantsTable).omit({ id: true });
+export const insertSessionBlockSchema = createInsertSchema(sessionBlocksTable).omit({ id: true, createdAt: true });
 
 export type InsertProgram = z.infer<typeof insertProgramSchema>;
 export type Program = typeof programsTable.$inferSelect;
 export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessionsTable.$inferSelect;
 export type SessionVariant = typeof sessionVariantsTable.$inferSelect;
+export type SessionBlock = typeof sessionBlocksTable.$inferSelect;

@@ -15,6 +15,7 @@ import ProgramDetail from "./pages/programs/detail";
 import AlertsFeed from "./pages/alerts/index";
 import MessagesList from "./pages/messages/index";
 import ChatView from "./pages/messages/chat";
+import LibraryPage from "./pages/library/index";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ function AppRouter() {
         <Route path="/clients/:id" component={ClientDetail} />
         <Route path="/programs" component={ProgramsList} />
         <Route path="/programs/:id" component={ProgramDetail} />
+        <Route path="/library" component={LibraryPage} />
         <Route path="/alerts" component={AlertsFeed} />
         <Route path="/messages" component={MessagesList} />
         <Route path="/messages/:id" component={ChatView} />
