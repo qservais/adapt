@@ -15,6 +15,12 @@ import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme"
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
 
+const DIFFICULTY_LABELS: Record<string, string> = {
+  too_easy: "Trop facile",
+  well_calibrated: "Parfait",
+  too_hard: "Trop difficile",
+};
+
 export default function SessionDetailScreen() {
   const insets = useSafeAreaInsets();
   const { logId } = useLocalSearchParams<{ logId: string }>();
@@ -120,7 +126,7 @@ export default function SessionDetailScreen() {
               {log.perceivedDifficulty != null && (
                 <View style={styles.feedbackItem}>
                   <Text style={[styles.feedbackVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
-                    {log.perceivedDifficulty}
+                    {DIFFICULTY_LABELS[log.perceivedDifficulty] ?? log.perceivedDifficulty}
                   </Text>
                   <Text style={[styles.feedbackLabel, { fontFamily: FONTS.body }]}>Difficulté</Text>
                 </View>

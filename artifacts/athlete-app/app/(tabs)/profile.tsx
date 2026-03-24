@@ -65,9 +65,14 @@ export default function ProfileScreen() {
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [gender, setGender] = useState<string>(user?.gender ?? "");
   const [cycleTracking, setCycleTracking] = useState(user?.cycleTracking ?? false);
   const [weight, setWeight] = useState<string>("");
+  const [heightCm, setHeightCm] = useState<string>("");
+  const [trainingFrequency, setTrainingFrequency] = useState<string>("");
+  const [fitnessLevel, setFitnessLevel] = useState<string>("");
+  const [primaryGoal, setPrimaryGoal] = useState<string>("");
   const [birthDateValue, setBirthDateValue] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -85,9 +90,14 @@ export default function ProfileScreen() {
         setEditing(false);
         setShowDatePicker(false);
         setFirstName(p?.firstName ?? "");
+        setLastName(p?.lastName ?? "");
         setGender(p?.gender ?? "");
         setCycleTracking(p?.cycleTracking ?? false);
         setWeight(p?.weightKg ? String(Math.round(parseFloat(String(p.weightKg)))) : "");
+        setHeightCm(p?.heightCm ? String(p.heightCm) : "");
+        setTrainingFrequency(p?.trainingFrequency ? String(p.trainingFrequency) : "");
+        setFitnessLevel(p?.fitnessLevel ?? "");
+        setPrimaryGoal(p?.primaryGoal ?? "");
         if (p?.birthDate) {
           setBirthDateValue(new Date(String(p.birthDate).substring(0, 10) + "T12:00:00"));
         } else {
@@ -100,9 +110,14 @@ export default function ProfileScreen() {
   const startEditing = () => {
     const p = meQuery.data ?? user;
     setFirstName(p?.firstName ?? "");
+    setLastName(p?.lastName ?? "");
     setGender(p?.gender ?? "");
     setCycleTracking(p?.cycleTracking ?? false);
     setWeight(p?.weightKg ? String(Math.round(parseFloat(String(p.weightKg)))) : "");
+    setHeightCm(p?.heightCm ? String(p.heightCm) : "");
+    setTrainingFrequency(p?.trainingFrequency ? String(p.trainingFrequency) : "");
+    setFitnessLevel(p?.fitnessLevel ?? "");
+    setPrimaryGoal(p?.primaryGoal ?? "");
     if (p?.birthDate) {
       setBirthDateValue(new Date(String(p.birthDate).substring(0, 10) + "T12:00:00"));
     } else {
@@ -113,6 +128,8 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     const parsedWeight = parseFloat(weight);
+    const parsedHeight = parseInt(heightCm, 10);
+    const parsedFreq = parseInt(trainingFrequency, 10);
     let birthDateStr: string | undefined;
     if (birthDateValue != null) {
       const y = birthDateValue.getFullYear();
@@ -124,9 +141,14 @@ export default function ProfileScreen() {
       const updated = await updateMutation.mutateAsync({
         data: {
           firstName: firstName.trim() || undefined,
+          lastName: lastName.trim() || undefined,
           gender: (gender as "homme" | "femme") || undefined,
           cycleTracking,
           weightKg: !isNaN(parsedWeight) && parsedWeight >= 20 ? parsedWeight : undefined,
+          heightCm: !isNaN(parsedHeight) && parsedHeight >= 50 && parsedHeight <= 300 ? parsedHeight : undefined,
+          trainingFrequency: !isNaN(parsedFreq) && parsedFreq >= 1 && parsedFreq <= 14 ? parsedFreq : undefined,
+          fitnessLevel: (fitnessLevel as "beginner" | "intermediate" | "advanced") || undefined,
+          primaryGoal: (primaryGoal as "strength" | "muscle" | "fat_loss" | "performance" | "health" | "aesthetic" | "fitness") || undefined,
           birthDate: birthDateStr,
         },
       });
@@ -285,6 +307,11 @@ export default function ProfileScreen() {
             value={firstName}
             onChangeText={setFirstName}
           />
+          <InputField
+            label="Nom"
+            value={lastName}
+            onChangeText={setLastName}
+          />
           <Text style={[styles.fieldLabel, { fontFamily: FONTS.body }]}>Genre</Text>
           <View style={styles.genderRow}>
             {(["homme", "femme"] as const).map((g) => (
@@ -326,16 +353,74 @@ export default function ProfileScreen() {
               />
             </View>
           )}
-          <View style={{ flex: 1 }}>
-            <InputField
-              label="Poids (kg)"
-              value={weight}
-              onChangeText={setWeight}
-              keyboardType="decimal-pad"
-              placeholder="ex: 70.5"
-            />
+          <View style={styles.rowInputs}>
+            <View style={{ flex: 1 }}>
+              <InputField
+                label="Poids (kg)"
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="decimal-pad"
+                placeholder="ex: 70"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <InputField
+                label="Taille (cm)"
+                value={heightCm}
+                onChangeText={setHeightCm}
+                keyboardType="number-pad"
+                placeholder="ex: 175"
+              />
+            </View>
           </View>
-          <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 12, marginBottom: 6 }]}>
+          <InputField
+            label="Séances / semaine"
+            value={trainingFrequency}
+            onChangeText={setTrainingFrequency}
+            keyboardType="number-pad"
+            placeholder="ex: 4"
+          />
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body, marginBottom: 6 }]}>Niveau de forme</Text>
+          <View style={styles.segmentRow}>
+            {(["beginner", "intermediate", "advanced"] as const).map((level) => (
+              <TouchableOpacity
+                key={level}
+                onPress={() => setFitnessLevel(level)}
+                style={[
+                  styles.segmentBtn,
+                  fitnessLevel === level && { borderColor: COLORS.cyan, backgroundColor: COLORS.cyanDim },
+                ]}
+              >
+                <Text style={[
+                  styles.segmentBtnText,
+                  { fontFamily: FONTS.body, color: fitnessLevel === level ? COLORS.cyan : COLORS.textSecondary },
+                ]}>
+                  {FITNESS_LABELS[level]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body, marginBottom: 6 }]}>Objectif principal</Text>
+          <View style={styles.goalGrid}>
+            {(Object.entries(GOAL_LABELS) as [string, string][]).map(([key, label]) => (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setPrimaryGoal(key)}
+                style={[
+                  styles.goalBtn,
+                  primaryGoal === key && { borderColor: COLORS.violet, backgroundColor: COLORS.violetDim },
+                ]}
+              >
+                <Text style={[
+                  styles.goalBtnText,
+                  { fontFamily: FONTS.body, color: primaryGoal === key ? COLORS.violet : COLORS.textSecondary },
+                ]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 4, marginBottom: 6 }]}>
             Date de naissance
           </Text>
           <TouchableOpacity
@@ -685,4 +770,29 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.redDim,
   },
   unlinkText: { fontSize: 11, color: COLORS.red, letterSpacing: 1 },
+  segmentRow: { flexDirection: "row", gap: 8 },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgInput,
+    alignItems: "center",
+  },
+  segmentBtnText: { fontSize: 12 },
+  goalGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  goalBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgInput,
+  },
+  goalBtnText: { fontSize: 13 },
 });

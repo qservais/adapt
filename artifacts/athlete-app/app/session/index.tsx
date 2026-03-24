@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -15,14 +14,6 @@ import { useGetTodaySession, useStartSession } from "@workspace/api-client-react
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
-
-const CATEGORY_IMAGES: Record<string, ReturnType<typeof require>> = {
-  compound: require("@/assets/images/categories/compound.png"),
-  isolation: require("@/assets/images/categories/isolation.png"),
-  cardio: require("@/assets/images/categories/cardio.png"),
-  mobility: require("@/assets/images/categories/mobility.png"),
-  plyometric: require("@/assets/images/categories/plyometric.png"),
-};
 
 export default function SessionIntroScreen() {
   const insets = useSafeAreaInsets();
@@ -135,18 +126,13 @@ export default function SessionIntroScreen() {
         <View style={styles.exerciseList}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRAMME</Text>
           {session.exercises?.map((ex, i) => {
-            const thumb = ex.category ? CATEGORY_IMAGES[ex.category] : null;
             return (
               <View key={ex.id} style={styles.exRow}>
-                {thumb ? (
-                  <Image source={thumb} style={styles.exThumb} contentFit="cover" />
-                ) : (
-                  <View style={styles.exThumbFallback}>
-                    <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-                      {String(i + 1).padStart(2, "0")}
-                    </Text>
-                  </View>
-                )}
+                <View style={styles.exThumbFallback}>
+                  <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                    {String(i + 1).padStart(2, "0")}
+                  </Text>
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
                   <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
@@ -263,13 +249,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     alignItems: "center",
-  },
-  exThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: COLORS.bgCard,
-    flexShrink: 0,
   },
   exThumbFallback: {
     width: 56,
