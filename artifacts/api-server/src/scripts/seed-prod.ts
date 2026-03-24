@@ -61,15 +61,27 @@ async function main() {
     console.log("✅ Patch seed déjà présent (athlètes demo)");
   }
 
+  // Step 3: Content seed (guides éducatifs + routines bibliothèque)
+  const guidesExist = psql("SELECT COUNT(*) FROM guides");
+  if (guidesExist === "0") {
+    runSqlFile(join(__dirname, "seed-content.sql"), "seed-content.sql");
+  } else {
+    console.log("✅ Content seed déjà présent (guides + routines)");
+  }
+
   // Verify final state
   const userCount = psql("SELECT COUNT(*) FROM users");
   const programCount = psql("SELECT COUNT(*) FROM programs");
   const sessionCount = psql("SELECT COUNT(*) FROM sessions");
+  const guidesCount = psql("SELECT COUNT(*) FROM guides");
+  const routinesCount = psql("SELECT COUNT(*) FROM content_routines");
 
   console.log(`\n📊 État de la base:`);
   console.log(`   - ${userCount} utilisateurs`);
   console.log(`   - ${programCount} programmes`);
   console.log(`   - ${sessionCount} séances`);
+  console.log(`   - ${guidesCount} guides`);
+  console.log(`   - ${routinesCount} routines`);
 }
 
 main().catch((err) => {
