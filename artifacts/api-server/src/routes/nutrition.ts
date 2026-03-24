@@ -183,19 +183,6 @@ router.put("/coach/clients/:athleteId/nutrition/goals", authenticate, requireRol
   }
 });
 
-router.get("/coach/clients/:athleteId/nutrition/goals", authenticate, requireRole("coach"), async (req, res) => {
-  try {
-    const athleteId = String(req.params.athleteId);
-    const coachId = req.user!.userId;
-    const [athlete] = await db.select({ coachId: usersTable.coachId }).from(usersTable).where(eq(usersTable.id, athleteId));
-    if (!athlete || athlete.coachId !== coachId) return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
-    const [goals] = await db.select().from(nutritionGoalsTable).where(eq(nutritionGoalsTable.userId, athleteId));
-    return res.json(goals ?? { proteinG: 150, carbsG: 250, fatG: 70, kcal: 2200 });
-  } catch {
-    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
-  }
-});
-
 router.get("/coach/clients/:athleteId/nutrition/meals", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const athleteId = String(req.params.athleteId);
@@ -298,7 +285,7 @@ router.get("/nutrition/pdfs/:id/download", authenticate, async (req, res) => {
       return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Impossible de lire le fichier" } });
     }
     const { Readable } = await import("stream");
-    const nodeStream = Readable.fromWeb(response.body as any);
+    const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
     nodeStream.pipe(res);
     return;
   } catch {
