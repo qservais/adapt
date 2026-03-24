@@ -75,7 +75,7 @@ async function buildSessionDetail(
       coachNotes = sess.coachNotes ?? null;
       estimatedDurationMin = sess.estimatedDurationMin ?? null;
       sessionType = sess.type ?? null;
-      sessionLocation = sess.sessionType ?? null;
+      sessionLocation = sess.sessionType ?? "online";
     }
   }
 
@@ -311,7 +311,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
         sessionId = session.id;
         sessionName = session.name;
         sessionTypeValue = session.type ?? null;
-        sessionLocationValue = session.sessionType ?? null;
+        sessionLocationValue = session.sessionType ?? "online";
         estimatedDuration = session.estimatedDurationMin ?? null;
         coachNotes = session.coachNotes ?? null;
 

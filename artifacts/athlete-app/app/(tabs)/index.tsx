@@ -250,17 +250,17 @@ function StateCheckedIn({
             <View style={styles.sessionMeta}>
               {session.sessionLocation != null && (
                 <View style={[styles.locationChip, {
-                  borderColor: session.sessionLocation === "presentiel" ? `${COLORS.violet}50` : `${COLORS.cyan}50`,
-                  backgroundColor: session.sessionLocation === "presentiel" ? COLORS.violetDim : COLORS.cyanDim,
+                  borderColor: session.sessionLocation === "presentiel" ? `${COLORS.amber}50` : `${COLORS.cyan}50`,
+                  backgroundColor: session.sessionLocation === "presentiel" ? `${COLORS.amber}15` : COLORS.cyanDim,
                 }]}>
                   <Feather
                     name={session.sessionLocation === "presentiel" ? "map-pin" : "video"}
                     size={9}
-                    color={session.sessionLocation === "presentiel" ? COLORS.violet : COLORS.cyan}
+                    color={session.sessionLocation === "presentiel" ? COLORS.amber : COLORS.cyan}
                   />
                   <Text style={[styles.locationText, {
                     fontFamily: FONTS.mono,
-                    color: session.sessionLocation === "presentiel" ? COLORS.violet : COLORS.cyan,
+                    color: session.sessionLocation === "presentiel" ? COLORS.amber : COLORS.cyan,
                   }]}>
                     {session.sessionLocation === "presentiel" ? "PRÉSENTIEL" : "EN LIGNE"}
                   </Text>

@@ -136,6 +136,21 @@ export default function SessionIntroScreen() {
                 {session.exercises?.length ?? 0} EXERCICES
               </Text>
             </View>
+            {(() => {
+              const isPresentiel = session.sessionLocation === "presentiel";
+              const color = isPresentiel ? COLORS.amber : COLORS.cyan;
+              return (
+                <View style={[styles.metaChip, {
+                  borderColor: `${color}40`,
+                  backgroundColor: `${color}12`,
+                }]}>
+                  <Feather name={isPresentiel ? "map-pin" : "video"} size={12} color={color} />
+                  <Text style={[styles.metaText, { fontFamily: FONTS.mono, color }]}>
+                    {isPresentiel ? "PRÉSENTIEL" : "EN LIGNE"}
+                  </Text>
+                </View>
+              );
+            })()}
           </View>
           <View style={[styles.scoreRow, { backgroundColor: `${cfg.color}10`, borderColor: `${cfg.color}40` }]}>
             <Text style={[styles.scoreLabel, { fontFamily: FONTS.mono }]}>ADAPT SCORE</Text>
