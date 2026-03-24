@@ -13,8 +13,9 @@ import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import { 
   Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
   Pencil, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Copy, Check,
-  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus, Trash2
+  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus, Trash2, Apple
 } from "lucide-react";
+import { CoachNutritionPanel } from "@/components/nutrition/CoachNutritionPanel";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
@@ -121,7 +122,7 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
   mixed: "Mixte",
 };
 
-type Tab = "apercu" | "programme" | "tests";
+type Tab = "apercu" | "programme" | "tests" | "nutrition";
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -380,6 +381,7 @@ export default function ClientDetail() {
     { id: "apercu", label: "Aperçu", icon: CheckCircle2 },
     { id: "programme", label: "Programme", icon: Dumbbell },
     { id: "tests", label: "Tests", icon: TrendingUp },
+    { id: "nutrition", label: "Nutrition", icon: Apple },
   ];
 
   return (
@@ -1612,6 +1614,11 @@ export default function ClientDetail() {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+      )}
+
+      {/* NUTRITION TAB */}
+      {activeTab === "nutrition" && (
+        <CoachNutritionPanel athleteId={id ?? ""} />
       )}
 
       {/* PROGRAMME TAB */}

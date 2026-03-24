@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { NutritionTab } from "@/components/nutrition/NutritionTab";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -281,6 +282,7 @@ export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
+  const [activeTab, setActiveTab] = useState<"training" | "nutrition">("training");
   const [period, setPeriod] = useState<Period>("30");
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
@@ -358,27 +360,52 @@ export default function StatsScreen() {
     >
       <View style={styles.headRow}>
         <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>STATS</Text>
-        <View style={styles.periodRow}>
-          {(["7", "14", "30"] as Period[]).map((p) => (
-            <TouchableOpacity
-              key={p}
-              onPress={() => setPeriod(p)}
-              style={[styles.periodBtn, period === p && styles.periodActive]}
-            >
-              <Text
-                style={[
-                  styles.periodText,
-                  { fontFamily: FONTS.mono },
-                  period === p && { color: COLORS.cyan },
-                ]}
+        {activeTab === "training" && (
+          <View style={styles.periodRow}>
+            {(["7", "14", "30"] as Period[]).map((p) => (
+              <TouchableOpacity
+                key={p}
+                onPress={() => setPeriod(p)}
+                style={[styles.periodBtn, period === p && styles.periodActive]}
               >
-                {p}j
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Text
+                  style={[
+                    styles.periodText,
+                    { fontFamily: FONTS.mono },
+                    period === p && { color: COLORS.cyan },
+                  ]}
+                >
+                  {p}j
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          onPress={() => setActiveTab("training")}
+          style={[styles.tabBtn, activeTab === "training" && styles.tabBtnActive]}
+        >
+          <Text style={[styles.tabBtnText, { fontFamily: FONTS.mono, color: activeTab === "training" ? COLORS.cyan : COLORS.textMuted }]}>
+            ENTRAÎNEMENT
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setActiveTab("nutrition")}
+          style={[styles.tabBtn, activeTab === "nutrition" && styles.tabBtnActiveGreen]}
+        >
+          <Text style={[styles.tabBtnText, { fontFamily: FONTS.mono, color: activeTab === "nutrition" ? COLORS.green : COLORS.textMuted }]}>
+            NUTRITION
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === "nutrition" && <NutritionTab />}
+
+      {activeTab === "training" && (
+      <>
       <View style={styles.section}>
         <View style={styles.kpiRow}>
           <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
@@ -644,6 +671,8 @@ export default function StatsScreen() {
           </Text>
         </View>
       )}
+      </>
+      )}
     </ScrollView>
   );
 }
@@ -669,6 +698,20 @@ const styles = StyleSheet.create({
   periodBtn: { paddingHorizontal: 12, paddingVertical: 8 },
   periodActive: { backgroundColor: COLORS.cyanDim },
   periodText: { fontSize: 12, color: COLORS.textSecondary },
+  tabRow: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  tabBtn: { flex: 1, paddingVertical: 10, alignItems: "center" },
+  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: COLORS.cyan },
+  tabBtnActiveGreen: { borderBottomWidth: 2, borderBottomColor: COLORS.green },
+  tabBtnText: { fontSize: 12, letterSpacing: 1.5 },
   section: { paddingHorizontal: 20, marginBottom: 16 },
   kpiRow: { flexDirection: "row", gap: 10 },
   kpiCard: { flex: 1, alignItems: "center", padding: 16 },

@@ -10,6 +10,7 @@ import exercisesRouter from "./exercises.js";
 import messagesRouter from "./messages.js";
 import notificationsRouter from "./notifications.js";
 import contentRouter from "./content.js";
+import nutritionRouter from "./nutrition.js";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(exercisesRouter);
 router.use(messagesRouter);
 router.use(notificationsRouter);
 router.use(contentRouter);
+router.use(nutritionRouter);
 
 export default router;
