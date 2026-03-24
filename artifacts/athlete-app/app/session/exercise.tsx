@@ -465,6 +465,16 @@ export default function ExerciseScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+            {workTimerStarted && !timerCompleted && (
+              <TouchableOpacity
+                onPress={() => setTimerCompleted(true)}
+                style={styles.skipBtn}
+              >
+                <Text style={[styles.skipText, { fontFamily: FONTS.bodyMedium }]}>
+                  Passer
+                </Text>
+              </TouchableOpacity>
+            )}
             {timerCompleted && (
               <View style={[styles.timerDoneBadge, { backgroundColor: `${COLORS.green}20`, borderColor: `${COLORS.green}50` }]}>
                 <Feather name="check-circle" size={14} color={COLORS.green} />
