@@ -348,6 +348,7 @@ export interface SessionFeedbackRequest {
   rpe: number;
   perceivedDifficulty: SessionFeedbackRequestPerceivedDifficulty;
   athleteNotes?: string | null;
+  theme?: string | null;
 }
 
 export interface ProgramSummary {

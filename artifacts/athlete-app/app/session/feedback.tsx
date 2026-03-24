@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -25,6 +25,15 @@ const DIFFICULTY_OPTIONS = [
   { key: "too_easy" as Difficulty, label: "Trop facile", icon: "thumbs-up" as const, color: COLORS.cyan },
   { key: "well_calibrated" as Difficulty, label: "Parfait", icon: "check-circle" as const, color: COLORS.green },
   { key: "too_hard" as Difficulty, label: "Trop dur", icon: "alert-triangle" as const, color: COLORS.red },
+];
+
+const THEME_OPTIONS = [
+  { key: "strength", label: "Force", icon: "trending-up" as const },
+  { key: "cardio", label: "Cardio", icon: "activity" as const },
+  { key: "hiit", label: "HIIT", icon: "zap" as const },
+  { key: "mobility", label: "Mobilité", icon: "wind" as const },
+  { key: "mixed", label: "Mixte", icon: "layers" as const },
+  { key: "recovery", label: "Récup", icon: "heart" as const },
 ];
 
 function getRPEColor(rpe: number): string {
@@ -45,13 +54,16 @@ function getRPELabel(rpe: number): string {
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{ sessionType?: string }>();
   const sessionQuery = useGetTodaySession();
   const feedbackMutation = useSubmitSessionFeedback();
 
   const session = sessionQuery.data;
+  const defaultTheme = params.sessionType ?? null;
 
   const [rpe, setRpe] = useState(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
+  const [theme, setTheme] = useState<string | null>(defaultTheme);
   const [notes, setNotes] = useState("");
   const [submitError, setSubmitError] = useState("");
 
@@ -70,6 +82,7 @@ export default function FeedbackScreen() {
           rpe,
           perceivedDifficulty: difficulty,
           athleteNotes: notes.trim() || null,
+          theme: theme ?? null,
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/sessions/today"] });
@@ -130,6 +143,46 @@ export default function FeedbackScreen() {
               <Text style={[styles.rpeEndText, { fontFamily: FONTS.mono }]}>Facile</Text>
               <Text style={[styles.rpeEndText, { fontFamily: FONTS.mono }]}>Effort max</Text>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>THÈME DE SÉANCE</Text>
+          <View style={styles.themeGrid}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = theme === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setTheme(active ? null : opt.key);
+                  }}
+                  style={[
+                    styles.themeBtn,
+                    active && {
+                      borderColor: COLORS.cyan,
+                      backgroundColor: `${COLORS.cyan}15`,
+                    },
+                  ]}
+                >
+                  <Feather
+                    name={opt.icon}
+                    size={18}
+                    color={active ? COLORS.cyan : COLORS.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.themeLabel,
+                      { fontFamily: FONTS.bodyMedium },
+                      active && { color: COLORS.cyan },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -233,6 +286,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   rpeEndText: { fontSize: 11, color: COLORS.textMuted },
+  themeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  themeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgElevated,
+  },
+  themeLabel: { fontSize: 12, color: COLORS.textMuted },
   calibRow: { flexDirection: "row", gap: 8 },
   calibBtn: {
     flex: 1,

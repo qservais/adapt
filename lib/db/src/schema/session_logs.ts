@@ -18,6 +18,7 @@ export const sessionLogsTable = pgTable("session_logs", {
   rpe: smallint("rpe"),
   perceivedDifficulty: varchar("perceived_difficulty", { length: 20 }),
   athleteNotes: text("athlete_notes"),
+  theme: varchar("theme", { length: 30 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

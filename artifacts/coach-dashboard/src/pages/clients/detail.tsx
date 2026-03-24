@@ -981,6 +981,74 @@ export default function ClientDetail() {
                       );
                     })()}
 
+                    {/* RPE chart + consecutive high-RPE alert */}
+                    {(() => {
+                      const rpeData = client.recentSessions
+                        .filter(s => s.completedAt && s.rpe != null)
+                        .sort((a, b) => new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime())
+                        .slice(-10)
+                        .map(s => ({
+                          date: format(new Date(s.completedAt!), 'd MMM', { locale: fr }),
+                          rpe: s.rpe as number,
+                        }));
+
+                      const consecutiveHighRpe = (() => {
+                        const withRpe = client.recentSessions
+                          .filter(s => s.completedAt && s.rpe != null)
+                          .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
+                        let count = 0;
+                        for (const s of withRpe) {
+                          if ((s.rpe as number) > 8) count++;
+                          else break;
+                        }
+                        return count;
+                      })();
+
+                      if (rpeData.length === 0) return null;
+
+                      return (
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                              RPE — Effort perçu
+                            </div>
+                            {consecutiveHighRpe >= 2 && (
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/30 px-2.5 py-1 rounded-full">
+                                <AlertTriangle className="w-3 h-3" />
+                                {consecutiveHighRpe} séances RPE &gt; 8 consécutives
+                              </div>
+                            )}
+                          </div>
+                          <div className="h-[90px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={rpeData} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                                <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 10]} ticks={[0, 5, 8, 10]} />
+                                <RechartsTooltip
+                                  contentStyle={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
+                                  formatter={(v) => [`${v}/10`, "RPE"]}
+                                  labelStyle={{ color: "#94a3b8" }}
+                                />
+                                <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="4 2" opacity={0.5} />
+                                <Line
+                                  type="monotone"
+                                  dataKey="rpe"
+                                  strokeWidth={2}
+                                  dot={(props) => {
+                                    const { cx, cy, payload } = props;
+                                    const color = payload.rpe > 8 ? "#ef4444" : payload.rpe > 6 ? "#f59e0b" : "#22c55e";
+                                    return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill={color} stroke="none" />;
+                                  }}
+                                  stroke="#f59e0b"
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Recent sessions */}
                     {client.recentSessions.length > 0 && (
                       <div className="mt-5 pt-4 border-t border-border">

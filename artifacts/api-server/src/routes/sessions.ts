@@ -490,6 +490,7 @@ const feedbackSchema = z.object({
   rpe: z.number().int().min(1).max(10),
   perceivedDifficulty: z.enum(["too_easy", "well_calibrated", "too_hard"]),
   athleteNotes: z.string().nullable().optional(),
+  theme: z.string().max(30).nullable().optional(),
 });
 
 router.post("/sessions/:sessionId/feedback", authenticate, requireRole("athlete"), async (req, res) => {
@@ -512,6 +513,7 @@ router.post("/sessions/:sessionId/feedback", authenticate, requireRole("athlete"
         rpe: parsed.data.rpe,
         perceivedDifficulty: parsed.data.perceivedDifficulty,
         athleteNotes: parsed.data.athleteNotes ?? null,
+        theme: parsed.data.theme ?? null,
       })
       .where(and(
         eq(sessionLogsTable.id, sessionId),
