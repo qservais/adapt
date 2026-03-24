@@ -114,9 +114,9 @@ export default function HomeScreen() {
           </Text>
         </View>
         <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} activeOpacity={0.8}>
-          {(user as { avatarUrl?: string | null } | null)?.avatarUrl ? (
+          {user?.avatarUrl ? (
             <Image
-              source={{ uri: (user as { avatarUrl?: string | null }).avatarUrl! }}
+              source={{ uri: user.avatarUrl }}
               style={styles.headerAvatar}
               contentFit="cover"
             />

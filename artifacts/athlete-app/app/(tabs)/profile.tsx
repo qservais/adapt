@@ -193,6 +193,10 @@ export default function ProfileScreen() {
         throw new Error(body?.error?.message ?? `Erreur HTTP ${response.status}`);
       }
 
+      const data = await response.json();
+      if (data?.user) {
+        updateUser(data.user);
+      }
       queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Impossible de mettre à jour la photo de profil";
