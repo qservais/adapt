@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { customFetch } from "@workspace/api-client-react";
 
 interface NutritionGoals {
   proteinG: number;
@@ -142,13 +143,14 @@ export function CoachNutritionPanel({ athleteId }: Props) {
     if (!uploadFile || !uploadTitle.trim()) return;
     setUploading(true);
     try {
-      const urlRes = await fetch(`/api/coach/clients/${athleteId}/nutrition/pdfs/upload-url`, {
+      const { uploadUrl, objectPath, metadataEndpoint } = await customFetch<{
+        uploadUrl: string;
+        objectPath: string;
+        metadataEndpoint: string;
+      }>(`/api/coach/clients/${athleteId}/nutrition/pdfs/upload-url`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: uploadTitle.trim(), contentType: "application/pdf" }),
       });
-      if (!urlRes.ok) throw new Error("Erreur lors de la génération du lien d'upload");
-      const { uploadUrl, objectPath, metadataEndpoint } = await urlRes.json();
 
       const putRes = await fetch(uploadUrl, {
         method: "PUT",
@@ -157,12 +159,10 @@ export function CoachNutritionPanel({ athleteId }: Props) {
       });
       if (!putRes.ok) throw new Error("Erreur lors du transfert du fichier");
 
-      const metaRes = await fetch(metadataEndpoint, {
+      await customFetch(metadataEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: uploadTitle.trim(), objectPath }),
       });
-      if (!metaRes.ok) throw new Error("Erreur lors de l'enregistrement des métadonnées");
 
       queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`] });
       setUploadOpen(false);

@@ -291,10 +291,13 @@ export function NutritionTab() {
               key={pdf.id}
               style={styles.pdfCard}
               activeOpacity={0.8}
-              onPress={() => {
-                const baseUrl = Platform.select({ web: "", default: process.env.EXPO_PUBLIC_API_URL ?? "" });
-                const url = `${baseUrl}/api/nutrition/pdfs/${pdf.id}/download`;
-                Linking.openURL(url);
+              onPress={async () => {
+                try {
+                  const res = await customFetch<{ signedUrl: string }>(`/api/nutrition/pdfs/${pdf.id}/signed-url`);
+                  Linking.openURL(res.signedUrl);
+                } catch {
+                  Alert.alert("Erreur", "Impossible d'ouvrir le plan nutritionnel.");
+                }
               }}
             >
               <Feather name="file-text" size={18} color={COLORS.amber} />

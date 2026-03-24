@@ -274,6 +274,22 @@ router.delete("/coach/clients/:athleteId/nutrition/pdfs/:pdfId", authenticate, r
   }
 });
 
+router.get("/nutrition/pdfs/:id/signed-url", authenticate, async (req, res) => {
+  try {
+    const id = String(req.params.id);
+    const userId = req.user!.userId;
+    const [pdf] = await db.select().from(nutritionPdfsTable).where(eq(nutritionPdfsTable.id, id));
+    if (!pdf) return res.status(404).json({ error: { code: "NOT_FOUND", message: "PDF introuvable" } });
+    if (pdf.athleteId !== userId && pdf.coachId !== userId) {
+      return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
+    }
+    const signedUrl = await storage.getObjectEntitySignedDownloadUrl(pdf.objectPath, 900);
+    return res.json({ signedUrl });
+  } catch {
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 router.get("/nutrition/pdfs/:id/download", authenticate, async (req, res) => {
   try {
     const id = String(req.params.id);
