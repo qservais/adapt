@@ -60,6 +60,7 @@ async function buildSessionDetail(
   let coachNotes: string | null = null;
   let estimatedDurationMin: number | null = null;
   let sessionType: string | null = null;
+  let sessionLocation: string | null = null;
 
   if (sessionLog.sessionId) {
     const [sess] = await db.select({
@@ -67,12 +68,14 @@ async function buildSessionDetail(
       coachNotes: sessionsTable.coachNotes,
       estimatedDurationMin: sessionsTable.estimatedDurationMin,
       type: sessionsTable.type,
+      sessionType: sessionsTable.sessionType,
     }).from(sessionsTable).where(eq(sessionsTable.id, sessionLog.sessionId));
     if (sess) {
       sessionName = sess.name;
       coachNotes = sess.coachNotes ?? null;
       estimatedDurationMin = sess.estimatedDurationMin ?? null;
       sessionType = sess.type ?? null;
+      sessionLocation = sess.sessionType ?? null;
     }
   }
 
@@ -171,6 +174,7 @@ async function buildSessionDetail(
     name: sessionName,
     mode: sessionLog.variantMode,
     sessionType,
+    sessionLocation,
     adaptScore: checkin.adaptScore,
     completedAt: sessionLog.completedAt ?? null,
     durationMin,
@@ -255,6 +259,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
     let sessionId: string | null = null;
     let sessionName = "Session libre";
     let sessionTypeValue: string | null = null;
+    let sessionLocationValue: string | null = null;
     let estimatedDuration: number | null = null;
     let coachNotes: string | null = null;
     let exercises: {
@@ -306,6 +311,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
         sessionId = session.id;
         sessionName = session.name;
         sessionTypeValue = session.type ?? null;
+        sessionLocationValue = session.sessionType ?? null;
         estimatedDuration = session.estimatedDurationMin ?? null;
         coachNotes = session.coachNotes ?? null;
 
@@ -386,6 +392,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       name: sessionName,
       mode: forcedMode,
       sessionType: sessionTypeValue,
+      sessionLocation: sessionLocationValue,
       estimatedDurationMin: estimatedDuration,
       coachNotes,
       exercises,
@@ -659,6 +666,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           sessionId: session.id,
           sessionName: session.name,
           sessionType: session.type,
+          sessionLocation: session.sessionType ?? "online",
           weekNumber: session.weekNumber,
           dayNumber: session.dayNumber,
           scheduledDate: sessionDate.toISOString().split("T")[0],

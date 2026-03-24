@@ -148,6 +148,7 @@ export interface BlockDraft {
 export interface SessionDraft {
   name: string;
   type: typeof SESSION_TYPES[number];
+  sessionType: "online" | "presentiel";
   estimatedDurationMin: number;
   coachNotes: string;
   blocks: BlockDraft[];
@@ -166,6 +167,7 @@ export const emptyBlock = (orderIndex: number, type: BlockType = "strength"): Bl
 export const emptySession = (): SessionDraft => ({
   name: "",
   type: "strength",
+  sessionType: "online",
   estimatedDurationMin: 60,
   coachNotes: "",
   blocks: [emptyBlock(0, "warm_up"), emptyBlock(1, "strength")],
@@ -239,6 +241,7 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
   return {
     name: session.name,
     type: session.type as typeof SESSION_TYPES[number],
+    sessionType: (session.sessionType === "presentiel" ? "presentiel" : "online") as "online" | "presentiel",
     estimatedDurationMin: session.estimatedDurationMin || 60,
     coachNotes: session.coachNotes || "",
     blocks,
@@ -882,6 +885,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
         dayNumber,
         name: draft.name,
         type: draft.type as CreateSessionRequest["type"],
+        sessionType: draft.sessionType,
         estimatedDurationMin: autoDurationMin ?? draft.estimatedDurationMin,
         coachNotes: draft.coachNotes,
         blocks: blocksPayload,
@@ -942,21 +946,23 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Durée estimée</label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  min={1}
-                  value={draft.estimatedDurationMin}
-                  onChange={(e) => setDraft((d) => ({ ...d, estimatedDurationMin: +e.target.value }))}
-                  className="bg-background border-border pr-24"
-                />
-                {autoDurationMin !== null && (
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-primary text-xs font-mono">
-                    <Clock className="w-3 h-3" />
-                    ~{autoDurationMin} min
-                  </div>
-                )}
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Format</label>
+              <div className="flex gap-2">
+                {(["online", "presentiel"] as const).map((loc) => (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => setDraft((d) => ({ ...d, sessionType: loc }))}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 h-9 rounded-md border text-xs font-medium transition-colors",
+                      draft.sessionType === loc
+                        ? "bg-primary/15 border-primary text-primary"
+                        : "bg-background border-border text-muted-foreground hover:border-muted-foreground"
+                    )}
+                  >
+                    {loc === "online" ? "🎥 En ligne" : "🏋️ Présentiel"}
+                  </button>
+                ))}
               </div>
             </div>
             <div>
@@ -967,6 +973,25 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
                 placeholder="Notes optionnelles..."
                 className="bg-background border-border"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Durée estimée</label>
+            <div className="relative max-w-[200px]">
+              <Input
+                type="number"
+                min={1}
+                value={draft.estimatedDurationMin}
+                onChange={(e) => setDraft((d) => ({ ...d, estimatedDurationMin: +e.target.value }))}
+                className="bg-background border-border pr-24"
+              />
+              {autoDurationMin !== null && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-primary text-xs font-mono">
+                  <Clock className="w-3 h-3" />
+                  ~{autoDurationMin} min
+                </div>
+              )}
             </div>
           </div>
 

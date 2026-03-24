@@ -27,6 +27,7 @@ export const sessionsTable = pgTable("sessions", {
   dayNumber: integer("day_number").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   type: varchar("type", { length: 20 }).notNull(),
+  sessionType: varchar("session_type", { length: 20 }).default("online"),
   estimatedDurationMin: integer("estimated_duration_min"),
   coachNotes: text("coach_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

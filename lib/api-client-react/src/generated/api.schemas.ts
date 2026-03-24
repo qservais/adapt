@@ -212,6 +212,7 @@ export interface SessionDetail {
   name: string;
   mode: string;
   sessionType?: string | null;
+  sessionLocation?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   exercises: SessionExerciseItem[];
@@ -378,6 +379,7 @@ export interface SessionWithVariants {
   dayNumber: number;
   name: string;
   type: string;
+  sessionType?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   variants: VariantWithExercises[];
@@ -470,6 +472,7 @@ export interface CreateSessionRequest {
   dayNumber: number;
   name: string;
   type: CreateSessionRequestType;
+  sessionType?: "online" | "presentiel";
   estimatedDurationMin?: number;
   coachNotes?: string;
   variants?: CreateSessionRequestVariantsItem[];
@@ -506,6 +509,7 @@ export interface UpcomingSession {
   sessionId: string;
   sessionName: string;
   sessionType: string;
+  sessionLocation?: string | null;
   weekNumber: number;
   dayNumber: number;
   scheduledDate: string;

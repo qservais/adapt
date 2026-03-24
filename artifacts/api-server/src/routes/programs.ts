@@ -164,6 +164,7 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
         dayNumber: session.dayNumber,
         name: session.name,
         type: session.type,
+        sessionType: session.sessionType ?? "online",
         estimatedDurationMin: session.estimatedDurationMin,
         coachNotes: session.coachNotes,
         blocks: blocks.map(b => ({
@@ -324,6 +325,7 @@ const createSessionSchema = z.object({
   dayNumber: z.number().int().min(1),
   name: z.string().min(1),
   type: z.enum(["strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning"]),
+  sessionType: z.enum(["online", "presentiel"]).optional(),
   estimatedDurationMin: z.number().int().optional(),
   coachNotes: z.string().optional(),
   blocks: z.array(blockInputSchema).optional(),
@@ -357,6 +359,7 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
       dayNumber: parsed.data.dayNumber,
       name: parsed.data.name,
       type: parsed.data.type,
+      sessionType: parsed.data.sessionType ?? "online",
       estimatedDurationMin: parsed.data.estimatedDurationMin,
       coachNotes: parsed.data.coachNotes,
     }).returning();
@@ -471,6 +474,7 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
       weekNumber?: number;
       dayNumber?: number;
       type?: string;
+      sessionType?: string;
       estimatedDurationMin?: number;
       coachNotes?: string;
     } = {};
@@ -478,6 +482,7 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
     if (parsed.data.weekNumber !== undefined) updateData.weekNumber = parsed.data.weekNumber;
     if (parsed.data.dayNumber !== undefined) updateData.dayNumber = parsed.data.dayNumber;
     if (parsed.data.type !== undefined) updateData.type = parsed.data.type;
+    if (parsed.data.sessionType !== undefined) updateData.sessionType = parsed.data.sessionType;
     if (parsed.data.estimatedDurationMin !== undefined) updateData.estimatedDurationMin = parsed.data.estimatedDurationMin;
     if (parsed.data.coachNotes !== undefined) updateData.coachNotes = parsed.data.coachNotes;
 

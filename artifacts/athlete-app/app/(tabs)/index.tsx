@@ -17,6 +17,7 @@ import {
   useGetTodayCheckin,
   useGetTodaySession,
   useGetCheckinHistory,
+  useGetAthleteUpcomingSessions,
 } from "@workspace/api-client-react";
 import type { CheckinData, SessionDetail } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
@@ -27,6 +28,7 @@ import { ScoreCircle } from "@/components/ui/ScoreCircle";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
+import { WeekCalendar } from "@/components/home/WeekCalendar";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -37,6 +39,7 @@ export default function HomeScreen() {
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetCheckinHistory();
+  const upcomingQuery = useGetAthleteUpcomingSessions();
 
   const todayCheckin = checkinQuery.data;
   const todaySession = sessionQuery.data;
@@ -47,12 +50,14 @@ export default function HomeScreen() {
     checkinQuery.refetch();
     sessionQuery.refetch();
     historyQuery.refetch();
+    upcomingQuery.refetch();
   };
 
   useFocusEffect(
     useCallback(() => {
       checkinQuery.refetch();
       sessionQuery.refetch();
+      upcomingQuery.refetch();
     }, [])
   );
 
@@ -133,9 +138,17 @@ export default function HomeScreen() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : todayCheckin == null ? (
-        <StateNoPending onCheckin={() => router.push("/checkin")} />
+        <StateNoPending
+          onCheckin={() => router.push("/checkin")}
+          upcomingSessions={upcomingQuery.data ?? []}
+        />
       ) : (
-        <StateCheckedIn checkin={todayCheckin} session={todaySession} modeColor={modeColor} />
+        <StateCheckedIn
+          checkin={todayCheckin}
+          session={todaySession}
+          modeColor={modeColor}
+          upcomingSessions={upcomingQuery.data ?? []}
+        />
       )}
 
       {!isLoading && (
@@ -154,7 +167,13 @@ function LoadingSkeleton() {
   );
 }
 
-function StateNoPending({ onCheckin }: { onCheckin: () => void }) {
+function StateNoPending({
+  onCheckin,
+  upcomingSessions,
+}: {
+  onCheckin: () => void;
+  upcomingSessions: import("@workspace/api-client-react").UpcomingSession[];
+}) {
   return (
     <View style={styles.pendingContainer}>
       <View style={styles.checkinCard}>
@@ -175,6 +194,12 @@ function StateNoPending({ onCheckin }: { onCheckin: () => void }) {
         />
       </View>
 
+      {upcomingSessions.length > 0 && (
+        <View style={styles.weekCalendarCard}>
+          <WeekCalendar sessions={upcomingSessions} />
+        </View>
+      )}
+
       <GlowCard style={styles.lockedSession} glowColor={COLORS.border}>
         <Feather name="lock" size={20} color={COLORS.textMuted} />
         <View style={{ flex: 1 }}>
@@ -192,10 +217,12 @@ function StateCheckedIn({
   checkin,
   session,
   modeColor,
+  upcomingSessions,
 }: {
   checkin: CheckinData;
   session: SessionDetail | undefined;
   modeColor: string;
+  upcomingSessions: import("@workspace/api-client-react").UpcomingSession[];
 }) {
   const modeKey = checkin.sessionMode as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
@@ -208,6 +235,12 @@ function StateCheckedIn({
         <ModeBadge mode={modeKey} size="md" style={{ marginTop: 16 }} />
       </View>
 
+      {upcomingSessions.length > 0 && (
+        <View style={styles.weekCalendarCard}>
+          <WeekCalendar sessions={upcomingSessions} />
+        </View>
+      )}
+
       {isCompleted ? (
         <SessionDoneCard session={session!} modeColor={modeColor} cfg={cfg} />
       ) : session != null ? (
@@ -215,6 +248,24 @@ function StateCheckedIn({
           <View style={styles.sessionTopRow}>
             <ModeBadge mode={modeKey} size="sm" />
             <View style={styles.sessionMeta}>
+              {session.sessionLocation != null && (
+                <View style={[styles.locationChip, {
+                  borderColor: session.sessionLocation === "presentiel" ? `${COLORS.violet}50` : `${COLORS.cyan}50`,
+                  backgroundColor: session.sessionLocation === "presentiel" ? COLORS.violetDim : COLORS.cyanDim,
+                }]}>
+                  <Feather
+                    name={session.sessionLocation === "presentiel" ? "map-pin" : "video"}
+                    size={9}
+                    color={session.sessionLocation === "presentiel" ? COLORS.violet : COLORS.cyan}
+                  />
+                  <Text style={[styles.locationText, {
+                    fontFamily: FONTS.mono,
+                    color: session.sessionLocation === "presentiel" ? COLORS.violet : COLORS.cyan,
+                  }]}>
+                    {session.sessionLocation === "presentiel" ? "PRÉSENTIEL" : "EN LIGNE"}
+                  </Text>
+                </View>
+              )}
               {session.estimatedDurationMin != null && (
                 <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
                   {session.estimatedDurationMin} MIN
@@ -415,7 +466,14 @@ const styles = StyleSheet.create({
   },
   lockedTitle: { fontSize: 15, color: COLORS.textSecondary, marginBottom: 2 },
   lockedDesc: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18 },
-  checkedContainer: { gap: 24 },
+  checkedContainer: { gap: 16 },
+  weekCalendarCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+  },
   scoreSection: { alignItems: "center", paddingVertical: 8 },
   sessionCard: {
     backgroundColor: COLORS.bgCard,
@@ -436,6 +494,16 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   exCountText: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
+  locationChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  locationText: { fontSize: 9, letterSpacing: 0.5 },
   sessionName: { fontSize: 32, letterSpacing: 2, lineHeight: 36 },
   coachNoteRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   coachNote: { flex: 1, fontSize: 13, color: COLORS.textMuted, fontStyle: "italic", lineHeight: 18 },
