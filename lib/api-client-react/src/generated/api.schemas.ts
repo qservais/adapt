@@ -528,6 +528,8 @@ export interface ClientDetail {
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   cycleTracking?: boolean;
+  lastPeriodDate?: string | null;
+  avgCycleDays?: number | null;
   inviteCode?: string | null;
   todayCheckin?: CheckinData | null;
   recentCheckins: CheckinData[];

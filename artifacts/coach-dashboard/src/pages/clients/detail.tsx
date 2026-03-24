@@ -675,6 +675,51 @@ export default function ClientDetail() {
             </div>
 
             <div className="space-y-6">
+              {/* Cycle tracking (read-only) — visible only when athlete has enabled it */}
+              {client.cycleTracking && (
+                <Card className="bg-card border border-[#A855F7]/30 shadow-lg">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-display tracking-widest text-[#A855F7]">CYCLE MENSTRUEL</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    {client.lastPeriodDate ? (
+                      <>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Dernières règles</span>
+                          <span className="text-white font-mono">
+                            {format(new Date(client.lastPeriodDate + "T12:00:00"), 'd MMM yyyy', { locale: fr })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Durée du cycle</span>
+                          <span className="text-white font-mono">{client.avgCycleDays ?? 28} j</span>
+                        </div>
+                        {(() => {
+                          const daysSince = Math.floor((Date.now() - new Date(client.lastPeriodDate + "T12:00:00").getTime()) / 86400000);
+                          const cycle = client.avgCycleDays ?? 28;
+                          const dayInCycle = ((daysSince % cycle) + cycle) % cycle + 1;
+                          let phase = "Lutéale";
+                          let phaseColor = "#F59E0B";
+                          if (dayInCycle <= 5) { phase = "Menstruelle"; phaseColor = "#EF4444"; }
+                          else if (dayInCycle <= 13) { phase = "Folliculaire"; phaseColor = "#22C55E"; }
+                          else if (dayInCycle <= 16) { phase = "Ovulatoire"; phaseColor = "#00F0FF"; }
+                          return (
+                            <div className="flex justify-between items-center pt-1">
+                              <span className="text-muted-foreground">Phase actuelle</span>
+                              <span className="font-semibold text-xs px-2 py-0.5 rounded-full" style={{ color: phaseColor, backgroundColor: `${phaseColor}20` }}>
+                                {phase} (J{dayInCycle})
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground italic text-xs">Aucune date renseignée par l'athlète.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Monthly calendar planning */}
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader className="pb-2">

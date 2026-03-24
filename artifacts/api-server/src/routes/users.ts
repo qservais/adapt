@@ -66,7 +66,7 @@ const updateSchema = z.object({
   primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
   cycleTracking: z.boolean().optional(),
   lastPeriodDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-  avgCycleDays: z.number().int().min(20).max(45).optional(),
+  avgCycleDays: z.number().int().min(20).max(45).nullable().optional(),
 });
 
 router.put("/users/me", authenticate, async (req, res) => {
