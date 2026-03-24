@@ -203,7 +203,12 @@ router.post("/coach/clients/:athleteId/nutrition/pdfs/upload-url", authenticate,
     const [athlete] = await db.select({ coachId: usersTable.coachId }).from(usersTable).where(eq(usersTable.id, athleteId));
     if (!athlete || athlete.coachId !== coachId) return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
     const uploadUrl = await storage.getObjectEntityUploadURL();
-    const objectPath = storage.normalizeObjectEntityPath(uploadUrl);
+    const urlPathname = new URL(uploadUrl).pathname;
+    const uploadsIndex = urlPathname.indexOf("/uploads/");
+    if (uploadsIndex === -1) {
+      return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Format d'URL de stockage inattendu" } });
+    }
+    const objectPath = `/objects${urlPathname.slice(uploadsIndex)}`.split("?")[0];
     const metadataEndpoint = `/api/coach/clients/${athleteId}/nutrition/pdfs`;
     return res.json({ uploadUrl, objectPath, metadataEndpoint });
   } catch {
