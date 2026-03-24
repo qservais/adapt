@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import {
   Platform,
   ScrollView,
@@ -17,7 +17,7 @@ import {
   useGetAthleteUpcomingSessions,
 } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
 
@@ -61,6 +61,15 @@ export default function SessionTab() {
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetSessionHistory();
   const upcomingQuery = useGetAthleteUpcomingSessions();
+
+  useFocusEffect(
+    useCallback(() => {
+      checkinQuery.refetch();
+      sessionQuery.refetch();
+      upcomingQuery.refetch();
+      historyQuery.refetch();
+    }, [])
+  );
 
   const hasCheckin = checkinQuery.data != null;
   const session = sessionQuery.data;

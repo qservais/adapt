@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import {
   Platform,
   RefreshControl,
@@ -20,7 +20,7 @@ import {
 import type { CheckinData, SessionDetail } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
-import { useScrollToTop } from "@react-navigation/native";
+import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { ScoreCircle } from "@/components/ui/ScoreCircle";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -47,6 +47,13 @@ export default function HomeScreen() {
     sessionQuery.refetch();
     historyQuery.refetch();
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      checkinQuery.refetch();
+      sessionQuery.refetch();
+    }, [])
+  );
 
   const modeColor =
     todayCheckin != null

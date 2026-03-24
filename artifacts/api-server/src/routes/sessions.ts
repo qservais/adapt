@@ -194,8 +194,42 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       ));
 
     if (existingLog) {
-      const detail = await buildSessionDetail(existingLog, checkin);
-      res.json(detail);
+      let activeLog = existingLog;
+
+      if (existingLog.sessionId === null) {
+        const [program] = await db.select().from(programsTable)
+          .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)));
+
+        if (program) {
+          const now = new Date();
+          const startDate = program.startDate ? new Date(program.startDate) : new Date();
+          const daysSinceStart = Math.floor((now.getTime() - startDate.getTime()) / 86400000);
+          const trainingWeek = Math.min(Math.max(1, Math.floor(daysSinceStart / 7) + 1), program.durationWeeks ?? 1);
+          const dayOfWeek = now.getDay();
+          const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
+          const dayNum = dayMap[dayOfWeek] ?? 1;
+
+          let [matchedSession] = await db.select().from(sessionsTable)
+            .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.weekNumber, trainingWeek), eq(sessionsTable.dayNumber, dayNum)));
+
+          if (!matchedSession) {
+            [matchedSession] = await db.select().from(sessionsTable)
+              .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
+          }
+
+          if (matchedSession) {
+            const [updatedLog] = await db.update(sessionLogsTable)
+              .set({ sessionId: matchedSession.id })
+              .where(eq(sessionLogsTable.id, existingLog.id))
+              .returning();
+            if (updatedLog) activeLog = updatedLog;
+          }
+        }
+      }
+
+      const detail = await buildSessionDetail(activeLog, checkin);
+      const athletePRs = await getAthleteCurrentPRs(athleteId);
+      res.json({ ...detail, athletePRs });
       return;
     }
 

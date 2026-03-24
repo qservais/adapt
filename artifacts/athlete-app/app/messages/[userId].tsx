@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -27,7 +27,7 @@ export default function ChatScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user } = useAuth();
   const [text, setText] = useState("");
-  const listRef = useRef<FlashListRef<MessageData>>(null);
+  const listRef = useRef<FlatList<MessageData>>(null);
 
   const userIdStr = userId ?? "";
   const messagesQuery = useGetThreadMessages(userIdStr);
@@ -38,10 +38,15 @@ export default function ChatScreen() {
 
   const messages: MessageData[] = messagesQuery.data ?? [];
 
-  useEffect(() => {
+  const scrollToBottom = (animated: boolean) => {
     if (messages.length > 0) {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
+      listRef.current?.scrollToEnd({ animated });
     }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => scrollToBottom(false), 100);
+    return () => clearTimeout(timer);
   }, [messages.length]);
 
   const handleSend = async () => {
@@ -53,7 +58,7 @@ export default function ChatScreen() {
         data: { recipientId: userIdStr, content: trimmed },
       });
       messagesQuery.refetch();
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
+      setTimeout(() => scrollToBottom(true), 150);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Impossible d'envoyer";
       console.warn(msg);
@@ -67,6 +72,7 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       <View style={[styles.chatHeader, { paddingTop: topPad + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -88,15 +94,17 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <FlashList
-        ref={listRef as any}
+      <FlatList
+        ref={listRef}
         data={messages}
         keyExtractor={(m) => m.id}
         contentContainerStyle={[
           styles.messageList,
-          { paddingBottom: insets.bottom + 100 },
+          { paddingBottom: 16 },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => scrollToBottom(false)}
         renderItem={({ item, index }) => {
           const isMe = item.senderId === myId;
           const prevItem = index > 0 ? messages[index - 1] : null;
@@ -185,6 +193,7 @@ export default function ChatScreen() {
           maxLength={1000}
           onSubmitEditing={handleSend}
           blurOnSubmit={false}
+          onFocus={() => setTimeout(() => scrollToBottom(true), 300)}
         />
         <Pressable
           onPress={handleSend}
@@ -269,10 +278,6 @@ const styles = StyleSheet.create({
   },
   emptyChatText: { fontSize: 15, color: COLORS.textMuted },
   inputBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 10,
