@@ -203,8 +203,7 @@ router.post("/coach/clients/:athleteId/nutrition/pdfs/upload-url", authenticate,
     const [athlete] = await db.select({ coachId: usersTable.coachId }).from(usersTable).where(eq(usersTable.id, athleteId));
     if (!athlete || athlete.coachId !== coachId) return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
     const uploadUrl = await storage.getObjectEntityUploadURL();
-    const urlObj = new URL(uploadUrl);
-    const objectPath = urlObj.pathname;
+    const objectPath = storage.normalizeObjectEntityPath(uploadUrl);
     const metadataEndpoint = `/api/coach/clients/${athleteId}/nutrition/pdfs`;
     return res.json({ uploadUrl, objectPath, metadataEndpoint });
   } catch {
