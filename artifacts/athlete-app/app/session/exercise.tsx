@@ -164,10 +164,16 @@ function ExerciseRibbon({ exercises, currentIndex, completedCount, modeColor }: 
   );
 }
 
+interface HistoryEntry {
+  exerciseIndex: number;
+  currentSet: number;
+}
+
 export default function ExerciseScreen() {
   const insets = useSafeAreaInsets();
   const sessionQuery = useGetTodaySession();
   const timerRef = useRef<CircularTimerRef>(null);
+  const workTimerRef = useRef<CircularTimerRef>(null);
   const session = sessionQuery.data;
   const exercises = session?.exercises ?? [];
   const modeKey = (session?.mode ?? "normal") as SessionMode;
@@ -178,6 +184,9 @@ export default function ExerciseScreen() {
   const [currentSet, setCurrentSet] = useState(1);
   const [showRest, setShowRest] = useState(false);
   const [loadAdjustments, setLoadAdjustments] = useState<Record<string, number>>({});
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [timerCompleted, setTimerCompleted] = useState(false);
+  const [workTimerStarted, setWorkTimerStarted] = useState(false);
 
   const encouragementMsg = useMemo(
     () => ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)],
@@ -190,13 +199,52 @@ export default function ExerciseScreen() {
   const isLast = exerciseIndex === totalExercises - 1;
   const nextExercise = !isLast ? exercises[exerciseIndex + 1] : null;
 
+  const hasDurationTimer = (exercise?.durationSeconds ?? 0) > 0;
+  const isAtStart = history.length === 0 && currentSet === 1;
+
   const adjustLoad = useCallback((exId: string, next: number) => {
     setLoadAdjustments((prev) => ({ ...prev, [exId]: next }));
   }, []);
 
+  const pushHistory = () => {
+    setHistory((prev) => [...prev, { exerciseIndex, currentSet }]);
+  };
+
+  const handleGoBack = () => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    setExerciseIndex(prev.exerciseIndex);
+    setCurrentSet(prev.currentSet);
+    setShowRest(false);
+    setTimerCompleted(false);
+    setWorkTimerStarted(false);
+    timerRef.current?.reset();
+    workTimerRef.current?.reset();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const resetTimerState = () => {
+    setTimerCompleted(false);
+    setWorkTimerStarted(false);
+    workTimerRef.current?.reset();
+  };
+
   const handleSetDone = () => {
+    if (hasDurationTimer && !timerCompleted) {
+      Alert.alert(
+        "Chrono obligatoire",
+        "Lance et termine le chrono avant de valider la série.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    pushHistory();
+
     if (currentSet < (exercise?.sets ?? 1)) {
+      resetTimerState();
       if ((exercise?.restSeconds ?? 0) > 0) {
         setShowRest(true);
         setTimeout(() => timerRef.current?.start(), 50);
@@ -211,6 +259,8 @@ export default function ExerciseScreen() {
   const handleExerciseDone = () => {
     setShowRest(false);
     timerRef.current?.reset();
+    workTimerRef.current?.reset();
+    resetTimerState();
     if (isLast) {
       router.replace("/session/complete");
     } else {
@@ -223,11 +273,23 @@ export default function ExerciseScreen() {
     setShowRest(false);
     timerRef.current?.reset();
     setCurrentSet((s) => s + 1);
+    resetTimerState();
   };
 
-  const handleTimerComplete = () => {
+  const handleRestTimerComplete = () => {
     setShowRest(false);
     setCurrentSet((s) => s + 1);
+    resetTimerState();
+  };
+
+  const handleWorkTimerStart = () => {
+    setWorkTimerStarted(true);
+    workTimerRef.current?.start();
+  };
+
+  const handleWorkTimerComplete = () => {
+    setTimerCompleted(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   if (sessionQuery.isPending || (sessionQuery.isFetching && !session)) {
@@ -277,9 +339,36 @@ export default function ExerciseScreen() {
     return `Dernière fois : ${lastUsedLoadKg} kg · ${day} ${month}`;
   }, [lastUsedLoadKg, lastUsedDate]);
 
+  const doneBtnDisabled = hasDurationTimer && !timerCompleted;
+
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Pressable
+          onPress={handleGoBack}
+          disabled={isAtStart}
+          style={[styles.navBtn, isAtStart && styles.navBtnDisabled]}
+        >
+          <View style={[styles.navBtnBg, isAtStart && { opacity: 0.35 }]}>
+            <Feather name="arrow-left" size={18} color={COLORS.white} />
+          </View>
+        </Pressable>
+
+        <View style={{ flex: 1 }}>
+          <ProgressBar
+            progress={exerciseIndex}
+            total={totalExercises}
+            color={cfg.color}
+            height={4}
+          />
+        </View>
+
+        <View style={[styles.progressChip, { borderColor: `${cfg.color}50`, backgroundColor: `${cfg.color}15` }]}>
+          <Text style={[styles.progressText, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
+            {exerciseIndex + 1}/{totalExercises}
+          </Text>
+        </View>
+
         <Pressable
           onPress={() => {
             Alert.alert(
@@ -291,25 +380,12 @@ export default function ExerciseScreen() {
               ]
             );
           }}
-          style={styles.closeBtn}
+          style={styles.navBtn}
         >
-          <View style={styles.closeBtnBg}>
+          <View style={styles.navBtnBg}>
             <Feather name="x" size={18} color={COLORS.white} />
           </View>
         </Pressable>
-        <View style={{ flex: 1 }}>
-          <ProgressBar
-            progress={exerciseIndex}
-            total={totalExercises}
-            color={cfg.color}
-            height={4}
-          />
-        </View>
-        <View style={[styles.progressChip, { borderColor: `${cfg.color}50`, backgroundColor: `${cfg.color}15` }]}>
-          <Text style={[styles.progressText, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
-            {exerciseIndex + 1}/{totalExercises}
-          </Text>
-        </View>
       </View>
 
       <ExerciseRibbon
@@ -327,7 +403,9 @@ export default function ExerciseScreen() {
           {exercise.exerciseName}
         </Text>
         <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
-          {exercise.reps} REPS
+          {hasDurationTimer
+            ? `${exercise.durationSeconds}s`
+            : `${exercise.reps} REPS`}
         </Text>
       </View>
 
@@ -367,6 +445,37 @@ export default function ExerciseScreen() {
           </View>
         )}
 
+        {hasDurationTimer && !showRest && (
+          <View style={styles.workTimerContainer}>
+            <CircularTimer
+              ref={workTimerRef}
+              durationSeconds={exercise.durationSeconds!}
+              onComplete={handleWorkTimerComplete}
+              autoStart={false}
+              label="TRAVAIL"
+            />
+            {!workTimerStarted && !timerCompleted && (
+              <TouchableOpacity
+                onPress={handleWorkTimerStart}
+                style={[styles.startTimerBtn, { backgroundColor: cfg.color }]}
+              >
+                <Feather name="play" size={16} color={COLORS.bg} />
+                <Text style={[styles.startTimerText, { fontFamily: FONTS.bodyBold }]}>
+                  Lancer le chrono
+                </Text>
+              </TouchableOpacity>
+            )}
+            {timerCompleted && (
+              <View style={[styles.timerDoneBadge, { backgroundColor: `${COLORS.green}20`, borderColor: `${COLORS.green}50` }]}>
+                <Feather name="check-circle" size={14} color={COLORS.green} />
+                <Text style={[styles.timerDoneText, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
+                  CHRONO TERMINÉ
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {exercise.coachCue ? (
           <View style={styles.cueBox}>
             <Feather name="message-square" size={14} color={COLORS.cyan} />
@@ -379,7 +488,7 @@ export default function ExerciseScreen() {
             <CircularTimer
               ref={timerRef}
               durationSeconds={exercise.restSeconds!}
-              onComplete={handleTimerComplete}
+              onComplete={handleRestTimerComplete}
               autoStart={false}
             />
             <View style={styles.encourageBox}>
@@ -416,13 +525,22 @@ export default function ExerciseScreen() {
         <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
           <TouchableOpacity
             onPress={handleSetDone}
-            style={[styles.doneBtn, { backgroundColor: cfg.color }]}
+            style={[
+              styles.doneBtn,
+              { backgroundColor: doneBtnDisabled ? COLORS.bgElevated : cfg.color },
+            ]}
+            activeOpacity={doneBtnDisabled ? 1 : 0.8}
           >
-            <Feather name="check" size={22} color={COLORS.bg} />
-            <Text style={[styles.doneBtnText, { fontFamily: FONTS.bodyBold }]}>
+            <Feather name="check" size={22} color={doneBtnDisabled ? COLORS.textMuted : COLORS.bg} />
+            <Text style={[styles.doneBtnText, { fontFamily: FONTS.bodyBold, color: doneBtnDisabled ? COLORS.textMuted : COLORS.bg }]}>
               {setDoneLabel()}
             </Text>
           </TouchableOpacity>
+          {doneBtnDisabled && (
+            <Text style={[styles.timerHint, { fontFamily: FONTS.body }]}>
+              Lance et termine le chrono pour valider
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -436,11 +554,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingBottom: 10,
-    gap: 12,
+    gap: 10,
     backgroundColor: COLORS.bg,
   },
-  closeBtn: { padding: 4 },
-  closeBtnBg: {
+  navBtn: { padding: 4 },
+  navBtnBg: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -448,6 +566,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  navBtnDisabled: { opacity: 0.35 },
   progressChip: {
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -510,6 +629,26 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   prText: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1 },
+  workTimerContainer: { alignItems: "center", gap: 16, width: "100%" },
+  startTimerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  startTimerText: { fontSize: 15, color: COLORS.bg },
+  timerDoneBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  timerDoneText: { fontSize: 12, letterSpacing: 1 },
   cueBox: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -561,6 +700,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bg,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    gap: 8,
   },
   doneBtn: {
     flexDirection: "row",
@@ -570,7 +710,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 18,
   },
-  doneBtnText: { fontSize: 16, color: COLORS.bg, letterSpacing: 1 },
+  doneBtnText: { fontSize: 16, letterSpacing: 1 },
+  timerHint: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
   backHomeBtn: {
     backgroundColor: COLORS.bgCard,
     borderRadius: 12,

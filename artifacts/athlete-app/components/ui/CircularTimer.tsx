@@ -28,11 +28,12 @@ interface CircularTimerProps {
   durationSeconds: number;
   onComplete?: () => void;
   autoStart?: boolean;
+  label?: string;
   ref?: React.Ref<CircularTimerRef>;
 }
 
 export const CircularTimer = React.forwardRef<CircularTimerRef, CircularTimerProps>(
-  ({ durationSeconds, onComplete, autoStart = false }, ref) => {
+  ({ durationSeconds, onComplete, autoStart = false, label = "REPOS" }, ref) => {
     const [seconds, setSeconds] = useState(durationSeconds);
     const [running, setRunning] = useState(autoStart);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -134,7 +135,7 @@ export const CircularTimer = React.forwardRef<CircularTimerRef, CircularTimerPro
           >
             {formatTime(seconds)}
           </Text>
-          <Text style={[styles.label, { fontFamily: FONTS.body }]}>REPOS</Text>
+          <Text style={[styles.label, { fontFamily: FONTS.body }]}>{label}</Text>
         </View>
       </View>
     );

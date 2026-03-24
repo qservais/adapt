@@ -186,6 +186,7 @@ export interface SessionExerciseItem {
   nominalLoadKg?: number | null;
   adaptedLoadKg?: number | null;
   restSeconds?: number | null;
+  durationSeconds?: number | null;
   coachCue?: string | null;
   lastUsedLoadKg?: number | null;
   lastUsedDate?: string | null;

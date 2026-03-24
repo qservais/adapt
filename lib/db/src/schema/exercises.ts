@@ -28,6 +28,7 @@ export const sessionExercisesTable = pgTable("session_exercises", {
   reps: varchar("reps", { length: 20 }),
   loadKg: decimal("load_kg", { precision: 6, scale: 2 }),
   restSeconds: integer("rest_seconds"),
+  durationSeconds: integer("duration_seconds"),
   coachCue: text("coach_cue"),
   tempo: varchar("tempo", { length: 10 }),
   supersetGroup: varchar("superset_group", { length: 5 }),

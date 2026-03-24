@@ -94,6 +94,7 @@ async function buildSessionDetail(
     nominalLoadKg: number | null;
     adaptedLoadKg: number | null;
     restSeconds: number | null;
+    durationSeconds: number | null;
     coachCue: string | null;
     lastUsedLoadKg: number | null;
     lastUsedDate: string | null;
@@ -123,6 +124,7 @@ async function buildSessionDetail(
         reps: sessionExercisesTable.reps,
         loadKg: sessionExercisesTable.loadKg,
         restSeconds: sessionExercisesTable.restSeconds,
+        durationSeconds: sessionExercisesTable.durationSeconds,
         coachCue: sessionExercisesTable.coachCue,
         exerciseName: exercisesTable.name,
         category: exercisesTable.category,
@@ -152,6 +154,7 @@ async function buildSessionDetail(
         nominalLoadKg: ex.loadKg ? parseFloat(ex.loadKg) : null,
         adaptedLoadKg: calculateAdaptedLoad(ex.loadKg ? parseFloat(ex.loadKg) : null, sessionLog.variantMode),
         restSeconds: ex.restSeconds ?? null,
+        durationSeconds: ex.durationSeconds ?? null,
         coachCue: ex.coachCue ?? null,
         lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
         lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
@@ -263,6 +266,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       nominalLoadKg: number | null;
       adaptedLoadKg: number | null;
       restSeconds: number | null;
+      durationSeconds: number | null;
       coachCue: string | null;
       lastUsedLoadKg: number | null;
       lastUsedDate: string | null;
@@ -322,6 +326,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             reps: sessionExercisesTable.reps,
             loadKg: sessionExercisesTable.loadKg,
             restSeconds: sessionExercisesTable.restSeconds,
+            durationSeconds: sessionExercisesTable.durationSeconds,
             coachCue: sessionExercisesTable.coachCue,
             exerciseName: exercisesTable.name,
             category: exercisesTable.category,
@@ -351,6 +356,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             nominalLoadKg: ex.loadKg ? parseFloat(ex.loadKg) : null,
             adaptedLoadKg: calculateAdaptedLoad(ex.loadKg ? parseFloat(ex.loadKg) : null, forcedMode),
             restSeconds: ex.restSeconds ?? null,
+            durationSeconds: ex.durationSeconds ?? null,
             coachCue: ex.coachCue ?? null,
             lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
             lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
