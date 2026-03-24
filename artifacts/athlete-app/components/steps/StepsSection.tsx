@@ -51,6 +51,8 @@ export function StepsSection() {
 
   useEffect(() => {
     let subscription: ReturnType<typeof Pedometer.watchStepCount> | null = null;
+    let dailyBaseSteps = 0;
+    let watcherBaseSteps: number | null = null;
 
     async function initPedometer() {
       try {
@@ -67,9 +69,14 @@ export function StepsSection() {
         setPedometerStatus("granted");
         const { start, end } = getTodayRange();
         const result = await Pedometer.getStepCountAsync(start, end);
+        dailyBaseSteps = result.steps;
         setHealthSteps(result.steps);
         subscription = Pedometer.watchStepCount((update) => {
-          setHealthSteps(update.steps);
+          if (watcherBaseSteps === null) {
+            watcherBaseSteps = update.steps;
+          }
+          const delta = update.steps - watcherBaseSteps;
+          setHealthSteps(dailyBaseSteps + Math.max(0, delta));
         });
       } catch {
         setPedometerStatus("unavailable");
