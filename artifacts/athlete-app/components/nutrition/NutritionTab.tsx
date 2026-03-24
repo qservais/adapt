@@ -159,19 +159,19 @@ export function NutritionTab() {
       date: selectedDate,
       mealType,
       description: description.trim() || null,
-      proteinG: parseInt(proteinG, 10) || 0,
-      carbsG: parseInt(carbsG, 10) || 0,
-      fatG: parseInt(fatG, 10) || 0,
-      kcal: parseInt(kcal, 10) || 0,
+      proteinG: Number.isNaN(parseInt(proteinG, 10)) ? 0 : parseInt(proteinG, 10),
+      carbsG: Number.isNaN(parseInt(carbsG, 10)) ? 0 : parseInt(carbsG, 10),
+      fatG: Number.isNaN(parseInt(fatG, 10)) ? 0 : parseInt(fatG, 10),
+      kcal: Number.isNaN(parseInt(kcal, 10)) ? 0 : parseInt(kcal, 10),
     });
   }
 
   function handleSaveGoals() {
     updateGoalsMutation.mutate({
-      proteinG: parseInt(goalProtein, 10) || 150,
-      carbsG: parseInt(goalCarbs, 10) || 250,
-      fatG: parseInt(goalFat, 10) || 70,
-      kcal: parseInt(goalKcal, 10) || 2200,
+      proteinG: Number.isNaN(parseInt(goalProtein, 10)) ? 150 : parseInt(goalProtein, 10),
+      carbsG: Number.isNaN(parseInt(goalCarbs, 10)) ? 250 : parseInt(goalCarbs, 10),
+      fatG: Number.isNaN(parseInt(goalFat, 10)) ? 70 : parseInt(goalFat, 10),
+      kcal: Number.isNaN(parseInt(goalKcal, 10)) ? 2200 : parseInt(goalKcal, 10),
     });
   }
 

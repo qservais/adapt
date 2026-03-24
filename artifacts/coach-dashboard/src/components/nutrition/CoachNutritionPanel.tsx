@@ -150,17 +150,19 @@ export function CoachNutritionPanel({ athleteId }: Props) {
       if (!urlRes.ok) throw new Error("Erreur lors de la génération du lien d'upload");
       const { uploadUrl, objectPath, metadataEndpoint } = await urlRes.json();
 
-      await fetch(uploadUrl, {
+      const putRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": "application/pdf" },
         body: uploadFile,
       });
+      if (!putRes.ok) throw new Error("Erreur lors du transfert du fichier");
 
-      await fetch(metadataEndpoint, {
+      const metaRes = await fetch(metadataEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: uploadTitle.trim(), objectPath }),
       });
+      if (!metaRes.ok) throw new Error("Erreur lors de l'enregistrement des métadonnées");
 
       queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`] });
       setUploadOpen(false);
