@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -61,11 +61,11 @@ function isSafeLink(link?: string | null): link is string {
   return SAFE_LINK_PREFIXES.some((p) => link.startsWith(p) || link.startsWith(`/${p}`));
 }
 
-function NotifRow({ item, onRead, onNavigate }: { item: NotificationItem; onRead: (id: string) => void; onNavigate: (link: string) => void }) {
+function NotifRow({ item, onRead, onNavigate }: { item: NotificationItem; onRead: (id: string) => void; onNavigate: (link: Href) => void }) {
   function handlePress() {
     if (!item.isRead) onRead(item.id);
     if (isSafeLink(item.link)) {
-      const path = item.link.startsWith("/") ? item.link : `/${item.link}`;
+      const path: Href = (item.link.startsWith("/") ? item.link : `/${item.link}`) as Href;
       onNavigate(path);
     }
   }
@@ -137,7 +137,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={items}
           keyExtractor={(n) => n.id}
-          renderItem={({ item }) => <NotifRow item={item} onRead={(id) => markOne(id)} onNavigate={(path) => router.push(path as any)} />}
+          renderItem={({ item }) => <NotifRow item={item} onRead={(id) => markOne(id)} onNavigate={(path) => router.push(path)} />}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           showsVerticalScrollIndicator={false}
           onRefresh={refetch}

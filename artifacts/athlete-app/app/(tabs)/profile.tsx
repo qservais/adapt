@@ -21,6 +21,8 @@ import {
   useGetBadges,
   useGetNotificationPreferences,
   useUpdateNotificationPreferences,
+  getGetNotificationPreferencesQueryKey,
+  type NotificationPreferences,
   customFetch,
 } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
@@ -112,7 +114,13 @@ export default function ProfileScreen() {
   const [coachLinked, setCoachLinked] = useState(false);
 
   const { data: notifPrefs } = useGetNotificationPreferences();
-  const updatePrefsMutation = useUpdateNotificationPreferences();
+  const updatePrefsMutation = useUpdateNotificationPreferences({
+    mutation: {
+      onSuccess: (updated) => {
+        queryClient.setQueryData<NotificationPreferences>(getGetNotificationPreferencesQueryKey(), updated);
+      },
+    },
+  });
 
   const blurResetRef = useRef({ meQuery, user });
   blurResetRef.current = { meQuery, user };
