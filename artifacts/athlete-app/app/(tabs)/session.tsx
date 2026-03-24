@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import {
   Platform,
   ScrollView,
@@ -57,8 +57,6 @@ export default function SessionTab() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
-  const [showAllHistory, setShowAllHistory] = useState(false);
-
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetSessionHistory();
@@ -76,7 +74,7 @@ export default function SessionTab() {
   const exerciseIndexMap = new Map(exercises.map((ex, i) => [ex.id, i]));
 
   const completedLogs = historyQuery.data?.filter((l) => l.completedAt != null) ?? [];
-  const displayedLogs = showAllHistory ? completedLogs : completedLogs.slice(0, 5);
+  const displayedLogs = completedLogs.slice(0, 5);
 
   const upcomingSessions = upcomingQuery.data ?? [];
   const today = new Date();
@@ -239,9 +237,9 @@ export default function SessionTab() {
           <View style={styles.sectionHeaderRow}>
             <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>SÉANCES RÉCENTES</Text>
             {completedLogs.length > 5 && (
-              <TouchableOpacity onPress={() => setShowAllHistory((v) => !v)}>
+              <TouchableOpacity onPress={() => router.push("/session/history")}>
                 <Text style={[styles.seeAllText, { fontFamily: FONTS.mono }]}>
-                  {showAllHistory ? "Réduire" : `Voir tout (${completedLogs.length})`}
+                  Voir tout ({completedLogs.length})
                 </Text>
               </TouchableOpacity>
             )}
