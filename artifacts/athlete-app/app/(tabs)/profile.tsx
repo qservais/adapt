@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -166,12 +167,15 @@ export default function ProfileScreen() {
   const uploadAvatar = async (uri: string) => {
     setAvatarUploading(true);
     try {
-      const filename = uri.split("/").pop() ?? "avatar.jpg";
-      const ext = filename.split(".").pop()?.toLowerCase() ?? "jpg";
-      const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800, height: 800 } }],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      const resizedUri = manipResult.uri;
 
       const formData = new FormData();
-      formData.append("avatar", { uri, name: filename, type: mimeType } as unknown as Blob);
+      formData.append("avatar", { uri: resizedUri, name: "avatar.jpg", type: "image/jpeg" } as unknown as Blob);
 
       const accessToken = await tokenStore.getAccess();
       const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN

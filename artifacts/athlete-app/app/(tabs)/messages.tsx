@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -62,16 +63,24 @@ export default function MessagesScreen() {
                 }
                 style={styles.threadRow}
               >
-                <View
-                  style={[
-                    styles.avatar,
-                    hasUnread && { borderColor: COLORS.green },
-                  ]}
-                >
-                  <Text style={[styles.initials, { fontFamily: FONTS.title }]}>
-                    {initials}
-                  </Text>
-                </View>
+                {item.userAvatarUrl ? (
+                  <Image
+                    source={{ uri: item.userAvatarUrl }}
+                    style={[styles.avatar, hasUnread && { borderColor: COLORS.green }]}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatar,
+                      hasUnread && { borderColor: COLORS.green },
+                    ]}
+                  >
+                    <Text style={[styles.initials, { fontFamily: FONTS.title }]}>
+                      {initials}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.threadContent}>
                   <View style={styles.threadMeta}>
                     <Text
