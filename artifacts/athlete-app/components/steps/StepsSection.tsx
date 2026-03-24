@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   Alert,
-  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -16,9 +15,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GlowCard } from "@/components/ui/GlowCard";
-
-const { width } = Dimensions.get("window");
-const CHART_W = width - 80;
 
 interface StepRow {
   id: string;
@@ -170,6 +166,13 @@ export function StepsSection() {
             Aucune donnée — enregistre tes pas du jour !
           </Text>
         )}
+
+        <View style={styles.healthRow}>
+          <Feather name="smartphone" size={12} color={COLORS.textMuted} />
+          <Text style={[styles.healthNote, { fontFamily: FONTS.body }]}>
+            Synchronisation automatique non disponible — saisie manuelle uniquement
+          </Text>
+        </View>
       </GlowCard>
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
@@ -271,6 +274,8 @@ const styles = StyleSheet.create({
   },
   barLabel: { fontSize: 9, letterSpacing: 0.5 },
   emptyText: { fontSize: 13, color: COLORS.textMuted, textAlign: "center", paddingVertical: 16 },
+  healthRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: COLORS.border },
+  healthNote: { fontSize: 11, color: COLORS.textMuted, flex: 1 },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
