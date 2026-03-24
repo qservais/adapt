@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -10,6 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -22,9 +25,11 @@ import {
   useGetNotificationPreferences,
   useUpdateNotificationPreferences,
   getGetNotificationPreferencesQueryKey,
+  getGetMeQueryKey,
   type NotificationPreferences,
   customFetch,
 } from "@workspace/api-client-react";
+import { tokenStore } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
@@ -112,6 +117,86 @@ export default function ProfileScreen() {
   const [coachCode, setCoachCode] = useState("");
   const [coachLinkError, setCoachLinkError] = useState("");
   const [coachLinked, setCoachLinked] = useState(false);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const handleAvatarPress = () => {
+    Alert.alert("Photo de profil", "Choisir une source", [
+      {
+        text: "Galerie",
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) {
+            Alert.alert("Permission refusée", "Active l'accès à la galerie dans les réglages.");
+            return;
+          }
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: "images",
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0]) {
+            await uploadAvatar(result.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: "Caméra",
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) {
+            Alert.alert("Permission refusée", "Active l'accès à la caméra dans les réglages.");
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0]) {
+            await uploadAvatar(result.assets[0].uri);
+          }
+        },
+      },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  };
+
+  const uploadAvatar = async (uri: string) => {
+    setAvatarUploading(true);
+    try {
+      const filename = uri.split("/").pop() ?? "avatar.jpg";
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "jpg";
+      const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+
+      const formData = new FormData();
+      formData.append("avatar", { uri, name: filename, type: mimeType } as unknown as Blob);
+
+      const accessToken = await tokenStore.getAccess();
+      const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
+        ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+        : "";
+
+      const response = await fetch(`${BASE_URL}/api/users/me/avatar`, {
+        method: "POST",
+        body: formData,
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body?.error?.message ?? `Erreur HTTP ${response.status}`);
+      }
+
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Impossible de mettre à jour la photo de profil";
+      Alert.alert("Erreur", msg);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const { data: notifPrefs } = useGetNotificationPreferences();
   const updatePrefsMutation = useUpdateNotificationPreferences({
@@ -309,11 +394,31 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
-          <Text style={[styles.initials, { fontFamily: FONTS.title }]}>
-            {(profile?.firstName?.[0] ?? "A").toUpperCase()}
-          </Text>
-        </View>
+        <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.8} style={styles.avatarWrap}>
+          {profile?.avatarUrl ? (
+            <Image
+              source={{ uri: profile.avatarUrl }}
+              style={styles.avatarImg}
+              contentFit="cover"
+              transition={200}
+            />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={[styles.initials, { fontFamily: FONTS.title }]}>
+                {(profile?.firstName?.[0] ?? "A").toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {avatarUploading ? (
+            <View style={styles.avatarOverlay}>
+              <ActivityIndicator color={COLORS.white} size="small" />
+            </View>
+          ) : (
+            <View style={styles.avatarCameraBtn}>
+              <Feather name="camera" size={14} color={COLORS.white} />
+            </View>
+          )}
+        </TouchableOpacity>
         <Text style={[styles.displayName, { fontFamily: FONTS.bodyBold }]}>
           {profile?.firstName} {profile?.lastName ?? ""}
         </Text>
@@ -770,6 +875,12 @@ const styles = StyleSheet.create({
   editBtn: { padding: 8 },
   rowInputs: { flexDirection: "row", gap: 12 },
   avatarSection: { alignItems: "center", marginBottom: 28, gap: 8 },
+  avatarWrap: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    position: "relative",
+  },
   avatar: {
     width: 90,
     height: 90,
@@ -779,6 +890,37 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cyan,
     alignItems: "center",
     justifyContent: "center",
+  },
+  avatarImg: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
+    borderColor: COLORS.cyan,
+  },
+  avatarOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 45,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarCameraBtn: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: COLORS.cyan,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: COLORS.bg,
   },
   initials: { fontSize: 38, color: COLORS.cyan },
   displayName: { fontSize: 22, color: COLORS.white },

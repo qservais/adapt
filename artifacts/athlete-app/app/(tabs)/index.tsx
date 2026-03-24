@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -102,7 +103,7 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={[styles.greeting, { fontFamily: FONTS.body }]}>
             Bonjour, {user?.firstName ?? "Athlète"} 👋
           </Text>
@@ -112,6 +113,21 @@ export default function HomeScreen() {
               .toUpperCase()}
           </Text>
         </View>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} activeOpacity={0.8}>
+          {(user as { avatarUrl?: string | null } | null)?.avatarUrl ? (
+            <Image
+              source={{ uri: (user as { avatarUrl?: string | null }).avatarUrl! }}
+              style={styles.headerAvatar}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={styles.headerAvatarFallback}>
+              <Text style={[styles.headerAvatarInitial, { fontFamily: FONTS.title }]}>
+                {(user?.firstName?.[0] ?? "A").toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -341,9 +357,27 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 28,
   },
+  headerAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    borderColor: COLORS.cyan,
+  },
+  headerAvatarFallback: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.cyanDim,
+    borderWidth: 1.5,
+    borderColor: COLORS.cyan,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerAvatarInitial: { fontSize: 18, color: COLORS.cyan },
   greeting: { fontSize: 17, color: COLORS.textSecondary },
   date: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1, marginTop: 3 },
   pendingContainer: { gap: 16 },

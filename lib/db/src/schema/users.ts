@@ -28,6 +28,7 @@ export const usersTable = pgTable("users", {
   inviteCode: varchar("invite_code", { length: 6 }).unique(),
   refreshToken: varchar("refresh_token", { length: 512 }),
   notificationPrefs: jsonb("notification_prefs"),
+  avatarUrl: text("avatar_url"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

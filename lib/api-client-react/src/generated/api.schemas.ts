@@ -70,6 +70,7 @@ export interface UserProfile {
   coachId?: string | null;
   inviteCode?: string | null;
   coachName?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface AuthResponse {
@@ -477,6 +478,7 @@ export interface ClientSummary {
   firstName: string;
   lastName?: string | null;
   email: string;
+  avatarUrl?: string | null;
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   todayCheckin?: CheckinData | null;
@@ -522,6 +524,7 @@ export interface ClientDetail {
   firstName: string;
   lastName?: string | null;
   email: string;
+  avatarUrl?: string | null;
   age?: number | null;
   weightKg?: number | null;
   heightCm?: number | null;
@@ -605,6 +608,7 @@ export interface MessageThread {
   userId: string;
   userFirstName: string;
   userLastName?: string | null;
+  userAvatarUrl?: string | null;
   lastMessage?: string | null;
   lastMessageAt?: string | null;
   unreadCount: number;

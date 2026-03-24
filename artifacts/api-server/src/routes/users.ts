@@ -4,6 +4,25 @@ import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, exercis
 import { eq, and, desc, gte, sql, count } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
+import multer from "multer";
+import sharp from "sharp";
+import { Storage } from "@google-cloud/storage";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Seules les images sont acceptées"));
+    }
+  },
+});
+
+const gcsClient = new Storage();
+const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
+const PRIVATE_OBJECT_DIR = process.env.PRIVATE_OBJECT_DIR ?? "objects/uploads";
 
 const router = Router();
 
@@ -28,6 +47,7 @@ function userProfile(user: typeof usersTable.$inferSelect) {
     avgCycleDays: user.avgCycleDays,
     coachId: user.coachId,
     inviteCode: user.inviteCode,
+    avatarUrl: user.avatarUrl ?? null,
   };
 }
 
@@ -102,6 +122,50 @@ router.put("/users/me", authenticate, async (req, res) => {
     res.json(userProfile(user));
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.post("/users/me/avatar", authenticate, (req, res, next) => {
+  upload.single("avatar")(req, res, (err) => {
+    if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+      res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "L'image ne doit pas dépasser 2 MB" } });
+      return;
+    }
+    if (err) {
+      res.status(400).json({ error: { code: "UPLOAD_ERROR", message: err.message } });
+      return;
+    }
+    next();
+  });
+}, async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: { code: "NO_FILE", message: "Aucun fichier fourni" } });
+    return;
+  }
+  try {
+    const resized = await sharp(req.file.buffer)
+      .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    const timestamp = Date.now();
+    const objectName = `avatars/${req.user!.userId}-${timestamp}.jpg`;
+    const bucket = gcsClient.bucket(BUCKET_ID);
+    const gcsFile = bucket.file(objectName);
+    await gcsFile.save(resized, { contentType: "image/jpeg", resumable: false });
+    await gcsFile.makePublic();
+
+    const publicUrl = `https://storage.googleapis.com/${BUCKET_ID}/${objectName}`;
+
+    const [updatedUser] = await db.update(usersTable)
+      .set({ avatarUrl: publicUrl, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.userId))
+      .returning();
+
+    res.json({ avatarUrl: publicUrl, user: userProfile(updatedUser) });
+  } catch (err) {
+    console.error("Avatar upload error:", err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur lors de l'upload de la photo" } });
   }
 });
 

@@ -154,8 +154,12 @@ export default function ClientsOverview() {
                   <tr key={client.id} className={cn("transition-colors group", stateStyles[rowState as keyof typeof stateStyles])}>
                     <td className="px-6 py-4">
                       <Link href={`/clients/${client.id}`} className="flex items-center gap-3 outline-none">
-                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-white group-hover:bg-white/20 transition-colors">
-                          {client.firstName[0]}{client.lastName?.[0]}
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-white group-hover:bg-white/20 transition-colors overflow-hidden flex-shrink-0">
+                          {client.avatarUrl ? (
+                            <img src={client.avatarUrl} alt={client.firstName} className="w-full h-full object-cover" />
+                          ) : (
+                            <>{client.firstName[0]}{client.lastName?.[0]}</>
+                          )}
                         </div>
                         <div>
                           <div className="font-semibold text-white group-hover:text-primary transition-colors">

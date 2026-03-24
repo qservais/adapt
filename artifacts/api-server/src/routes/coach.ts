@@ -314,6 +314,7 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         firstName: athlete.firstName,
         lastName: athlete.lastName,
         email: athlete.email,
+        avatarUrl: athlete.avatarUrl ?? null,
         fitnessLevel: athlete.fitnessLevel,
         primaryGoal: athlete.primaryGoal,
         todayCheckin: todayCheckin ? {
@@ -428,6 +429,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       firstName: athlete.firstName,
       lastName: athlete.lastName,
       email: athlete.email,
+      avatarUrl: athlete.avatarUrl ?? null,
       age: athlete.age,
       weightKg: athlete.weightKg,
       heightCm: athlete.heightCm,

@@ -47,12 +47,13 @@ router.get("/messages", authenticate, async (req, res) => {
 
     const threads = [];
     for (const [otherId, thread] of threadMap.entries()) {
-      const [user] = await db.select({ firstName: usersTable.firstName, lastName: usersTable.lastName })
+      const [user] = await db.select({ firstName: usersTable.firstName, lastName: usersTable.lastName, avatarUrl: usersTable.avatarUrl })
         .from(usersTable).where(eq(usersTable.id, otherId));
       threads.push({
         userId: otherId,
         userFirstName: user?.firstName ?? "Unknown",
         userLastName: user?.lastName ?? null,
+        userAvatarUrl: user?.avatarUrl ?? null,
         lastMessage: thread.lastMessage,
         lastMessageAt: thread.lastMessageAt?.toISOString() ?? null,
         unreadCount: thread.unreadCount,

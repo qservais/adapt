@@ -395,8 +395,12 @@ export default function ClientDetail() {
         <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-secondary" />
         
         <div className="flex items-start gap-6">
-          <div className="w-20 h-20 rounded-full bg-background border-2 border-border flex items-center justify-center text-3xl font-display text-white shadow-inner">
-            {client.firstName[0]}{client.lastName?.[0]}
+          <div className="w-20 h-20 rounded-full bg-background border-2 border-border flex items-center justify-center text-3xl font-display text-white shadow-inner overflow-hidden">
+            {client.avatarUrl ? (
+              <img src={client.avatarUrl} alt={client.firstName} className="w-full h-full object-cover" />
+            ) : (
+              <>{client.firstName[0]}{client.lastName?.[0]}</>
+            )}
           </div>
           <div>
             <h1 className="text-4xl font-display text-white tracking-wide">{client.firstName} {client.lastName}</h1>

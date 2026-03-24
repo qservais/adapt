@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -87,11 +88,19 @@ export default function ChatScreen() {
             COACH
           </Text>
         </View>
-        <View style={styles.avatarSmall}>
-          <Text style={[styles.avatarInitial, { fontFamily: FONTS.title }]}>
-            {(otherThread?.userFirstName?.[0] ?? "C").toUpperCase()}
-          </Text>
-        </View>
+        {otherThread?.userAvatarUrl ? (
+          <Image
+            source={{ uri: otherThread.userAvatarUrl }}
+            style={styles.avatarSmall}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={styles.avatarSmall}>
+            <Text style={[styles.avatarInitial, { fontFamily: FONTS.title }]}>
+              {(otherThread?.userFirstName?.[0] ?? "C").toUpperCase()}
+            </Text>
+          </View>
+        )}
       </View>
 
       <FlatList
