@@ -27,6 +27,9 @@ Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/
 - **Mobile**: Expo (React Native) — Task #2
 - **Coach dashboard**: React + Vite — Task #3
 
+## Completed Features (Tasks)
+- **Task #26**: Daily step counter (`daily_steps` DB table, `GET/POST /stats/steps`, `GET/PUT /users/me/stats-order`), `StepsSection` component with bar chart + manual entry modal, reorderable stats sections with long-press + up/down arrows, persisted section order in DB.
+
 ## Key Implementation Notes
 
 - Express 5 `req.params` returns `string | string[]` — always use `String(req.params["x"])` pattern

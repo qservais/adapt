@@ -253,6 +253,32 @@ router.get("/users/prs", authenticate, async (req, res) => {
   }
 });
 
+const statsOrderSchema = z.object({
+  order: z.array(z.string()).min(1).max(20),
+});
+
+router.get("/users/me/stats-order", authenticate, async (req, res) => {
+  try {
+    const [user] = await db.select({ statsOrder: usersTable.statsOrder }).from(usersTable).where(eq(usersTable.id, req.user!.userId));
+    return res.json({ order: user?.statsOrder ?? null });
+  } catch {
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.put("/users/me/stats-order", authenticate, async (req, res) => {
+  try {
+    const parsed = statsOrderSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    }
+    await db.update(usersTable).set({ statsOrder: parsed.data.order, updatedAt: new Date() }).where(eq(usersTable.id, req.user!.userId));
+    return res.json({ order: parsed.data.order });
+  } catch {
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 router.get("/users/weekly-recap/latest", authenticate, async (req, res) => {
   try {
     const userId = req.user!.userId;

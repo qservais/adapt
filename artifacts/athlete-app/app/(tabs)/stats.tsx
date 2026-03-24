@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   Platform,
@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { NutritionTab } from "@/components/nutrition/NutritionTab";
+import { StepsSection } from "@/components/steps/StepsSection";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -18,6 +19,7 @@ import {
   useGetPersonalRecords,
   useGetAthleteTests,
 } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -27,6 +29,8 @@ const CHART_WIDTH = width - 80;
 const CHART_HEIGHT = 110;
 
 type Period = "7" | "14" | "30";
+
+const DEFAULT_SECTION_ORDER = ["kpi", "tests", "steps", "trend", "calendar", "averages", "weekly", "modes", "rpe", "prs"];
 
 interface CheckinItem {
   date: string;
@@ -278,6 +282,37 @@ function MonthCalendar({
   );
 }
 
+function ReorderControls({
+  index,
+  total,
+  onUp,
+  onDown,
+}: {
+  index: number;
+  total: number;
+  onUp: () => void;
+  onDown: () => void;
+}) {
+  return (
+    <View style={styles.reorderControls}>
+      <TouchableOpacity
+        onPress={onUp}
+        disabled={index === 0}
+        style={[styles.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
+      >
+        <Feather name="chevron-up" size={18} color={index === 0 ? COLORS.textMuted : COLORS.cyan} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={onDown}
+        disabled={index === total - 1}
+        style={[styles.reorderBtn, index === total - 1 && styles.reorderBtnDisabled]}
+      >
+        <Feather name="chevron-down" size={18} color={index === total - 1 ? COLORS.textMuted : COLORS.cyan} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
@@ -288,6 +323,47 @@ export default function StatsScreen() {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
+  const [sectionOrder, setSectionOrder] = useState<string[]>(DEFAULT_SECTION_ORDER);
+  const [reorderMode, setReorderMode] = useState(false);
+  const saveOrderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    customFetch<{ order: string[] | null }>("/api/users/me/stats-order")
+      .then((res) => {
+        if (res.order && res.order.length > 0) {
+          const merged = [
+            ...res.order.filter((id) => DEFAULT_SECTION_ORDER.includes(id)),
+            ...DEFAULT_SECTION_ORDER.filter((id) => !res.order!.includes(id)),
+          ];
+          setSectionOrder(merged);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveOrder = useCallback((order: string[]) => {
+    if (saveOrderTimer.current) clearTimeout(saveOrderTimer.current);
+    saveOrderTimer.current = setTimeout(() => {
+      customFetch("/api/users/me/stats-order", {
+        method: "PUT",
+        body: JSON.stringify({ order }),
+      }).catch(() => {});
+    }, 800);
+  }, []);
+
+  function moveSection(index: number, direction: -1 | 1) {
+    const newOrder = [...sectionOrder];
+    const target = index + direction;
+    if (target < 0 || target >= newOrder.length) return;
+    [newOrder[index], newOrder[target]] = [newOrder[target], newOrder[index]];
+    setSectionOrder(newOrder);
+    saveOrder(newOrder);
+  }
+
+  function resetOrder() {
+    setSectionOrder(DEFAULT_SECTION_ORDER);
+    saveOrder(DEFAULT_SECTION_ORDER);
+  }
 
   const checkinQuery = useGetCheckinHistory();
   const sessionQuery = useGetSessionHistory();
@@ -351,6 +427,249 @@ export default function StatsScreen() {
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
+  const sectionMap: Record<string, React.ReactNode> = {
+    kpi: (
+      <View style={styles.kpiRow}>
+        <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
+          <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+            {avgScore.toFixed(0)}
+          </Text>
+          <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Moy. Score</Text>
+        </GlowCard>
+        <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
+          <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+            {checkins.length}
+          </Text>
+          <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Check-ins</Text>
+        </GlowCard>
+        <GlowCard glowColor={COLORS.violet} style={styles.kpiCard}>
+          <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
+            {sessions.length}
+          </Text>
+          <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Séances</Text>
+        </GlowCard>
+      </View>
+    ),
+    tests: (testsQuery.data?.length ?? 0) > 0 ? (
+      <GlowCard glowColor={COLORS.violet} style={styles.testsCard}>
+        <View style={styles.testsHeader}>
+          <Feather name="activity" size={14} color={COLORS.violet} />
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.violet }]}>
+            MES TESTS
+          </Text>
+        </View>
+        {testsQuery.data!.slice(0, 8).map((test, i) => {
+          const label = test.exerciseName ?? test.testType;
+          const prevTest = testsQuery.data!
+            .slice(i + 1)
+            .find((t) => (t.exerciseName ?? t.testType) === label);
+          const delta = prevTest != null ? test.value - prevTest.value : null;
+          return (
+            <View key={test.id} style={[styles.testRow, i === 0 && styles.testRowFirst]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.testName, { fontFamily: FONTS.body }]} numberOfLines={1}>
+                  {label}
+                </Text>
+                <Text style={[styles.testDate, { fontFamily: FONTS.mono }]}>
+                  {new Date(test.testedAt).toLocaleDateString("fr-FR")}
+                </Text>
+              </View>
+              <View style={styles.testRight}>
+                {delta != null && (
+                  <Text
+                    style={[
+                      styles.testDelta,
+                      { fontFamily: FONTS.mono, color: delta >= 0 ? COLORS.green : COLORS.red },
+                    ]}
+                  >
+                    {delta >= 0 ? "+" : ""}{delta.toFixed(1)}
+                  </Text>
+                )}
+                <Text style={[styles.testVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
+                  {test.value} {test.unit}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </GlowCard>
+    ) : null,
+    steps: <StepsSection />,
+    trend: (
+      <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
+        <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ÉVOLUTION ADAPT SCORE</Text>
+        <ScoreTrendChart data={sortedScores} color={COLORS.cyan} />
+      </GlowCard>
+    ),
+    calendar: (
+      <GlowCard glowColor={COLORS.border} style={styles.calCard}>
+        <View style={styles.calHeader}>
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>CALENDRIER</Text>
+          <View style={styles.calNav}>
+            <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
+              <Feather name="chevron-left" size={18} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={nextMonth} style={styles.calNavBtn}>
+              <Feather name="chevron-right" size={18} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <MonthCalendar
+          checkins={allCheckins}
+          year={calMonth.year}
+          month={calMonth.month}
+        />
+        <View style={styles.calLegend}>
+          {Object.entries(MODE_CONFIG).map(([key, cfg]) => (
+            <View key={key} style={styles.calLegendItem}>
+              <View style={[styles.calLegendDot, { backgroundColor: cfg.color }]} />
+              <Text style={[styles.calLegendText, { fontFamily: FONTS.mono, color: cfg.color }]}>
+                {cfg.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </GlowCard>
+    ),
+    averages: (
+      <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
+        <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>MOYENNES QUOTIDIENNES</Text>
+        <View style={styles.barList}>
+          <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sommeil" />
+          <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Énergie" />
+          <ScoreBar value={avg("stress")} max={5} color={COLORS.amber} label="Stress" />
+          <ScoreBar value={avg("soreness")} max={5} color={COLORS.red} label="Courbat." />
+          <ScoreBar value={avg("motivation")} max={5} color={COLORS.violet} label="Motivat." />
+        </View>
+      </GlowCard>
+    ),
+    weekly: (
+      <TouchableOpacity activeOpacity={0.85} onPress={() => !reorderMode && router.push("/weekly-recap")}>
+        <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
+          <View style={styles.weeklyCardHeader}>
+            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>BILAN HEBDOMADAIRE</Text>
+            <Feather name="chevron-right" size={16} color={COLORS.amber} />
+          </View>
+          <View style={styles.weeklyRow}>
+            <View style={styles.weeklyItem}>
+              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
+                {sessions.filter((s) => {
+                  const d = new Date(s.completedAt ?? "");
+                  const weekAgo = new Date();
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  return d >= weekAgo;
+                }).length}
+              </Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Séances</Text>
+            </View>
+            <View style={styles.weeklyDivider} />
+            <View style={styles.weeklyItem}>
+              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.amber }]}>
+                {avgRpe > 0 ? avgRpe.toFixed(1) : "—"}
+              </Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>RPE moy.</Text>
+            </View>
+            <View style={styles.weeklyDivider} />
+            <View style={styles.weeklyItem}>
+              <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+                {avgScore.toFixed(0)}
+              </Text>
+              <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Score moy.</Text>
+            </View>
+          </View>
+        </GlowCard>
+      </TouchableOpacity>
+    ),
+    modes: Object.keys(modeCounts).length > 0 ? (
+      <GlowCard glowColor={COLORS.border} style={styles.modesCard}>
+        <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>
+          RÉPARTITION DES SÉANCES
+        </Text>
+        <View style={styles.modesList}>
+          {Object.entries(modeCounts).map(([mode, count]) => {
+            const cfg = MODE_CONFIG[mode as SessionMode] ?? MODE_CONFIG.normal;
+            const pct = checkins.length > 0 ? (count / checkins.length) * 100 : 0;
+            return (
+              <View key={mode} style={styles.modeRow}>
+                <View style={[styles.modeDot, { backgroundColor: cfg.color }]} />
+                <Text
+                  style={[styles.modeLabel, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}
+                  numberOfLines={1}
+                >
+                  {cfg.label}
+                </Text>
+                <View style={styles.modeBar}>
+                  <View
+                    style={[styles.modeBarFill, { width: `${pct}%`, backgroundColor: cfg.color }]}
+                  />
+                </View>
+                <Text style={[styles.modeCount, { fontFamily: FONTS.mono }]}>{count}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </GlowCard>
+    ) : null,
+    rpe: sortedRpe.length >= 2 ? (
+      <GlowCard glowColor={COLORS.amber} style={styles.chartCard}>
+        <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>PROGRESSION D'EFFORT (RPE)</Text>
+        <ScoreTrendChart data={sortedRpe} color={COLORS.amber} />
+        <View style={styles.rpeScaleRow}>
+          <View style={styles.rpeScaleItem}>
+            <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.cyan }]} />
+            <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>1-4 Facile</Text>
+          </View>
+          <View style={styles.rpeScaleItem}>
+            <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.green }]} />
+            <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>5-7 Modéré</Text>
+          </View>
+          <View style={styles.rpeScaleItem}>
+            <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.amber }]} />
+            <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>8-9 Difficile</Text>
+          </View>
+          <View style={styles.rpeScaleItem}>
+            <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.red }]} />
+            <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>10 Max</Text>
+          </View>
+        </View>
+      </GlowCard>
+    ) : null,
+    prs: (prQuery.data?.personalRecords?.length ?? 0) > 0 ? (
+      <GlowCard glowColor={COLORS.cyan} style={styles.prCard}>
+        <View style={styles.prCardHeader}>
+          <Feather name="trending-up" size={14} color={COLORS.cyan} />
+          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
+            MES RECORDS PERSONNELS
+          </Text>
+        </View>
+        {(prQuery.data?.personalRecords ?? []).slice(0, 8).map((pr) => (
+          <View key={pr.exerciseId} style={styles.prItemRow}>
+            <Text style={[styles.prItemName, { fontFamily: FONTS.body }]} numberOfLines={1}>
+              {pr.exerciseName}
+            </Text>
+            <View style={styles.prItemRight}>
+              {pr.isRecent && (
+                <View style={styles.prNewBadge}>
+                  <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
+                </View>
+              )}
+              <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+                {pr.loadKg} kg
+              </Text>
+            </View>
+          </View>
+        ))}
+        {(prQuery.data?.total ?? 0) > 8 && (
+          <Text style={[{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body, textAlign: "center", marginTop: 4 }]}>
+            +{(prQuery.data?.total ?? 0) - 8} autres records
+          </Text>
+        )}
+      </GlowCard>
+    ) : null,
+  };
+
+  const visibleSections = sectionOrder.filter((id) => sectionMap[id] != null);
+
   return (
     <ScrollView
       ref={scrollRef}
@@ -360,7 +679,7 @@ export default function StatsScreen() {
     >
       <View style={styles.headRow}>
         <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>STATS</Text>
-        {activeTab === "training" && (
+        {activeTab === "training" && !reorderMode && (
           <View style={styles.periodRow}>
             {(["7", "14", "30"] as Period[]).map((p) => (
               <TouchableOpacity
@@ -379,6 +698,16 @@ export default function StatsScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
+          </View>
+        )}
+        {activeTab === "training" && reorderMode && (
+          <View style={styles.reorderHeaderBtns}>
+            <TouchableOpacity onPress={resetOrder} style={styles.resetBtn}>
+              <Text style={[styles.resetText, { fontFamily: FONTS.mono }]}>Réinitialiser</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setReorderMode(false)} style={styles.doneBtn}>
+              <Text style={[styles.doneText, { fontFamily: FONTS.mono }]}>Terminé</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -405,273 +734,77 @@ export default function StatsScreen() {
       {activeTab === "nutrition" && <NutritionTab />}
 
       {activeTab === "training" && (
-      <>
-      <View style={styles.section}>
-        <View style={styles.kpiRow}>
-          <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
-              {avgScore.toFixed(0)}
-            </Text>
-            <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Moy. Score</Text>
-          </GlowCard>
-          <GlowCard glowColor={COLORS.cyan} style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
-              {checkins.length}
-            </Text>
-            <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Check-ins</Text>
-          </GlowCard>
-          <GlowCard glowColor={COLORS.violet} style={styles.kpiCard}>
-            <Text style={[styles.kpiVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
-              {sessions.length}
-            </Text>
-            <Text style={[styles.kpiLabel, { fontFamily: FONTS.body }]}>Séances</Text>
-          </GlowCard>
-        </View>
-      </View>
-
-      {(testsQuery.data?.length ?? 0) > 0 && (
-        <View style={styles.section}>
-          <GlowCard glowColor={COLORS.violet} style={styles.testsCard}>
-            <View style={styles.testsHeader}>
-              <Feather name="activity" size={14} color={COLORS.violet} />
-              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.violet }]}>
-                MES TESTS
+        <>
+          {reorderMode && (
+            <View style={[styles.section, styles.reorderBanner]}>
+              <Feather name="move" size={13} color={COLORS.amber} />
+              <Text style={[styles.reorderBannerText, { fontFamily: FONTS.mono }]}>
+                Mode réorganisation — utilisez les flèches
               </Text>
             </View>
-            {testsQuery.data!.slice(0, 8).map((test, i) => {
-              const label = test.exerciseName ?? test.testType;
-              const prevTest = testsQuery.data!
-                .slice(i + 1)
-                .find(
-                  (t) =>
-                    (t.exerciseName ?? t.testType) === label
-                );
-              const delta = prevTest != null ? test.value - prevTest.value : null;
-              return (
-                <View key={test.id} style={[styles.testRow, i === 0 && styles.testRowFirst]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.testName, { fontFamily: FONTS.body }]} numberOfLines={1}>
-                      {label}
-                    </Text>
-                    <Text style={[styles.testDate, { fontFamily: FONTS.mono }]}>
-                      {new Date(test.testedAt).toLocaleDateString("fr-FR")}
-                    </Text>
-                  </View>
-                  <View style={styles.testRight}>
-                    {delta != null && (
-                      <Text
-                        style={[
-                          styles.testDelta,
-                          { fontFamily: FONTS.mono, color: delta >= 0 ? COLORS.green : COLORS.red },
-                        ]}
-                      >
-                        {delta >= 0 ? "+" : ""}{delta.toFixed(1)}
-                      </Text>
-                    )}
-                    <Text style={[styles.testVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
-                      {test.value} {test.unit}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
-          </GlowCard>
-        </View>
-      )}
+          )}
 
-      <View style={styles.section}>
-        <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>ÉVOLUTION ADAPT SCORE</Text>
-          <ScoreTrendChart data={sortedScores} color={COLORS.cyan} />
-        </GlowCard>
-      </View>
-
-      <View style={styles.section}>
-        <GlowCard glowColor={COLORS.border} style={styles.calCard}>
-          <View style={styles.calHeader}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>CALENDRIER</Text>
-            <View style={styles.calNav}>
-              <TouchableOpacity onPress={prevMonth} style={styles.calNavBtn}>
-                <Feather name="chevron-left" size={18} color={COLORS.textSecondary} />
+          {visibleSections.map((sectionId, index) => {
+            const content = sectionMap[sectionId];
+            if (!content) return null;
+            const visibleIndex = visibleSections.indexOf(sectionId);
+            return (
+              <TouchableOpacity
+                key={sectionId}
+                activeOpacity={reorderMode ? 1 : 0.95}
+                onLongPress={() => !reorderMode && setReorderMode(true)}
+                delayLongPress={600}
+                style={[styles.section, reorderMode && styles.sectionReorder]}
+              >
+                {reorderMode && (
+                  <ReorderControls
+                    index={visibleIndex}
+                    total={visibleSections.length}
+                    onUp={() => {
+                      const orderIndex = sectionOrder.indexOf(sectionId);
+                      const prevVisible = visibleSections[visibleIndex - 1];
+                      const prevOrderIndex = prevVisible ? sectionOrder.indexOf(prevVisible) : -1;
+                      if (prevOrderIndex === -1) return;
+                      const newOrder = [...sectionOrder];
+                      [newOrder[orderIndex], newOrder[prevOrderIndex]] = [newOrder[prevOrderIndex], newOrder[orderIndex]];
+                      setSectionOrder(newOrder);
+                      saveOrder(newOrder);
+                    }}
+                    onDown={() => {
+                      const orderIndex = sectionOrder.indexOf(sectionId);
+                      const nextVisible = visibleSections[visibleIndex + 1];
+                      const nextOrderIndex = nextVisible ? sectionOrder.indexOf(nextVisible) : -1;
+                      if (nextOrderIndex === -1) return;
+                      const newOrder = [...sectionOrder];
+                      [newOrder[orderIndex], newOrder[nextOrderIndex]] = [newOrder[nextOrderIndex], newOrder[orderIndex]];
+                      setSectionOrder(newOrder);
+                      saveOrder(newOrder);
+                    }}
+                  />
+                )}
+                {content}
               </TouchableOpacity>
-              <TouchableOpacity onPress={nextMonth} style={styles.calNavBtn}>
-                <Feather name="chevron-right" size={18} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <MonthCalendar
-            checkins={allCheckins}
-            year={calMonth.year}
-            month={calMonth.month}
-          />
-          <View style={styles.calLegend}>
-            {Object.entries(MODE_CONFIG).map(([key, cfg]) => (
-              <View key={key} style={styles.calLegendItem}>
-                <View style={[styles.calLegendDot, { backgroundColor: cfg.color }]} />
-                <Text style={[styles.calLegendText, { fontFamily: FONTS.mono, color: cfg.color }]}>
-                  {cfg.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </GlowCard>
-      </View>
+            );
+          })}
 
-      <View style={styles.section}>
-        <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
-          <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>MOYENNES QUOTIDIENNES</Text>
-          <View style={styles.barList}>
-            <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sommeil" />
-            <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Énergie" />
-            <ScoreBar value={avg("stress")} max={5} color={COLORS.amber} label="Stress" />
-            <ScoreBar value={avg("soreness")} max={5} color={COLORS.red} label="Courbat." />
-            <ScoreBar value={avg("motivation")} max={5} color={COLORS.violet} label="Motivat." />
-          </View>
-        </GlowCard>
-      </View>
-
-      <View style={styles.section}>
-        <TouchableOpacity activeOpacity={0.85} onPress={() => router.push("/weekly-recap")}>
-          <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
-            <View style={styles.weeklyCardHeader}>
-              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>BILAN HEBDOMADAIRE</Text>
-              <Feather name="chevron-right" size={16} color={COLORS.amber} />
-            </View>
-            <View style={styles.weeklyRow}>
-              <View style={styles.weeklyItem}>
-                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
-                  {sessions.filter((s) => {
-                    const d = new Date(s.completedAt ?? "");
-                    const weekAgo = new Date();
-                    weekAgo.setDate(weekAgo.getDate() - 7);
-                    return d >= weekAgo;
-                  }).length}
-                </Text>
-                <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Séances</Text>
-              </View>
-              <View style={styles.weeklyDivider} />
-              <View style={styles.weeklyItem}>
-                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.amber }]}>
-                  {avgRpe > 0 ? avgRpe.toFixed(1) : "—"}
-                </Text>
-                <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>RPE moy.</Text>
-              </View>
-              <View style={styles.weeklyDivider} />
-              <View style={styles.weeklyItem}>
-                <Text style={[styles.weeklyVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
-                  {avgScore.toFixed(0)}
-                </Text>
-                <Text style={[styles.weeklyLabel, { fontFamily: FONTS.body }]}>Score moy.</Text>
-              </View>
-            </View>
-          </GlowCard>
-        </TouchableOpacity>
-      </View>
-
-      {Object.keys(modeCounts).length > 0 && (
-        <View style={styles.section}>
-          <GlowCard glowColor={COLORS.border} style={styles.modesCard}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>
-              RÉPARTITION DES SÉANCES
-            </Text>
-            <View style={styles.modesList}>
-              {Object.entries(modeCounts).map(([mode, count]) => {
-                const cfg = MODE_CONFIG[mode as SessionMode] ?? MODE_CONFIG.normal;
-                const pct = checkins.length > 0 ? (count / checkins.length) * 100 : 0;
-                return (
-                  <View key={mode} style={styles.modeRow}>
-                    <View style={[styles.modeDot, { backgroundColor: cfg.color }]} />
-                    <Text
-                      style={[styles.modeLabel, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}
-                      numberOfLines={1}
-                    >
-                      {cfg.label}
-                    </Text>
-                    <View style={styles.modeBar}>
-                      <View
-                        style={[styles.modeBarFill, { width: `${pct}%`, backgroundColor: cfg.color }]}
-                      />
-                    </View>
-                    <Text style={[styles.modeCount, { fontFamily: FONTS.mono }]}>{count}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </GlowCard>
-        </View>
-      )}
-
-      {sortedRpe.length >= 2 && (
-        <View style={styles.section}>
-          <GlowCard glowColor={COLORS.amber} style={styles.chartCard}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>PROGRESSION D'EFFORT (RPE)</Text>
-            <ScoreTrendChart data={sortedRpe} color={COLORS.amber} />
-            <View style={styles.rpeScaleRow}>
-              <View style={styles.rpeScaleItem}>
-                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.cyan }]} />
-                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>1-4 Facile</Text>
-              </View>
-              <View style={styles.rpeScaleItem}>
-                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.green }]} />
-                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>5-7 Modéré</Text>
-              </View>
-              <View style={styles.rpeScaleItem}>
-                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.amber }]} />
-                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>8-9 Difficile</Text>
-              </View>
-              <View style={styles.rpeScaleItem}>
-                <View style={[styles.rpeScaleDot, { backgroundColor: COLORS.red }]} />
-                <Text style={[styles.rpeScaleLabel, { fontFamily: FONTS.mono }]}>10 Max</Text>
-              </View>
-            </View>
-          </GlowCard>
-        </View>
-      )}
-
-      {(prQuery.data?.personalRecords?.length ?? 0) > 0 && (
-        <View style={styles.section}>
-          <GlowCard glowColor={COLORS.cyan} style={styles.prCard}>
-            <View style={styles.prCardHeader}>
-              <Feather name="trending-up" size={14} color={COLORS.cyan} />
-              <Text style={[styles.cardTitle, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
-                MES RECORDS PERSONNELS
+          {checkins.length === 0 && (
+            <View style={styles.emptyWrap}>
+              <Feather name="bar-chart-2" size={40} color={COLORS.textMuted} />
+              <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
+                Aucune donnée pour cette période. Commence ton check-in quotidien !
               </Text>
             </View>
-            {(prQuery.data?.personalRecords ?? []).slice(0, 8).map((pr) => (
-              <View key={pr.exerciseId} style={styles.prItemRow}>
-                <Text style={[styles.prItemName, { fontFamily: FONTS.body }]} numberOfLines={1}>
-                  {pr.exerciseName}
-                </Text>
-                <View style={styles.prItemRight}>
-                  {pr.isRecent && (
-                    <View style={styles.prNewBadge}>
-                      <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
-                    </View>
-                  )}
-                  <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
-                    {pr.loadKg} kg
-                  </Text>
-                </View>
-              </View>
-            ))}
-            {(prQuery.data?.total ?? 0) > 8 && (
-              <Text style={[{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body, textAlign: "center", marginTop: 4 }]}>
-                +{(prQuery.data?.total ?? 0) - 8} autres records
-              </Text>
-            )}
-          </GlowCard>
-        </View>
-      )}
+          )}
 
-      {checkins.length === 0 && (
-        <View style={styles.emptyWrap}>
-          <Feather name="bar-chart-2" size={40} color={COLORS.textMuted} />
-          <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
-            Aucune donnée pour cette période. Commence ton check-in quotidien !
-          </Text>
-        </View>
-      )}
-      </>
+          {!reorderMode && (
+            <TouchableOpacity style={styles.reorderHint} onPress={() => setReorderMode(true)}>
+              <Feather name="move" size={12} color={COLORS.textMuted} />
+              <Text style={[styles.reorderHintText, { fontFamily: FONTS.mono }]}>
+                Maintenir pour réorganiser
+              </Text>
+            </TouchableOpacity>
+          )}
+        </>
       )}
     </ScrollView>
   );
@@ -713,6 +846,69 @@ const styles = StyleSheet.create({
   tabBtnActiveGreen: { borderBottomWidth: 2, borderBottomColor: COLORS.green },
   tabBtnText: { fontSize: 12, letterSpacing: 1.5 },
   section: { paddingHorizontal: 20, marginBottom: 16 },
+  sectionReorder: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    marginHorizontal: 12,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: COLORS.bgCard,
+  },
+  reorderControls: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 4,
+    marginBottom: 8,
+  },
+  reorderBtn: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: COLORS.bgElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  reorderBtnDisabled: { opacity: 0.3 },
+  reorderHeaderBtns: { flexDirection: "row", gap: 8 },
+  resetBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  resetText: { fontSize: 11, color: COLORS.textMuted },
+  doneBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: COLORS.cyanDim,
+    borderWidth: 1,
+    borderColor: COLORS.cyan,
+  },
+  doneText: { fontSize: 11, color: COLORS.cyan },
+  reorderBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F59E0B15",
+    borderRadius: 10,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#F59E0B30",
+    marginBottom: 8,
+  },
+  reorderBannerText: { fontSize: 11, color: COLORS.amber, letterSpacing: 1 },
+  reorderHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    marginHorizontal: 20,
+  },
+  reorderHintText: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
   kpiRow: { flexDirection: "row", gap: 10 },
   kpiCard: { flex: 1, alignItems: "center", padding: 16 },
   kpiVal: { fontSize: 32, marginBottom: 4 },

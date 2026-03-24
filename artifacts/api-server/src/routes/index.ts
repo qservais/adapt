@@ -11,6 +11,7 @@ import messagesRouter from "./messages.js";
 import notificationsRouter from "./notifications.js";
 import contentRouter from "./content.js";
 import nutritionRouter from "./nutrition.js";
+import stepsRouter from "./steps.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(messagesRouter);
 router.use(notificationsRouter);
 router.use(contentRouter);
 router.use(nutritionRouter);
+router.use(stepsRouter);
 
 export default router;
