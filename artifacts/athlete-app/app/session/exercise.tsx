@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -73,6 +74,96 @@ function PRPulse({ color }: { color: string }) {
   );
 }
 
+interface ExerciseRibbonProps {
+  exercises: { exerciseName: string }[];
+  currentIndex: number;
+  completedCount: number;
+  modeColor: string;
+}
+
+function ExerciseRibbon({ exercises, currentIndex, completedCount, modeColor }: ExerciseRibbonProps) {
+  const listRef = useRef<FlatList<{ exerciseName: string }>>(null);
+
+  useEffect(() => {
+    if (listRef.current && exercises.length > 0) {
+      listRef.current.scrollToIndex({ index: currentIndex, animated: true, viewPosition: 0.5 });
+    }
+  }, [currentIndex, exercises.length]);
+
+  return (
+    <FlatList
+      ref={listRef}
+      data={exercises}
+      keyExtractor={(_, i) => String(i)}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.ribbonContent}
+      onScrollToIndexFailed={() => {}}
+      renderItem={({ item, index }) => {
+        const isDone = index < completedCount;
+        const isCurrent = index === currentIndex;
+        const isUpcoming = index > currentIndex;
+
+        const pillBg = isDone
+          ? `${modeColor}20`
+          : isCurrent
+          ? `${modeColor}30`
+          : COLORS.bgElevated;
+
+        const pillBorder = isDone
+          ? `${modeColor}60`
+          : isCurrent
+          ? modeColor
+          : COLORS.border;
+
+        const numColor = isDone
+          ? modeColor
+          : isCurrent
+          ? modeColor
+          : COLORS.textMuted;
+
+        return (
+          <View
+            style={[
+              styles.ribbonPill,
+              { backgroundColor: pillBg, borderColor: pillBorder },
+              isCurrent && styles.ribbonPillCurrent,
+            ]}
+          >
+            {isDone ? (
+              <Feather name="check" size={11} color={modeColor} />
+            ) : (
+              <Text
+                style={[
+                  styles.ribbonNum,
+                  { fontFamily: FONTS.mono, color: numColor },
+                  isUpcoming && { opacity: 0.5 },
+                ]}
+              >
+                {String(index + 1).padStart(2, "0")}
+              </Text>
+            )}
+            <Text
+              style={[
+                styles.ribbonName,
+                { fontFamily: FONTS.body },
+                isDone && { color: modeColor },
+                isCurrent && { color: COLORS.white },
+                isUpcoming && { color: COLORS.textMuted },
+              ]}
+              numberOfLines={1}
+            >
+              {item.exerciseName.length > 10
+                ? item.exerciseName.substring(0, 9) + "…"
+                : item.exerciseName}
+            </Text>
+          </View>
+        );
+      }}
+    />
+  );
+}
+
 export default function ExerciseScreen() {
   const insets = useSafeAreaInsets();
   const sessionQuery = useGetTodaySession();
@@ -97,6 +188,7 @@ export default function ExerciseScreen() {
   const exercise = exercises[exerciseIndex];
   const totalExercises = exercises.length;
   const isLast = exerciseIndex === totalExercises - 1;
+  const nextExercise = !isLast ? exercises[exerciseIndex + 1] : null;
 
   const adjustLoad = useCallback((exId: string, next: number) => {
     setLoadAdjustments((prev) => ({ ...prev, [exId]: next }));
@@ -213,15 +305,22 @@ export default function ExerciseScreen() {
             height={4}
           />
         </View>
-        <View style={styles.progressChip}>
-          <Text style={[styles.progressText, { fontFamily: FONTS.mono }]}>
+        <View style={[styles.progressChip, { borderColor: `${cfg.color}50`, backgroundColor: `${cfg.color}15` }]}>
+          <Text style={[styles.progressText, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
             {exerciseIndex + 1}/{totalExercises}
           </Text>
         </View>
       </View>
 
+      <ExerciseRibbon
+        exercises={exercises}
+        currentIndex={exerciseIndex}
+        completedCount={exerciseIndex}
+        modeColor={cfg.color}
+      />
+
       <View style={styles.identityBlock}>
-        <Text style={[styles.setLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+        <Text style={[styles.setLabel, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
           SÉRIE {currentSet}/{exercise.sets}
         </Text>
         <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
@@ -288,17 +387,6 @@ export default function ExerciseScreen() {
                 {encouragementMsg}
               </Text>
             </View>
-            {currentSet + 1 === exercise.sets && !isLast && exercises[exerciseIndex + 1] != null && (
-              <View style={styles.nextExBox}>
-                <Text style={[styles.nextExLabel, { fontFamily: FONTS.mono }]}>ENSUITE</Text>
-                <Text style={[styles.nextExName, { fontFamily: FONTS.bodyMedium }]}>
-                  {exercises[exerciseIndex + 1].exerciseName}
-                </Text>
-                <Text style={[styles.nextExDetail, { fontFamily: FONTS.mono }]}>
-                  {exercises[exerciseIndex + 1].sets}×{exercises[exerciseIndex + 1].reps}
-                </Text>
-              </View>
-            )}
             <TouchableOpacity onPress={handleSkipRest} style={styles.skipBtn}>
               <Text style={[styles.skipText, { fontFamily: FONTS.bodyMedium }]}>
                 Passer le repos
@@ -306,6 +394,22 @@ export default function ExerciseScreen() {
             </TouchableOpacity>
           </View>
         ) : null}
+
+        {nextExercise != null && (
+          <View style={[styles.nextExRow, { borderColor: `${cfg.color}20` }]}>
+            <View style={styles.nextExLeft}>
+              <Text style={[styles.nextExLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+                SUIVANT
+              </Text>
+              <Text style={[styles.nextExName, { fontFamily: FONTS.bodyMedium }]} numberOfLines={1}>
+                {nextExercise.exerciseName}
+              </Text>
+            </View>
+            <Text style={[styles.nextExVolume, { fontFamily: FONTS.mono }]}>
+              {nextExercise.sets}×{nextExercise.reps}
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       {!showRest && (
@@ -331,7 +435,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 10,
     gap: 12,
     backgroundColor: COLORS.bg,
   },
@@ -345,28 +449,52 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   progressChip: {
-    backgroundColor: COLORS.bgElevated,
     borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
   },
-  progressText: { fontSize: 12, color: COLORS.white },
+  progressText: { fontSize: 13 },
+  ribbonContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  ribbonPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    maxWidth: 130,
+  },
+  ribbonPillCurrent: {
+    shadowColor: COLORS.cyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  ribbonNum: { fontSize: 11, letterSpacing: 0.5 },
+  ribbonName: { fontSize: 12, flexShrink: 1 },
   identityBlock: {
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 8,
     gap: 4,
     backgroundColor: COLORS.bg,
   },
-  setLabel: { fontSize: 13, letterSpacing: 3 },
+  setLabel: { fontSize: 18, letterSpacing: 3 },
   exerciseName: { fontSize: 42, letterSpacing: 2, textAlign: "center", lineHeight: 48 },
   repsText: { fontSize: 26, color: COLORS.white, letterSpacing: 4 },
   content: {
     paddingHorizontal: 24,
     alignItems: "center",
     gap: 24,
-    paddingTop: 20,
+    paddingTop: 16,
   },
   loadSection: { alignItems: "center", gap: 14, width: "100%" },
   lastUsedRow: {
@@ -403,16 +531,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   encourageText: { fontSize: 15, color: COLORS.white, textAlign: "center", lineHeight: 22 },
-  nextExBox: {
-    width: "100%",
-    backgroundColor: COLORS.bgElevated,
-    borderRadius: 12,
-    padding: 16,
-    gap: 4,
-  },
-  nextExLabel: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
-  nextExName: { fontSize: 16, color: COLORS.white },
-  nextExDetail: { fontSize: 12, color: COLORS.textSecondary },
   skipBtn: {
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -421,6 +539,22 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   skipText: { fontSize: 14, color: COLORS.textSecondary },
+  nextExRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  nextExLeft: { flex: 1, gap: 2 },
+  nextExLabel: { fontSize: 9, letterSpacing: 2 },
+  nextExName: { fontSize: 14, color: COLORS.white },
+  nextExVolume: { fontSize: 13, color: COLORS.textSecondary, letterSpacing: 0.5 },
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,
