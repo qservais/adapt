@@ -19,6 +19,8 @@ export const notificationsTable = pgTable("notifications", {
   type: varchar("type", { length: 50 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   body: text("body"),
+  link: varchar("link", { length: 512 }),
+  isRead: boolean("is_read").default(false),
   isSent: boolean("is_sent").default(false),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

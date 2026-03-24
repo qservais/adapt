@@ -69,6 +69,7 @@ function RootLayoutNav() {
       <Stack.Screen name="messages/[userId]" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="badges" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="weekly-recap" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="notifications" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }

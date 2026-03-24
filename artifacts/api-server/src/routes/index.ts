@@ -8,6 +8,7 @@ import programsRouter from "./programs.js";
 import coachRouter from "./coach.js";
 import exercisesRouter from "./exercises.js";
 import messagesRouter from "./messages.js";
+import notificationsRouter from "./notifications.js";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(programsRouter);
 router.use(coachRouter);
 router.use(exercisesRouter);
 router.use(messagesRouter);
+router.use(notificationsRouter);
 
 export default router;

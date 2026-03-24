@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, integer, decimal, timestamp, date, text } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, boolean, integer, decimal, timestamp, date, text, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { sql } from "drizzle-orm";
@@ -27,6 +27,7 @@ export const usersTable = pgTable("users", {
   coachId: uuid("coach_id"),
   inviteCode: varchar("invite_code", { length: 6 }).unique(),
   refreshToken: varchar("refresh_token", { length: 512 }),
+  notificationPrefs: jsonb("notification_prefs"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

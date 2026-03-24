@@ -650,3 +650,34 @@ export interface AthletePerformanceTest {
   notes?: string | null;
   createdAt?: string;
 }
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  body?: string | null;
+  link?: string | null;
+  isRead: boolean;
+  createdAt?: string | null;
+}
+
+export interface NotificationsResponse {
+  items: NotificationItem[];
+  unreadCount: number;
+}
+
+export interface NotificationPreferences {
+  session: boolean;
+  checkin: boolean;
+  messages: boolean;
+  encouragements: boolean;
+  performance: boolean;
+}
+
+export interface UpdateNotificationPreferencesRequest {
+  session?: boolean;
+  checkin?: boolean;
+  messages?: boolean;
+  encouragements?: boolean;
+  performance?: boolean;
+}

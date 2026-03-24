@@ -14,7 +14,15 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useUpdateMe, useAthleteLink, useGetBadges, customFetch } from "@workspace/api-client-react";
+import {
+  useGetMe,
+  useUpdateMe,
+  useAthleteLink,
+  useGetBadges,
+  useGetNotificationPreferences,
+  useUpdateNotificationPreferences,
+  customFetch,
+} from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
@@ -102,6 +110,9 @@ export default function ProfileScreen() {
   const [coachCode, setCoachCode] = useState("");
   const [coachLinkError, setCoachLinkError] = useState("");
   const [coachLinked, setCoachLinked] = useState(false);
+
+  const { data: notifPrefs } = useGetNotificationPreferences();
+  const updatePrefsMutation = useUpdateNotificationPreferences();
 
   const blurResetRef = useRef({ meQuery, user });
   blurResetRef.current = { meQuery, user };
@@ -708,6 +719,27 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold }]}>Notifications</Text>
+        {([
+          { key: "session", label: "Rappels de séance" },
+          { key: "checkin", label: "Rappels de check-in" },
+          { key: "messages", label: "Nouveaux messages" },
+          { key: "encouragements", label: "Encouragements du coach" },
+          { key: "performance", label: "Performances & alertes" },
+        ] as const).map(({ key, label }) => (
+          <View key={key} style={styles.prefRow}>
+            <Text style={[styles.prefLabel, { fontFamily: FONTS.body }]}>{label}</Text>
+            <Switch
+              value={notifPrefs ? notifPrefs[key] : true}
+              onValueChange={(val) => updatePrefsMutation.mutate({ [key]: val })}
+              trackColor={{ false: COLORS.border, true: COLORS.cyan }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        ))}
+      </View>
+
       <Pressable onPress={handleLogout} style={styles.logoutBtn}>
         <Feather name="log-out" size={18} color={COLORS.red} />
         <Text style={[styles.logoutText, { fontFamily: FONTS.bodyMedium }]}>
@@ -767,6 +799,24 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: COLORS.textSecondary },
   editCard: { gap: 16, marginBottom: 24 },
   sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
+  section: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    gap: 4,
+    marginBottom: 8,
+  },
+  prefRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  prefLabel: { fontSize: 14, color: COLORS.textPrimary, flex: 1 },
   fieldLabel: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 },
   genderRow: { flexDirection: "row", gap: 10 },
   genderBtn: {
