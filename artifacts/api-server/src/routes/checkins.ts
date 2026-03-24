@@ -38,11 +38,17 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     return;
   }
 
-  // Check for duplicate
-  const existing = await db.select({ id: checkinsTable.id })
+  // Check for existing check-in today
+  const [existing] = await db.select()
     .from(checkinsTable)
     .where(and(eq(checkinsTable.athleteId, req.user!.userId), eq(checkinsTable.date, today)));
-  if (existing.length > 0) {
+
+  const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+  const isWithin2h = existing
+    ? Date.now() - new Date(existing.createdAt!).getTime() < TWO_HOURS_MS
+    : false;
+
+  if (existing && !isWithin2h) {
     res.status(409).json({ error: { code: "CHECKIN_ALREADY_EXISTS", message: "Tu as déjà fait ton check-in aujourd'hui" } });
     return;
   }
@@ -91,20 +97,42 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     sessionMode = "recovery";
   }
 
-  const [checkin] = await db.insert(checkinsTable).values({
-    athleteId: req.user!.userId,
-    date: today,
-    sleep,
-    energy,
-    stress,
-    soreness,
-    motivation,
-    hasPain: hasPain ?? false,
-    painNotes: painNotes ?? null,
-    cyclePhase: cyclePhase ?? null,
-    adaptScore,
-    sessionMode,
-  }).returning();
+  let checkin: typeof checkinsTable.$inferSelect;
+
+  if (existing && isWithin2h) {
+    const [updated] = await db.update(checkinsTable)
+      .set({
+        sleep,
+        energy,
+        stress,
+        soreness,
+        motivation,
+        hasPain: hasPain ?? false,
+        painNotes: painNotes ?? null,
+        cyclePhase: cyclePhase ?? null,
+        adaptScore,
+        sessionMode,
+      })
+      .where(eq(checkinsTable.id, existing.id))
+      .returning();
+    checkin = updated;
+  } else {
+    const [inserted] = await db.insert(checkinsTable).values({
+      athleteId: req.user!.userId,
+      date: today,
+      sleep,
+      energy,
+      stress,
+      soreness,
+      motivation,
+      hasPain: hasPain ?? false,
+      painNotes: painNotes ?? null,
+      cyclePhase: cyclePhase ?? null,
+      adaptScore,
+      sessionMode,
+    }).returning();
+    checkin = inserted;
+  }
 
   // Create P1 alert if pain reported
   if (hasPain) {
@@ -172,7 +200,8 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
   const checkinHour = new Date().getHours();
   const newBadges = await checkAfterCheckin(req.user!.userId, checkinHour);
 
-  res.status(201).json({
+  const responseStatus = existing && isWithin2h ? 200 : 201;
+  res.status(responseStatus).json({
     checkin: {
       id: checkin.id,
       date: checkin.date,

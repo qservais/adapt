@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -149,24 +149,46 @@ export default function CheckinScreen() {
   const meQuery = useGetMe();
   const submitMutation = useSubmitCheckin();
 
+  const params = useLocalSearchParams<{
+    sleep?: string;
+    energy?: string;
+    stress?: string;
+    soreness?: string;
+    motivation?: string;
+    hasPain?: string;
+    painNotes?: string;
+    cyclePhase?: string;
+    edit?: string;
+  }>();
+
+  const isEditMode = params.edit === "1";
+
   const gender = meQuery.data?.gender;
   const hasCycleTracking =
     meQuery.data?.cycleTracking === true && gender !== "homme";
-  const steps = hasCycleTracking
+  const allSteps = hasCycleTracking
     ? ALL_STEPS
     : ALL_STEPS.filter((s) => s.kind !== "cycle");
+  const steps = isEditMode ? allSteps.filter((s) => s.kind !== "welcome") : allSteps;
+
+  const parseNum = (v: string | undefined, fallback: number) => {
+    const n = parseInt(v ?? "", 10);
+    return isNaN(n) ? fallback : n;
+  };
 
   const [stepIndex, setStepIndex] = useState(0);
   const [values, setValues] = useState({
-    sleep: 3,
-    energy: 3,
-    stress: 3,
-    soreness: 3,
-    motivation: 3,
+    sleep: parseNum(params.sleep, 3),
+    energy: parseNum(params.energy, 3),
+    stress: parseNum(params.stress, 3),
+    soreness: parseNum(params.soreness, 3),
+    motivation: parseNum(params.motivation, 3),
   });
-  const [hasPain, setHasPain] = useState(false);
-  const [painNotes, setPainNotes] = useState("");
-  const [cyclePhase, setCyclePhase] = useState<CyclePhase>(null);
+  const [hasPain, setHasPain] = useState(params.hasPain === "1");
+  const [painNotes, setPainNotes] = useState(params.painNotes ?? "");
+  const [cyclePhase, setCyclePhase] = useState<CyclePhase>(
+    (params.cyclePhase as CyclePhase) ?? null
+  );
 
   const isLastStep = stepIndex === steps.length - 1;
   const currentStep = steps[stepIndex];
@@ -191,6 +213,15 @@ export default function CheckinScreen() {
             score: String(result.checkin.adaptScore),
             mode: result.checkin.sessionMode,
             badges: badges.length > 0 ? JSON.stringify(badges) : "",
+            createdAt: result.checkin.createdAt ?? new Date().toISOString(),
+            sleep: String(values.sleep),
+            energy: String(values.energy),
+            stress: String(values.stress),
+            soreness: String(values.soreness),
+            motivation: String(values.motivation),
+            hasPainParam: hasPain ? "1" : "0",
+            painNotes: hasPain ? painNotes : "",
+            cyclePhase: cyclePhase ?? "",
           },
         });
       } catch (err: unknown) {
@@ -414,7 +445,9 @@ export default function CheckinScreen() {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
         <GradientButton
-          label={isLastStep ? "Valider mon check-in" : "Suivant"}
+          label={isLastStep
+            ? (isEditMode ? "Mettre à jour mon check-in" : "Valider mon check-in")
+            : "Suivant"}
           onPress={handleNext}
           loading={submitMutation.isPending}
         />

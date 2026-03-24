@@ -10,16 +10,42 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useGetTodaySession, useStartSession } from "@workspace/api-client-react";
+import { useGetTodaySession, useStartSession, useGetTodayCheckin } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
 
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
 export default function SessionIntroScreen() {
   const insets = useSafeAreaInsets();
   const sessionQuery = useGetTodaySession();
+  const checkinQuery = useGetTodayCheckin();
   const startMutation = useStartSession();
   const [startError, setStartError] = React.useState("");
+
+  const checkin = checkinQuery.data;
+  const canEditCheckin =
+    checkin?.createdAt
+      ? Date.now() - new Date(checkin.createdAt).getTime() < TWO_HOURS_MS
+      : false;
+
+  const handleEditCheckin = () => {
+    router.push({
+      pathname: "/checkin",
+      params: {
+        sleep: String(checkin?.sleep ?? 3),
+        energy: String(checkin?.energy ?? 3),
+        stress: String(checkin?.stress ?? 3),
+        soreness: String(checkin?.soreness ?? 3),
+        motivation: String(checkin?.motivation ?? 3),
+        hasPain: checkin?.hasPain ? "1" : "0",
+        painNotes: checkin?.painNotes ?? "",
+        cyclePhase: checkin?.cyclePhase ?? "",
+        edit: "1",
+      },
+    });
+  };
 
   const session = sessionQuery.data;
   const modeKey = (session?.mode ?? "normal") as SessionMode;
@@ -109,6 +135,15 @@ export default function SessionIntroScreen() {
               {session.adaptScore}
             </Text>
           </View>
+          {canEditCheckin && (
+            <TouchableOpacity onPress={handleEditCheckin} style={styles.editCheckinRow}>
+              <Feather name="edit-2" size={12} color={COLORS.textMuted} />
+              <Text style={[styles.editCheckinText, { fontFamily: FONTS.body }]}>
+                Modifier mon check-in du jour
+              </Text>
+              <Feather name="chevron-right" size={12} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {session.coachNotes != null && (
@@ -296,6 +331,13 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 28,
   },
+  editCheckinRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 4,
+  },
+  editCheckinText: { fontSize: 12, color: COLORS.textMuted, flex: 1 },
   emptyIconWrap: {
     width: 80,
     height: 80,

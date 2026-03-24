@@ -15,23 +15,40 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ScoreCircle } from "@/components/ui/ScoreCircle";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { BadgeToast } from "@/components/ui/BadgeToast";
-import { Feather } from "@expo/vector-icons";
+
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 export default function CheckinResultScreen() {
   const insets = useSafeAreaInsets();
-  const { score, mode, badges } = useLocalSearchParams<{
+  const params = useLocalSearchParams<{
     score: string;
     mode: string;
     badges?: string;
+    createdAt?: string;
+    sleep?: string;
+    energy?: string;
+    stress?: string;
+    soreness?: string;
+    motivation?: string;
+    hasPainParam?: string;
+    painNotes?: string;
+    cyclePhase?: string;
   }>();
+
+  const { score, mode, badges, createdAt } = params;
   const scoreNum = parseInt(score ?? "0");
   const modeKey = (mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+
+  const canEditCheckin = createdAt
+    ? Date.now() - new Date(createdAt).getTime() < TWO_HOURS_MS
+    : false;
 
   const parsedBadges: Array<{ code: string; name: string; icon: string }> =
     badges ? JSON.parse(badges) : [];
@@ -92,6 +109,23 @@ export default function CheckinResultScreen() {
     }
   };
 
+  const handleEditCheckin = () => {
+    router.push({
+      pathname: "/checkin",
+      params: {
+        sleep: params.sleep ?? "3",
+        energy: params.energy ?? "3",
+        stress: params.stress ?? "3",
+        soreness: params.soreness ?? "3",
+        motivation: params.motivation ?? "3",
+        hasPain: params.hasPainParam ?? "0",
+        painNotes: params.painNotes ?? "",
+        cyclePhase: params.cyclePhase ?? "",
+        edit: "1",
+      },
+    });
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
       <BadgeToast badge={currentToast} onDismiss={() => setToastIndex((i) => i + 1)} />
@@ -119,6 +153,14 @@ export default function CheckinResultScreen() {
             onPress={() => router.replace("/session")}
             icon={<Feather name="zap" size={18} color={COLORS.textInverse} />}
           />
+          {canEditCheckin && (
+            <TouchableOpacity onPress={handleEditCheckin} style={styles.editCheckinBtn}>
+              <Feather name="edit-2" size={13} color={COLORS.textMuted} />
+              <Text style={[styles.editCheckinText, { fontFamily: FONTS.body }]}>
+                Modifier mon check-in
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={() => router.replace("/")} style={styles.secondaryBtn}>
             <Text style={[styles.secondaryBtnText, { fontFamily: FONTS.body }]}>
               Retour à l'accueil
@@ -161,6 +203,14 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   actions: { width: "100%", gap: 12 },
+  editCheckinBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+  },
+  editCheckinText: { fontSize: 13, color: COLORS.textMuted },
   secondaryBtn: { alignItems: "center", paddingVertical: 14 },
   secondaryBtnText: { fontSize: 15, color: COLORS.textSecondary },
 });
