@@ -44,6 +44,26 @@ const GENDER_LABELS: Record<string, string> = {
   femme: "Femme",
 };
 
+const CYCLE_PHASE_LABELS: Record<string, string> = {
+  menstrual: "Menstruel",
+  follicular: "Folliculaire",
+  ovulatory: "Ovulatoire",
+  luteal: "Lutéal",
+};
+
+function computeCyclePhase(lastPeriodDate: string | null | undefined, avgCycleDays: number | null | undefined): string | null {
+  if (!lastPeriodDate) return null;
+  const lastPeriod = new Date(String(lastPeriodDate).substring(0, 10) + "T12:00:00");
+  if (isNaN(lastPeriod.getTime())) return null;
+  const cycleDays = avgCycleDays && avgCycleDays >= 20 ? avgCycleDays : 28;
+  const daysSince = Math.floor((Date.now() - lastPeriod.getTime()) / 86400000);
+  const dayInCycle = ((daysSince % cycleDays) + cycleDays) % cycleDays + 1;
+  if (dayInCycle <= 5) return "menstrual";
+  if (dayInCycle <= 13) return "follicular";
+  if (dayInCycle <= 16) return "ovulatory";
+  return "luteal";
+}
+
 function computeAge(birthDate: string | null | undefined): number | null {
   if (!birthDate) return null;
   const dob = new Date(birthDate);
@@ -75,6 +95,9 @@ export default function ProfileScreen() {
   const [primaryGoal, setPrimaryGoal] = useState<string>("");
   const [birthDateValue, setBirthDateValue] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [lastPeriodDateValue, setLastPeriodDateValue] = useState<Date | null>(null);
+  const [showLastPeriodPicker, setShowLastPeriodPicker] = useState(false);
+  const [avgCycleDaysInput, setAvgCycleDaysInput] = useState<string>("28");
 
   const [coachCode, setCoachCode] = useState("");
   const [coachLinkError, setCoachLinkError] = useState("");
@@ -89,6 +112,7 @@ export default function ProfileScreen() {
         const p = blurResetRef.current.meQuery.data ?? blurResetRef.current.user;
         setEditing(false);
         setShowDatePicker(false);
+        setShowLastPeriodPicker(false);
         setFirstName(p?.firstName ?? "");
         setLastName(p?.lastName ?? "");
         setGender(p?.gender ?? "");
@@ -98,10 +122,16 @@ export default function ProfileScreen() {
         setTrainingFrequency(p?.trainingFrequency ? String(p.trainingFrequency) : "");
         setFitnessLevel(p?.fitnessLevel ?? "");
         setPrimaryGoal(p?.primaryGoal ?? "");
+        setAvgCycleDaysInput(p?.avgCycleDays != null ? String(p.avgCycleDays) : "28");
         if (p?.birthDate) {
           setBirthDateValue(new Date(String(p.birthDate).substring(0, 10) + "T12:00:00"));
         } else {
           setBirthDateValue(null);
+        }
+        if (p?.lastPeriodDate) {
+          setLastPeriodDateValue(new Date(String(p.lastPeriodDate).substring(0, 10) + "T12:00:00"));
+        } else {
+          setLastPeriodDateValue(null);
         }
       };
     }, [])
@@ -118,10 +148,16 @@ export default function ProfileScreen() {
     setTrainingFrequency(p?.trainingFrequency ? String(p.trainingFrequency) : "");
     setFitnessLevel(p?.fitnessLevel ?? "");
     setPrimaryGoal(p?.primaryGoal ?? "");
+    setAvgCycleDaysInput(p?.avgCycleDays != null ? String(p.avgCycleDays) : "28");
     if (p?.birthDate) {
       setBirthDateValue(new Date(String(p.birthDate).substring(0, 10) + "T12:00:00"));
     } else {
       setBirthDateValue(null);
+    }
+    if (p?.lastPeriodDate) {
+      setLastPeriodDateValue(new Date(String(p.lastPeriodDate).substring(0, 10) + "T12:00:00"));
+    } else {
+      setLastPeriodDateValue(null);
     }
     setEditing(true);
   };
@@ -137,6 +173,21 @@ export default function ProfileScreen() {
       const d = String(birthDateValue.getDate()).padStart(2, "0");
       birthDateStr = `${y}-${m}-${d}`;
     }
+    let lastPeriodDateStr: string | null | undefined;
+    if (cycleTracking) {
+      if (lastPeriodDateValue != null) {
+        const y = lastPeriodDateValue.getFullYear();
+        const m = String(lastPeriodDateValue.getMonth() + 1).padStart(2, "0");
+        const d = String(lastPeriodDateValue.getDate()).padStart(2, "0");
+        lastPeriodDateStr = `${y}-${m}-${d}`;
+      } else {
+        lastPeriodDateStr = null;
+      }
+    } else {
+      lastPeriodDateStr = null;
+    }
+    const parsedCycleDays = parseInt(avgCycleDaysInput, 10);
+    const cycleDaysToSave = !isNaN(parsedCycleDays) && parsedCycleDays >= 20 && parsedCycleDays <= 45 ? parsedCycleDays : undefined;
     try {
       const updated = await updateMutation.mutateAsync({
         data: {
@@ -144,6 +195,8 @@ export default function ProfileScreen() {
           lastName: lastName.trim() || undefined,
           gender: (gender as "homme" | "femme") || undefined,
           cycleTracking,
+          lastPeriodDate: lastPeriodDateStr,
+          avgCycleDays: cycleDaysToSave,
           weightKg: !isNaN(parsedWeight) && parsedWeight >= 20 ? parsedWeight : undefined,
           heightCm: !isNaN(parsedHeight) && parsedHeight >= 50 && parsedHeight <= 300 ? parsedHeight : undefined,
           trainingFrequency: !isNaN(parsedFreq) && parsedFreq >= 1 && parsedFreq <= 14 ? parsedFreq : undefined,
@@ -347,9 +400,55 @@ export default function ProfileScreen() {
               </View>
               <Switch
                 value={cycleTracking}
-                onValueChange={setCycleTracking}
+                onValueChange={(v) => {
+                  setCycleTracking(v);
+                  if (!v) { setLastPeriodDateValue(null); }
+                }}
                 trackColor={{ false: COLORS.border, true: COLORS.cyanDim }}
                 thumbColor={cycleTracking ? COLORS.cyan : COLORS.textMuted}
+              />
+            </View>
+          )}
+          {gender !== "homme" && cycleTracking && (
+            <View style={styles.cycleSection}>
+              <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
+                CYCLE MENSTRUEL
+              </Text>
+              <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 8, marginBottom: 6 }]}>
+                Date des dernières règles
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowLastPeriodPicker(true)}
+                style={[styles.datePicker, { borderColor: COLORS.violet }]}
+                activeOpacity={0.7}
+              >
+                <Feather name="calendar" size={16} color={COLORS.violet} />
+                <Text style={[styles.datePickerText, { fontFamily: FONTS.body, color: lastPeriodDateValue ? COLORS.white : COLORS.textMuted }]}>
+                  {lastPeriodDateValue
+                    ? lastPeriodDateValue.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+                    : "Sélectionner une date"}
+                </Text>
+                <Feather name="chevron-down" size={14} color={COLORS.textMuted} />
+              </TouchableOpacity>
+              {showLastPeriodPicker && (
+                <DateTimePicker
+                  value={lastPeriodDateValue ?? new Date()}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  maximumDate={new Date()}
+                  minimumDate={new Date(new Date().getFullYear() - 1, 0, 1)}
+                  onChange={(_event, date) => {
+                    setShowLastPeriodPicker(Platform.OS === "ios");
+                    if (date) setLastPeriodDateValue(date);
+                  }}
+                />
+              )}
+              <InputField
+                label="Durée moyenne du cycle (jours)"
+                value={avgCycleDaysInput}
+                onChangeText={setAvgCycleDaysInput}
+                keyboardType="number-pad"
+                placeholder="28"
               />
             </View>
           )}
@@ -491,6 +590,18 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
+          {showCycleTracking && profile?.cycleTracking && profile?.lastPeriodDate && (() => {
+            const phase = computeCyclePhase(profile.lastPeriodDate, profile.avgCycleDays);
+            return phase ? (
+              <View style={styles.infoRow}>
+                <Feather name="circle" size={16} color={COLORS.violet} />
+                <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Phase actuelle</Text>
+                <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.violet }]}>
+                  {CYCLE_PHASE_LABELS[phase] ?? phase}
+                </Text>
+              </View>
+            ) : null;
+          })()}
           {profile?.inviteCode != null && (
             <View style={styles.infoRow}>
               <Feather name="link" size={16} color={COLORS.textMuted} />
@@ -750,6 +861,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.redDim,
   },
   logoutText: { fontSize: 16, color: COLORS.red },
+  cycleSection: {
+    backgroundColor: COLORS.violetDim,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${COLORS.violet}55`,
+    padding: 14,
+    gap: 8,
+  },
   datePicker: {
     flexDirection: "row",
     alignItems: "center",

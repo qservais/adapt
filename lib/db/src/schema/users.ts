@@ -22,6 +22,8 @@ export const usersTable = pgTable("users", {
   fitnessLevel: varchar("fitness_level", { length: 20 }),
   primaryGoal: varchar("primary_goal", { length: 20 }),
   cycleTracking: boolean("cycle_tracking").default(false),
+  lastPeriodDate: date("last_period_date"),
+  avgCycleDays: integer("avg_cycle_days").default(28),
   coachId: uuid("coach_id"),
   inviteCode: varchar("invite_code", { length: 6 }).unique(),
   refreshToken: varchar("refresh_token", { length: 512 }),

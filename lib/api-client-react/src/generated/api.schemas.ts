@@ -65,6 +65,8 @@ export interface UserProfile {
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   cycleTracking?: boolean;
+  lastPeriodDate?: string | null;
+  avgCycleDays?: number | null;
   coachId?: string | null;
   inviteCode?: string | null;
   coachName?: string | null;
@@ -89,6 +91,8 @@ export interface UpdateProfileRequest {
   fitnessLevel?: string;
   primaryGoal?: string;
   cycleTracking?: boolean;
+  lastPeriodDate?: string | null;
+  avgCycleDays?: number | null;
 }
 
 export type CheckinRequestCyclePhase =

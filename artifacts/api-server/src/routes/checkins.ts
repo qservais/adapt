@@ -61,11 +61,30 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
 
   const { sleep, energy, stress, soreness, motivation, hasPain, painNotes, cyclePhase } = parsed.data;
 
+  // Auto-compute cycle phase from athlete's profile if cycleTracking is enabled
+  let activeCyclePhase: string | null = cyclePhase ?? null;
+  const [athleteProfile] = await db.select({
+    cycleTracking: usersTable.cycleTracking,
+    lastPeriodDate: usersTable.lastPeriodDate,
+    avgCycleDays: usersTable.avgCycleDays,
+  }).from(usersTable).where(eq(usersTable.id, req.user!.userId));
+
+  if (athleteProfile?.cycleTracking && athleteProfile.lastPeriodDate) {
+    const lastPeriod = new Date(String(athleteProfile.lastPeriodDate));
+    const cycleDays = athleteProfile.avgCycleDays ?? 28;
+    const daysSince = Math.floor((Date.now() - lastPeriod.getTime()) / 86400000);
+    const dayInCycle = ((daysSince % cycleDays) + cycleDays) % cycleDays + 1;
+    if (dayInCycle <= 5) activeCyclePhase = "menstrual";
+    else if (dayInCycle <= 13) activeCyclePhase = "follicular";
+    else if (dayInCycle <= 16) activeCyclePhase = "ovulatory";
+    else activeCyclePhase = "luteal";
+  }
+
   // Force recovery if pain
   let { adaptScore, sessionMode } = calculateAdaptScore({
     sleep, energy, stress, soreness, motivation,
     rpeYesterday: yesterdayLog?.rpe ?? null,
-    cyclePhase: cyclePhase ?? null,
+    cyclePhase: activeCyclePhase,
   });
 
   if (hasPain) {

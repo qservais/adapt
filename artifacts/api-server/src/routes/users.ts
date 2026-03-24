@@ -24,6 +24,8 @@ function userProfile(user: typeof usersTable.$inferSelect) {
     fitnessLevel: user.fitnessLevel,
     primaryGoal: user.primaryGoal,
     cycleTracking: user.cycleTracking,
+    lastPeriodDate: user.lastPeriodDate,
+    avgCycleDays: user.avgCycleDays,
     coachId: user.coachId,
     inviteCode: user.inviteCode,
   };
@@ -63,6 +65,8 @@ const updateSchema = z.object({
   fitnessLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
   primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
   cycleTracking: z.boolean().optional(),
+  lastPeriodDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  avgCycleDays: z.number().int().min(20).max(45).optional(),
 });
 
 router.put("/users/me", authenticate, async (req, res) => {
@@ -88,6 +92,8 @@ router.put("/users/me", authenticate, async (req, res) => {
         ...(data.fitnessLevel !== undefined && { fitnessLevel: data.fitnessLevel }),
         ...(data.primaryGoal !== undefined && { primaryGoal: data.primaryGoal }),
         ...(data.cycleTracking !== undefined && { cycleTracking: data.cycleTracking }),
+        ...(data.lastPeriodDate !== undefined && { lastPeriodDate: data.lastPeriodDate }),
+        ...(data.avgCycleDays !== undefined && { avgCycleDays: data.avgCycleDays }),
         updatedAt: new Date(),
       })
       .where(eq(usersTable.id, req.user!.userId))

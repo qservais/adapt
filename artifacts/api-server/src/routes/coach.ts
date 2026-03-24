@@ -434,6 +434,8 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       fitnessLevel: athlete.fitnessLevel,
       primaryGoal: athlete.primaryGoal,
       cycleTracking: athlete.cycleTracking,
+      lastPeriodDate: athlete.lastPeriodDate,
+      avgCycleDays: athlete.avgCycleDays,
       inviteCode: athlete.inviteCode,
       todayCheckin: todayCheckin ?? null,
       recentCheckins,
