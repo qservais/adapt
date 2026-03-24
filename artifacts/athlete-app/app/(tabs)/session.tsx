@@ -74,7 +74,6 @@ export default function SessionTab() {
   const exerciseIndexMap = new Map(exercises.map((ex, i) => [ex.id, i]));
 
   const completedLogs = historyQuery.data?.filter((l) => l.completedAt != null) ?? [];
-  const displayedLogs = completedLogs.slice(0, 5);
 
   const upcomingSessions = upcomingQuery.data ?? [];
   const today = new Date();
@@ -236,15 +235,13 @@ export default function SessionTab() {
         <View style={styles.historySection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>SÉANCES RÉCENTES</Text>
-            {completedLogs.length > 5 && (
-              <TouchableOpacity onPress={() => router.push("/session/history")}>
-                <Text style={[styles.seeAllText, { fontFamily: FONTS.mono }]}>
-                  Voir tout ({completedLogs.length})
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={() => router.push("/session/history")}>
+              <Text style={[styles.seeAllText, { fontFamily: FONTS.mono }]}>
+                Voir tout ({completedLogs.length})
+              </Text>
+            </TouchableOpacity>
           </View>
-          {displayedLogs.map((log) => {
+          {completedLogs.map((log) => {
             const mode = log.variantMode as SessionMode;
             const c = MODE_CONFIG[mode] ?? MODE_CONFIG.normal;
             return (
