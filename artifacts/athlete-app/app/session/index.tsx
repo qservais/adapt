@@ -41,7 +41,7 @@ export default function SessionIntroScreen() {
         motivation: String(checkin?.motivation ?? 3),
         hasPain: checkin?.hasPain ? "1" : "0",
         painNotes: checkin?.painNotes ?? "",
-        cyclePhase: checkin?.cyclePhase ?? "",
+        cyclePhase: checkin?.cyclePhase ?? undefined,
         edit: "1",
       },
     });

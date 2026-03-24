@@ -187,7 +187,7 @@ export default function CheckinScreen() {
   const [hasPain, setHasPain] = useState(params.hasPain === "1");
   const [painNotes, setPainNotes] = useState(params.painNotes ?? "");
   const [cyclePhase, setCyclePhase] = useState<CyclePhase>(
-    (params.cyclePhase as CyclePhase) ?? null
+    (params.cyclePhase || null) as CyclePhase
   );
 
   const isLastStep = stepIndex === steps.length - 1;
@@ -221,7 +221,7 @@ export default function CheckinScreen() {
             motivation: String(values.motivation),
             hasPainParam: hasPain ? "1" : "0",
             painNotes: hasPain ? painNotes : "",
-            cyclePhase: cyclePhase ?? "",
+            cyclePhase: cyclePhase ?? undefined,
           },
         });
       } catch (err: unknown) {

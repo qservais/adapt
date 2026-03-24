@@ -120,7 +120,7 @@ export default function CheckinResultScreen() {
         motivation: params.motivation ?? "3",
         hasPain: params.hasPainParam ?? "0",
         painNotes: params.painNotes ?? "",
-        cyclePhase: params.cyclePhase ?? "",
+        cyclePhase: params.cyclePhase || undefined,
         edit: "1",
       },
     });
