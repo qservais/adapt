@@ -116,6 +116,14 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
       .where(eq(checkinsTable.id, existing.id))
       .returning();
     checkin = updated;
+
+    // Also update the session_log linked to this check-in so /sessions/today reflects new mode
+    await db.update(sessionLogsTable)
+      .set({ variantMode: sessionMode })
+      .where(and(
+        eq(sessionLogsTable.checkinId, existing.id),
+        eq(sessionLogsTable.athleteId, req.user!.userId)
+      ));
   } else {
     const [inserted] = await db.insert(checkinsTable).values({
       athleteId: req.user!.userId,

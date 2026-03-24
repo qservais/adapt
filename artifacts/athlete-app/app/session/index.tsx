@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { useGetTodaySession, useStartSession, useGetTodayCheckin } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
@@ -23,6 +24,13 @@ export default function SessionIntroScreen() {
   const checkinQuery = useGetTodayCheckin();
   const startMutation = useStartSession();
   const [startError, setStartError] = React.useState("");
+
+  useFocusEffect(
+    React.useCallback(() => {
+      sessionQuery.refetch();
+      checkinQuery.refetch();
+    }, [])
+  );
 
   const checkin = checkinQuery.data;
   const canEditCheckin =
