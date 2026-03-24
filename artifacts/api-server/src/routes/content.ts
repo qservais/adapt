@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { guidesTable, contentRoutinesTable } from "@workspace/db";
-import { eq, asc, or, isNull } from "drizzle-orm";
+import { guidesTable, contentRoutinesTable, usersTable } from "@workspace/db";
+import { eq, asc, or, isNull, and } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -26,22 +26,27 @@ const routineBodySchema = z.object({
   })).optional(),
 });
 
+async function resolveCoachId(userId: string, role: string): Promise<string | null> {
+  if (role === "coach") return userId;
+  const [athlete] = await db
+    .select({ coachId: usersTable.coachId })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  return athlete?.coachId ?? null;
+}
+
 router.get("/guides", authenticate, async (req, res) => {
   try {
     const user = req.user!;
-    let guides;
-    if (user.role === "coach") {
-      guides = await db
-        .select()
-        .from(guidesTable)
-        .where(or(eq(guidesTable.coachId, user.userId), isNull(guidesTable.coachId)))
-        .orderBy(asc(guidesTable.sortOrder), asc(guidesTable.createdAt));
-    } else {
-      guides = await db
-        .select()
-        .from(guidesTable)
-        .orderBy(asc(guidesTable.sortOrder), asc(guidesTable.createdAt));
-    }
+    const coachId = await resolveCoachId(user.userId, user.role);
+    const condition = coachId
+      ? or(eq(guidesTable.coachId, coachId), isNull(guidesTable.coachId))
+      : isNull(guidesTable.coachId);
+    const guides = await db
+      .select()
+      .from(guidesTable)
+      .where(condition)
+      .orderBy(asc(guidesTable.sortOrder), asc(guidesTable.createdAt));
     res.json(guides);
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
@@ -51,8 +56,13 @@ router.get("/guides", authenticate, async (req, res) => {
 router.get("/guides/:id", authenticate, async (req, res) => {
   try {
     const id = String(req.params.id);
+    const user = req.user!;
+    const coachId = await resolveCoachId(user.userId, user.role);
     const [guide] = await db.select().from(guidesTable).where(eq(guidesTable.id, id));
     if (!guide) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Guide introuvable" } });
+    if (guide.coachId !== null && guide.coachId !== coachId) {
+      return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
+    }
     return res.json(guide);
   } catch {
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
@@ -83,9 +93,9 @@ router.put("/guides/:id", authenticate, requireRole("coach"), async (req, res) =
     const coachId = req.user!.userId;
     const parsed = guideBodySchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
-    const existing = await db.select({ coachId: guidesTable.coachId }).from(guidesTable).where(eq(guidesTable.id, id));
-    if (!existing[0]) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Guide introuvable" } });
-    if (existing[0].coachId !== null && existing[0].coachId !== coachId) {
+    const [existing] = await db.select({ coachId: guidesTable.coachId }).from(guidesTable).where(eq(guidesTable.id, id));
+    if (!existing) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Guide introuvable" } });
+    if (existing.coachId !== null && existing.coachId !== coachId) {
       return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
     }
     const [guide] = await db
@@ -103,9 +113,9 @@ router.delete("/guides/:id", authenticate, requireRole("coach"), async (req, res
   try {
     const id = String(req.params.id);
     const coachId = req.user!.userId;
-    const existing = await db.select({ coachId: guidesTable.coachId }).from(guidesTable).where(eq(guidesTable.id, id));
-    if (!existing[0]) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Guide introuvable" } });
-    if (existing[0].coachId !== null && existing[0].coachId !== coachId) {
+    const [existing] = await db.select({ coachId: guidesTable.coachId }).from(guidesTable).where(eq(guidesTable.id, id));
+    if (!existing) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Guide introuvable" } });
+    if (existing.coachId !== null && existing.coachId !== coachId) {
       return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
     }
     await db.delete(guidesTable).where(eq(guidesTable.id, id));
@@ -118,33 +128,23 @@ router.delete("/guides/:id", authenticate, requireRole("coach"), async (req, res
 router.get("/content-routines", authenticate, async (req, res) => {
   try {
     const user = req.user!;
+    const coachId = await resolveCoachId(user.userId, user.role);
     const category = typeof req.query.category === "string" ? req.query.category : undefined;
-    let query = db
+
+    const ownerCondition = coachId
+      ? or(eq(contentRoutinesTable.coachId, coachId), isNull(contentRoutinesTable.coachId))
+      : isNull(contentRoutinesTable.coachId);
+
+    const fullCondition = category
+      ? and(ownerCondition, eq(contentRoutinesTable.category, category))
+      : ownerCondition;
+
+    const routines = await db
       .select()
       .from(contentRoutinesTable)
+      .where(fullCondition)
       .orderBy(asc(contentRoutinesTable.category), asc(contentRoutinesTable.createdAt));
 
-    if (user.role === "coach") {
-      const condition = or(eq(contentRoutinesTable.coachId, user.userId), isNull(contentRoutinesTable.coachId));
-      if (category) {
-        const routines = await db.select().from(contentRoutinesTable)
-          .where(condition)
-          .orderBy(asc(contentRoutinesTable.createdAt));
-        return res.json(routines.filter(r => r.category === category));
-      }
-      const routines = await db.select().from(contentRoutinesTable)
-        .where(condition)
-        .orderBy(asc(contentRoutinesTable.category), asc(contentRoutinesTable.createdAt));
-      return res.json(routines);
-    }
-
-    if (category) {
-      const routines = await db.select().from(contentRoutinesTable)
-        .where(eq(contentRoutinesTable.category, category))
-        .orderBy(asc(contentRoutinesTable.createdAt));
-      return res.json(routines);
-    }
-    const routines = await query;
     return res.json(routines);
   } catch {
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
@@ -154,8 +154,13 @@ router.get("/content-routines", authenticate, async (req, res) => {
 router.get("/content-routines/:id", authenticate, async (req, res) => {
   try {
     const id = String(req.params.id);
+    const user = req.user!;
+    const coachId = await resolveCoachId(user.userId, user.role);
     const [routine] = await db.select().from(contentRoutinesTable).where(eq(contentRoutinesTable.id, id));
     if (!routine) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Routine introuvable" } });
+    if (routine.coachId !== null && routine.coachId !== coachId) {
+      return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
+    }
     return res.json(routine);
   } catch {
     return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
@@ -187,9 +192,9 @@ router.put("/content-routines/:id", authenticate, requireRole("coach"), async (r
     const coachId = req.user!.userId;
     const parsed = routineBodySchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
-    const existing = await db.select({ coachId: contentRoutinesTable.coachId }).from(contentRoutinesTable).where(eq(contentRoutinesTable.id, id));
-    if (!existing[0]) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Routine introuvable" } });
-    if (existing[0].coachId !== null && existing[0].coachId !== coachId) {
+    const [existing] = await db.select({ coachId: contentRoutinesTable.coachId }).from(contentRoutinesTable).where(eq(contentRoutinesTable.id, id));
+    if (!existing) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Routine introuvable" } });
+    if (existing.coachId !== null && existing.coachId !== coachId) {
       return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
     }
     const [routine] = await db
@@ -207,9 +212,9 @@ router.delete("/content-routines/:id", authenticate, requireRole("coach"), async
   try {
     const id = String(req.params.id);
     const coachId = req.user!.userId;
-    const existing = await db.select({ coachId: contentRoutinesTable.coachId }).from(contentRoutinesTable).where(eq(contentRoutinesTable.id, id));
-    if (!existing[0]) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Routine introuvable" } });
-    if (existing[0].coachId !== null && existing[0].coachId !== coachId) {
+    const [existing] = await db.select({ coachId: contentRoutinesTable.coachId }).from(contentRoutinesTable).where(eq(contentRoutinesTable.id, id));
+    if (!existing) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Routine introuvable" } });
+    if (existing.coachId !== null && existing.coachId !== coachId) {
       return res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
     }
     await db.delete(contentRoutinesTable).where(eq(contentRoutinesTable.id, id));
