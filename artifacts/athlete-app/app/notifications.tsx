@@ -54,11 +54,25 @@ function timeAgo(iso?: string | null): string {
   return `Il y a ${days}j`;
 }
 
-function NotifRow({ item, onRead }: { item: NotificationItem; onRead: (id: string) => void }) {
+const SAFE_LINK_PREFIXES = ["/", "checkin", "session", "messages", "stats", "profile", "notifications", "badges", "weekly-recap"];
+
+function isSafeLink(link?: string | null): link is string {
+  if (!link) return false;
+  return SAFE_LINK_PREFIXES.some((p) => link.startsWith(p) || link.startsWith(`/${p}`));
+}
+
+function NotifRow({ item, onRead, onNavigate }: { item: NotificationItem; onRead: (id: string) => void; onNavigate: (link: string) => void }) {
+  function handlePress() {
+    if (!item.isRead) onRead(item.id);
+    if (isSafeLink(item.link)) {
+      const path = item.link.startsWith("/") ? item.link : `/${item.link}`;
+      onNavigate(path);
+    }
+  }
   return (
     <TouchableOpacity
       style={[styles.row, !item.isRead && styles.rowUnread]}
-      onPress={() => onRead(item.id)}
+      onPress={handlePress}
       activeOpacity={0.7}
     >
       <View style={styles.iconWrap}>
@@ -123,7 +137,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={items}
           keyExtractor={(n) => n.id}
-          renderItem={({ item }) => <NotifRow item={item} onRead={(id) => markOne(id)} />}
+          renderItem={({ item }) => <NotifRow item={item} onRead={(id) => markOne(id)} onNavigate={(path) => router.push(path as any)} />}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           showsVerticalScrollIndicator={false}
           onRefresh={refetch}
