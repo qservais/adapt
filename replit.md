@@ -28,7 +28,7 @@ Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/
 - **Coach dashboard**: React + Vite — Task #3
 
 ## Completed Features (Tasks)
-- **Task #26**: Daily step counter (`daily_steps` DB table, `GET/POST /stats/steps`, `GET/PUT /users/me/stats-order`), `StepsSection` component with bar chart + manual entry modal, reorderable stats sections with long-press + up/down arrows, persisted section order in DB.
+- **Task #26**: Daily step counter (`daily_steps` DB table, `GET/POST /stats/steps`, `GET/PUT /users/me/stats-order`), `StepsSection` component with bar chart (7/14/30d) + manual entry modal. `DraggableSectionList` using `PanResponder` for drag-and-drop section reordering — long-press activates mode, drag handles visible per section, hover indicator shown, order persisted to DB. Migration: `lib/db/migrations/0020_task26_steps_stats_order.sql`.
 
 ## Key Implementation Notes
 
