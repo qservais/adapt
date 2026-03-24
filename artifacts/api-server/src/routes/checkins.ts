@@ -70,7 +70,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
   }).from(usersTable).where(eq(usersTable.id, req.user!.userId));
 
   if (athleteProfile?.cycleTracking && athleteProfile.lastPeriodDate) {
-    const lastPeriod = new Date(String(athleteProfile.lastPeriodDate));
+    const lastPeriod = new Date(String(athleteProfile.lastPeriodDate).substring(0, 10) + "T12:00:00");
     const cycleDays = athleteProfile.avgCycleDays ?? 28;
     const daysSince = Math.floor((Date.now() - lastPeriod.getTime()) / 86400000);
     const dayInCycle = ((daysSince % cycleDays) + cycleDays) % cycleDays + 1;
