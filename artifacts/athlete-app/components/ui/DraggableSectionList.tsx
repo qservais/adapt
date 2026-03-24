@@ -3,6 +3,7 @@ import {
   LayoutChangeEvent,
   PanResponder,
   StyleSheet,
+  UIManager,
   View,
 } from "react-native";
 import { COLORS } from "@/constants/theme";
@@ -30,6 +31,7 @@ export function DraggableSectionList<T>({
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
+  const containerRef = useRef<View>(null);
   const itemHeights = useRef<number[]>([]);
   const itemOffsets = useRef<number[]>([]);
   const listTopPageY = useRef<number>(0);
@@ -49,6 +51,16 @@ export function DraggableSectionList<T>({
     itemOffsets.current = offsets;
   }, [itemGap]);
 
+  const measureListTop = useCallback(() => {
+    if (!containerRef.current) return;
+    UIManager.measure(
+      (containerRef.current as unknown as { _nativeTag: number })._nativeTag,
+      (_x, _y, _w, _h, _px, py) => {
+        listTopPageY.current = py;
+      }
+    );
+  }, []);
+
   const getHoverIndex = useCallback((pageY: number): number => {
     const yInList = pageY - listTopPageY.current;
     let best = 0;
@@ -56,7 +68,7 @@ export function DraggableSectionList<T>({
       const midY = (itemOffsets.current[i] ?? 0) + (itemHeights.current[i] ?? 0) / 2;
       if (yInList >= midY) best = i;
     }
-    return Math.max(0, Math.min(best, itemOffsets.current.length - 1));
+    return Math.max(0, Math.min(best, Math.max(0, itemOffsets.current.length - 1)));
   }, []);
 
   const createPanResponder = useCallback(
@@ -65,6 +77,7 @@ export function DraggableSectionList<T>({
         onStartShouldSetPanResponder: () => enabled,
         onMoveShouldSetPanResponder: (_, gs) => enabled && Math.abs(gs.dy) > 4,
         onPanResponderGrant: () => {
+          measureListTop();
           currentDragIndex.current = index;
           currentHover.current = index;
           setDraggingIndex(index);
@@ -98,7 +111,7 @@ export function DraggableSectionList<T>({
           currentHover.current = null;
         },
       }),
-    [enabled, getHoverIndex, onReorder]
+    [enabled, measureListTop, getHoverIndex, onReorder]
   );
 
   const panResponders = useRef<ReturnType<typeof PanResponder.create>[]>([]);
@@ -108,10 +121,9 @@ export function DraggableSectionList<T>({
 
   return (
     <View
+      ref={containerRef}
       onLayout={(e: LayoutChangeEvent) => {
-        e.target.measure((_fx, _fy, _w, _h, _px, py) => {
-          listTopPageY.current = py;
-        });
+        listTopPageY.current = e.nativeEvent.layout.y;
       }}
     >
       {items.map((item, index) => {

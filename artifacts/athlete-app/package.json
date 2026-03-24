@@ -65,6 +65,7 @@
     "@shopify/flash-list": "2.0.2",
     "expo-image-manipulator": "^55.0.11",
     "expo-secure-store": "^55.0.9",
+    "expo-sensors": "^55.0.9",
     "react-native-confetti-cannon": "^1.5.2"
   }
 }
