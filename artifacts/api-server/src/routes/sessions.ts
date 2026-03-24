@@ -580,6 +580,9 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
     }
 
     const programStart = new Date(activeProgram.startDate);
+    const programEnd = new Date(programStart);
+    programEnd.setDate(programStart.getDate() + activeProgram.durationWeeks * 7);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const in7Days = new Date(today);
@@ -588,9 +591,9 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
     const plannedSessions = await db.select().from(sessionsTable)
       .where(eq(sessionsTable.programId, activeProgram.id));
 
-    const allLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
+    const allLogs = await db.select({ sessionId: sessionLogsTable.sessionId, completedAt: sessionLogsTable.completedAt })
       .from(sessionLogsTable)
-      .where(eq(sessionLogsTable.athleteId, athleteId));
+      .where(and(eq(sessionLogsTable.athleteId, athleteId), isNotNull(sessionLogsTable.completedAt)));
 
     const completedSessionIds = new Set(
       allLogs.filter((l) => l.sessionId).map((l) => l.sessionId)
@@ -602,7 +605,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
       sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
       sessionDate.setHours(0, 0, 0, 0);
 
-      if (sessionDate >= today && sessionDate <= in7Days) {
+      if (sessionDate >= today && sessionDate <= in7Days && sessionDate <= programEnd) {
         result.push({
           sessionId: session.id,
           sessionName: session.name,
