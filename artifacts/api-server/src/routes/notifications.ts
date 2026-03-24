@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { notificationsTable, usersTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -15,25 +15,38 @@ const DEFAULT_PREFS = {
   performance: true,
 };
 
+const PAGE_SIZE = 20;
+
 router.get("/notifications", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const userId = req.user!.userId;
-    const items = await db
-      .select({
-        id: notificationsTable.id,
-        type: notificationsTable.type,
-        title: notificationsTable.title,
-        body: notificationsTable.body,
-        link: notificationsTable.link,
-        isRead: notificationsTable.isRead,
-        createdAt: notificationsTable.createdAt,
-      })
-      .from(notificationsTable)
-      .where(eq(notificationsTable.userId, userId))
-      .orderBy(desc(notificationsTable.createdAt))
-      .limit(50);
+    const offset = Math.max(0, parseInt(String(req.query["offset"] ?? "0"), 10) || 0);
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query["limit"] ?? String(PAGE_SIZE)), 10) || PAGE_SIZE));
 
-    const unreadCount = items.filter((n) => !n.isRead).length;
+    const [items, totalRow] = await Promise.all([
+      db
+        .select({
+          id: notificationsTable.id,
+          type: notificationsTable.type,
+          title: notificationsTable.title,
+          body: notificationsTable.body,
+          link: notificationsTable.link,
+          isRead: notificationsTable.isRead,
+          createdAt: notificationsTable.createdAt,
+        })
+        .from(notificationsTable)
+        .where(eq(notificationsTable.userId, userId))
+        .orderBy(desc(notificationsTable.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int`, unread: sql<number>`count(*) filter (where is_read = false)::int` })
+        .from(notificationsTable)
+        .where(eq(notificationsTable.userId, userId)),
+    ]);
+
+    const total = totalRow[0]?.count ?? 0;
+    const unreadCount = totalRow[0]?.unread ?? 0;
 
     res.json({
       items: items.map((n) => ({
@@ -41,6 +54,10 @@ router.get("/notifications", authenticate, requireRole("athlete"), async (req, r
         createdAt: n.createdAt?.toISOString() ?? null,
       })),
       unreadCount,
+      total,
+      offset,
+      limit,
+      hasMore: offset + limit < total,
     });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });

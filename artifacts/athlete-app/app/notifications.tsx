@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,13 +12,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import {
-  useGetNotifications,
+  getNotifications,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   getGetNotificationsQueryKey,
   type NotificationItem,
+  type NotificationsResponse,
 } from "@workspace/api-client-react";
 import { COLORS } from "@/constants/theme";
+
+const PAGE_SIZE = 20;
 
 function notifIconName(type: string): React.ComponentProps<typeof Feather>["name"] {
   switch (type) {
@@ -54,14 +57,23 @@ function timeAgo(iso?: string | null): string {
   return `Il y a ${days}j`;
 }
 
-const SAFE_LINK_PREFIXES = ["/", "checkin", "session", "messages", "stats", "profile", "notifications", "badges", "weekly-recap"];
+const SAFE_LINK_PREFIXES = ["checkin", "session", "messages", "stats", "profile", "notifications", "badges", "weekly-recap"];
 
 function isSafeLink(link?: string | null): link is string {
   if (!link) return false;
-  return SAFE_LINK_PREFIXES.some((p) => link.startsWith(p) || link.startsWith(`/${p}`));
+  if (link.startsWith("/")) return true;
+  return SAFE_LINK_PREFIXES.some((p) => link.startsWith(p));
 }
 
-function NotifRow({ item, onRead, onNavigate }: { item: NotificationItem; onRead: (id: string) => void; onNavigate: (link: Href) => void }) {
+function NotifRow({
+  item,
+  onRead,
+  onNavigate,
+}: {
+  item: NotificationItem;
+  onRead: (id: string) => void;
+  onNavigate: (link: Href) => void;
+}) {
   function handlePress() {
     if (!item.isRead) onRead(item.id);
     if (isSafeLink(item.link)) {
@@ -93,23 +105,65 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const qc = useQueryClient();
 
-  const { data, isLoading, refetch } = useGetNotifications({
-    query: { queryKey: getGetNotificationsQueryKey(), refetchOnMount: true },
-  });
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+
+  const load = useCallback(async (nextOffset: number, replace: boolean) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const res = await getNotifications({ offset: nextOffset, limit: PAGE_SIZE });
+      setItems((prev) => replace ? res.items : [...prev, ...res.items]);
+      setOffset(nextOffset + res.items.length);
+      setHasMore(res.hasMore);
+      setUnreadCount(res.unreadCount);
+      setInitialLoaded(true);
+      qc.setQueryData<NotificationsResponse>(getGetNotificationsQueryKey(), res);
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, qc]);
+
+  React.useEffect(() => {
+    load(0, true);
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load(0, true);
+    setRefreshing(false);
+  }, [load]);
+
+  const handleEndReached = useCallback(() => {
+    if (!loading && hasMore) {
+      load(offset, false);
+    }
+  }, [loading, hasMore, offset, load]);
 
   const { mutate: markAll } = useMarkAllNotificationsRead({
     mutation: {
-      onSuccess: () => qc.invalidateQueries({ queryKey: getGetNotificationsQueryKey() }),
+      onSuccess: () => {
+        setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+        qc.invalidateQueries({ queryKey: getGetNotificationsQueryKey() });
+      },
     },
   });
 
   const { mutate: markOne } = useMarkNotificationRead({
     mutation: {
-      onSuccess: () => qc.invalidateQueries({ queryKey: getGetNotificationsQueryKey() }),
+      onSuccess: (_data, id) => {
+        setItems((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+        setUnreadCount((c) => Math.max(0, c - 1));
+        qc.invalidateQueries({ queryKey: getGetNotificationsQueryKey() });
+      },
     },
   });
-
-  const items = data?.items ?? [];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
@@ -118,7 +172,7 @@ export default function NotificationsScreen() {
           <Feather name="arrow-left" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Notifications</Text>
-        {(data?.unreadCount ?? 0) > 0 && (
+        {unreadCount > 0 && (
           <TouchableOpacity onPress={() => markAll()} style={styles.markAllBtn}>
             <Feather name="check-square" size={18} color={COLORS.cyan} />
             <Text style={styles.markAllText}>Tout lire</Text>
@@ -126,7 +180,7 @@ export default function NotificationsScreen() {
         )}
       </View>
 
-      {isLoading ? (
+      {!initialLoaded && loading ? (
         <ActivityIndicator color={COLORS.cyan} style={{ marginTop: 48 }} />
       ) : items.length === 0 ? (
         <View style={styles.empty}>
@@ -137,11 +191,24 @@ export default function NotificationsScreen() {
         <FlatList
           data={items}
           keyExtractor={(n) => n.id}
-          renderItem={({ item }) => <NotifRow item={item} onRead={(id) => markOne(id)} onNavigate={(path) => router.push(path)} />}
+          renderItem={({ item }) => (
+            <NotifRow
+              item={item}
+              onRead={(id) => markOne(id)}
+              onNavigate={(path) => router.push(path)}
+            />
+          )}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isLoading}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            hasMore && loading ? (
+              <ActivityIndicator color={COLORS.cyan} style={{ marginVertical: 16 }} />
+            ) : null
+          }
         />
       )}
     </View>

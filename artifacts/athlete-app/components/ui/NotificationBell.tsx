@@ -15,6 +15,7 @@ export function NotificationBell({ top, right = 16 }: Props) {
     query: {
       queryKey: getGetNotificationsQueryKey(),
       refetchInterval: 30000,
+      select: (d) => d,
     },
   });
   const unread = data?.unreadCount ?? 0;

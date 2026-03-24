@@ -664,6 +664,15 @@ export interface NotificationItem {
 export interface NotificationsResponse {
   items: NotificationItem[];
   unreadCount: number;
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface GetNotificationsParams {
+  offset?: number;
+  limit?: number;
 }
 
 export interface NotificationPreferences {

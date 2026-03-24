@@ -45,6 +45,7 @@ import type {
   LoginRequest,
   MessageData,
   MessageThread,
+  GetNotificationsParams,
   NotificationPreferences,
   NotificationsResponse,
   OverrideRequest,
@@ -3705,30 +3706,39 @@ export function useGetAthleteUpcomingSessions<
   return query;
 }
 
-export const getGetNotificationsUrl = () => `/api/notifications`;
+export const getGetNotificationsUrl = (params?: GetNotificationsParams) => {
+  const qs = new URLSearchParams();
+  if (params?.offset !== undefined) qs.set("offset", String(params.offset));
+  if (params?.limit !== undefined) qs.set("limit", String(params.limit));
+  const q = qs.toString();
+  return `/api/notifications${q ? `?${q}` : ""}`;
+};
 
 export const getNotifications = async (
+  params?: GetNotificationsParams,
   options?: RequestInit,
 ): Promise<NotificationsResponse> => {
-  return customFetch<NotificationsResponse>(getGetNotificationsUrl(), {
+  return customFetch<NotificationsResponse>(getGetNotificationsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetNotificationsQueryKey = () => ["/api/notifications"] as const;
+export const getGetNotificationsQueryKey = (params?: GetNotificationsParams) =>
+  ["/api/notifications", params] as const;
 
 export function useGetNotifications<
   TData = Awaited<ReturnType<typeof getNotifications>>,
   TError = ErrorType<unknown>,
 >(options?: {
+  params?: GetNotificationsParams;
   query?: UseQueryOptions<Awaited<ReturnType<typeof getNotifications>>, TError, TData>;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-  const queryKey = queryOptions?.queryKey ?? getGetNotificationsQueryKey();
+  const { query: queryOptions, request: requestOptions, params } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetNotificationsQueryKey(params);
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotifications>>> = ({ signal }) =>
-    getNotifications({ signal, ...requestOptions });
+    getNotifications(params, { signal, ...requestOptions });
   const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
   query.queryKey = queryKey;
   return query;
