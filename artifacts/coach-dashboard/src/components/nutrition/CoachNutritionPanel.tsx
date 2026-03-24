@@ -96,26 +96,25 @@ export function CoachNutritionPanel({ athleteId }: Props) {
 
   const goalsQuery = useQuery<NutritionGoals>({
     queryKey: [`/api/coach/clients/${athleteId}/nutrition/goals`],
-    queryFn: () => fetch(`/api/coach/clients/${athleteId}/nutrition/goals`).then(r => r.json()),
+    queryFn: () => customFetch<NutritionGoals>(`/api/coach/clients/${athleteId}/nutrition/goals`),
   });
 
   const mealsQuery = useQuery<MealLog[]>({
     queryKey: [`/api/coach/clients/${athleteId}/nutrition/meals`],
-    queryFn: () => fetch(`/api/coach/clients/${athleteId}/nutrition/meals`).then(r => r.json()),
+    queryFn: () => customFetch<MealLog[]>(`/api/coach/clients/${athleteId}/nutrition/meals`),
   });
 
   const pdfsQuery = useQuery<NutritionPdf[]>({
     queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`],
-    queryFn: () => fetch(`/api/coach/clients/${athleteId}/nutrition/pdfs`).then(r => r.json()),
+    queryFn: () => customFetch<NutritionPdf[]>(`/api/coach/clients/${athleteId}/nutrition/pdfs`),
   });
 
   const setGoalsMutation = useMutation({
     mutationFn: (data: NutritionGoals) =>
-      fetch(`/api/coach/clients/${athleteId}/nutrition/goals`, {
+      customFetch<NutritionGoals>(`/api/coach/clients/${athleteId}/nutrition/goals`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }).then(r => r.json()),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/goals`] });
       setGoalsOpen(false);
@@ -125,7 +124,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
 
   const deletePdfMutation = useMutation({
     mutationFn: (pdfId: string) =>
-      fetch(`/api/coach/clients/${athleteId}/nutrition/pdfs/${pdfId}`, { method: "DELETE" }).then(r => r.json()),
+      customFetch(`/api/coach/clients/${athleteId}/nutrition/pdfs/${pdfId}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`] });
       setDeletePdfId(null);
