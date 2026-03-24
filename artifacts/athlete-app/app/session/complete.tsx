@@ -42,6 +42,15 @@ const DIFFICULTY_OPTIONS: { key: Difficulty; label: string; icon: FeatherIconNam
   { key: "too_hard", label: "Trop dur", icon: "alert-triangle", color: COLORS.red },
 ];
 
+const THEME_OPTIONS: { key: string; label: string; icon: FeatherIconName }[] = [
+  { key: "strength", label: "Force", icon: "trending-up" },
+  { key: "cardio", label: "Cardio", icon: "activity" },
+  { key: "hiit", label: "HIIT", icon: "zap" },
+  { key: "mobility", label: "Mobilité", icon: "wind" },
+  { key: "mixed", label: "Mixte", icon: "layers" },
+  { key: "recovery", label: "Récup", icon: "heart" },
+];
+
 function getRPEColor(rpe: number): string {
   if (rpe <= 4) return COLORS.green;
   if (rpe <= 7) return COLORS.cyan;
@@ -58,6 +67,7 @@ export default function SessionCompleteScreen() {
 
   const [rpe, setRpe] = useState(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
+  const [theme, setTheme] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
@@ -69,6 +79,12 @@ export default function SessionCompleteScreen() {
   const session = sessionQuery.data;
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+
+  useEffect(() => {
+    if (session?.sessionType != null && theme === null) {
+      setTheme(session.sessionType);
+    }
+  }, [session?.sessionType]);
 
   const newPRs = completeMutation.data?.newPRs ?? [];
   const newBadges = completeMutation.data?.newBadges ?? [];
@@ -107,7 +123,7 @@ export default function SessionCompleteScreen() {
     try {
       await feedbackMutation.mutateAsync({
         sessionId: session.sessionLogId,
-        data: { rpe, perceivedDifficulty: difficulty, athleteNotes: notes.trim() || null },
+        data: { rpe, perceivedDifficulty: difficulty, athleteNotes: notes.trim() || null, theme: theme ?? null },
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/sessions/today"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
@@ -313,6 +329,41 @@ export default function SessionCompleteScreen() {
             ))}
           </View>
 
+          {/* Theme */}
+          <Text style={[styles.rpeLabel, { fontFamily: FONTS.body, marginTop: 4 }]}>
+            Thème de séance
+          </Text>
+          <View style={styles.themeGrid}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = theme === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setTheme(active ? null : opt.key);
+                  }}
+                  style={[
+                    styles.themeChip,
+                    active && { borderColor: COLORS.cyan, backgroundColor: `${COLORS.cyan}15` },
+                  ]}
+                >
+                  <Feather
+                    name={opt.icon}
+                    size={13}
+                    color={active ? COLORS.cyan : COLORS.textMuted}
+                  />
+                  <Text style={[
+                    styles.diffLabel,
+                    { fontFamily: FONTS.body, color: active ? COLORS.cyan : COLORS.textMuted },
+                  ]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           {/* Notes */}
           <TextInput
             style={[styles.notesInput, { fontFamily: FONTS.body }]}
@@ -439,6 +490,18 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   diffLabel: { fontSize: 12 },
+  themeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  themeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: "transparent",
+  },
   notesInput: {
     backgroundColor: COLORS.bg,
     borderWidth: 1,

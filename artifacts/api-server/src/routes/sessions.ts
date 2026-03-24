@@ -59,17 +59,20 @@ async function buildSessionDetail(
   let sessionName = "Séance du jour";
   let coachNotes: string | null = null;
   let estimatedDurationMin: number | null = null;
+  let sessionType: string | null = null;
 
   if (sessionLog.sessionId) {
     const [sess] = await db.select({
       name: sessionsTable.name,
       coachNotes: sessionsTable.coachNotes,
       estimatedDurationMin: sessionsTable.estimatedDurationMin,
+      type: sessionsTable.type,
     }).from(sessionsTable).where(eq(sessionsTable.id, sessionLog.sessionId));
     if (sess) {
       sessionName = sess.name;
       coachNotes = sess.coachNotes ?? null;
       estimatedDurationMin = sess.estimatedDurationMin ?? null;
+      sessionType = sess.type ?? null;
     }
   }
 
@@ -167,6 +170,7 @@ async function buildSessionDetail(
     sessionId: sessionLog.sessionId,
     name: sessionName,
     mode: sessionLog.variantMode,
+    sessionType,
     adaptScore: checkin.adaptScore,
     completedAt: sessionLog.completedAt ?? null,
     durationMin,
@@ -250,6 +254,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
 
     let sessionId: string | null = null;
     let sessionName = "Session libre";
+    let sessionTypeValue: string | null = null;
     let estimatedDuration: number | null = null;
     let coachNotes: string | null = null;
     let exercises: {
@@ -300,6 +305,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       if (session) {
         sessionId = session.id;
         sessionName = session.name;
+        sessionTypeValue = session.type ?? null;
         estimatedDuration = session.estimatedDurationMin ?? null;
         coachNotes = session.coachNotes ?? null;
 
@@ -379,6 +385,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       sessionId,
       name: sessionName,
       mode: forcedMode,
+      sessionType: sessionTypeValue,
       estimatedDurationMin: estimatedDuration,
       coachNotes,
       exercises,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -54,18 +54,22 @@ function getRPELabel(rpe: number): string {
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const params = useLocalSearchParams<{ sessionType?: string }>();
   const sessionQuery = useGetTodaySession();
   const feedbackMutation = useSubmitSessionFeedback();
 
   const session = sessionQuery.data;
-  const defaultTheme = params.sessionType ?? null;
 
   const [rpe, setRpe] = useState(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
-  const [theme, setTheme] = useState<string | null>(defaultTheme);
+  const [theme, setTheme] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    if (session?.sessionType != null && theme === null) {
+      setTheme(session.sessionType);
+    }
+  }, [session?.sessionType]);
 
   const rpeColor = getRPEColor(rpe);
 

@@ -211,6 +211,7 @@ export interface SessionDetail {
   sessionId?: string | null;
   name: string;
   mode: string;
+  sessionType?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   exercises: SessionExerciseItem[];
