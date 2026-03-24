@@ -29,13 +29,7 @@ const routineBodySchema = z.object({
 router.get("/guides", authenticate, async (_req, res) => {
   try {
     const guides = await db
-      .select({
-        id: guidesTable.id,
-        title: guidesTable.title,
-        category: guidesTable.category,
-        sortOrder: guidesTable.sortOrder,
-        createdAt: guidesTable.createdAt,
-      })
+      .select()
       .from(guidesTable)
       .orderBy(asc(guidesTable.sortOrder), asc(guidesTable.createdAt));
     res.json(guides);
