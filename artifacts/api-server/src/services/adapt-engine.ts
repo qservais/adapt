@@ -44,19 +44,17 @@ export function calculateAdaptScore(input: AdaptScoreInput): AdaptScoreResult {
     else if (rpeYesterday <= 4) score_base *= 1.05;
   }
 
-  // Step 4 — Menstrual cycle modifier
-  if (cyclePhase) {
-    const cycleModifiers: Record<string, number> = {
-      menstrual: 0.85,
-      follicular: 1.00,
-      ovulatory: 1.05,
-      luteal: 0.95,
-    };
-    score_base *= cycleModifiers[cyclePhase] ?? 1.00;
-  }
+  // Step 4 — Menstrual cycle additive offset (applied on 0-100 scale)
+  const cycleOffsets: Record<string, number> = {
+    menstrual: -8,
+    follicular: 5,
+    ovulatory: 0,
+    luteal: -5,
+  };
+  const cycleOffset = cyclePhase ? (cycleOffsets[cyclePhase] ?? 0) : 0;
 
   // Step 5 — Final score (0-100, rounded)
-  const adaptScore = Math.round(Math.min(100, Math.max(0, score_base * 100)));
+  const adaptScore = Math.round(Math.min(100, Math.max(0, score_base * 100 + cycleOffset)));
 
   // Step 6 — Determine mode
   let sessionMode: "performance" | "normal" | "adapt" | "recovery";
