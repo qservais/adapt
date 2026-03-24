@@ -804,6 +804,40 @@ export default function ProfileScreen() {
 
       <View style={styles.quickLinks}>
         <TouchableOpacity
+          onPress={() => router.push("/guides" as any)}
+          style={styles.quickLinkRow}
+          activeOpacity={0.7}
+        >
+          <View style={styles.quickLinkLeft}>
+            <Text style={styles.quickLinkIcon}>📖</Text>
+            <View>
+              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Guides ADAPT</Text>
+              <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                Entraînement, nutrition, RPE, tempo
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => router.push("/library" as any)}
+          style={styles.quickLinkRow}
+          activeOpacity={0.7}
+        >
+          <View style={styles.quickLinkLeft}>
+            <Text style={styles.quickLinkIcon}>🗂️</Text>
+            <View>
+              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Bibliothèque</Text>
+              <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                Échauffements, réathlétisation, relaxation
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
           onPress={() => router.push("/badges")}
           style={styles.quickLinkRow}
           activeOpacity={0.7}

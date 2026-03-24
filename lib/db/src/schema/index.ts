@@ -8,3 +8,4 @@ export * from "./messages";
 export * from "./badges";
 export * from "./personal_records";
 export * from "./performance_tests";
+export * from "./content";
