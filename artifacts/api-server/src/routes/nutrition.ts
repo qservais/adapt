@@ -225,6 +225,9 @@ router.post("/coach/clients/:athleteId/nutrition/pdfs", authenticate, requireRol
     const parsed = pdfMetaSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
     const normalizedPath = storage.normalizeObjectEntityPath(parsed.data.objectPath);
+    if (!normalizedPath.startsWith("/objects/")) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Chemin d'objet invalide" } });
+    }
     const [pdf] = await db.insert(nutritionPdfsTable).values({
       coachId,
       athleteId,
