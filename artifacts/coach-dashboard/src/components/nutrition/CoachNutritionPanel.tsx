@@ -94,29 +94,29 @@ export function CoachNutritionPanel({ athleteId }: Props) {
   const [goalForm, setGoalForm] = useState<NutritionGoals>({ proteinG: 150, carbsG: 250, fatG: 70, kcal: 2200 });
 
   const goalsQuery = useQuery<NutritionGoals>({
-    queryKey: [`/api/coach/nutrition/goals/${athleteId}`],
-    queryFn: () => fetch(`/api/coach/nutrition/${athleteId}/goals`).then(r => r.json()),
+    queryKey: [`/api/coach/clients/${athleteId}/nutrition/goals`],
+    queryFn: () => fetch(`/api/coach/clients/${athleteId}/nutrition/goals`).then(r => r.json()),
   });
 
   const mealsQuery = useQuery<MealLog[]>({
-    queryKey: [`/api/coach/nutrition/meals/${athleteId}`],
-    queryFn: () => fetch(`/api/coach/nutrition/${athleteId}/meals`).then(r => r.json()),
+    queryKey: [`/api/coach/clients/${athleteId}/nutrition/meals`],
+    queryFn: () => fetch(`/api/coach/clients/${athleteId}/nutrition/meals`).then(r => r.json()),
   });
 
   const pdfsQuery = useQuery<NutritionPdf[]>({
-    queryKey: [`/api/coach/nutrition/pdfs/${athleteId}`],
-    queryFn: () => fetch(`/api/coach/nutrition/${athleteId}/pdfs`).then(r => r.json()),
+    queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`],
+    queryFn: () => fetch(`/api/coach/clients/${athleteId}/nutrition/pdfs`).then(r => r.json()),
   });
 
   const setGoalsMutation = useMutation({
     mutationFn: (data: NutritionGoals) =>
-      fetch(`/api/coach/nutrition/${athleteId}/goals`, {
+      fetch(`/api/coach/clients/${athleteId}/nutrition/goals`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }).then(r => r.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/coach/nutrition/goals/${athleteId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/goals`] });
       setGoalsOpen(false);
       toast({ title: "Objectifs mis à jour" });
     },
@@ -124,9 +124,9 @@ export function CoachNutritionPanel({ athleteId }: Props) {
 
   const deletePdfMutation = useMutation({
     mutationFn: (pdfId: string) =>
-      fetch(`/api/coach/nutrition/${athleteId}/pdfs/${pdfId}`, { method: "DELETE" }).then(r => r.json()),
+      fetch(`/api/coach/clients/${athleteId}/nutrition/pdfs/${pdfId}`, { method: "DELETE" }).then(r => r.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/coach/nutrition/pdfs/${athleteId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`] });
       setDeletePdfId(null);
       toast({ title: "Plan supprimé" });
     },
@@ -142,7 +142,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
     if (!uploadFile || !uploadTitle.trim()) return;
     setUploading(true);
     try {
-      const urlRes = await fetch(`/api/coach/nutrition/${athleteId}/pdfs/upload-url`, {
+      const urlRes = await fetch(`/api/coach/clients/${athleteId}/nutrition/pdfs/upload-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: uploadTitle.trim(), contentType: "application/pdf" }),
@@ -162,7 +162,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
         body: JSON.stringify({ title: uploadTitle.trim(), objectPath }),
       });
 
-      queryClient.invalidateQueries({ queryKey: [`/api/coach/nutrition/pdfs/${athleteId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`] });
       setUploadOpen(false);
       setUploadTitle("");
       setUploadFile(null);
