@@ -128,7 +128,6 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
       .where(and(eq(usersTable.coachId, coach.id), eq(usersTable.role, "athlete")));
 
     for (const athlete of athletes) {
-      const dedupKey = `morning-${today}-${athlete.id}`;
       const existing = await db
         .select({ id: notificationsTable.id })
         .from(notificationsTable)
@@ -179,7 +178,6 @@ async function runScheduledReminders(currentHour: number): Promise<void> {
     const config = (notif.recurrenceConfig ?? {}) as Record<string, unknown>;
     if (!shouldFireToday(notif.recurrenceType, config, now)) continue;
 
-    const dedupKey = `sched-${notif.id}-${today}`;
     const existing = await db
       .select({ id: notificationsTable.id })
       .from(notificationsTable)
