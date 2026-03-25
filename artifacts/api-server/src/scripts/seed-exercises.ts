@@ -896,10 +896,16 @@ const EXERCISES: SeedExercise[] = [
 ];
 
 export async function seedExercises(): Promise<{ inserted: number; levelUpdated: number; categoryUpdated: number }> {
-  const existing = await db
-    .select({ name: exercisesTable.name })
-    .from(exercisesTable)
-    .where(isNull(exercisesTable.createdBy));
+  let existing: { name: string }[] = [];
+  try {
+    existing = await db
+      .select({ name: exercisesTable.name })
+      .from(exercisesTable)
+      .where(isNull(exercisesTable.createdBy));
+  } catch (e) {
+    console.warn("⚠  Impossible de lire les exercices existants — table absente ou inaccessible:", (e as Error).message);
+    return { inserted: 0, levelUpdated: 0, categoryUpdated: 0 };
+  }
 
   const existingNames = new Set(existing.map((e) => e.name));
 
@@ -907,50 +913,62 @@ export async function seedExercises(): Promise<{ inserted: number; levelUpdated:
 
   let inserted = 0;
   if (toInsert.length > 0) {
-    await db.insert(exercisesTable).values(
-      toInsert.map((e) => ({
-        name: e.name,
-        category: e.category,
-        muscleGroups: e.muscleGroups,
-        equipment: e.equipment,
-        description: e.description,
-        level: e.level,
-      }))
-    );
-    inserted = toInsert.length;
+    try {
+      await db.insert(exercisesTable).values(
+        toInsert.map((e) => ({
+          name: e.name,
+          category: e.category,
+          muscleGroups: e.muscleGroups,
+          equipment: e.equipment,
+          description: e.description,
+          level: e.level,
+        }))
+      );
+      inserted = toInsert.length;
+    } catch (e) {
+      console.warn(`⚠  Insert exercices échoué (${toInsert.length} exercices) — poursuite:`, (e as Error).message);
+    }
   }
 
   let levelUpdated = 0;
   let categoryUpdated = 0;
   for (const ex of EXERCISES) {
     if (existingNames.has(ex.name)) {
-      const lvlResult = await db
-        .update(exercisesTable)
-        .set({ level: ex.level })
-        .where(
-          and(
-            eq(exercisesTable.name, ex.name),
-            isNull(exercisesTable.createdBy),
-            sql`${exercisesTable.level} IS NULL`
-          )
-        );
-      if ((lvlResult as { rowCount?: number }).rowCount) levelUpdated++;
+      try {
+        const lvlResult = await db
+          .update(exercisesTable)
+          .set({ level: ex.level })
+          .where(
+            and(
+              eq(exercisesTable.name, ex.name),
+              isNull(exercisesTable.createdBy),
+              sql`${exercisesTable.level} IS NULL`
+            )
+          );
+        if ((lvlResult as { rowCount?: number }).rowCount) levelUpdated++;
+      } catch {
+        // level column might not exist yet — non-fatal
+      }
 
-      const catResult = await db
-        .update(exercisesTable)
-        .set({ category: ex.category })
-        .where(
-          and(
-            eq(exercisesTable.name, ex.name),
-            isNull(exercisesTable.createdBy),
-            eq(exercisesTable.category, "mobility")
-          )
-        );
-      if (
-        (catResult as { rowCount?: number }).rowCount &&
-        ex.category === "réathlétisation"
-      )
-        categoryUpdated++;
+      try {
+        const catResult = await db
+          .update(exercisesTable)
+          .set({ category: ex.category })
+          .where(
+            and(
+              eq(exercisesTable.name, ex.name),
+              isNull(exercisesTable.createdBy),
+              eq(exercisesTable.category, "mobility")
+            )
+          );
+        if (
+          (catResult as { rowCount?: number }).rowCount &&
+          ex.category === "réathlétisation"
+        )
+          categoryUpdated++;
+      } catch {
+        // non-fatal
+      }
     }
   }
 

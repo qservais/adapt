@@ -133,6 +133,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
-  process.exit(1);
+  console.error("⚠  Seed non-fatal — le serveur démarrera quand même:", err);
+  process.exit(0);
 });
