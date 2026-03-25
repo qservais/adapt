@@ -459,6 +459,8 @@ function TempoInput({ value, onChange }: { value: string; onChange: (v: string) 
     setDigits(next);
     if (next.every(x => x !== "")) {
       onChange(next.join("-"));
+    } else if (next.every(x => x === "")) {
+      onChange("");
     }
     if (d && i < 3) refs[i + 1]?.current?.focus();
   };

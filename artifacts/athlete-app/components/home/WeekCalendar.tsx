@@ -38,8 +38,8 @@ const SESSION_TYPE_COLOR: Record<string, string> = {
   conditioning: "#EF4444",
   athletic_development: "#F59E0B",
   hybrid: "#00F0FF",
-  coordination: "#00F0FF",
-  technique: "#00F0FF",
+  coordination: "#00D4AA",
+  technique: "#818CF8",
 };
 
 const SESSION_TYPE_ICON: Record<string, React.ComponentProps<typeof Feather>["name"]> = {
