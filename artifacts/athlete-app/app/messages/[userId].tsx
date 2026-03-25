@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -46,7 +47,10 @@ export default function ChatScreen() {
   const [videoUploading, setVideoUploading] = useState(false);
 
   const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
+  const [audioDurations, setAudioDurations] = useState<Record<string, string>>({});
   const soundRef = useRef<Audio.Sound | null>(null);
+  const fullscreenVideoRef = useRef<Video | null>(null);
+  const [fullscreenVideoUrl, setFullscreenVideoUrl] = useState<string | null>(null);
 
   const userIdStr = userId ?? "";
   const messagesQuery = useGetThreadMessages(userIdStr);
@@ -275,13 +279,30 @@ export default function ChatScreen() {
           if (status.isLoaded && status.didJustFinish) {
             setAudioPlaying(null);
           }
+          if (status.isLoaded && status.durationMillis && !audioDurations[msgId]) {
+            const secs = Math.round(status.durationMillis / 1000);
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            setAudioDurations((prev) => ({ ...prev, [msgId]: `${m}:${s.toString().padStart(2, "0")}` }));
+          }
         }
       );
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded && status.durationMillis && !audioDurations[msgId]) {
+        const secs = Math.round(status.durationMillis / 1000);
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        setAudioDurations((prev) => ({ ...prev, [msgId]: `${m}:${s.toString().padStart(2, "0")}` }));
+      }
       soundRef.current = sound;
       setAudioPlaying(msgId);
     } catch (err) {
       console.warn("Erreur lecture audio:", err);
     }
+  };
+
+  const handleOpenFullscreenVideo = (url: string) => {
+    setFullscreenVideoUrl(url);
   };
 
   const formatDuration = (secs: number) => {
@@ -346,16 +367,27 @@ export default function ChatScreen() {
                     />
                   ))}
                 </View>
-                <Feather name="mic" size={14} color={isMe ? `${COLORS.bg}80` : COLORS.textMuted} />
+                <Text style={[styles.audioDuration, { color: isMe ? `${COLORS.bg}80` : COLORS.textMuted }]}>
+                  {audioDurations[item.id] ?? "0:00"}
+                </Text>
               </TouchableOpacity>
             ) : item.mediaType === "video" && item.mediaUrl ? (
-              <Video
-                source={{ uri: item.mediaUrl }}
-                style={styles.videoThumb}
-                resizeMode={ResizeMode.COVER}
-                useNativeControls
-                isLooping={false}
-              />
+              <TouchableOpacity
+                style={styles.videoThumbWrap}
+                onPress={() => handleOpenFullscreenVideo(item.mediaUrl!)}
+                activeOpacity={0.85}
+              >
+                <Video
+                  source={{ uri: item.mediaUrl }}
+                  style={styles.videoThumb}
+                  resizeMode={ResizeMode.COVER}
+                  isMuted
+                  shouldPlay={false}
+                />
+                <View style={styles.videoPlayOverlay}>
+                  <Feather name="play-circle" size={36} color="#fff" />
+                </View>
+              </TouchableOpacity>
             ) : (
               <Text
                 style={[
@@ -505,6 +537,32 @@ export default function ChatScreen() {
           </Pressable>
         )}
       </View>
+
+      <Modal
+        visible={fullscreenVideoUrl != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFullscreenVideoUrl(null)}
+      >
+        <View style={styles.videoModal}>
+          <TouchableOpacity
+            style={styles.videoModalClose}
+            onPress={() => setFullscreenVideoUrl(null)}
+          >
+            <Feather name="x" size={26} color="#fff" />
+          </TouchableOpacity>
+          {fullscreenVideoUrl && (
+            <Video
+              ref={fullscreenVideoRef}
+              source={{ uri: fullscreenVideoUrl }}
+              style={styles.videoModalPlayer}
+              resizeMode={ResizeMode.CONTAIN}
+              useNativeControls
+              shouldPlay
+            />
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -580,7 +638,38 @@ const styles = StyleSheet.create({
   },
   audioWave: { flex: 1, flexDirection: "row", alignItems: "center", gap: 2 },
   audioBar: { width: 3, borderRadius: 2 },
-  videoThumb: { width: 200, height: 130, borderRadius: 10 },
+  audioDuration: { fontSize: 11, minWidth: 28 },
+  videoThumbWrap: {
+    width: 200,
+    height: 130,
+    borderRadius: 10,
+    overflow: "hidden",
+    position: "relative",
+  },
+  videoThumb: { width: 200, height: 130 },
+  videoPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  videoModal: {
+    flex: 1,
+    backgroundColor: "#000",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoModalClose: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+  },
+  videoModalPlayer: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+  },
   recordingBanner: {
     flexDirection: "row",
     alignItems: "center",
