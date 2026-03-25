@@ -13,7 +13,7 @@ paths = ["/api"]
 run = "pnpm --filter @workspace/api-server run dev"
 
 [services.production]
-build = "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/api-server run seed"
+build = "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/db run push-force && pnpm --filter @workspace/api-server run seed"
 
 [services.production.run]
 args = ["node", "artifacts/api-server/dist/index.cjs"]

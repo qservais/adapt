@@ -26,6 +26,22 @@ function psql(query: string): string {
   return result.stdout.trim();
 }
 
+function psqlSafe(query: string): string | null {
+  const result = spawnSync("psql", [process.env["DATABASE_URL"]!, "-t", "-A", "-c", query], {
+    encoding: "utf-8",
+    timeout: 10000,
+  });
+  if (result.status !== 0) return null;
+  return result.stdout.trim();
+}
+
+function tableExists(tableName: string): boolean {
+  const result = psqlSafe(
+    `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '${tableName}')`
+  );
+  return result === "t";
+}
+
 function runSqlFile(filePath: string, label: string): void {
   console.log(`🌱 Exécution ${label}...`);
   const result = spawnSync(
@@ -46,6 +62,14 @@ async function main() {
     throw new Error("DATABASE_URL est requis");
   }
 
+  // Guard: if core tables don't exist yet, schema migrations haven't run.
+  // Exit gracefully — the schema push step must complete first.
+  if (!tableExists("users")) {
+    console.log("⚠️  Tables absentes — les migrations n'ont pas encore été appliquées. Abandon du seed.");
+    console.log("   Relancer le build après que les migrations aient été appliquées.");
+    process.exit(0);
+  }
+
   // Step 1: Base seed (coach + Owen + exercises + Owen's programs)
   const coachExists = psql("SELECT COUNT(*) FROM users WHERE email = 'coach@adapt.demo'");
   if (coachExists === "0") {
@@ -63,31 +87,41 @@ async function main() {
   }
 
   // Step 3: Content seed (guides éducatifs + routines bibliothèque)
-  const guidesExist = psql("SELECT COUNT(*) FROM guides");
+  const guidesExist = tableExists("guides")
+    ? psql("SELECT COUNT(*) FROM guides")
+    : "0";
   if (guidesExist === "0") {
-    runSqlFile(join(__dirname, "seed-content.sql"), "seed-content.sql");
+    if (tableExists("guides")) {
+      runSqlFile(join(__dirname, "seed-content.sql"), "seed-content.sql");
+    } else {
+      console.log("⚠️  Table guides absente — seed-content ignoré (migrations requises)");
+    }
   } else {
     console.log("✅ Content seed déjà présent (guides + routines)");
   }
 
   // Step 4: Exercises seed (bibliothèque 100+ exercices pré-remplis)
-  const globalExerciseCount = psql("SELECT COUNT(*) FROM exercises WHERE created_by IS NULL");
-  if (parseInt(globalExerciseCount, 10) < 100) {
-    console.log("🌱 Exécution seed-exercises.ts...");
-    const { inserted, levelUpdated, categoryUpdated } = await seedExercises();
-    console.log(`✅ Seed exercices terminé (+${inserted} insérés, ${levelUpdated} niveaux mis à jour, ${categoryUpdated} catégories corrigées)`);
+  if (!tableExists("exercises")) {
+    console.log("⚠️  Table exercises absente — seed exercices ignoré (migrations requises)");
   } else {
-    console.log(`✅ Bibliothèque d'exercices déjà remplie (${globalExerciseCount} exercices globaux)`);
-    await seedExercises();
+    const globalExerciseCount = psql("SELECT COUNT(*) FROM exercises WHERE created_by IS NULL");
+    if (parseInt(globalExerciseCount, 10) < 100) {
+      console.log("🌱 Exécution seed-exercises.ts...");
+      const { inserted, levelUpdated, categoryUpdated } = await seedExercises();
+      console.log(`✅ Seed exercices terminé (+${inserted} insérés, ${levelUpdated} niveaux mis à jour, ${categoryUpdated} catégories corrigées)`);
+    } else {
+      console.log(`✅ Bibliothèque d'exercices déjà remplie (${globalExerciseCount} exercices globaux)`);
+      await seedExercises();
+    }
   }
 
   // Verify final state
-  const userCount = psql("SELECT COUNT(*) FROM users");
-  const programCount = psql("SELECT COUNT(*) FROM programs");
-  const sessionCount = psql("SELECT COUNT(*) FROM sessions");
-  const guidesCount = psql("SELECT COUNT(*) FROM guides");
-  const routinesCount = psql("SELECT COUNT(*) FROM content_routines");
-  const exerciseCount = psql("SELECT COUNT(*) FROM exercises WHERE created_by IS NULL");
+  const userCount = psqlSafe("SELECT COUNT(*) FROM users") ?? "?";
+  const programCount = psqlSafe("SELECT COUNT(*) FROM programs") ?? "?";
+  const sessionCount = psqlSafe("SELECT COUNT(*) FROM sessions") ?? "?";
+  const guidesCount = psqlSafe("SELECT COUNT(*) FROM guides") ?? "?";
+  const routinesCount = psqlSafe("SELECT COUNT(*) FROM content_routines") ?? "?";
+  const exerciseCount = psqlSafe("SELECT COUNT(*) FROM exercises WHERE created_by IS NULL") ?? "?";
 
   console.log(`\n📊 État de la base:`);
   console.log(`   - ${userCount} utilisateurs`);
