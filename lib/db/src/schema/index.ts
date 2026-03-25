@@ -11,3 +11,4 @@ export * from "./performance_tests";
 export * from "./content";
 export * from "./nutrition";
 export * from "./steps";
+export * from "./challenges";

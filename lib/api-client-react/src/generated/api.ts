@@ -21,9 +21,13 @@ import type {
   AthleteLinkRequest,
   AthletePerformanceTest,
   BadgesResponse,
+  Challenge,
+  CoachChallenge,
   CoachLinkRequest,
   CoachUnlinkRequest,
   CoachUpdateAthleteRequest,
+  CreateChallengeRequest,
+  UpdateProgressRequest,
   AuthResponse,
   CheckinData,
   CheckinRequest,
@@ -3844,4 +3848,169 @@ export function useGetAthleteTests<
   }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
   query.queryKey = queryKey;
   return query;
+}
+
+export const getGetActiveChallengesQueryKey = () => ["/api/challenges/active"] as const;
+
+export const getActiveChallenges = async (options?: RequestInit): Promise<Challenge[]> => {
+  return customFetch<Challenge[]>("/api/challenges/active", { ...options, method: "GET" });
+};
+
+export function useGetActiveChallenges<
+  TData = Awaited<ReturnType<typeof getActiveChallenges>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getActiveChallenges>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetActiveChallengesQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveChallenges>>> = ({ signal }) =>
+    getActiveChallenges({ signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
+
+export const getGetChallengeQueryKey = (id: string) => [`/api/challenges/${id}`] as const;
+
+export const getChallenge = async (id: string, options?: RequestInit): Promise<Challenge> => {
+  return customFetch<Challenge>(`/api/challenges/${id}`, { ...options, method: "GET" });
+};
+
+export function useGetChallenge<
+  TData = Awaited<ReturnType<typeof getChallenge>>,
+  TError = ErrorType<unknown>,
+>(id: string, options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getChallenge>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetChallengeQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getChallenge>>> = ({ signal }) =>
+    getChallenge(id, { signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, enabled: !!id, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
+
+export const updateChallengeProgress = async (
+  id: string,
+  data: UpdateProgressRequest,
+  options?: RequestInit,
+): Promise<{ progress: number; completedAt: string | null }> => {
+  return customFetch<{ progress: number; completedAt: string | null }>(
+    `/api/challenges/${id}/progress`,
+    { ...options, method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) },
+  );
+};
+
+export function useUpdateChallengeProgress<
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateChallengeProgress>>,
+    TError,
+    { id: string; data: UpdateProgressRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateChallengeProgress>>,
+  TError,
+  { id: string; data: UpdateProgressRequest },
+  TContext
+> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: ({ id, data }) => updateChallengeProgress(id, data, requestOptions),
+    ...mutationOptions,
+  });
+}
+
+export const getGetCoachChallengesQueryKey = () => ["/api/coach/challenges"] as const;
+
+export const getCoachChallenges = async (options?: RequestInit): Promise<CoachChallenge[]> => {
+  return customFetch<CoachChallenge[]>("/api/coach/challenges", { ...options, method: "GET" });
+};
+
+export function useGetCoachChallenges<
+  TData = Awaited<ReturnType<typeof getCoachChallenges>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getCoachChallenges>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetCoachChallengesQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCoachChallenges>>> = ({ signal }) =>
+    getCoachChallenges({ signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+}
+
+export const createCoachChallenge = async (
+  data: CreateChallengeRequest,
+  options?: RequestInit,
+): Promise<{ id: string }> => {
+  return customFetch<{ id: string }>("/api/coach/challenges", {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+};
+
+export function useCreateCoachChallenge<
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCoachChallenge>>,
+    TError,
+    CreateChallengeRequest,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCoachChallenge>>,
+  TError,
+  CreateChallengeRequest,
+  TContext
+> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (data) => createCoachChallenge(data, requestOptions),
+    ...mutationOptions,
+  });
+}
+
+export const deleteCoachChallenge = async (id: string, options?: RequestInit): Promise<{ ok: boolean }> => {
+  return customFetch<{ ok: boolean }>(`/api/coach/challenges/${id}`, { ...options, method: "DELETE" });
+};
+
+export function useDeleteCoachChallenge<
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCoachChallenge>>,
+    TError,
+    string,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCoachChallenge>>,
+  TError,
+  string,
+  TContext
+> {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: (id) => deleteCoachChallenge(id, requestOptions),
+    ...mutationOptions,
+  });
 }

@@ -18,8 +18,9 @@ import {
   useGetTodaySession,
   useGetCheckinHistory,
   useGetAthleteUpcomingSessions,
+  useGetActiveChallenges,
 } from "@workspace/api-client-react";
-import type { CheckinData, SessionDetail } from "@workspace/api-client-react";
+import type { CheckinData, SessionDetail, Challenge } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
@@ -29,6 +30,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { WeekCalendar } from "@/components/home/WeekCalendar";
+import { ChallengeCard } from "@/components/home/ChallengeCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -40,6 +42,7 @@ export default function HomeScreen() {
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetCheckinHistory();
   const upcomingQuery = useGetAthleteUpcomingSessions();
+  const challengesQuery = useGetActiveChallenges();
 
   const todayCheckin = checkinQuery.data;
   const todaySession = sessionQuery.data;
@@ -51,6 +54,7 @@ export default function HomeScreen() {
     sessionQuery.refetch();
     historyQuery.refetch();
     upcomingQuery.refetch();
+    challengesQuery.refetch();
   };
 
   useFocusEffect(
@@ -58,6 +62,7 @@ export default function HomeScreen() {
       checkinQuery.refetch();
       sessionQuery.refetch();
       upcomingQuery.refetch();
+      challengesQuery.refetch();
     }, [])
   );
 
@@ -141,6 +146,7 @@ export default function HomeScreen() {
         <StateNoPending
           onCheckin={() => router.push("/checkin")}
           upcomingSessions={upcomingQuery.data ?? []}
+          activeChallenges={challengesQuery.data ?? []}
         />
       ) : (
         <StateCheckedIn
@@ -148,6 +154,7 @@ export default function HomeScreen() {
           session={todaySession}
           modeColor={modeColor}
           upcomingSessions={upcomingQuery.data ?? []}
+          activeChallenges={challengesQuery.data ?? []}
         />
       )}
 
@@ -170,9 +177,11 @@ function LoadingSkeleton() {
 function StateNoPending({
   onCheckin,
   upcomingSessions,
+  activeChallenges,
 }: {
   onCheckin: () => void;
   upcomingSessions: import("@workspace/api-client-react").UpcomingSession[];
+  activeChallenges: Challenge[];
 }) {
   return (
     <View style={styles.pendingContainer}>
@@ -200,6 +209,10 @@ function StateNoPending({
         </View>
       )}
 
+      {activeChallenges.length > 0 && (
+        <ChallengeCard challenge={activeChallenges[0]!} />
+      )}
+
       <GlowCard style={styles.lockedSession} glowColor={COLORS.border}>
         <Feather name="lock" size={20} color={COLORS.textMuted} />
         <View style={{ flex: 1 }}>
@@ -218,11 +231,13 @@ function StateCheckedIn({
   session,
   modeColor,
   upcomingSessions,
+  activeChallenges,
 }: {
   checkin: CheckinData;
   session: SessionDetail | undefined;
   modeColor: string;
   upcomingSessions: import("@workspace/api-client-react").UpcomingSession[];
+  activeChallenges: Challenge[];
 }) {
   const modeKey = checkin.sessionMode as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
@@ -239,6 +254,10 @@ function StateCheckedIn({
         <View style={styles.weekCalendarCard}>
           <WeekCalendar sessions={upcomingSessions} />
         </View>
+      )}
+
+      {activeChallenges.length > 0 && (
+        <ChallengeCard challenge={activeChallenges[0]!} />
       )}
 
       {isCompleted ? (

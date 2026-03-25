@@ -701,3 +701,53 @@ export interface UpdateNotificationPreferencesRequest {
   encouragements?: boolean;
   performance?: boolean;
 }
+
+export interface Challenge {
+  id: string;
+  title: string;
+  description?: string | null;
+  metric: string;
+  target: number;
+  unit?: string | null;
+  startDate: string;
+  endDate: string;
+  progress: number;
+  completedAt?: string | null;
+  assignmentId?: string | null;
+}
+
+export interface ChallengeAssignment {
+  athleteId: string;
+  athleteName: string;
+  progress: number;
+  completedAt?: string | null;
+}
+
+export interface CoachChallenge {
+  id: string;
+  title: string;
+  description?: string | null;
+  metric: string;
+  target: number;
+  unit?: string | null;
+  type: string;
+  startDate: string;
+  endDate: string;
+  createdAt?: string | null;
+  assignments: ChallengeAssignment[];
+}
+
+export interface CreateChallengeRequest {
+  title: string;
+  description?: string;
+  metric: "reps" | "distance" | "time" | "sessions";
+  target: number;
+  unit?: string;
+  startDate: string;
+  endDate: string;
+  athleteIds: string[];
+}
+
+export interface UpdateProgressRequest {
+  progress: number;
+}
