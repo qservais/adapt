@@ -983,23 +983,25 @@ export default function ClientDetail() {
                       );
                     })()}
 
-                    {/* RPE chart + consecutive high-RPE alert */}
+                    {/* RPE chart + consecutive high-RPE alert (DASH-V2-02) */}
                     {(() => {
-                      const rpeData = client.recentSessions
+                      const withRpe = client.recentSessions
                         .filter(s => s.completedAt && s.rpe != null)
-                        .sort((a, b) => new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime())
-                        .slice(-10)
-                        .map(s => ({
-                          date: format(new Date(s.completedAt!), 'd MMM', { locale: fr }),
-                          rpe: s.rpe as number,
-                        }));
+                        .sort((a, b) => new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime());
+
+                      const rpeData = withRpe.slice(-10).map(s => ({
+                        date: format(new Date(s.completedAt!), 'd MMM', { locale: fr }),
+                        rpe: s.rpe as number,
+                      }));
+
+                      const avgRpe = withRpe.length > 0
+                        ? Math.round((withRpe.reduce((sum, s) => sum + (s.rpe as number), 0) / withRpe.length) * 10) / 10
+                        : null;
 
                       const consecutiveHighRpe = (() => {
-                        const withRpe = client.recentSessions
-                          .filter(s => s.completedAt && s.rpe != null)
-                          .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
+                        const sorted = [...withRpe].sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
                         let count = 0;
-                        for (const s of withRpe) {
+                        for (const s of sorted) {
                           if ((s.rpe as number) > 8) count++;
                           else break;
                         }
@@ -1011,8 +1013,20 @@ export default function ClientDetail() {
                       return (
                         <div className="mt-4 pt-4 border-t border-border">
                           <div className="flex items-center justify-between mb-3">
-                            <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                              RPE — Effort perçu
+                            <div className="flex items-center gap-3">
+                              <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                                RPE — Effort perçu
+                              </div>
+                              {avgRpe !== null && (
+                                <div className={cn(
+                                  "text-[10px] font-mono px-2 py-0.5 rounded border",
+                                  avgRpe > 8 ? "text-destructive border-destructive/30 bg-destructive/10" :
+                                  avgRpe > 6 ? "text-amber-400 border-amber-400/30 bg-amber-400/10" :
+                                  "text-green-400 border-green-400/30 bg-green-400/10"
+                                )}>
+                                  moy. {avgRpe}/10
+                                </div>
+                              )}
                             </div>
                             {consecutiveHighRpe >= 2 && (
                               <div className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/30 px-2.5 py-1 rounded-full">
@@ -1081,7 +1095,15 @@ export default function ClientDetail() {
                                   <div className="flex items-center gap-4 shrink-0">
                                     <div className="text-right">
                                       <div className="text-[10px] text-muted-foreground uppercase">RPE</div>
-                                      <div className="text-sm font-mono text-white">{session.rpe || '--'}<span className="text-xs text-muted-foreground">/10</span></div>
+                                      <div className={cn(
+                                        "text-sm font-mono",
+                                        session.rpe == null ? "text-muted-foreground" :
+                                        (session.rpe as number) > 8 ? "text-destructive" :
+                                        (session.rpe as number) > 6 ? "text-amber-400" :
+                                        "text-green-400"
+                                      )}>
+                                        {session.rpe ?? '--'}<span className="text-xs text-muted-foreground">/10</span>
+                                      </div>
                                     </div>
                                     {isExpanded
                                       ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
