@@ -64,6 +64,7 @@
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@shopify/flash-list": "2.0.2",
     "expo-av": "^16.0.8",
+    "expo-camera": "^17.0.10",
     "expo-image-manipulator": "^55.0.11",
     "expo-secure-store": "^55.0.9",
     "expo-sensors": "^55.0.9",

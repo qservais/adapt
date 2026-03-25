@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,11 +12,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { BarcodeScannerModal } from "./BarcodeScannerModal";
+import { fetchProductByBarcode, type OFFProduct } from "@/lib/openFoodFacts";
+
+const RECENT_PRODUCTS_KEY = "recent_scanned_products";
+const MAX_RECENT = 10;
 
 interface MealLog {
   id: string;
@@ -87,6 +94,12 @@ export function NutritionTab() {
   const [selectedDate, setSelectedDate] = useState(() => toDateStr(new Date()));
   const [showAddModal, setShowAddModal] = useState(false);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [productLoading, setProductLoading] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState<OFFProduct | null>(null);
+  const [quantity, setQuantity] = useState("100");
+  const [productNotFound, setProductNotFound] = useState(false);
+  const [recentProducts, setRecentProducts] = useState<OFFProduct[]>([]);
 
   const [mealType, setMealType] = useState<MealType>("lunch");
   const [description, setDescription] = useState("");
@@ -99,6 +112,14 @@ export function NutritionTab() {
   const [goalCarbs, setGoalCarbs] = useState("");
   const [goalFat, setGoalFat] = useState("");
   const [goalKcal, setGoalKcal] = useState("");
+
+  useEffect(() => {
+    AsyncStorage.getItem(RECENT_PRODUCTS_KEY)
+      .then((val) => {
+        if (val) setRecentProducts(JSON.parse(val) as OFFProduct[]);
+      })
+      .catch(() => {});
+  }, []);
 
   const mealsQuery = useQuery<MealLog[]>({
     queryKey: ["/api/nutrition/meals", selectedDate],
@@ -144,6 +165,60 @@ export function NutritionTab() {
     setFatG("");
     setKcal("");
     setMealType("lunch");
+    setScannedProduct(null);
+    setProductNotFound(false);
+    setQuantity("100");
+  }
+
+  async function saveToRecent(product: OFFProduct) {
+    const updated = [product, ...recentProducts.filter(p => p.barcode !== product.barcode)].slice(0, MAX_RECENT);
+    setRecentProducts(updated);
+    try {
+      await AsyncStorage.setItem(RECENT_PRODUCTS_KEY, JSON.stringify(updated));
+    } catch {}
+  }
+
+  async function handleBarcodeScanned(barcode: string) {
+    setShowScanner(false);
+    setProductLoading(true);
+    setProductNotFound(false);
+    setScannedProduct(null);
+    try {
+      const product = await fetchProductByBarcode(barcode);
+      if (product) {
+        setScannedProduct(product);
+        setQuantity("100");
+        await saveToRecent(product);
+      } else {
+        setProductNotFound(true);
+      }
+    } catch {
+      setProductNotFound(true);
+    } finally {
+      setProductLoading(false);
+    }
+  }
+
+  function handleAddFromProduct() {
+    if (!scannedProduct) return;
+    const qty = parseFloat(quantity);
+    if (isNaN(qty) || qty <= 0) return;
+    const factor = qty / 100;
+    addMealMutation.mutate({
+      date: selectedDate,
+      mealType,
+      description: scannedProduct.name,
+      proteinG: Math.round(scannedProduct.proteinPer100g * factor),
+      carbsG: Math.round(scannedProduct.carbsPer100g * factor),
+      fatG: Math.round(scannedProduct.fatPer100g * factor),
+      kcal: Math.round(scannedProduct.kcalPer100g * factor),
+    });
+  }
+
+  function selectRecentProduct(product: OFFProduct) {
+    setScannedProduct(product);
+    setQuantity("100");
+    setProductNotFound(false);
   }
 
   function shiftDate(delta: number) {
@@ -313,15 +388,171 @@ export function NutritionTab() {
         </View>
       )}
 
+      <BarcodeScannerModal
+        visible={showScanner}
+        onScanned={handleBarcodeScanned}
+        onClose={() => setShowScanner(false)}
+      />
+
       <Modal visible={showAddModal} animationType="slide" transparent presentationStyle="overFullScreen">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
+          <ScrollView
+            style={{ maxHeight: "90%" }}
+            contentContainerStyle={styles.modalBox}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { fontFamily: FONTS.mono }]}>AJOUTER UN REPAS</Text>
               <TouchableOpacity onPress={() => { setShowAddModal(false); resetForm(); }}>
                 <Feather name="x" size={20} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
+
+            {/* Scanner button */}
+            <TouchableOpacity
+              style={styles.scannerBtn}
+              onPress={() => setShowScanner(true)}
+              activeOpacity={0.8}
+            >
+              <Feather name="camera" size={18} color={COLORS.green} />
+              <Text style={[styles.scannerBtnText, { fontFamily: FONTS.mono }]}>
+                SCANNER UN PRODUIT
+              </Text>
+            </TouchableOpacity>
+
+            {/* Recent products */}
+            {recentProducts.length > 0 && !scannedProduct && (
+              <View style={styles.recentSection}>
+                <Text style={[styles.recentLabel, { fontFamily: FONTS.mono }]}>PRODUITS RÉCENTS</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentScroll}>
+                  {recentProducts.map((p) => (
+                    <TouchableOpacity
+                      key={p.barcode}
+                      style={styles.recentChip}
+                      onPress={() => selectRecentProduct(p)}
+                      activeOpacity={0.75}
+                    >
+                      {p.imageUrl ? (
+                        <Image source={{ uri: p.imageUrl }} style={styles.recentChipImg} />
+                      ) : (
+                        <View style={styles.recentChipImgPlaceholder}>
+                          <Feather name="package" size={14} color={COLORS.textMuted} />
+                        </View>
+                      )}
+                      <Text style={[styles.recentChipText, { fontFamily: FONTS.body }]} numberOfLines={2}>
+                        {p.name}
+                      </Text>
+                      <Text style={[styles.recentChipKcal, { fontFamily: FONTS.mono }]}>
+                        {p.kcalPer100g} kcal/100g
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Product loading */}
+            {productLoading && (
+              <View style={styles.productLoadingBox}>
+                <ActivityIndicator color={COLORS.green} />
+                <Text style={[styles.productLoadingText, { fontFamily: FONTS.body }]}>
+                  Recherche du produit…
+                </Text>
+              </View>
+            )}
+
+            {/* Product not found */}
+            {productNotFound && !productLoading && (
+              <View style={styles.productNotFoundBox}>
+                <Feather name="alert-circle" size={16} color={COLORS.amber} />
+                <Text style={[styles.productNotFoundText, { fontFamily: FONTS.body }]}>
+                  Produit non trouvé — saisie manuelle
+                </Text>
+                <TouchableOpacity onPress={() => setProductNotFound(false)}>
+                  <Feather name="x" size={14} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Product card */}
+            {scannedProduct && !productLoading && (
+              <View style={styles.productCard}>
+                <View style={styles.productCardHeader}>
+                  {scannedProduct.imageUrl ? (
+                    <Image source={{ uri: scannedProduct.imageUrl }} style={styles.productImg} />
+                  ) : (
+                    <View style={[styles.productImg, styles.productImgPlaceholder]}>
+                      <Feather name="package" size={20} color={COLORS.textMuted} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.productName, { fontFamily: FONTS.bodyBold }]} numberOfLines={2}>
+                      {scannedProduct.name}
+                    </Text>
+                    <Text style={[styles.productPer100, { fontFamily: FONTS.mono }]}>Par 100g :</Text>
+                    <View style={styles.productMacroRow}>
+                      <Text style={[styles.productMacro, { fontFamily: FONTS.mono, color: COLORS.green }]}>
+                        {scannedProduct.kcalPer100g} kcal
+                      </Text>
+                      <Text style={[styles.productMacro, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
+                        {scannedProduct.proteinPer100g}g P
+                      </Text>
+                      <Text style={[styles.productMacro, { fontFamily: FONTS.mono, color: COLORS.amber }]}>
+                        {scannedProduct.carbsPer100g}g G
+                      </Text>
+                      <Text style={[styles.productMacro, { fontFamily: FONTS.mono, color: COLORS.violet }]}>
+                        {scannedProduct.fatPer100g}g L
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => setScannedProduct(null)} style={{ padding: 4 }}>
+                    <Feather name="x" size={16} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.productQtyRow}>
+                  <Text style={[styles.productQtyLabel, { fontFamily: FONTS.body }]}>Quantité :</Text>
+                  <TextInput
+                    value={quantity}
+                    onChangeText={setQuantity}
+                    keyboardType="numeric"
+                    style={[styles.productQtyInput, { fontFamily: FONTS.mono }]}
+                  />
+                  <Text style={[styles.productQtyUnit, { fontFamily: FONTS.mono }]}>g</Text>
+                </View>
+                {(() => {
+                  const qty = parseFloat(quantity) || 0;
+                  const factor = qty / 100;
+                  if (qty <= 0) return null;
+                  return (
+                    <View style={styles.productCalcRow}>
+                      <Text style={[styles.productCalcText, { fontFamily: FONTS.mono, color: COLORS.green }]}>
+                        {Math.round(scannedProduct.kcalPer100g * factor)} kcal
+                      </Text>
+                      <Text style={[styles.productCalcText, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
+                        {Math.round(scannedProduct.proteinPer100g * factor)}g P
+                      </Text>
+                      <Text style={[styles.productCalcText, { fontFamily: FONTS.mono, color: COLORS.amber }]}>
+                        {Math.round(scannedProduct.carbsPer100g * factor)}g G
+                      </Text>
+                      <Text style={[styles.productCalcText, { fontFamily: FONTS.mono, color: COLORS.violet }]}>
+                        {Math.round(scannedProduct.fatPer100g * factor)}g L
+                      </Text>
+                    </View>
+                  );
+                })()}
+                <TouchableOpacity
+                  style={styles.addFromProductBtn}
+                  onPress={handleAddFromProduct}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="plus-circle" size={16} color={COLORS.bg} />
+                  <Text style={[styles.addFromProductBtnText, { fontFamily: FONTS.mono }]}>
+                    AJOUTER AU REPAS
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <Text style={[styles.fieldLabel, { fontFamily: FONTS.body }]}>Type de repas</Text>
             <View style={styles.mealTypeRow}>
@@ -368,7 +599,7 @@ export function NutritionTab() {
                 : <Text style={[styles.saveBtnText, { fontFamily: FONTS.mono }]}>ENREGISTRER</Text>
               }
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -488,4 +719,100 @@ const styles = StyleSheet.create({
   saveBtn: { backgroundColor: COLORS.green, borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 4 },
   saveBtnLoading: { opacity: 0.6 },
   saveBtnText: { fontSize: 14, color: COLORS.bg },
+  scannerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: `${COLORS.green}50`,
+    borderRadius: 12,
+    paddingVertical: 12,
+    backgroundColor: `${COLORS.green}10`,
+  },
+  scannerBtnText: { fontSize: 13, color: COLORS.green },
+  recentSection: { gap: 6 },
+  recentLabel: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 2 },
+  recentScroll: { marginHorizontal: -4 },
+  recentChip: {
+    width: 100,
+    marginHorizontal: 4,
+    alignItems: "center",
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 8,
+    gap: 4,
+  },
+  recentChipImg: { width: 48, height: 48, borderRadius: 6 },
+  recentChipImgPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: COLORS.bgInput,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  recentChipText: { fontSize: 11, color: COLORS.textPrimary, textAlign: "center" },
+  recentChipKcal: { fontSize: 10, color: COLORS.textMuted },
+  productLoadingBox: { flexDirection: "row", alignItems: "center", gap: 10, justifyContent: "center", paddingVertical: 12 },
+  productLoadingText: { fontSize: 13, color: COLORS.textSecondary },
+  productNotFoundBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 10,
+    backgroundColor: `${COLORS.amber}12`,
+    borderWidth: 1,
+    borderColor: `${COLORS.amber}40`,
+    borderRadius: 10,
+  },
+  productNotFoundText: { flex: 1, fontSize: 13, color: COLORS.amber },
+  productCard: {
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${COLORS.green}40`,
+    padding: 12,
+    gap: 10,
+  },
+  productCardHeader: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
+  productImg: { width: 60, height: 60, borderRadius: 8 },
+  productImgPlaceholder: { backgroundColor: COLORS.bgInput, alignItems: "center", justifyContent: "center" },
+  productName: { fontSize: 14, color: COLORS.white, lineHeight: 18, marginBottom: 4 },
+  productPer100: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 1, marginBottom: 4 },
+  productMacroRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  productMacro: { fontSize: 11 },
+  productQtyRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  productQtyLabel: { fontSize: 13, color: COLORS.textSecondary },
+  productQtyInput: {
+    flex: 1,
+    textAlign: "center",
+    backgroundColor: COLORS.bgInput,
+    borderWidth: 1,
+    borderColor: `${COLORS.green}50`,
+    borderRadius: 8,
+    padding: 8,
+    color: COLORS.white,
+    fontSize: 18,
+  },
+  productQtyUnit: { fontSize: 14, color: COLORS.textMuted },
+  productCalcRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+    paddingHorizontal: 4,
+  },
+  productCalcText: { fontSize: 12 },
+  addFromProductBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.green,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  addFromProductBtnText: { fontSize: 13, color: COLORS.bg },
 });
