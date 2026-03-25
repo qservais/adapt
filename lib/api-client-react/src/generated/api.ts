@@ -60,6 +60,8 @@ import type {
   RegisterRequest,
   ResolveAlertRequest,
   SendMessageRequest,
+  UploadMediaRequest,
+  UploadMediaResponse,
   SessionDetail,
   SessionFeedbackRequest,
   SessionLogSummary,
@@ -4014,3 +4016,43 @@ export function useDeleteCoachChallenge<
     ...mutationOptions,
   });
 }
+
+export const getUploadMessageMediaUrl = () => {
+  return `/api/messages/upload-media`;
+};
+
+export const uploadMessageMedia = async (
+  uploadMediaRequest: UploadMediaRequest,
+  options?: RequestInit,
+): Promise<UploadMediaResponse> => {
+  return customFetch<UploadMediaResponse>(getUploadMessageMediaUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(uploadMediaRequest),
+  });
+};
+
+export const useUploadMessageMedia = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadMessageMedia>>,
+    TError,
+    { data: BodyType<UploadMediaRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof uploadMessageMedia>>,
+  TError,
+  { data: BodyType<UploadMediaRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: ({ data }) => uploadMessageMedia(data, requestOptions),
+    ...mutationOptions,
+  });
+};

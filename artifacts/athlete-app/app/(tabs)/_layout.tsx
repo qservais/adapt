@@ -5,10 +5,47 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants/theme";
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import { useGetMessageThreads } from "@workspace/api-client-react";
+
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <View style={badgeStyles.badge}>
+      <Text style={badgeStyles.badgeText}>{count > 99 ? "99+" : count}</Text>
+    </View>
+  );
+}
+
+const badgeStyles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.red,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "700",
+    lineHeight: 14,
+  },
+});
+
+function useUnreadMessageCount() {
+  const threadsQuery = useGetMessageThreads();
+  const threads = threadsQuery.data ?? [];
+  return threads.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
+}
 
 function NativeTabLayout() {
   const insets = useSafeAreaInsets();
@@ -47,20 +84,25 @@ function TabIcon({
   color,
   focused,
   sfSymbol,
+  badge,
 }: {
   name: React.ComponentProps<typeof Feather>["name"];
   color: string;
   focused: boolean;
   sfSymbol?: string;
+  badge?: number;
 }) {
   const isIOS = Platform.OS === "ios";
   return (
     <View style={tabIconStyles.wrapper}>
-      {isIOS && sfSymbol ? (
-        <SymbolView name={sfSymbol as any} tintColor={color} size={22} />
-      ) : (
-        <Feather name={name} size={22} color={color} />
-      )}
+      <View>
+        {isIOS && sfSymbol ? (
+          <SymbolView name={sfSymbol as any} tintColor={color} size={22} />
+        ) : (
+          <Feather name={name} size={22} color={color} />
+        )}
+        {badge != null && badge > 0 && <UnreadBadge count={badge} />}
+      </View>
       {focused && <View style={[tabIconStyles.dot, { backgroundColor: COLORS.cyan }]} />}
     </View>
   );
@@ -68,11 +110,7 @@ function TabIcon({
 
 const tabIconStyles = StyleSheet.create({
   wrapper: { alignItems: "center", gap: 3 },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
+  dot: { width: 4, height: 4, borderRadius: 2 },
 });
 
 function ClassicTabLayout() {
@@ -81,6 +119,7 @@ function ClassicTabLayout() {
   const tabHeight = isWeb ? 84 : isIOS ? 88 : 64;
   const insets = useSafeAreaInsets();
   const bellTop = Math.max(insets.top - 28, 8);
+  const unreadCount = useUnreadMessageCount();
 
   return (
     <View style={{ flex: 1 }}>
@@ -147,8 +186,15 @@ function ClassicTabLayout() {
           options={{
             title: "Messages",
             tabBarIcon: ({ color, focused }) => (
-              <TabIcon name="message-circle" sfSymbol="message" color={color} focused={focused} />
+              <TabIcon
+                name="message-circle"
+                sfSymbol="message"
+                color={color}
+                focused={focused}
+                badge={unreadCount}
+              />
             ),
+            tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           }}
         />
         <Tabs.Screen

@@ -626,13 +626,26 @@ export interface MessageData {
   senderId: string;
   recipientId: string;
   content: string;
+  mediaType?: "audio" | "video" | null;
+  mediaUrl?: string | null;
   isRead: boolean;
   createdAt: string;
 }
 
 export interface SendMessageRequest {
   recipientId: string;
-  content: string;
+  content?: string;
+  mediaType?: "audio" | "video";
+  mediaUrl?: string;
+}
+
+export interface UploadMediaRequest {
+  mediaType: "audio" | "video";
+  contentType: string;
+}
+
+export interface UploadMediaResponse {
+  uploadUrl: string;
 }
 
 export type GetExercisesParams = {

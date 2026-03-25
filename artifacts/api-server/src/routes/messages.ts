@@ -3,9 +3,11 @@ import { db } from "@workspace/db";
 import { messagesTable, usersTable } from "@workspace/db";
 import { eq, or, and, desc } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
+import { ObjectStorageService } from "../lib/objectStorage.js";
 import { z } from "zod";
 
 const router = Router();
+const storage = new ObjectStorageService();
 
 router.get("/messages", authenticate, async (req, res) => {
   try {
@@ -15,6 +17,7 @@ router.get("/messages", authenticate, async (req, res) => {
       senderId: messagesTable.senderId,
       recipientId: messagesTable.recipientId,
       content: messagesTable.content,
+      mediaType: messagesTable.mediaType,
       isRead: messagesTable.isRead,
       createdAt: messagesTable.createdAt,
     })
@@ -22,10 +25,10 @@ router.get("/messages", authenticate, async (req, res) => {
       .where(or(eq(messagesTable.senderId, userId), eq(messagesTable.recipientId, userId)))
       .orderBy(desc(messagesTable.createdAt));
 
-    // Group into threads by other-party user ID
     const threadMap = new Map<string, {
       userId: string;
       lastMessage: string;
+      lastMediaType: string | null;
       lastMessageAt: Date | null;
       unreadCount: number;
     }>();
@@ -36,6 +39,7 @@ router.get("/messages", authenticate, async (req, res) => {
         threadMap.set(otherId, {
           userId: otherId,
           lastMessage: msg.content,
+          lastMediaType: msg.mediaType ?? null,
           lastMessageAt: msg.createdAt,
           unreadCount: 0,
         });
@@ -55,6 +59,7 @@ router.get("/messages", authenticate, async (req, res) => {
         userLastName: user?.lastName ?? null,
         userAvatarUrl: user?.avatarUrl ?? null,
         lastMessage: thread.lastMessage,
+        lastMediaType: thread.lastMediaType,
         lastMessageAt: thread.lastMessageAt?.toISOString() ?? null,
         unreadCount: thread.unreadCount,
       });
@@ -78,7 +83,28 @@ router.get("/messages/:userId", authenticate, async (req, res) => {
       ))
       .orderBy(messagesTable.createdAt);
 
-    res.json(messages);
+    const result = await Promise.all(messages.map(async (msg) => {
+      let resolvedMediaUrl = msg.mediaUrl ?? null;
+      if (resolvedMediaUrl && resolvedMediaUrl.startsWith("/objects/")) {
+        try {
+          resolvedMediaUrl = await storage.getObjectEntitySignedDownloadUrl(resolvedMediaUrl, 3600);
+        } catch {
+          resolvedMediaUrl = null;
+        }
+      }
+      return {
+        id: msg.id,
+        senderId: msg.senderId,
+        recipientId: msg.recipientId,
+        content: msg.content,
+        mediaType: msg.mediaType ?? null,
+        mediaUrl: resolvedMediaUrl,
+        isRead: msg.isRead,
+        createdAt: msg.createdAt,
+      };
+    }));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
@@ -86,7 +112,9 @@ router.get("/messages/:userId", authenticate, async (req, res) => {
 
 const sendSchema = z.object({
   recipientId: z.string().uuid(),
-  content: z.string().min(1),
+  content: z.string().min(0).max(4000).default(""),
+  mediaType: z.enum(["audio", "video"]).optional(),
+  mediaUrl: z.string().optional(),
 });
 
 router.post("/messages", authenticate, async (req, res) => {
@@ -96,11 +124,24 @@ router.post("/messages", authenticate, async (req, res) => {
     return;
   }
 
+  const { recipientId, content, mediaType, mediaUrl } = parsed.data;
+  if (!content && !mediaUrl) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Contenu ou média requis" } });
+    return;
+  }
+
   try {
+    let storedMediaUrl: string | null = null;
+    if (mediaUrl) {
+      storedMediaUrl = storage.normalizeObjectEntityPath(mediaUrl);
+    }
+
     const [message] = await db.insert(messagesTable).values({
       senderId: req.user!.userId,
-      recipientId: parsed.data.recipientId,
-      content: parsed.data.content,
+      recipientId,
+      content: content || (mediaType === "audio" ? "🎤 Message vocal" : "🎬 Vidéo"),
+      mediaType: mediaType ?? null,
+      mediaUrl: storedMediaUrl,
     }).returning();
 
     res.status(201).json(message);
@@ -120,6 +161,26 @@ router.put("/messages/:userId/read", authenticate, async (req, res) => {
     res.json({ success: true, message: "Marked as read" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const uploadMediaSchema = z.object({
+  mediaType: z.enum(["audio", "video"]),
+  contentType: z.string().min(1),
+});
+
+router.post("/messages/upload-media", authenticate, async (req, res) => {
+  const parsed = uploadMediaSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Type de média invalide" });
+    return;
+  }
+
+  try {
+    const uploadUrl = await storage.getObjectEntityUploadURL();
+    res.json({ uploadUrl });
+  } catch (err) {
+    res.status(500).json({ error: "Impossible de générer l'URL d'upload" });
   }
 });
 

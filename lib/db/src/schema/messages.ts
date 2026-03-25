@@ -9,6 +9,8 @@ export const messagesTable = pgTable("messages", {
   senderId: uuid("sender_id").references(() => usersTable.id).notNull(),
   recipientId: uuid("recipient_id").references(() => usersTable.id).notNull(),
   content: text("content").notNull(),
+  mediaType: varchar("media_type", { length: 10 }),
+  mediaUrl: text("media_url"),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

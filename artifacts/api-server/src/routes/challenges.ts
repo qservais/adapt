@@ -123,7 +123,7 @@ const UpdateChallengeSchema = z.object({
 
 router.put("/coach/challenges/:id", authenticate, requireRole("coach"), async (req, res) => {
   const coachId = req.user!.userId;
-  const { id } = req.params;
+  const id = String(req.params["id"]);
 
   const [challenge] = await db.select().from(challengesTable)
     .where(and(eq(challengesTable.id, id), eq(challengesTable.coachId, coachId)));
@@ -154,7 +154,7 @@ router.put("/coach/challenges/:id", authenticate, requireRole("coach"), async (r
 
 router.delete("/coach/challenges/:id", authenticate, requireRole("coach"), async (req, res) => {
   const coachId = req.user!.userId;
-  const { id } = req.params;
+  const id = String(req.params["id"]);
 
   const [challenge] = await db.select().from(challengesTable)
     .where(and(eq(challengesTable.id, id), eq(challengesTable.coachId, coachId)));
@@ -215,7 +215,7 @@ router.get("/challenges/active", authenticate, async (req, res) => {
 
 router.get("/challenges/:id", authenticate, async (req, res) => {
   const athleteId = req.user!.userId;
-  const { id } = req.params;
+  const id = String(req.params["id"]);
 
   const [row] = await db
     .select({
@@ -262,7 +262,7 @@ router.get("/challenges/:id", authenticate, async (req, res) => {
 
 router.put("/challenges/:id/progress", authenticate, async (req, res) => {
   const athleteId = req.user!.userId;
-  const { id } = req.params;
+  const id = String(req.params["id"]);
 
   const parsed = UpdateProgressSchema.safeParse(req.body);
   if (!parsed.success) {
