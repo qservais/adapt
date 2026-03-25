@@ -14,6 +14,7 @@ export const exercisesTable = pgTable("exercises", {
   description: text("description"),
   demoUrl: varchar("demo_url", { length: 500 }),
   demoGifUrl: varchar("demo_gif_url", { length: 500 }),
+  level: varchar("level", { length: 20 }),
   createdBy: uuid("created_by").references(() => usersTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

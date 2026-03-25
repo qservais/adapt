@@ -15,6 +15,7 @@ const exerciseResponseFields = {
   equipment: exercisesTable.equipment,
   description: exercisesTable.description,
   demoUrl: exercisesTable.demoUrl,
+  level: exercisesTable.level,
   createdBy: exercisesTable.createdBy,
 } as const;
 
@@ -49,11 +50,12 @@ router.get("/exercises", authenticate, async (req, res) => {
 
 const createExerciseSchema = z.object({
   name: z.string().min(1),
-  category: z.enum(["compound", "isolation", "cardio", "mobility", "core", "power", "plyometric"]).optional(),
+  category: z.enum(["compound", "isolation", "cardio", "mobility", "core", "power", "plyometric", "réathlétisation"]).optional(),
   muscleGroups: z.array(z.string()).optional(),
   equipment: z.array(z.string()).optional(),
   description: z.string().optional(),
   demoUrl: z.string().url().optional().or(z.literal("")),
+  level: z.enum(["débutant", "intermédiaire", "avancé"]).optional(),
 });
 
 router.post("/exercises", authenticate, requireRole("coach"), async (req, res) => {
@@ -71,6 +73,7 @@ router.post("/exercises", authenticate, requireRole("coach"), async (req, res) =
       equipment: parsed.data.equipment ?? null,
       description: parsed.data.description ?? null,
       demoUrl: parsed.data.demoUrl || null,
+      level: parsed.data.level ?? null,
       createdBy: req.user!.userId,
     }).returning(exerciseResponseFields);
 
@@ -112,6 +115,7 @@ router.put("/exercises/:exerciseId", authenticate, requireRole("coach"), async (
         equipment: parsed.data.equipment ?? null,
         description: parsed.data.description ?? null,
         demoUrl: parsed.data.demoUrl || null,
+        level: parsed.data.level ?? null,
       })
       .where(and(eq(exercisesTable.id, exerciseId), eq(exercisesTable.createdBy, coachId)))
       .returning(exerciseResponseFields);

@@ -35,6 +35,7 @@ interface ExerciseItem {
   equipment: string[] | null;
   description: string | null;
   demoUrl: string | null;
+  level: string | null;
   createdBy: string | null;
 }
 
@@ -46,6 +47,7 @@ const CATEGORIES = [
   { value: "core", label: "Gainage/Core", color: "text-[#F97316]", bg: "bg-[#F97316]/10 border-[#F97316]/30" },
   { value: "power", label: "Puissance", color: "text-[#EF4444]", bg: "bg-[#EF4444]/10 border-[#EF4444]/30" },
   { value: "plyometric", label: "Pliométrie", color: "text-[#FF8C42]", bg: "bg-[#FF8C42]/10 border-[#FF8C42]/30" },
+  { value: "réathlétisation", label: "Réathlétisation", color: "text-[#22C55E]", bg: "bg-[#22C55E]/10 border-[#22C55E]/30" },
 ];
 
 const MUSCLE_GROUPS = [
