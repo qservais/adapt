@@ -709,6 +709,8 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           scheduledDate: localDateFromTimestamp(sessionDate),
           estimatedDurationMin: session.estimatedDurationMin,
           isCompleted: completedSessionIds.has(session.id),
+          scheduledTime: session.scheduledTime ?? null,
+          visioLink: session.visioLink ?? null,
         });
       }
     }

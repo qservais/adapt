@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor,
   useSensor, useSensors, DragEndEvent,
@@ -436,39 +436,67 @@ interface ExerciseRowCardProps {
 }
 
 function TempoInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const parts = value.match(/^(\d)-(\d)-(\d)-(\d)$/) ?? [];
-  const digits = parts.length === 5 ? [parts[1], parts[2], parts[3], parts[4]] : ["", "", "", ""];
-  const refs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
-  const labels = ["exc", "bas", "con", "haut"];
-  const update = (i: number, d: string) => {
-    const next = [...digits];
-    next[i] = d;
-    if (next.every(x => x !== "")) onChange(next.join("-"));
-    else if (d && i < 3) refs[i + 1]?.current?.focus();
+  const parseDigits = (v: string): [string, string, string, string] => {
+    const m = v.match(/^(\d)-(\d)-(\d)-(\d)$/);
+    return m ? [m[1], m[2], m[3], m[4]] : ["", "", "", ""];
   };
+  const [digits, setDigits] = useState<[string, string, string, string]>(() => parseDigits(value));
+  const ref0 = useRef<HTMLInputElement>(null);
+  const ref1 = useRef<HTMLInputElement>(null);
+  const ref2 = useRef<HTMLInputElement>(null);
+  const ref3 = useRef<HTMLInputElement>(null);
+  const refs = [ref0, ref1, ref2, ref3];
+  const labels = ["exc", "bas", "con", "haut"];
+
+  useEffect(() => {
+    const parsed = parseDigits(value);
+    setDigits(parsed);
+  }, [value]);
+
+  const update = (i: number, d: string) => {
+    const next = [...digits] as [string, string, string, string];
+    next[i] = d;
+    setDigits(next);
+    if (next.every(x => x !== "")) {
+      onChange(next.join("-"));
+    }
+    if (d && i < 3) refs[i + 1]?.current?.focus();
+  };
+
+  const items: React.ReactNode[] = [];
+  for (let i = 0; i < 4; i++) {
+    items.push(
+      <div key={i} className="flex flex-col items-center gap-0.5">
+        <input
+          ref={refs[i]}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={digits[i]}
+          onChange={e => {
+            const v = e.target.value.replace(/\D/, "");
+            update(i, v);
+          }}
+          onKeyDown={e => {
+            if (e.key === "Backspace" && !digits[i] && i > 0) {
+              refs[i - 1]?.current?.focus();
+            }
+          }}
+          className="w-8 h-8 text-center text-sm rounded border border-border bg-background text-white focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <span className="text-[9px] text-muted-foreground font-mono">{labels[i]}</span>
+      </div>
+    );
+    if (i < 3) {
+      items.push(
+        <span key={`sep-${i}`} className="text-muted-foreground text-lg self-start mt-1">-</span>
+      );
+    }
+  }
+
   return (
     <div className="flex items-end gap-0.5">
-      {digits.map((d, i) => (
-        <div key={i} className="flex flex-col items-center gap-0.5">
-          <input
-            ref={refs[i]}
-            type="text"
-            inputMode="numeric"
-            maxLength={1}
-            value={d}
-            onChange={e => {
-              const v = e.target.value.replace(/\D/, "");
-              update(i, v);
-            }}
-            onKeyDown={e => {
-              if (e.key === "Backspace" && !d && i > 0) refs[i - 1]?.current?.focus();
-            }}
-            className="w-8 h-8 text-center text-sm rounded border border-border bg-background text-white focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <span className="text-[9px] text-muted-foreground font-mono">{labels[i]}</span>
-          {i < 3 && <span className="absolute" />}
-        </div>
-      )).flatMap((el, i) => i < 3 ? [el, <span key={`sep-${i}`} className="text-muted-foreground text-lg self-start mt-1">-</span>] : [el])}
+      {items}
     </div>
   );
 }

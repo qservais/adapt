@@ -82,7 +82,13 @@ export const EQUIPMENT_CATALOG: EquipmentItem[] = [
   { key: "haies", labelFr: "Haies", category: "Athlétisme" },
   { key: "ceinture-de-dips", labelFr: "Ceinture de dips", category: "Accessoires" },
   { key: "gilet-leste", labelFr: "Gilet lesté", category: "Accessoires" },
-  { key: "sac-leste", labelFr: "Sac leste", category: "Accessoires" },
+  { key: "sac-leste", labelFr: "Sac lesté", category: "Accessoires" },
+  { key: "straps", labelFr: "Straps", category: "Accessoires" },
+  { key: "magnésie", labelFr: "Magnésie", category: "Accessoires" },
+  { key: "ceinture-lombaire", labelFr: "Ceinture lombaire", category: "Accessoires" },
+  { key: "genouillères", labelFr: "Genouillères", category: "Accessoires" },
+  { key: "hyper-extension", labelFr: "Hyper-extension", category: "Machines" },
+  { key: "chaise-romaine", labelFr: "Chaise romaine", category: "Machines" },
 ];
 
 export const EQUIPMENT_CATEGORIES = [...new Set(EQUIPMENT_CATALOG.map(e => e.category))];
