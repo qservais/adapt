@@ -1028,7 +1028,7 @@ export default function ClientDetail() {
                                 </div>
                               )}
                             </div>
-                            {consecutiveHighRpe >= 2 && (
+                            {consecutiveHighRpe >= 3 && (
                               <div className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/30 px-2.5 py-1 rounded-full">
                                 <AlertTriangle className="w-3 h-3" />
                                 {consecutiveHighRpe} séances RPE &gt; 8 consécutives

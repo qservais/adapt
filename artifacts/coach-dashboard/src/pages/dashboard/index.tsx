@@ -229,7 +229,7 @@ export default function Dashboard() {
 
   function submitApptDialog() {
     if (!apptDialog.athleteId || !apptDialog.date) return;
-    const startAt = `${apptDialog.date}T${apptDialog.time}:00`;
+    const startAt = new Date(`${apptDialog.date}T${apptDialog.time}:00`).toISOString();
     if (apptDialog.editing) {
       updateAppt({ id: apptDialog.editing.id, data: { startAt, durationMin: apptDialog.durationMin, location: apptDialog.location || undefined, notes: apptDialog.notes || undefined } });
     } else {
