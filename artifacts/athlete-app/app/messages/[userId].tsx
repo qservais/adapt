@@ -49,6 +49,7 @@ export default function ChatScreen() {
   const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
   const [audioDurations, setAudioDurations] = useState<Record<string, string>>({});
   const soundRef = useRef<Audio.Sound | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
   const fullscreenVideoRef = useRef<Video | null>(null);
   const [fullscreenVideoUrl, setFullscreenVideoUrl] = useState<string | null>(null);
 
@@ -122,13 +123,14 @@ export default function ChatScreen() {
       const { recording: rec } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
+      recordingRef.current = rec;
       setRecording(rec);
       setRecordingState("recording");
       setRecordingDuration(0);
       durationTimer.current = setInterval(() => {
         setRecordingDuration((d) => {
           if (d >= 120) {
-            stopRecording();
+            stopRecordingFromRef();
             return d;
           }
           return d + 1;
@@ -139,17 +141,19 @@ export default function ChatScreen() {
     }
   };
 
-  const stopRecording = async () => {
-    if (!recording) return;
+  const stopRecordingFromRef = async () => {
+    const rec = recordingRef.current;
+    if (!rec) return;
+    recordingRef.current = null;
     if (durationTimer.current) {
       clearInterval(durationTimer.current);
       durationTimer.current = null;
     }
     setRecordingState("uploading");
     try {
-      await recording.stopAndUnloadAsync();
+      await rec.stopAndUnloadAsync();
       await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-      const uri = recording.getURI();
+      const uri = rec.getURI();
       setRecording(null);
       if (!uri) throw new Error("URI manquant");
 
@@ -176,15 +180,19 @@ export default function ChatScreen() {
 
   const handleMicPress = () => {
     if (recordingState === "recording") {
-      stopRecording();
+      stopRecordingFromRef();
     } else if (recordingState === "idle") {
       startRecording();
     }
   };
 
-  const sendVideoAsset = async (uri: string, fileSize?: number) => {
+  const sendVideoAsset = async (uri: string, fileSize?: number, durationSecs?: number) => {
     if (fileSize && fileSize > 50 * 1024 * 1024) {
       Alert.alert("Fichier trop lourd", "La vidéo ne doit pas dépasser 50 Mo.");
+      return;
+    }
+    if (durationSecs && durationSecs > 60) {
+      Alert.alert("Vidéo trop longue", "La durée maximale est de 60 secondes.");
       return;
     }
     setVideoUri(uri);
@@ -230,7 +238,8 @@ export default function ChatScreen() {
             });
             if (!result.canceled && result.assets?.[0]) {
               const asset = result.assets[0];
-              await sendVideoAsset(asset.uri, asset.fileSize ?? undefined);
+              const durationSecs = asset.duration ? asset.duration / 1000 : undefined;
+              await sendVideoAsset(asset.uri, asset.fileSize ?? undefined, durationSecs);
             }
           },
         },
@@ -250,7 +259,8 @@ export default function ChatScreen() {
             });
             if (!result.canceled && result.assets?.[0]) {
               const asset = result.assets[0];
-              await sendVideoAsset(asset.uri, asset.fileSize ?? undefined);
+              const durationSecs = asset.duration ? asset.duration / 1000 : undefined;
+              await sendVideoAsset(asset.uri, asset.fileSize ?? undefined, durationSecs);
             }
           },
         },
