@@ -11,7 +11,7 @@ import { calculateAdaptedLoad } from "../services/adapt-engine.js";
 import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
 import { checkAfterSession, checkAfterFeedback } from "../services/badgeService.js";
 import { z } from "zod";
-import { getTodayLocalDate } from "../lib/dateUtils.js";
+import { getTodayLocalDate, localDateFromTimestamp } from "../lib/dateUtils.js";
 
 const router = Router();
 
@@ -686,7 +686,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           sessionLocation: session.sessionType ?? "online",
           weekNumber: session.weekNumber,
           dayNumber: session.dayNumber,
-          scheduledDate: sessionDate.toISOString().split("T")[0],
+          scheduledDate: localDateFromTimestamp(sessionDate),
           estimatedDurationMin: session.estimatedDurationMin,
           isCompleted: completedSessionIds.has(session.id),
         });
@@ -702,9 +702,9 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
       ));
 
     for (const appt of appts) {
-      const apptDate = new Date(appt.startAt);
-      apptDate.setHours(0, 0, 0, 0);
-      if (apptDate <= in7Days) {
+      const apptScheduledDate = localDateFromTimestamp(new Date(appt.startAt));
+      const apptDateMidnight = new Date(`${apptScheduledDate}T00:00:00Z`);
+      if (apptDateMidnight <= in7Days) {
         result.push({
           sessionId: appt.id,
           sessionName: appt.location ? `RDV — ${appt.location}` : "RDV Présentiel",
@@ -712,7 +712,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           sessionLocation: "presentiel",
           weekNumber: 0,
           dayNumber: 0,
-          scheduledDate: apptDate.toISOString().split("T")[0]!,
+          scheduledDate: apptScheduledDate,
           estimatedDurationMin: appt.durationMin,
           isCompleted: false,
         });
