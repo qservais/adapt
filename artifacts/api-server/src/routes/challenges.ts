@@ -111,6 +111,16 @@ router.get("/coach/challenges", authenticate, requireRole("coach"), async (req, 
   res.json(result);
 });
 
+const UpdateChallengeSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  metric: z.enum(["reps", "distance", "time", "sessions"]).optional(),
+  target: z.number().positive().optional(),
+  unit: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
 router.put("/coach/challenges/:id", authenticate, requireRole("coach"), async (req, res) => {
   const coachId = req.user!.userId;
   const { id } = req.params;
@@ -122,13 +132,13 @@ router.put("/coach/challenges/:id", authenticate, requireRole("coach"), async (r
     return;
   }
 
-  const parsed = CreateChallengeSchema.partial().safeParse(req.body);
+  const parsed = UpdateChallengeSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Données invalides" });
     return;
   }
 
-  const { athleteIds, ...rest } = parsed.data;
+  const rest = parsed.data;
   const updateData: Partial<typeof challengesTable.$inferInsert> = {};
   if (rest.title) updateData.title = rest.title;
   if (rest.description !== undefined) updateData.description = rest.description;
@@ -283,7 +293,7 @@ router.put("/challenges/:id/progress", authenticate, async (req, res) => {
   await db.update(challengeAssignmentsTable)
     .set({
       progress: String(newProgress),
-      completedAt: completedAt ?? undefined,
+      completedAt,
     })
     .where(eq(challengeAssignmentsTable.id, assignment.id));
 
