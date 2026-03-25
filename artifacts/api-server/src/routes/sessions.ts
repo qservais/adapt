@@ -62,6 +62,8 @@ async function buildSessionDetail(
   let estimatedDurationMin: number | null = null;
   let sessionType: string | null = null;
   let sessionLocation: string | null = null;
+  let scheduledTime: string | null = null;
+  let visioLink: string | null = null;
 
   if (sessionLog.sessionId) {
     const [sess] = await db.select({
@@ -70,6 +72,8 @@ async function buildSessionDetail(
       estimatedDurationMin: sessionsTable.estimatedDurationMin,
       type: sessionsTable.type,
       sessionType: sessionsTable.sessionType,
+      scheduledTime: sessionsTable.scheduledTime,
+      visioLink: sessionsTable.visioLink,
     }).from(sessionsTable).where(eq(sessionsTable.id, sessionLog.sessionId));
     if (sess) {
       sessionName = sess.name;
@@ -77,6 +81,8 @@ async function buildSessionDetail(
       estimatedDurationMin = sess.estimatedDurationMin ?? null;
       sessionType = sess.type ?? null;
       sessionLocation = sess.sessionType ?? "online";
+      scheduledTime = sess.scheduledTime ?? null;
+      visioLink = sess.visioLink ?? null;
     }
   }
 
@@ -106,6 +112,7 @@ async function buildSessionDetail(
     restSeconds: number | null;
     durationSeconds: number | null;
     coachCue: string | null;
+    tempo: string | null;
     lastUsedLoadKg: number | null;
     lastUsedDate: string | null;
   }[] = [];
@@ -136,6 +143,7 @@ async function buildSessionDetail(
         restSeconds: sessionExercisesTable.restSeconds,
         durationSeconds: sessionExercisesTable.durationSeconds,
         coachCue: sessionExercisesTable.coachCue,
+        tempo: sessionExercisesTable.tempo,
         exerciseName: exercisesTable.name,
         category: exercisesTable.category,
         demoUrl: exercisesTable.demoUrl,
@@ -171,6 +179,7 @@ async function buildSessionDetail(
         restSeconds: ex.restSeconds ?? null,
         durationSeconds: ex.durationSeconds ?? null,
         coachCue: ex.coachCue ?? null,
+        tempo: ex.tempo ?? null,
         lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
         lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
       }));
@@ -184,6 +193,8 @@ async function buildSessionDetail(
     mode: sessionLog.variantMode,
     sessionType,
     sessionLocation,
+    scheduledTime,
+    visioLink,
     adaptScore: checkin.adaptScore,
     completedAt: sessionLog.completedAt ?? null,
     durationMin,
@@ -269,6 +280,8 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
     let sessionName = "Session libre";
     let sessionTypeValue: string | null = null;
     let sessionLocationValue: string | null = null;
+    let scheduledTimeValue: string | null = null;
+    let visioLinkValue: string | null = null;
     let estimatedDuration: number | null = null;
     let coachNotes: string | null = null;
     let exercises: {
@@ -290,6 +303,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       restSeconds: number | null;
       durationSeconds: number | null;
       coachCue: string | null;
+      tempo: string | null;
       lastUsedLoadKg: number | null;
       lastUsedDate: string | null;
     }[] = [];
@@ -324,6 +338,8 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
         sessionName = session.name;
         sessionTypeValue = session.type ?? null;
         sessionLocationValue = session.sessionType ?? "online";
+        scheduledTimeValue = session.scheduledTime ?? null;
+        visioLinkValue = session.visioLink ?? null;
         estimatedDuration = session.estimatedDurationMin ?? null;
         coachNotes = session.coachNotes ?? null;
 
@@ -352,6 +368,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             restSeconds: sessionExercisesTable.restSeconds,
             durationSeconds: sessionExercisesTable.durationSeconds,
             coachCue: sessionExercisesTable.coachCue,
+            tempo: sessionExercisesTable.tempo,
             exerciseName: exercisesTable.name,
             category: exercisesTable.category,
             demoUrl: exercisesTable.demoUrl,
@@ -387,6 +404,7 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             restSeconds: ex.restSeconds ?? null,
             durationSeconds: ex.durationSeconds ?? null,
             coachCue: ex.coachCue ?? null,
+            tempo: ex.tempo ?? null,
             lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
             lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
           }));
@@ -410,6 +428,8 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       mode: forcedMode,
       sessionType: sessionTypeValue,
       sessionLocation: sessionLocationValue,
+      scheduledTime: scheduledTimeValue,
+      visioLink: visioLinkValue,
       estimatedDurationMin: estimatedDuration,
       coachNotes,
       exercises,

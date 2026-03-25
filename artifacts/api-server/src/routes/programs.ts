@@ -5,7 +5,10 @@ import { eq, and, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
-const ALL_SESSION_TYPES = ["strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning"] as const;
+const ALL_SESSION_TYPES = [
+  "strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning",
+  "hypertrophie", "coordination", "technique", "endurance",
+] as const;
 type SessionType = typeof ALL_SESSION_TYPES[number];
 
 const router = Router();
@@ -165,6 +168,8 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
         name: session.name,
         type: session.type,
         sessionType: session.sessionType ?? "online",
+        scheduledTime: session.scheduledTime ?? null,
+        visioLink: session.visioLink ?? null,
         estimatedDurationMin: session.estimatedDurationMin,
         coachNotes: session.coachNotes,
         blocks: blocks.map(b => ({
@@ -324,8 +329,10 @@ const createSessionSchema = z.object({
   weekNumber: z.number().int().min(1),
   dayNumber: z.number().int().min(1),
   name: z.string().min(1),
-  type: z.enum(["strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning"]),
+  type: z.enum(ALL_SESSION_TYPES),
   sessionType: z.enum(["online", "presentiel"]).optional(),
+  scheduledTime: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
+  visioLink: z.string().url().optional().nullable().or(z.literal("")),
   estimatedDurationMin: z.number().int().optional(),
   coachNotes: z.string().optional(),
   blocks: z.array(blockInputSchema).optional(),
@@ -360,6 +367,8 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
       name: parsed.data.name,
       type: parsed.data.type,
       sessionType: parsed.data.sessionType ?? "online",
+      scheduledTime: parsed.data.scheduledTime ?? null,
+      visioLink: parsed.data.visioLink || null,
       estimatedDurationMin: parsed.data.estimatedDurationMin,
       coachNotes: parsed.data.coachNotes,
     }).returning();
@@ -475,6 +484,8 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
       dayNumber?: number;
       type?: string;
       sessionType?: string;
+      scheduledTime?: string | null;
+      visioLink?: string | null;
       estimatedDurationMin?: number;
       coachNotes?: string;
     } = {};
@@ -483,6 +494,8 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
     if (parsed.data.dayNumber !== undefined) updateData.dayNumber = parsed.data.dayNumber;
     if (parsed.data.type !== undefined) updateData.type = parsed.data.type;
     if (parsed.data.sessionType !== undefined) updateData.sessionType = parsed.data.sessionType;
+    if (parsed.data.scheduledTime !== undefined) updateData.scheduledTime = parsed.data.scheduledTime ?? null;
+    if (parsed.data.visioLink !== undefined) updateData.visioLink = parsed.data.visioLink || null;
     if (parsed.data.estimatedDurationMin !== undefined) updateData.estimatedDurationMin = parsed.data.estimatedDurationMin;
     if (parsed.data.coachNotes !== undefined) updateData.coachNotes = parsed.data.coachNotes;
 

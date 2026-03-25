@@ -63,6 +63,7 @@ export const MODE_STYLES: Record<string, { label: string; color: string; border:
 export const SESSION_TYPES = [
   "strength", "cardio", "hybrid", "mobility",
   "athletic_development", "running", "conditioning",
+  "hypertrophie", "coordination", "technique", "endurance",
 ] as const;
 
 export const SESSION_TYPE_LABELS: Record<string, string> = {
@@ -73,6 +74,10 @@ export const SESSION_TYPE_LABELS: Record<string, string> = {
   athletic_development: "Dév. athlétique",
   running: "Course",
   conditioning: "Conditionnement",
+  hypertrophie: "Hypertrophie",
+  coordination: "Coordination",
+  technique: "Technique",
+  endurance: "Endurance",
 };
 
 export const SESSION_TYPE_COLORS: Record<string, { dot: string; text: string; bg: string }> = {
@@ -83,6 +88,10 @@ export const SESSION_TYPE_COLORS: Record<string, { dot: string; text: string; bg
   athletic_development:{ dot: "bg-[#FFB800]",  text: "text-[#FFB800]",  bg: "bg-[#FFB800]/10" },
   running:             { dot: "bg-[#FF8C42]",  text: "text-[#FF8C42]",  bg: "bg-[#FF8C42]/10" },
   conditioning:        { dot: "bg-[#EC4899]",  text: "text-[#EC4899]",  bg: "bg-[#EC4899]/10" },
+  hypertrophie:        { dot: "bg-[#3B82F6]",  text: "text-[#3B82F6]",  bg: "bg-[#3B82F6]/10" },
+  coordination:        { dot: "bg-[#10B981]",  text: "text-[#10B981]",  bg: "bg-[#10B981]/10" },
+  technique:           { dot: "bg-[#F59E0B]",  text: "text-[#F59E0B]",  bg: "bg-[#F59E0B]/10" },
+  endurance:           { dot: "bg-[#EF4444]",  text: "text-[#EF4444]",  bg: "bg-[#EF4444]/10" },
 };
 
 export const SESSION_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -93,6 +102,10 @@ export const SESSION_TYPE_ICONS: Record<string, React.ComponentType<{ className?
   athletic_development:Flame,
   running:             PersonStanding,
   conditioning:        Activity,
+  hypertrophie:        Dumbbell,
+  coordination:        Activity,
+  technique:           Shield,
+  endurance:           Heart,
 };
 
 export const MODES = ["performance", "normal", "adapt", "recovery"] as const;
@@ -149,6 +162,8 @@ export interface SessionDraft {
   name: string;
   type: typeof SESSION_TYPES[number];
   sessionType: "online" | "presentiel";
+  scheduledTime: string;
+  visioLink: string;
   estimatedDurationMin: number;
   coachNotes: string;
   blocks: BlockDraft[];
@@ -168,6 +183,8 @@ export const emptySession = (): SessionDraft => ({
   name: "",
   type: "strength",
   sessionType: "online",
+  scheduledTime: "",
+  visioLink: "",
   estimatedDurationMin: 60,
   coachNotes: "",
   blocks: [emptyBlock(0, "warm_up"), emptyBlock(1, "strength")],
@@ -242,6 +259,8 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
     name: session.name,
     type: session.type as typeof SESSION_TYPES[number],
     sessionType: (session.sessionType === "presentiel" ? "presentiel" : "online") as "online" | "presentiel",
+    scheduledTime: (session as { scheduledTime?: string | null }).scheduledTime ?? "",
+    visioLink: (session as { visioLink?: string | null }).visioLink ?? "",
     estimatedDurationMin: session.estimatedDurationMin || 60,
     coachNotes: session.coachNotes || "",
     blocks,
@@ -886,6 +905,8 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
         name: draft.name,
         type: draft.type as CreateSessionRequest["type"],
         sessionType: draft.sessionType,
+        scheduledTime: draft.scheduledTime || null,
+        visioLink: draft.visioLink || null,
         estimatedDurationMin: autoDurationMin ?? draft.estimatedDurationMin,
         coachNotes: draft.coachNotes,
         blocks: blocksPayload,
@@ -966,14 +987,36 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Notes coach</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Heure prévue</label>
               <Input
-                value={draft.coachNotes}
-                onChange={(e) => setDraft((d) => ({ ...d, coachNotes: e.target.value }))}
-                placeholder="Notes optionnelles..."
+                type="time"
+                value={draft.scheduledTime}
+                onChange={(e) => setDraft((d) => ({ ...d, scheduledTime: e.target.value }))}
                 className="bg-background border-border"
               />
             </div>
+          </div>
+
+          {draft.sessionType === "online" && (
+            <div>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Lien visio</label>
+              <Input
+                value={draft.visioLink}
+                onChange={(e) => setDraft((d) => ({ ...d, visioLink: e.target.value }))}
+                placeholder="https://meet.google.com/..."
+                className="bg-background border-border"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Notes coach</label>
+            <Input
+              value={draft.coachNotes}
+              onChange={(e) => setDraft((d) => ({ ...d, coachNotes: e.target.value }))}
+              placeholder="Notes optionnelles..."
+              className="bg-background border-border"
+            />
           </div>
 
           <div>

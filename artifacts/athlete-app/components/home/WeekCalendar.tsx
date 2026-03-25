@@ -22,6 +22,10 @@ const SESSION_TYPE_FR: Record<string, string> = {
   athletic_development: "Athlétisme",
   running: "Course",
   conditioning: "Conditioning",
+  hypertrophie: "Hypertrophie",
+  coordination: "Coordination",
+  technique: "Technique",
+  endurance: "Endurance",
 };
 
 function getWeekDays(): Date[] {
@@ -174,12 +178,28 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
                           {isOnline ? "En ligne" : "Présentiel"}
                         </Text>
                       </View>
+                      {session.scheduledTime ? (
+                        <View style={[styles.sheetLocationBadge, { borderColor: "#ffffff20", backgroundColor: "#ffffff08" }]}>
+                          <Feather name="clock" size={10} color={COLORS.textMuted} />
+                          <Text style={[styles.sheetLocationText, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+                            {session.scheduledTime}
+                          </Text>
+                        </View>
+                      ) : null}
                       {session.estimatedDurationMin != null && (
                         <Text style={[styles.sheetMetaText, { fontFamily: FONTS.mono }]}>
                           {session.estimatedDurationMin} min
                         </Text>
                       )}
                     </View>
+                    {session.visioLink && isOnline && !session.isCompleted ? (
+                      <Text
+                        style={[styles.sheetMetaText, { fontFamily: FONTS.mono, color: COLORS.cyan, marginTop: 4 }]}
+                        numberOfLines={1}
+                      >
+                        Lien visio : {session.visioLink}
+                      </Text>
+                    ) : null}
                   </View>
                   {session.isCompleted && (
                     <Feather name="check-circle" size={16} color={COLORS.green} />
@@ -348,6 +368,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   sheetLocationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,

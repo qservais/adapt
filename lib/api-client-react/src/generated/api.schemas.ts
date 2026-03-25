@@ -419,6 +419,10 @@ export const CreateSessionRequestType = {
   athletic_development: "athletic_development",
   running: "running",
   conditioning: "conditioning",
+  hypertrophie: "hypertrophie",
+  coordination: "coordination",
+  technique: "technique",
+  endurance: "endurance",
 } as const;
 
 export type CreateSessionRequestVariantsItemMode =
@@ -476,6 +480,8 @@ export interface CreateSessionRequest {
   name: string;
   type: CreateSessionRequestType;
   sessionType?: "online" | "presentiel";
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number;
   coachNotes?: string;
   variants?: CreateSessionRequestVariantsItem[];
@@ -513,6 +519,8 @@ export interface UpcomingSession {
   sessionName: string;
   sessionType: string;
   sessionLocation?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   weekNumber: number;
   dayNumber: number;
   scheduledDate: string;

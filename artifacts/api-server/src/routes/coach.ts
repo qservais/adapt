@@ -428,6 +428,9 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       sessionId: string;
       sessionName: string;
       sessionType: string;
+      sessionLocation: string;
+      scheduledTime: string | null;
+      visioLink: string | null;
       weekNumber: number;
       dayNumber: number;
       scheduledDate: string;
@@ -460,6 +463,9 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
           sessionId: session.id,
           sessionName: session.name,
           sessionType: session.type,
+          sessionLocation: session.sessionType ?? "online",
+          scheduledTime: session.scheduledTime ?? null,
+          visioLink: session.visioLink ?? null,
           weekNumber: session.weekNumber,
           dayNumber: session.dayNumber,
           scheduledDate: sessionDate.toISOString().split("T")[0],
