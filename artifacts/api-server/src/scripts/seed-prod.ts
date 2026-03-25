@@ -69,12 +69,21 @@ async function main() {
     console.log("✅ Content seed déjà présent (guides + routines)");
   }
 
+  // Step 4: Exercises seed (bibliothèque 100+ exercices pré-remplis)
+  const globalExerciseCount = psql("SELECT COUNT(*) FROM exercises WHERE created_by IS NULL");
+  if (parseInt(globalExerciseCount, 10) < 100) {
+    runSqlFile(join(__dirname, "seed-exercises.sql"), "seed-exercises.sql");
+  } else {
+    console.log(`✅ Bibliothèque d'exercices déjà remplie (${globalExerciseCount} exercices globaux)`);
+  }
+
   // Verify final state
   const userCount = psql("SELECT COUNT(*) FROM users");
   const programCount = psql("SELECT COUNT(*) FROM programs");
   const sessionCount = psql("SELECT COUNT(*) FROM sessions");
   const guidesCount = psql("SELECT COUNT(*) FROM guides");
   const routinesCount = psql("SELECT COUNT(*) FROM content_routines");
+  const exerciseCount = psql("SELECT COUNT(*) FROM exercises WHERE created_by IS NULL");
 
   console.log(`\n📊 État de la base:`);
   console.log(`   - ${userCount} utilisateurs`);
@@ -82,6 +91,7 @@ async function main() {
   console.log(`   - ${sessionCount} séances`);
   console.log(`   - ${guidesCount} guides`);
   console.log(`   - ${routinesCount} routines`);
+  console.log(`   - ${exerciseCount} exercices globaux`);
 }
 
 main().catch((err) => {
