@@ -325,7 +325,7 @@ const blockInputSchema = z.object({
   exercises: z.array(exerciseInputSchema).optional(),
 });
 
-const createSessionSchema = z.object({
+const sessionBaseSchema = z.object({
   weekNumber: z.number().int().min(1),
   dayNumber: z.number().int().min(1),
   name: z.string().min(1),
@@ -342,6 +342,18 @@ const createSessionSchema = z.object({
     exercises: z.array(exerciseInputSchema).optional(),
   })).optional(),
 });
+
+const createSessionSchema = sessionBaseSchema.superRefine((data, ctx) => {
+  const st = data.sessionType ?? "online";
+  if (!data.scheduledTime) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["scheduledTime"], message: "L'heure de séance est obligatoire" });
+  }
+  if (st === "online" && !data.visioLink) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["visioLink"], message: "Le lien visio est obligatoire pour les séances en ligne" });
+  }
+});
+
+const updateSessionSchema = sessionBaseSchema.partial();
 
 router.post("/programs/:programId/sessions", authenticate, requireRole("coach"), async (req, res) => {
   const parsed = createSessionSchema.safeParse(req.body);
@@ -454,7 +466,7 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
 });
 
 router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole("coach"), async (req, res) => {
-  const parsed = createSessionSchema.partial().safeParse(req.body);
+  const parsed = updateSessionSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
     return;

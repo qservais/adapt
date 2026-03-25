@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, EQUIPMENT_LABELS } from "@workspace/db";
 import { exercisesTable, sessionExercisesTable } from "@workspace/db";
 import { eq, and, or, isNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
@@ -52,7 +52,7 @@ const createExerciseSchema = z.object({
   name: z.string().min(1),
   category: z.enum(["compound", "isolation", "cardio", "mobility", "core", "power", "plyometric", "réathlétisation", "force", "pliométrie", "mobilité"]).optional(),
   muscleGroups: z.array(z.string()).optional(),
-  equipment: z.array(z.string()).optional(),
+  equipment: z.array(z.string().min(1)).optional(),
   description: z.string().optional(),
   demoUrl: z.string().url().optional().or(z.literal("")),
   level: z.enum(["débutant", "intermédiaire", "avancé"]).optional(),

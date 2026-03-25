@@ -880,6 +880,14 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
       toast({ title: "Nom de séance requis", variant: "destructive" });
       return;
     }
+    if (!draft.scheduledTime) {
+      toast({ title: "Heure de séance obligatoire", description: "Veuillez définir une heure de début", variant: "destructive" });
+      return;
+    }
+    if (draft.sessionType === "online" && !draft.visioLink.trim()) {
+      toast({ title: "Lien visio obligatoire", description: "Un lien de réunion est requis pour les séances en ligne", variant: "destructive" });
+      return;
+    }
     setIsSaving(true);
     try {
       const blocksPayload: CreateSessionRequestBlocksItem[] = draft.blocks.map((b, bIdx) => ({
@@ -992,24 +1000,28 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Heure prévue</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">
+                Heure prévue <span className="text-red-400">*</span>
+              </label>
               <Input
                 type="time"
                 value={draft.scheduledTime}
                 onChange={(e) => setDraft((d) => ({ ...d, scheduledTime: e.target.value }))}
-                className="bg-background border-border"
+                className={cn("bg-background border-border", !draft.scheduledTime && "border-red-500/40")}
               />
             </div>
           </div>
 
           {draft.sessionType === "online" && (
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Lien visio</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">
+                Lien visio <span className="text-red-400">*</span>
+              </label>
               <Input
                 value={draft.visioLink}
                 onChange={(e) => setDraft((d) => ({ ...d, visioLink: e.target.value }))}
                 placeholder="https://meet.google.com/..."
-                className="bg-background border-border"
+                className={cn("bg-background border-border", !draft.visioLink.trim() && "border-red-500/40")}
               />
             </div>
           )}
