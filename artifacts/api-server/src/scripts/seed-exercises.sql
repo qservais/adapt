@@ -1,5 +1,6 @@
--- seed-exercises.sql
--- 104 exercices pré-remplis en français (idempotent)
+-- seed-exercises.sql — FICHIER LEGACY/MIGRATION UNIQUEMENT
+-- Ce fichier n'est plus le seed principal. Le seed canonique est seed-exercises.ts (TypeScript).
+-- Utilisation : migration des données existantes uniquement (UPDATE level, UPDATE réathlétisation).
 -- Part 1 : INSERT les exercices absents (WHERE NOT EXISTS par nom + created_by IS NULL)
 -- Part 2 : UPDATE level sur les exercices globaux sans level (fix des précédentes insertions)
 -- Part 3 : UPDATE category → 'réathlétisation' pour les exercices de réathlétisation

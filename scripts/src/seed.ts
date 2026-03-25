@@ -14,6 +14,7 @@ import {
   checkinsTable,
   alertsTable,
 } from "@workspace/db";
+import { isNotNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 // Inline ADAPT score calculation (to avoid cross-artifact import)
@@ -59,7 +60,7 @@ async function seed() {
   await db.delete(sessionsTable);
   await db.delete(programsTable);
   await db.delete(checkinsTable);
-  await db.delete(exercisesTable);
+  await db.delete(exercisesTable).where(isNotNull(exercisesTable.createdBy));
   await db.delete(usersTable);
 
   // =====================
@@ -423,6 +424,16 @@ async function seed() {
   });
 
   console.log("  ✓ Alerts created (P1: Tom pain, P2: Marie inactivity)");
+  console.log("\nSeeding global exercise library...");
+  const { spawnSync } = await import("child_process");
+  const { fileURLToPath } = await import("url");
+  const { dirname, join } = await import("path");
+  const __dirname_scripts = dirname(fileURLToPath(import.meta.url));
+  const seedExercisesPath = join(__dirname_scripts, "../../../artifacts/api-server/src/scripts/seed-exercises.ts");
+  const result = spawnSync("npx", ["tsx", seedExercisesPath], { stdio: "inherit", encoding: "utf-8" });
+  if (result.status !== 0) console.warn("  ⚠ seed-exercises.ts returned non-zero, continuing");
+  else console.log("  ✓ Exercices globaux insérés via seed-exercises.ts");
+
   console.log("\n✅ Seed complete!");
   console.log("\n📋 Demo accounts:");
   console.log("  Coach: coach@adapt.demo / Demo1234! (invite code: MARC01)");
