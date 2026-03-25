@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { coachAppointmentsTable, usersTable } from "@workspace/db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, lt } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -47,7 +47,7 @@ router.get("/coach/appointments", authenticate, requireRole("coach"), async (req
           and(
             eq(coachAppointmentsTable.coachId, coachId),
             gte(coachAppointmentsTable.startAt, monthStart),
-            lte(coachAppointmentsTable.startAt, monthEnd)
+            lt(coachAppointmentsTable.startAt, monthEnd)
           )
         );
     } else {

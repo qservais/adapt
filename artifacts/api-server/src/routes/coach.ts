@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable, coachAppointmentsTable } from "@workspace/db";
-import { eq, and, desc, asc, gte, lte, inArray, isNotNull, sql } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lt, inArray, isNotNull, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -303,7 +303,7 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
         and(
           eq(coachAppointmentsTable.coachId, coachId),
           gte(coachAppointmentsTable.startAt, monthStart),
-          lte(coachAppointmentsTable.startAt, new Date(monthEnd.getTime() + 86400000))
+          lt(coachAppointmentsTable.startAt, new Date(year, month, 1))
         )
       );
 
