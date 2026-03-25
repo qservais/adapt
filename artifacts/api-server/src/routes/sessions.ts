@@ -94,6 +94,9 @@ async function buildSessionDetail(
     imageUrl: string | null;
     gifUrl: string | null;
     muscleGroups: unknown;
+    equipment: unknown;
+    description: string | null;
+    demoUrl: string | null;
     orderIndex: number;
     sets: number;
     reps: string | null;
@@ -137,6 +140,8 @@ async function buildSessionDetail(
         demoUrl: exercisesTable.demoUrl,
         demoGifUrl: exercisesTable.demoGifUrl,
         muscleGroups: exercisesTable.muscleGroups,
+        equipment: exercisesTable.equipment,
+        description: exercisesTable.description,
       })
         .from(sessionExercisesTable)
         .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
@@ -154,6 +159,9 @@ async function buildSessionDetail(
         imageUrl: ex.demoUrl ?? null,
         gifUrl: ex.demoGifUrl ?? null,
         muscleGroups: ex.muscleGroups,
+        equipment: ex.equipment,
+        description: ex.description ?? null,
+        demoUrl: ex.demoUrl ?? null,
         orderIndex: ex.orderIndex,
         sets: ex.sets,
         reps: ex.reps ?? null,
@@ -270,6 +278,9 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       imageUrl: string | null;
       gifUrl: string | null;
       muscleGroups: unknown;
+      equipment: unknown;
+      description: string | null;
+      demoUrl: string | null;
       orderIndex: number;
       sets: number;
       reps: string | null;
@@ -345,6 +356,8 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             demoUrl: exercisesTable.demoUrl,
             demoGifUrl: exercisesTable.demoGifUrl,
             muscleGroups: exercisesTable.muscleGroups,
+            equipment: exercisesTable.equipment,
+            description: exercisesTable.description,
           })
             .from(sessionExercisesTable)
             .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
@@ -362,6 +375,9 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
             imageUrl: ex.demoUrl ?? null,
             gifUrl: ex.demoGifUrl ?? null,
             muscleGroups: ex.muscleGroups,
+            equipment: ex.equipment,
+            description: ex.description ?? null,
+            demoUrl: ex.demoUrl ?? null,
             orderIndex: ex.orderIndex,
             sets: ex.sets,
             reps: ex.reps ?? null,

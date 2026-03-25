@@ -169,6 +169,31 @@ export default function SessionIntroScreen() {
           )}
         </View>
 
+        {(() => {
+          const allEquipment = (session.exercises ?? [])
+            .flatMap(ex => ((ex.equipment as string[] | null | undefined) ?? []))
+            .filter(e => e !== "Aucun");
+          const uniqueEquipment = [...new Set(allEquipment)];
+          if (uniqueEquipment.length === 0) return null;
+          return (
+            <View style={styles.equipmentCard}>
+              <View style={styles.equipmentCardHeader}>
+                <Feather name="package" size={14} color={COLORS.amber} />
+                <Text style={[styles.equipmentCardLabel, { fontFamily: FONTS.mono }]}>
+                  TU AURAS BESOIN DE
+                </Text>
+              </View>
+              <View style={styles.equipmentTagsRow}>
+                {uniqueEquipment.map(eq => (
+                  <View key={eq} style={styles.equipmentTag}>
+                    <Text style={[styles.equipmentTagText, { fontFamily: FONTS.mono }]}>{eq}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })()}
+
         {session.coachNotes != null && (
           <View style={styles.coachCard}>
             <View style={styles.coachHeader}>
@@ -383,4 +408,26 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   homeBtnText: { fontSize: 15, color: COLORS.white },
+  equipmentCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${COLORS.amber}30`,
+    padding: 16,
+    gap: 12,
+  },
+  equipmentCardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  equipmentCardLabel: { fontSize: 10, color: COLORS.amber, letterSpacing: 2 },
+  equipmentTagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  equipmentTag: {
+    backgroundColor: `${COLORS.amber}10`,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: `${COLORS.amber}30`,
+  },
+  equipmentTagText: { fontSize: 12, color: COLORS.amber, letterSpacing: 0.3 },
 });

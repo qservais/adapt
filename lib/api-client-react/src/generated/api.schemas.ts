@@ -180,6 +180,9 @@ export interface SessionExerciseItem {
   imageUrl?: string | null;
   gifUrl?: string | null;
   muscleGroups?: unknown;
+  equipment?: string[] | null;
+  description?: string | null;
+  demoUrl?: string | null;
   orderIndex: number;
   sets: number;
   reps?: string | null;

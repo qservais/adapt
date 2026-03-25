@@ -54,7 +54,8 @@ const MUSCLE_GROUPS = [
 ];
 
 const EQUIPMENT_LIST = [
-  "Haltères", "Barre", "Kettlebell", "Machine", "Câbles", "Élastiques", "Poids du corps", "TRX"
+  "Haltères", "Barre", "Kettlebell", "Bandes élastiques", "TRX", "Box", "Médecine ball",
+  "Foam roller", "Tapis", "Barre de traction", "Machine", "Câbles", "Poids du corps", "Aucun"
 ];
 
 const getCategoryStyle = (cat: string | null) => {
@@ -362,6 +363,19 @@ export default function LibraryPage() {
                       ))}
                       {mgs.length > 3 && (
                         <span className="text-[9px] text-muted-foreground">+{mgs.length - 3}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {((ex.equipment as string[] | null) ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {(ex.equipment as string[]).slice(0, 4).map(eq => (
+                        <span key={eq} className="text-[9px] bg-accent/10 border border-accent/20 text-accent/80 px-1.5 py-0.5 rounded font-mono">
+                          {eq}
+                        </span>
+                      ))}
+                      {(ex.equipment as string[]).length > 4 && (
+                        <span className="text-[9px] text-muted-foreground">+{(ex.equipment as string[]).length - 4}</span>
                       )}
                     </div>
                   )}

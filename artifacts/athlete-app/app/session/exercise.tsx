@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -187,6 +188,7 @@ export default function ExerciseScreen() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [timerCompleted, setTimerCompleted] = useState(false);
   const [workTimerStarted, setWorkTimerStarted] = useState(false);
+  const [showDescription, setShowDescription] = useState(true);
 
   const encouragementMsg = useMemo(
     () => ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)],
@@ -413,6 +415,59 @@ export default function ExerciseScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        {((exercise.equipment as string[] | null | undefined) ?? []).filter(e => e !== "Aucun").length > 0 && (
+          <View style={styles.equipmentRow}>
+            <Feather name="package" size={12} color={COLORS.textMuted} />
+            <View style={styles.equipmentTags}>
+              {((exercise.equipment as string[]).filter(e => e !== "Aucun")).map(eq => (
+                <View key={eq} style={styles.equipmentTag}>
+                  <Text style={[styles.equipmentTagText, { fontFamily: FONTS.mono }]}>{eq}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {exercise.description != null && exercise.description.length > 0 && (
+          <View style={styles.descriptionBox}>
+            <View style={styles.descriptionHeader}>
+              <Feather name="info" size={13} color={cfg.color} />
+              <Text style={[styles.descriptionLabel, { fontFamily: FONTS.mono, color: cfg.color }]}>
+                INSTRUCTIONS
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowDescription(v => !v)}
+                style={styles.descriptionToggle}
+              >
+                <Text style={[styles.descriptionToggleText, { fontFamily: FONTS.body }]}>
+                  {showDescription ? "Masquer" : "Voir"}
+                </Text>
+                <Feather
+                  name={showDescription ? "chevron-up" : "chevron-down"}
+                  size={13}
+                  color={COLORS.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+            {showDescription && (
+              <Text style={[styles.descriptionText, { fontFamily: FONTS.body }]}>
+                {exercise.description}
+              </Text>
+            )}
+            {showDescription && exercise.demoUrl != null && exercise.demoUrl.length > 0 && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(exercise.demoUrl!)}
+                style={[styles.demoBtn, { borderColor: `${cfg.color}50` }]}
+              >
+                <Feather name="play-circle" size={14} color={cfg.color} />
+                <Text style={[styles.demoBtnText, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}>
+                  Voir la démo
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {currentLoad > 0 && (
           <View style={styles.loadSection}>
             <Stepper
@@ -735,4 +790,60 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  equipmentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    width: "100%",
+  },
+  equipmentTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    flex: 1,
+  },
+  equipmentTag: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  equipmentTagText: { fontSize: 11, color: COLORS.textSecondary, letterSpacing: 0.3 },
+  descriptionBox: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    gap: 10,
+    width: "100%",
+  },
+  descriptionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  descriptionLabel: { fontSize: 10, letterSpacing: 1.5, flex: 1 },
+  descriptionToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  descriptionToggleText: { fontSize: 12, color: COLORS.textMuted },
+  descriptionText: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
+  demoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: "flex-start",
+  },
+  demoBtnText: { fontSize: 13 },
 });
