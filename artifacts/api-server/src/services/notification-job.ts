@@ -97,8 +97,9 @@ async function getSessionSummaryForAthlete(athleteId: string, todayDate: string)
 
       if (sessions.length > 0) {
         const s = sessions[0]!;
+        const type = s.type ? ` · ${s.type}` : "";
         const duration = s.estimatedDurationMin ? ` · ${s.estimatedDurationMin} min` : "";
-        return `Séance : ${s.name}${duration}`;
+        return `Séance : ${s.name}${type}${duration}`;
       }
     }
     return null;
