@@ -6,11 +6,11 @@ import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
 import multer from "multer";
 import sharp from "sharp";
-import { Storage } from "@google-cloud/storage";
+import { objectStorageClient } from "../lib/objectStorage.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
@@ -20,9 +20,7 @@ const upload = multer({
   },
 });
 
-const gcsClient = new Storage();
 const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
-const PRIVATE_OBJECT_DIR = process.env.PRIVATE_OBJECT_DIR ?? "objects/uploads";
 
 const router = Router();
 
@@ -128,7 +126,7 @@ router.put("/users/me", authenticate, async (req, res) => {
 router.post("/users/me/avatar", authenticate, (req, res, next) => {
   upload.single("avatar")(req, res, (err) => {
     if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
-      res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "L'image ne doit pas dépasser 2 MB" } });
+      res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "L'image ne doit pas dépasser 5 MB" } });
       return;
     }
     if (err) {
@@ -150,10 +148,10 @@ router.post("/users/me/avatar", authenticate, (req, res, next) => {
 
     const timestamp = Date.now();
     const objectName = `avatars/${req.user!.userId}-${timestamp}.jpg`;
-    const bucket = gcsClient.bucket(BUCKET_ID);
-    const gcsFile = bucket.file(objectName);
-    await gcsFile.save(resized, { contentType: "image/jpeg", resumable: false });
-    await gcsFile.makePublic();
+    const bucket = objectStorageClient.bucket(BUCKET_ID);
+    const storageFile = bucket.file(objectName);
+    await storageFile.save(resized, { contentType: "image/jpeg", resumable: false });
+    await storageFile.makePublic();
 
     const publicUrl = `https://storage.googleapis.com/${BUCKET_ID}/${objectName}`;
 

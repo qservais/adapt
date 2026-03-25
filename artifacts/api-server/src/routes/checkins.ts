@@ -6,6 +6,7 @@ import { authenticate, requireRole } from "../middleware/auth.js";
 import { calculateAdaptScore } from "../services/adapt-engine.js";
 import { checkAfterCheckin } from "../services/badgeService.js";
 import { z } from "zod";
+import { getTodayLocalDate } from "../lib/dateUtils.js";
 
 const router = Router();
 
@@ -27,10 +28,10 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     return;
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayLocalDate();
 
   // Enforce check-in window: closed after configurable hour (default 22:00)
-  const tz = process.env["APP_TIMEZONE"] ?? "Europe/Paris";
+  const tz = process.env["APP_TIMEZONE"] ?? "Europe/Brussels";
   const cutoffHour = parseInt(process.env["CHECKIN_CUTOFF_HOUR"] ?? "22", 10);
   const localHour = parseInt(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: tz }), 10);
   if (localHour >= cutoffHour) {
@@ -231,7 +232,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
 });
 
 router.get("/checkins/today", authenticate, requireRole("athlete"), async (req, res) => {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayLocalDate();
   const [checkin] = await db.select().from(checkinsTable)
     .where(and(eq(checkinsTable.athleteId, req.user!.userId), eq(checkinsTable.date, today)));
 

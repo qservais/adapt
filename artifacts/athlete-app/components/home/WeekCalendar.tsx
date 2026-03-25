@@ -75,7 +75,7 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
         contentContainerStyle={styles.scroll}
       >
         {weekDays.map((day) => {
-          const dateStr = day.toISOString().split("T")[0]!;
+          const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
           const daySessions = sessionsByDate.get(dateStr) ?? [];
           const isToday = day.getTime() === today.getTime();
           const isPast = day.getTime() < today.getTime();

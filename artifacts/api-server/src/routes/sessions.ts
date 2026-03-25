@@ -11,6 +11,7 @@ import { calculateAdaptedLoad } from "../services/adapt-engine.js";
 import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
 import { checkAfterSession, checkAfterFeedback } from "../services/badgeService.js";
 import { z } from "zod";
+import { getTodayLocalDate } from "../lib/dateUtils.js";
 
 const router = Router();
 
@@ -195,7 +196,7 @@ async function buildSessionDetail(
 
 router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayLocalDate();
     const athleteId = req.user!.userId;
 
     const [checkin] = await db.select().from(checkinsTable)
@@ -655,8 +656,8 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
     const programEnd = new Date(programStart);
     programEnd.setDate(programStart.getDate() + activeProgram.durationWeeks * 7);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = getTodayLocalDate();
+    const today = new Date(`${todayStr}T00:00:00Z`);
     const in7Days = new Date(today);
     in7Days.setDate(today.getDate() + 7);
 
