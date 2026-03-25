@@ -239,6 +239,8 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
       isMissed: boolean;
       isAppointment?: boolean;
       appointmentStartAt?: string;
+      appointmentLocation?: string | null;
+      appointmentNotes?: string | null;
     };
     const sessionsByDate = new Map<string, Array<CalendarSessionEntry>>();
 
@@ -319,6 +321,8 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
         isMissed: false,
         isAppointment: true,
         appointmentStartAt: appt.startAt.toISOString(),
+        appointmentLocation: appt.location ?? null,
+        appointmentNotes: appt.notes ?? null,
       } as CalendarSessionEntry);
       sessionsByDate.set(dateStr, arr);
     }

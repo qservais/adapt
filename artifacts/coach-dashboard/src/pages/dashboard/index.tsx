@@ -81,6 +81,8 @@ interface CalendarSession {
   isMissed: boolean;
   isAppointment?: boolean;
   appointmentStartAt?: string;
+  appointmentLocation?: string | null;
+  appointmentNotes?: string | null;
 }
 
 interface CalendarDay {
@@ -215,13 +217,13 @@ export default function Dashboard() {
     const mm = String(dt.getMinutes()).padStart(2, "0");
     setApptDialog({
       open: true,
-      editing: { id: s.sessionId, athleteId: s.athleteId, startAt: s.appointmentStartAt, durationMin: s.estimatedDurationMin ?? 60, location: s.sessionName.replace("RDV — ", ""), notes: "", type: "presentiel", coachId: "" },
+      editing: { id: s.sessionId, athleteId: s.athleteId, startAt: s.appointmentStartAt, durationMin: s.estimatedDurationMin ?? 60, location: s.appointmentLocation ?? "", notes: s.appointmentNotes ?? "", type: "presentiel", coachId: "" },
       date: s.appointmentStartAt.split("T")[0] ?? "",
       time: `${hh}:${mm}`,
       athleteId: s.athleteId,
       durationMin: s.estimatedDurationMin ?? 60,
-      location: s.sessionName.startsWith("RDV — ") ? s.sessionName.replace("RDV — ", "") : "",
-      notes: "",
+      location: s.appointmentLocation ?? "",
+      notes: s.appointmentNotes ?? "",
     });
   }
 
