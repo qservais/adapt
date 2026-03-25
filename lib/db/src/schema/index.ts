@@ -12,3 +12,4 @@ export * from "./content";
 export * from "./nutrition";
 export * from "./steps";
 export * from "./challenges";
+export * from "./appointments";

@@ -795,3 +795,33 @@ export interface UpdateScheduledNotificationRequest {
   sendHour?: number;
   active?: boolean;
 }
+
+export interface CoachAppointment {
+  id: string;
+  coachId: string;
+  athleteId: string;
+  startAt: string;
+  durationMin: number;
+  location?: string | null;
+  notes?: string | null;
+  type: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  athleteFirstName?: string | null;
+  athleteLastName?: string | null;
+}
+
+export interface CreateAppointmentRequest {
+  athleteId: string;
+  startAt: string;
+  durationMin?: number;
+  location?: string;
+  notes?: string;
+}
+
+export interface UpdateAppointmentRequest {
+  startAt?: string;
+  durationMin?: number;
+  location?: string;
+  notes?: string;
+}

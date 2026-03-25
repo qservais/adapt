@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import {
   checkinsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable,
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
-  performanceTestsTable,
+  performanceTestsTable, coachAppointmentsTable,
 } from "@workspace/db";
 import { eq, and, desc, gte, lt, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
@@ -672,6 +672,32 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           scheduledDate: sessionDate.toISOString().split("T")[0],
           estimatedDurationMin: session.estimatedDurationMin,
           isCompleted: completedSessionIds.has(session.id),
+        });
+      }
+    }
+
+    result.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+
+    const appts = await db.select().from(coachAppointmentsTable)
+      .where(and(
+        eq(coachAppointmentsTable.athleteId, athleteId),
+        gte(coachAppointmentsTable.startAt, today),
+      ));
+
+    for (const appt of appts) {
+      const apptDate = new Date(appt.startAt);
+      apptDate.setHours(0, 0, 0, 0);
+      if (apptDate <= in7Days) {
+        result.push({
+          sessionId: appt.id,
+          sessionName: appt.location ? `RDV — ${appt.location}` : "RDV Présentiel",
+          sessionType: "presentiel",
+          sessionLocation: "presentiel",
+          weekNumber: 0,
+          dayNumber: 0,
+          scheduledDate: apptDate.toISOString().split("T")[0]!,
+          estimatedDurationMin: appt.durationMin,
+          isCompleted: false,
         });
       }
     }

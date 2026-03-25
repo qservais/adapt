@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable } from "@workspace/db";
-import { eq, and, desc, asc, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable, coachAppointmentsTable } from "@workspace/db";
+import { eq, and, desc, asc, gte, lte, inArray, isNotNull, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -228,7 +228,7 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
       .where(eq(programsTable.isActive, true));
     const myPrograms = activePrograms.filter(p => athleteIds.includes(p.athleteId));
 
-    const sessionsByDate = new Map<string, Array<{
+    type CalendarSessionEntry = {
       athleteId: string;
       athleteName: string;
       sessionId: string;
@@ -237,7 +237,10 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
       estimatedDurationMin: number | null;
       isCompleted: boolean;
       isMissed: boolean;
-    }>>();
+      isAppointment?: boolean;
+      appointmentStartAt?: string;
+    };
+    const sessionsByDate = new Map<string, Array<CalendarSessionEntry>>();
 
     for (const program of myPrograms) {
       if (!program.startDate) continue;
@@ -278,6 +281,46 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
           sessionsByDate.set(dateStr, arr);
         }
       }
+    }
+
+    const appointments = await db
+      .select({
+        id: coachAppointmentsTable.id,
+        athleteId: coachAppointmentsTable.athleteId,
+        startAt: coachAppointmentsTable.startAt,
+        durationMin: coachAppointmentsTable.durationMin,
+        location: coachAppointmentsTable.location,
+        notes: coachAppointmentsTable.notes,
+        type: coachAppointmentsTable.type,
+        athleteFirstName: usersTable.firstName,
+        athleteLastName: usersTable.lastName,
+      })
+      .from(coachAppointmentsTable)
+      .leftJoin(usersTable, eq(coachAppointmentsTable.athleteId, usersTable.id))
+      .where(
+        and(
+          eq(coachAppointmentsTable.coachId, coachId),
+          gte(coachAppointmentsTable.startAt, monthStart),
+          lte(coachAppointmentsTable.startAt, new Date(monthEnd.getTime() + 86400000))
+        )
+      );
+
+    for (const appt of appointments) {
+      const dateStr = appt.startAt.toISOString().split("T")[0]!;
+      const arr = sessionsByDate.get(dateStr) ?? [];
+      arr.push({
+        athleteId: appt.athleteId,
+        athleteName: `${appt.athleteFirstName ?? ""} ${appt.athleteLastName ?? ""}`.trim(),
+        sessionId: appt.id,
+        sessionName: appt.location ? `RDV — ${appt.location}` : "RDV Présentiel",
+        sessionType: "presentiel",
+        estimatedDurationMin: appt.durationMin,
+        isCompleted: false,
+        isMissed: false,
+        isAppointment: true,
+        appointmentStartAt: appt.startAt.toISOString(),
+      } as CalendarSessionEntry);
+      sessionsByDate.set(dateStr, arr);
     }
 
     const result = Array.from(sessionsByDate.entries())

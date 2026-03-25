@@ -74,6 +74,9 @@ import type {
   ScheduledNotification,
   CreateScheduledNotificationRequest,
   UpdateScheduledNotificationRequest,
+  CoachAppointment,
+  CreateAppointmentRequest,
+  UpdateAppointmentRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -4138,4 +4141,55 @@ export const useUpdateMorningNotifHour = <TError = ErrorType<unknown>, TContext 
 }): UseMutationResult<Awaited<ReturnType<typeof updateMorningNotifHour>>, TError, { data: { hour: number } }, TContext> => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
   return useMutation({ mutationFn: ({ data }) => updateMorningNotifHour(data, requestOptions), ...mutationOptions });
+};
+
+export const getCoachAppointments = async (params?: { year?: number; month?: number }, options?: RequestInit): Promise<CoachAppointment[]> =>
+  customFetch<CoachAppointment[]>(`/api/coach/appointments${params?.year && params?.month ? `?year=${params.year}&month=${params.month}` : ""}`, { ...options });
+
+export const useGetCoachAppointments = <TData = Awaited<ReturnType<typeof getCoachAppointments>>, TError = ErrorType<unknown>>(
+  params?: { year?: number; month?: number },
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getCoachAppointments>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? ["/api/coach/appointments", params];
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCoachAppointments>>> = ({ signal }) => getCoachAppointments(params, { signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+};
+
+export const createCoachAppointment = async (data: CreateAppointmentRequest, options?: RequestInit): Promise<CoachAppointment> =>
+  customFetch<CoachAppointment>("/api/coach/appointments", { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useCreateCoachAppointment = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof createCoachAppointment>>, TError, { data: CreateAppointmentRequest }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof createCoachAppointment>>, TError, { data: CreateAppointmentRequest }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({ mutationFn: ({ data }) => createCoachAppointment(data, requestOptions), ...mutationOptions });
+};
+
+export const updateCoachAppointment = async (id: string, data: UpdateAppointmentRequest, options?: RequestInit): Promise<CoachAppointment> =>
+  customFetch<CoachAppointment>(`/api/coach/appointments/${id}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useUpdateCoachAppointment = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateCoachAppointment>>, TError, { id: string; data: UpdateAppointmentRequest }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof updateCoachAppointment>>, TError, { id: string; data: UpdateAppointmentRequest }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({ mutationFn: ({ id, data }) => updateCoachAppointment(id, data, requestOptions), ...mutationOptions });
+};
+
+export const deleteCoachAppointment = async (id: string, options?: RequestInit): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(`/api/coach/appointments/${id}`, { ...options, method: "DELETE" });
+
+export const useDeleteCoachAppointment = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteCoachAppointment>>, TError, { id: string }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof deleteCoachAppointment>>, TError, { id: string }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({ mutationFn: ({ id }) => deleteCoachAppointment(id, requestOptions), ...mutationOptions });
 };

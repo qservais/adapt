@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import {
   Loader2, Calendar, CheckCircle2, Clock, Zap, Users, TrendingUp,
-  AlertTriangle, ChevronLeft, ChevronRight, X, BarChart2
+  AlertTriangle, ChevronLeft, ChevronRight, X, BarChart2, Plus, MapPin, Pencil, Trash2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
@@ -12,6 +12,12 @@ import { fr } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
 } from "recharts";
+import {
+  useCreateCoachAppointment,
+  useUpdateCoachAppointment,
+  useDeleteCoachAppointment,
+  type CoachAppointment,
+} from "@workspace/api-client-react";
 
 interface DashboardAthlète {
   id: string;
@@ -73,6 +79,8 @@ interface CalendarSession {
   estimatedDurationMin: number | null;
   isCompleted: boolean;
   isMissed: boolean;
+  isAppointment?: boolean;
+  appointmentStartAt?: string;
 }
 
 interface CalendarDay {
@@ -141,6 +149,18 @@ export default function Dashboard() {
     return { year: d.getFullYear(), month: d.getMonth() + 1 };
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [apptDialog, setApptDialog] = useState<{
+    open: boolean;
+    editing: CoachAppointment | null;
+    date: string;
+    time: string;
+    athleteId: string;
+    durationMin: number;
+    location: string;
+    notes: string;
+  }>({ open: false, editing: null, date: "", time: "10:00", athleteId: "", durationMin: 60, location: "", notes: "" });
+
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<DashboardData>({
     queryKey: ["/api/coach/dashboard"],
@@ -148,7 +168,7 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  const { data: calendarData } = useQuery<CalendarDay[]>({
+  const { data: calendarData, refetch: refetchCalendar } = useQuery<CalendarDay[]>({
     queryKey: ["/api/coach/calendar", calendarMonth.year, calendarMonth.month],
     queryFn: () => fetchCalendar(calendarMonth.year, calendarMonth.month),
   });
@@ -158,6 +178,62 @@ export default function Dashboard() {
     queryFn: fetchWeeklyVolume,
     staleTime: 60000,
   });
+
+  const { mutate: createAppt, isPending: creatingAppt } = useCreateCoachAppointment({
+    mutation: {
+      onSuccess: () => {
+        void refetchCalendar();
+        setApptDialog(d => ({ ...d, open: false }));
+      },
+    },
+  });
+  const { mutate: updateAppt, isPending: updatingAppt } = useUpdateCoachAppointment({
+    mutation: {
+      onSuccess: () => {
+        void refetchCalendar();
+        setApptDialog(d => ({ ...d, open: false }));
+      },
+    },
+  });
+  const { mutate: deleteAppt } = useDeleteCoachAppointment({
+    mutation: {
+      onSuccess: () => {
+        void refetchCalendar();
+        void queryClient.invalidateQueries({ queryKey: ["/api/coach/appointments"] });
+      },
+    },
+  });
+
+  function openNewApptDialog(dateStr: string) {
+    setApptDialog({ open: true, editing: null, date: dateStr, time: "10:00", athleteId: "", durationMin: 60, location: "", notes: "" });
+  }
+
+  function openEditApptDialog(s: CalendarSession) {
+    if (!s.isAppointment || !s.appointmentStartAt) return;
+    const dt = new Date(s.appointmentStartAt);
+    const hh = String(dt.getHours()).padStart(2, "0");
+    const mm = String(dt.getMinutes()).padStart(2, "0");
+    setApptDialog({
+      open: true,
+      editing: { id: s.sessionId, athleteId: s.athleteId, startAt: s.appointmentStartAt, durationMin: s.estimatedDurationMin ?? 60, location: s.sessionName.replace("RDV — ", ""), notes: "", type: "presentiel", coachId: "" },
+      date: s.appointmentStartAt.split("T")[0] ?? "",
+      time: `${hh}:${mm}`,
+      athleteId: s.athleteId,
+      durationMin: s.estimatedDurationMin ?? 60,
+      location: s.sessionName.startsWith("RDV — ") ? s.sessionName.replace("RDV — ", "") : "",
+      notes: "",
+    });
+  }
+
+  function submitApptDialog() {
+    if (!apptDialog.athleteId || !apptDialog.date) return;
+    const startAt = `${apptDialog.date}T${apptDialog.time}:00`;
+    if (apptDialog.editing) {
+      updateAppt({ id: apptDialog.editing.id, data: { startAt, durationMin: apptDialog.durationMin, location: apptDialog.location || undefined, notes: apptDialog.notes || undefined } });
+    } else {
+      createAppt({ data: { athleteId: apptDialog.athleteId, startAt, durationMin: apptDialog.durationMin, location: apptDialog.location || undefined, notes: apptDialog.notes || undefined } });
+    }
+  }
 
   const today = new Date();
   const dayStr = format(today, "EEEE d MMMM yyyy", { locale: fr });
@@ -475,6 +551,13 @@ export default function Dashboard() {
             </CardTitle>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => selectedDate ? openNewApptDialog(selectedDate) : openNewApptDialog(todayStr)}
+                className="flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                RDV
+              </button>
+              <button
                 onClick={() => setCalendarMonth(m => {
                   const d = new Date(m.year, m.month - 2, 1);
                   return { year: d.getFullYear(), month: d.getMonth() + 1 };
@@ -541,6 +624,7 @@ export default function Dashboard() {
                             key={s.sessionId}
                             className={cn(
                               "text-[8px] px-1 py-0.5 rounded truncate leading-tight",
+                              s.isAppointment ? "bg-amber-500/20 text-amber-400" :
                               s.isCompleted ? "bg-primary/20 text-primary" :
                               s.isMissed ? "bg-destructive/20 text-destructive" :
                               isToday ? "bg-accent/20 text-accent" :
@@ -548,7 +632,7 @@ export default function Dashboard() {
                             )}
                             title={`${s.athleteName} — ${s.sessionName}`}
                           >
-                            {s.athleteName.split(" ")[0]}
+                            {s.isAppointment ? "📍" : ""}{s.athleteName.split(" ")[0]}
                           </div>
                         ))}
                         {daySessions.length > 3 && (
@@ -569,44 +653,83 @@ export default function Dashboard() {
                 <p className="text-sm font-mono text-white capitalize">
                   {format(new Date(selectedDate + "T12:00:00"), "EEEE d MMMM yyyy", { locale: fr })}
                 </p>
-                <button onClick={() => setSelectedDate(null)} className="text-muted-foreground hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openNewApptDialog(selectedDate)}
+                    className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />RDV
+                  </button>
+                  <button onClick={() => setSelectedDate(null)} className="text-muted-foreground hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               {selectedDaySessions.length === 0 ? (
                 <p className="text-sm text-muted-foreground italic">Aucune séance ce jour.</p>
               ) : (
                 <div className="space-y-2">
                   {selectedDaySessions.map(s => (
-                    <Link key={s.sessionId} href={`/clients/${s.athleteId}`}>
-                      <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-background border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors group cursor-pointer">
+                    s.isAppointment ? (
+                      <div key={s.sessionId} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-amber-500/5 border border-amber-500/20">
                         <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-2 h-2 rounded-full shrink-0",
-                            s.isCompleted ? "bg-primary" : s.isMissed ? "bg-destructive" : "bg-accent"
-                          )} />
+                          <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           <div>
-                            <p className="text-sm font-medium text-white group-hover:text-primary transition-colors">{s.sessionName}</p>
+                            <p className="text-sm font-medium text-amber-300">{s.sessionName}</p>
                             <p className="text-xs text-muted-foreground">{s.athleteName}</p>
+                            {s.appointmentStartAt && (
+                              <p className="text-[10px] text-amber-400/70 font-mono">
+                                {format(new Date(s.appointmentStartAt), "HH:mm")} · {s.estimatedDurationMin}min
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {s.estimatedDurationMin && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" />{s.estimatedDurationMin}min
-                            </span>
-                          )}
-                          <span className={cn(
-                            "text-[10px] font-mono px-2 py-0.5 rounded-full border",
-                            s.isCompleted ? "text-primary border-primary/30 bg-primary/10" :
-                            s.isMissed ? "text-destructive border-destructive/30 bg-destructive/10" :
-                            "text-muted-foreground border-border bg-white/5"
-                          )}>
-                            {s.isCompleted ? "✓ Réalisée" : s.isMissed ? "✗ Manquée" : "À venir"}
-                          </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEditApptDialog(s)}
+                            className="p-1.5 rounded hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => { if (window.confirm("Supprimer ce RDV ?")) deleteAppt({ id: s.sessionId }); }}
+                            className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
                         </div>
                       </div>
-                    </Link>
+                    ) : (
+                      <Link key={s.sessionId} href={`/clients/${s.athleteId}`}>
+                        <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-background border border-border hover:border-primary/30 hover:bg-primary/5 transition-colors group cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-2 h-2 rounded-full shrink-0",
+                              s.isCompleted ? "bg-primary" : s.isMissed ? "bg-destructive" : "bg-accent"
+                            )} />
+                            <div>
+                              <p className="text-sm font-medium text-white group-hover:text-primary transition-colors">{s.sessionName}</p>
+                              <p className="text-xs text-muted-foreground">{s.athleteName}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {s.estimatedDurationMin && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" />{s.estimatedDurationMin}min
+                              </span>
+                            )}
+                            <span className={cn(
+                              "text-[10px] font-mono px-2 py-0.5 rounded-full border",
+                              s.isCompleted ? "text-primary border-primary/30 bg-primary/10" :
+                              s.isMissed ? "text-destructive border-destructive/30 bg-destructive/10" :
+                              "text-muted-foreground border-border bg-white/5"
+                            )}>
+                              {s.isCompleted ? "✓ Réalisée" : s.isMissed ? "✗ Manquée" : "À venir"}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    )
                   ))}
                 </div>
               )}
@@ -711,6 +834,106 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Appointment dialog */}
+      {apptDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#1A1A1A] border border-border rounded-xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-display tracking-widest text-white">
+                {apptDialog.editing ? "MODIFIER LE RDV" : "NOUVEAU RDV PRÉSENTIEL"}
+              </h2>
+              <button onClick={() => setApptDialog(d => ({ ...d, open: false }))} className="text-muted-foreground hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {!apptDialog.editing && (
+                <div>
+                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Athlète</label>
+                  <select
+                    value={apptDialog.athleteId}
+                    onChange={e => setApptDialog(d => ({ ...d, athleteId: e.target.value }))}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                  >
+                    <option value="">— Sélectionner —</option>
+                    {todayAthletes.map(a => (
+                      <option key={a.id} value={a.id}>{a.firstName} {a.lastName ?? ""}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Date</label>
+                  <input
+                    type="date"
+                    value={apptDialog.date}
+                    onChange={e => setApptDialog(d => ({ ...d, date: e.target.value }))}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Heure</label>
+                  <input
+                    type="time"
+                    value={apptDialog.time}
+                    onChange={e => setApptDialog(d => ({ ...d, time: e.target.value }))}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Durée (min)</label>
+                <input
+                  type="number"
+                  min={5}
+                  max={480}
+                  value={apptDialog.durationMin}
+                  onChange={e => setApptDialog(d => ({ ...d, durationMin: parseInt(e.target.value) || 60 }))}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Lieu (optionnel)</label>
+                <input
+                  type="text"
+                  placeholder="Ex : Salle de sport, Domicile..."
+                  value={apptDialog.location}
+                  onChange={e => setApptDialog(d => ({ ...d, location: e.target.value }))}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-amber-500/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Notes (optionnel)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Notes pour ce RDV..."
+                  value={apptDialog.notes}
+                  onChange={e => setApptDialog(d => ({ ...d, notes: e.target.value }))}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-amber-500/50 resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border">
+              <button
+                onClick={() => setApptDialog(d => ({ ...d, open: false }))}
+                className="text-sm text-muted-foreground hover:text-white transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={submitApptDialog}
+                disabled={!apptDialog.athleteId || !apptDialog.date || creatingAppt || updatingAppt}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-black text-sm font-bold hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {(creatingAppt || updatingAppt) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {apptDialog.editing ? "Modifier" : "Créer le RDV"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
