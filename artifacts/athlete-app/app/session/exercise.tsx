@@ -439,6 +439,17 @@ export default function ExerciseScreen() {
               <Text style={[styles.descriptionLabel, { fontFamily: FONTS.mono, color: cfg.color }]}>
                 INSTRUCTIONS
               </Text>
+              {exercise.demoUrl != null && exercise.demoUrl.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => { Linking.openURL(exercise.demoUrl as string); }}
+                  style={[styles.demoBtn, { borderColor: `${cfg.color}50` }]}
+                >
+                  <Feather name="play-circle" size={13} color={cfg.color} />
+                  <Text style={[styles.demoBtnText, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}>
+                    Démo
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 onPress={() => setShowDescription(v => !v)}
                 style={styles.descriptionToggle}
@@ -457,17 +468,6 @@ export default function ExerciseScreen() {
               <Text style={[styles.descriptionText, { fontFamily: FONTS.body }]}>
                 {exercise.description}
               </Text>
-            )}
-            {showDescription && exercise.demoUrl != null && exercise.demoUrl.length > 0 && (
-              <TouchableOpacity
-                onPress={() => { Linking.openURL(exercise.demoUrl as string); }}
-                style={[styles.demoBtn, { borderColor: `${cfg.color}50` }]}
-              >
-                <Feather name="play-circle" size={14} color={cfg.color} />
-                <Text style={[styles.demoBtnText, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}>
-                  Voir la démo
-                </Text>
-              </TouchableOpacity>
             )}
           </View>
         )}

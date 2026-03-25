@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Search, Plus, Pencil, Trash2, Loader2, Dumbbell, Filter, X, CheckCircle, ExternalLink
+  Search, Plus, Pencil, Trash2, Loader2, Dumbbell, X, CheckCircle, ExternalLink
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -101,6 +101,8 @@ export default function LibraryPage() {
   const [editExercise, setEditExercise] = useState<ExerciseItem | null>(null);
   const [form, setForm] = useState<ExerciseFormData>(emptyForm());
   const [deleteTarget, setDeleteTarget] = useState<ExerciseItem | null>(null);
+  const [customEquipmentInput, setCustomEquipmentInput] = useState("");
+  const customEquipmentRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -205,6 +207,15 @@ export default function LibraryPage() {
     setDialogOpen(false);
     setEditExercise(null);
     setForm(emptyForm());
+    setCustomEquipmentInput("");
+  };
+
+  const addCustomEquipment = () => {
+    const val = customEquipmentInput.trim();
+    if (!val || form.equipment.includes(val)) return;
+    setForm(f => ({ ...f, equipment: [...f.equipment, val] }));
+    setCustomEquipmentInput("");
+    customEquipmentRef.current?.focus();
   };
 
   const handleSave = () => {
@@ -474,13 +485,13 @@ export default function LibraryPage() {
             <div className="space-y-1.5">
               <Label className="text-muted-foreground text-xs uppercase tracking-wider">Équipement</Label>
               <div className="flex flex-wrap gap-1.5">
-                {EQUIPMENT_LIST.map(eq => {
-                  const selected = form.equipment.includes(eq);
+                {EQUIPMENT_LIST.map(item => {
+                  const selected = form.equipment.includes(item);
                   return (
                     <button
-                      key={eq}
+                      key={item}
                       type="button"
-                      onClick={() => toggleMultiSelect(form.equipment, eq, v => setForm(f => ({ ...f, equipment: v })))}
+                      onClick={() => toggleMultiSelect(form.equipment, item, v => setForm(f => ({ ...f, equipment: v })))}
                       className={cn(
                         "flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors",
                         selected
@@ -489,10 +500,46 @@ export default function LibraryPage() {
                       )}
                     >
                       {selected && <CheckCircle className="w-3 h-3" />}
-                      {eq}
+                      {item}
                     </button>
                   );
                 })}
+              </div>
+              {form.equipment.filter(e => !EQUIPMENT_LIST.includes(e)).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-[10px] text-muted-foreground self-center">Personnalisé :</span>
+                  {form.equipment.filter(e => !EQUIPMENT_LIST.includes(e)).map(e => (
+                    <span key={e} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs border bg-accent/15 border-accent/40 text-accent">
+                      {e}
+                      <button
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, equipment: f.equipment.filter(x => x !== e) }))}
+                        className="hover:text-white transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <input
+                  ref={customEquipmentRef}
+                  type="text"
+                  value={customEquipmentInput}
+                  onChange={e => setCustomEquipmentInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomEquipment())}
+                  placeholder="Matériel personnalisé…"
+                  className="flex-1 bg-background border border-border rounded-md px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={addCustomEquipment}
+                  disabled={!customEquipmentInput.trim()}
+                  className="px-3 py-1.5 rounded-md text-xs border border-accent/40 text-accent hover:bg-accent/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Ajouter
+                </button>
               </div>
             </div>
 
