@@ -2,7 +2,7 @@ import React from "react";
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useGetNotifications, getGetNotificationsQueryKey } from "@workspace/api-client-react";
+import { useGetNotifications, getGetNotificationsQueryKey, useGetMessageThreads, getGetMessageThreadsQueryKey } from "@workspace/api-client-react";
 
 interface Props {
   top: number;
@@ -11,14 +11,20 @@ interface Props {
 
 export function NotificationBell({ top, right = 16 }: Props) {
   const router = useRouter();
-  const { data } = useGetNotifications({
+  const { data: notifData } = useGetNotifications({
     query: {
       queryKey: getGetNotificationsQueryKey(),
       refetchInterval: 30000,
       select: (d) => d,
     },
   });
-  const unread = data?.unreadCount ?? 0;
+  const { data: threads } = useGetMessageThreads({
+    query: { queryKey: getGetMessageThreadsQueryKey(), refetchInterval: 30000 },
+  });
+
+  const unreadNotifs = notifData?.unreadCount ?? 0;
+  const unreadMessages = (threads ?? []).reduce((sum, t) => sum + (t.unreadCount ?? 0), 0);
+  const unread = unreadNotifs + unreadMessages;
 
   return (
     <TouchableOpacity

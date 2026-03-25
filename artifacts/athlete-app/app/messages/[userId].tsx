@@ -178,32 +178,19 @@ export default function ChatScreen() {
     }
   };
 
-  const handleVideoAttach = async () => {
-    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!granted) {
-      Alert.alert("Permission refusée", "L'accès à la galerie est nécessaire.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "videos",
-      videoMaxDuration: 60,
-      quality: 0.8,
-      allowsEditing: false,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
+  const sendVideoAsset = async (uri: string, fileSize?: number) => {
+    if (fileSize && fileSize > 50 * 1024 * 1024) {
       Alert.alert("Fichier trop lourd", "La vidéo ne doit pas dépasser 50 Mo.");
       return;
     }
-    setVideoUri(asset.uri);
+    setVideoUri(uri);
     setVideoUploading(true);
     try {
       const uploadResult2 = await uploadMutation.mutateAsync({
         data: { mediaType: "video", contentType: "video/mp4" },
       });
       const { uploadUrl } = uploadResult2;
-      const rawUrl = await uploadToPresignedUrl(asset.uri, uploadUrl, "video/mp4");
+      const rawUrl = await uploadToPresignedUrl(uri, uploadUrl, "video/mp4");
       await sendMutation.mutateAsync({
         data: { recipientId: userIdStr, content: "", mediaType: "video", mediaUrl: rawUrl },
       });
@@ -216,6 +203,57 @@ export default function ChatScreen() {
       setVideoUri(null);
       setVideoUploading(false);
     }
+  };
+
+  const handleVideoAttach = () => {
+    Alert.alert(
+      "Envoyer une vidéo",
+      "Choisir la source",
+      [
+        {
+          text: "Galerie",
+          onPress: async () => {
+            const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!granted) {
+              Alert.alert("Permission refusée", "L'accès à la galerie est nécessaire.");
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: "videos",
+              videoMaxDuration: 60,
+              quality: 0.8,
+              allowsEditing: false,
+            });
+            if (!result.canceled && result.assets?.[0]) {
+              const asset = result.assets[0];
+              await sendVideoAsset(asset.uri, asset.fileSize ?? undefined);
+            }
+          },
+        },
+        {
+          text: "Caméra",
+          onPress: async () => {
+            const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+            if (!granted) {
+              Alert.alert("Permission refusée", "L'accès à la caméra est nécessaire.");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: "videos",
+              videoMaxDuration: 60,
+              quality: 0.8,
+              allowsEditing: false,
+            });
+            if (!result.canceled && result.assets?.[0]) {
+              const asset = result.assets[0];
+              await sendVideoAsset(asset.uri, asset.fileSize ?? undefined);
+            }
+          },
+        },
+        { text: "Annuler", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handlePlayAudio = async (url: string, msgId: string) => {

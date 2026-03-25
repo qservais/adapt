@@ -164,18 +164,25 @@ router.put("/messages/:userId/read", authenticate, async (req, res) => {
   }
 });
 
-const uploadMediaSchema = z.object({
-  mediaType: z.enum(["audio", "video"]),
-  contentType: z.string().min(1),
+router.post("/messages/upload-audio", authenticate, async (req, res) => {
+  try {
+    const uploadUrl = await storage.getObjectEntityUploadURL();
+    res.json({ uploadUrl });
+  } catch (err) {
+    res.status(500).json({ error: "Impossible de générer l'URL d'upload audio" });
+  }
+});
+
+router.post("/messages/upload-video", authenticate, async (req, res) => {
+  try {
+    const uploadUrl = await storage.getObjectEntityUploadURL();
+    res.json({ uploadUrl });
+  } catch (err) {
+    res.status(500).json({ error: "Impossible de générer l'URL d'upload vidéo" });
+  }
 });
 
 router.post("/messages/upload-media", authenticate, async (req, res) => {
-  const parsed = uploadMediaSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Type de média invalide" });
-    return;
-  }
-
   try {
     const uploadUrl = await storage.getObjectEntityUploadURL();
     res.json({ uploadUrl });
