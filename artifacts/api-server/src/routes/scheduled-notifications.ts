@@ -13,11 +13,30 @@ const createSchema = z.object({
   recurrenceType: z.enum(["daily", "weekly", "custom"]).default("daily"),
   recurrenceConfig: z.record(z.unknown()).default({}),
   sendHour: z.number().int().min(0).max(23).default(8),
-});
+}).refine(
+  (d) => {
+    if (d.recurrenceType === "daily") return true;
+    const days = d.recurrenceConfig["days"];
+    return Array.isArray(days) && days.length > 0;
+  },
+  { message: "Sélectionnez au moins un jour pour la récurrence hebdomadaire ou personnalisée." }
+);
 
-const updateSchema = createSchema.partial().omit({ athleteId: true }).extend({
+const updateSchema = z.object({
+  message: z.string().min(1).max(1000).optional(),
+  recurrenceType: z.enum(["daily", "weekly", "custom"]).optional(),
+  recurrenceConfig: z.record(z.unknown()).optional(),
+  sendHour: z.number().int().min(0).max(23).optional(),
   active: z.boolean().optional(),
-});
+}).refine(
+  (d) => {
+    if (!d.recurrenceType || d.recurrenceType === "daily") return true;
+    if (!d.recurrenceConfig) return true;
+    const days = d.recurrenceConfig["days"];
+    return Array.isArray(days) && days.length > 0;
+  },
+  { message: "Sélectionnez au moins un jour pour la récurrence hebdomadaire ou personnalisée." }
+);
 
 const morningHourSchema = z.object({
   hour: z.number().int().min(0).max(23),
