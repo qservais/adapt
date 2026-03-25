@@ -3,7 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -189,9 +190,11 @@ export default function ExerciseScreen() {
   const [timerCompleted, setTimerCompleted] = useState(false);
   const [workTimerStarted, setWorkTimerStarted] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   useEffect(() => {
     setShowDescription(true);
+    setShowDemoModal(false);
   }, [exerciseIndex]);
 
   const encouragementMsg = useMemo(
@@ -441,12 +444,12 @@ export default function ExerciseScreen() {
               </Text>
               {exercise.demoUrl != null && exercise.demoUrl.length > 0 && (
                 <TouchableOpacity
-                  onPress={() => { Linking.openURL(exercise.demoUrl as string); }}
+                  onPress={() => setShowDemoModal(true)}
                   style={[styles.demoBtn, { borderColor: `${cfg.color}50` }]}
                 >
                   <Feather name="play-circle" size={13} color={cfg.color} />
                   <Text style={[styles.demoBtnText, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}>
-                    Démo
+                    Voir la démo
                   </Text>
                 </TouchableOpacity>
               )}
@@ -612,6 +615,38 @@ export default function ExerciseScreen() {
           )}
         </View>
       )}
+
+      <Modal
+        visible={showDemoModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowDemoModal(false)}
+      >
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { fontFamily: FONTS.mono }]} numberOfLines={1}>
+              {exercise.exerciseName}
+            </Text>
+            <TouchableOpacity onPress={() => setShowDemoModal(false)} style={styles.modalCloseBtn}>
+              <Feather name="x" size={20} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+          {exercise.demoUrl != null && (
+            <WebView
+              source={{ uri: exercise.demoUrl }}
+              style={styles.webView}
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              startInLoadingState
+              renderLoading={() => (
+                <View style={styles.webViewLoader}>
+                  <ActivityIndicator size="large" color={cfg.color} />
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -850,4 +885,43 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   demoBtnText: { fontSize: 13 },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 12,
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    letterSpacing: 1,
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.bgElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  webView: { flex: 1 },
+  webViewLoader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.bg,
+  },
 });
