@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -21,7 +22,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetMe,
   useUpdateMe,
-  useAthleteLink,
   useGetBadges,
   useGetNotificationPreferences,
   useUpdateNotificationPreferences,
@@ -29,6 +29,11 @@ import {
   getGetMeQueryKey,
   type NotificationPreferences,
   customFetch,
+  useGetCoaches,
+  useRequestCoach,
+  useGetAthleteCoachRequest,
+  useCancelCoachRequest,
+  COACH_REQUEST_QUERY_KEY,
 } from "@workspace/api-client-react";
 import { tokenStore } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
@@ -95,9 +100,12 @@ export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
   const meQuery = useGetMe();
   const updateMutation = useUpdateMe();
-  const linkMutation = useAthleteLink();
   const queryClient = useQueryClient();
   const badgesQuery = useGetBadges();
+  const { data: coaches } = useGetCoaches();
+  const { data: coachRequest } = useGetAthleteCoachRequest();
+  const requestMutation = useRequestCoach();
+  const cancelRequestMutation = useCancelCoachRequest();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
@@ -115,9 +123,9 @@ export default function ProfileScreen() {
   const [showLastPeriodPicker, setShowLastPeriodPicker] = useState(false);
   const [avgCycleDaysInput, setAvgCycleDaysInput] = useState<string>("28");
 
-  const [coachCode, setCoachCode] = useState("");
-  const [coachLinkError, setCoachLinkError] = useState("");
-  const [coachLinked, setCoachLinked] = useState(false);
+  const [coachPickerVisible, setCoachPickerVisible] = useState(false);
+  const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState("");
 
   const [avatarUploading, setAvatarUploading] = useState(false);
 
@@ -348,22 +356,35 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleLinkCoach = async () => {
-    setCoachLinkError("");
-    const trimmed = coachCode.trim().toUpperCase();
-    if (trimmed.length !== 6) {
-      setCoachLinkError("Entre le code à 6 caractères donné par ton coach");
-      return;
-    }
+  const handleRequestCoach = async () => {
+    if (!selectedCoachId) return;
+    setRequestError("");
     try {
-      await linkMutation.mutateAsync({ data: { inviteCode: trimmed } });
-      setCoachLinked(true);
-      setCoachCode("");
-      queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Code invalide";
-      setCoachLinkError(msg);
+      await requestMutation.mutateAsync({ coachId: selectedCoachId });
+      setCoachPickerVisible(false);
+      setSelectedCoachId(null);
+      queryClient.invalidateQueries({ queryKey: COACH_REQUEST_QUERY_KEY });
+    } catch {
+      setRequestError("Une erreur est survenue. Réessaie.");
     }
+  };
+
+  const handleCancelRequest = async () => {
+    Alert.alert(
+      "Annuler la demande",
+      "Es-tu sûr(e) de vouloir annuler ta demande de connexion ?",
+      [
+        { text: "Non", style: "cancel" },
+        {
+          text: "Annuler la demande",
+          style: "destructive",
+          onPress: async () => {
+            await cancelRequestMutation.mutateAsync();
+            queryClient.invalidateQueries({ queryKey: COACH_REQUEST_QUERY_KEY });
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = () => {
@@ -768,39 +789,111 @@ export default function ProfileScreen() {
               CONNECTER UN COACH
             </Text>
           </View>
-          <Text style={[styles.coachDesc, { fontFamily: FONTS.body }]}>
-            Ton coach t'a fourni un code à 6 caractères. Entre-le ci-dessous pour relier ton compte.
-          </Text>
-          {coachLinked ? (
-            <View style={styles.linkedRow}>
-              <Feather name="check-circle" size={20} color={COLORS.cyan} />
-              <Text style={[styles.linkedText, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan }]}>
-                Coach connecté avec succès !
+          {coachRequest ? (
+            <View style={styles.pendingRequestBox}>
+              <View style={styles.pendingIconRow}>
+                <Feather name="clock" size={16} color={COLORS.amber} />
+                <Text style={[styles.pendingLabel, { fontFamily: FONTS.mono }]}>
+                  EN ATTENTE
+                </Text>
+              </View>
+              <Text style={[styles.coachDesc, { fontFamily: FONTS.body }]}>
+                Ta demande a été envoyée à{" "}
+                <Text style={{ color: COLORS.cyan }}>
+                  {coachRequest.coachFirstName} {coachRequest.coachLastName ?? ""}
+                </Text>
+                . Dès que ton coach aura accepté, tu seras connecté(e).
               </Text>
+              <TouchableOpacity onPress={handleCancelRequest} style={styles.cancelRequestBtn} activeOpacity={0.7}>
+                <Text style={[styles.cancelRequestText, { fontFamily: FONTS.mono }]}>
+                  Annuler la demande
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <>
-              <InputField
-                label="Code d'invitation"
-                value={coachCode}
-                onChangeText={(t) => setCoachCode(t.toUpperCase())}
-                placeholder="ABC123"
-                autoCapitalize="characters"
-              />
-              {coachLinkError ? (
-                <Text style={[styles.linkError, { fontFamily: FONTS.body }]}>
-                  {coachLinkError}
-                </Text>
-              ) : null}
+              <Text style={[styles.coachDesc, { fontFamily: FONTS.body }]}>
+                Choisis ton coach dans la liste pour lui envoyer une demande de connexion.
+              </Text>
               <GradientButton
-                label="Connecter"
-                onPress={handleLinkCoach}
-                loading={linkMutation.isPending}
+                label="Choisir un coach"
+                onPress={() => setCoachPickerVisible(true)}
               />
             </>
           )}
         </GlowCard>
       )}
+
+      <Modal
+        visible={coachPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCoachPickerVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setCoachPickerVisible(false)} />
+        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={styles.modalHandle} />
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { fontFamily: FONTS.mono }]}>CHOISIR UN COACH</Text>
+            <TouchableOpacity onPress={() => setCoachPickerVisible(false)}>
+              <Feather name="x" size={20} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+          {(coaches ?? []).length === 0 ? (
+            <View style={styles.emptyCoachBox}>
+              <Text style={[styles.coachDesc, { fontFamily: FONTS.body, textAlign: "center" }]}>
+                Aucun coach disponible.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <ScrollView style={styles.coachListScroll} showsVerticalScrollIndicator={false}>
+                {(coaches ?? []).map(coach => {
+                  const selected = selectedCoachId === coach.id;
+                  return (
+                    <TouchableOpacity
+                      key={coach.id}
+                      style={[styles.coachPickerCard, selected && styles.coachPickerCardSelected]}
+                      onPress={() => setSelectedCoachId(coach.id)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={styles.coachPickerAvatar}>
+                        {coach.avatarUrl ? (
+                          <Image source={{ uri: coach.avatarUrl }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                        ) : (
+                          <Text style={[styles.coachPickerInitials, { fontFamily: FONTS.bodyBold }]}>
+                            {coach.firstName[0]}{coach.lastName?.[0] ?? ""}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.coachPickerName, { fontFamily: FONTS.bodyBold, color: selected ? COLORS.cyan : COLORS.white }]}>
+                          {coach.firstName} {coach.lastName}
+                        </Text>
+                        <Text style={[styles.coachPickerRole, { fontFamily: FONTS.mono }]}>COACH ADAPT</Text>
+                      </View>
+                      {selected && <Feather name="check-circle" size={18} color={COLORS.cyan} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              {requestError ? (
+                <Text style={[styles.linkError, { fontFamily: FONTS.body, marginHorizontal: 16 }]}>
+                  {requestError}
+                </Text>
+              ) : null}
+              <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+                <GradientButton
+                  label="Envoyer la demande"
+                  onPress={handleRequestCoach}
+                  loading={requestMutation.isPending}
+                  disabled={!selectedCoachId}
+                />
+              </View>
+            </>
+          )}
+        </View>
+      </Modal>
 
       <View style={styles.quickLinks}>
         <TouchableOpacity
@@ -1156,4 +1249,78 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgInput,
   },
   goalBtnText: { fontSize: 13 },
+  pendingRequestBox: { gap: 10 },
+  pendingIconRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  pendingLabel: { fontSize: 10, color: COLORS.amber, letterSpacing: 2 },
+  cancelRequestBtn: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.redDim,
+    backgroundColor: COLORS.redDim,
+  },
+  cancelRequestText: { fontSize: 11, color: COLORS.red, letterSpacing: 1 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalSheet: {
+    backgroundColor: COLORS.bgCard,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    maxHeight: "75%",
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  modalTitle: { fontSize: 12, color: COLORS.cyan, letterSpacing: 2 },
+  coachListScroll: { maxHeight: 300 },
+  coachPickerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 14,
+    marginHorizontal: 12,
+    marginTop: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  coachPickerCardSelected: {
+    borderColor: COLORS.cyan,
+    backgroundColor: "rgba(0,240,255,0.07)",
+  },
+  coachPickerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  coachPickerInitials: { fontSize: 16, color: COLORS.white },
+  coachPickerName: { fontSize: 15, marginBottom: 2 },
+  coachPickerRole: { fontSize: 9, color: COLORS.cyan, letterSpacing: 2 },
+  emptyCoachBox: { alignItems: "center", padding: 32 },
 });

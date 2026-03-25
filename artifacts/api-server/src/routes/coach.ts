@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable, coachAppointmentsTable } from "@workspace/db";
+import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable, coachAppointmentsTable, coachJoinRequestsTable } from "@workspace/db";
 import { eq, and, desc, asc, gte, lt, inArray, isNotNull, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
@@ -1050,6 +1050,154 @@ router.get("/coach/clients/:clientId/sessions/:sessionLogId", authenticate, requ
       exercises,
     });
   } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+// ─── Coach Discovery & Join Requests ───────────────────────────────────────────
+
+router.get("/coaches", authenticate, async (req, res) => {
+  try {
+    const coaches = await db
+      .select({
+        id: usersTable.id,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+        email: usersTable.email,
+        avatarUrl: usersTable.avatarUrl,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.role, "coach"));
+    res.json(coaches);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.get("/athlete/coach-request", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    const [request] = await db
+      .select({
+        id: coachJoinRequestsTable.id,
+        coachId: coachJoinRequestsTable.coachId,
+        status: coachJoinRequestsTable.status,
+        createdAt: coachJoinRequestsTable.createdAt,
+        coachFirstName: usersTable.firstName,
+        coachLastName: usersTable.lastName,
+      })
+      .from(coachJoinRequestsTable)
+      .innerJoin(usersTable, eq(usersTable.id, coachJoinRequestsTable.coachId))
+      .where(eq(coachJoinRequestsTable.athleteId, athleteId));
+    res.json(request ?? null);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.post("/athlete/request-coach", authenticate, requireRole("athlete"), async (req, res) => {
+  const schema = z.object({ coachId: z.string().uuid() });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const athleteId = req.user!.userId;
+    const [coach] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.id, parsed.data.coachId), eq(usersTable.role, "coach")));
+    if (!coach) {
+      res.status(404).json({ error: { code: "COACH_NOT_FOUND", message: "Coach introuvable" } });
+      return;
+    }
+    await db
+      .insert(coachJoinRequestsTable)
+      .values({ athleteId, coachId: parsed.data.coachId, status: "pending" })
+      .onConflictDoUpdate({
+        target: coachJoinRequestsTable.athleteId,
+        set: { coachId: parsed.data.coachId, status: "pending", updatedAt: new Date() },
+      });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.delete("/athlete/request-coach", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    await db
+      .delete(coachJoinRequestsTable)
+      .where(and(eq(coachJoinRequestsTable.athleteId, athleteId), eq(coachJoinRequestsTable.status, "pending")));
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.get("/coach/join-requests", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const requests = await db
+      .select({
+        id: coachJoinRequestsTable.id,
+        status: coachJoinRequestsTable.status,
+        createdAt: coachJoinRequestsTable.createdAt,
+        athleteId: usersTable.id,
+        athleteFirstName: usersTable.firstName,
+        athleteLastName: usersTable.lastName,
+        athleteEmail: usersTable.email,
+        athleteAvatarUrl: usersTable.avatarUrl,
+        athleteFitnessLevel: usersTable.fitnessLevel,
+        athletePrimaryGoal: usersTable.primaryGoal,
+      })
+      .from(coachJoinRequestsTable)
+      .innerJoin(usersTable, eq(usersTable.id, coachJoinRequestsTable.athleteId))
+      .where(and(eq(coachJoinRequestsTable.coachId, coachId), eq(coachJoinRequestsTable.status, "pending")))
+      .orderBy(asc(coachJoinRequestsTable.createdAt));
+    res.json(requests);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.post("/coach/join-requests/:requestId/approve", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const requestId = String(req.params["requestId"]);
+    const [request] = await db
+      .select()
+      .from(coachJoinRequestsTable)
+      .where(and(eq(coachJoinRequestsTable.id, requestId), eq(coachJoinRequestsTable.coachId, coachId), eq(coachJoinRequestsTable.status, "pending")));
+    if (!request) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Demande introuvable" } });
+      return;
+    }
+    await db.update(usersTable).set({ coachId, updatedAt: new Date() }).where(eq(usersTable.id, request.athleteId));
+    await db.update(coachJoinRequestsTable).set({ status: "approved", updatedAt: new Date() }).where(eq(coachJoinRequestsTable.id, requestId));
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.post("/coach/join-requests/:requestId/reject", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const requestId = String(req.params["requestId"]);
+    const [request] = await db
+      .select()
+      .from(coachJoinRequestsTable)
+      .where(and(eq(coachJoinRequestsTable.id, requestId), eq(coachJoinRequestsTable.coachId, coachId), eq(coachJoinRequestsTable.status, "pending")));
+    if (!request) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Demande introuvable" } });
+      return;
+    }
+    await db.update(coachJoinRequestsTable).set({ status: "rejected", updatedAt: new Date() }).where(eq(coachJoinRequestsTable.id, requestId));
+    res.json({ success: true });
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });

@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useGetClients, useCoachLink } from "@workspace/api-client-react";
+import {
+  useGetClients, useCoachLink, useGetInviteCode,
+  useGetCoachJoinRequests, useApproveJoinRequest, useRejectJoinRequest,
+  type CoachJoinRequestItem,
+} from "@workspace/api-client-react";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
-import { Loader2, Search, UserPlus, CheckCircle } from "lucide-react";
+import { Loader2, Search, UserPlus, CheckCircle, Copy, Check, UserCheck, X, Bell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -15,11 +19,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ClientsOverview() {
-  const { data: clients, isLoading } = useGetClients({ query: { queryKey: ['/api/coach/clients'], refetchInterval: 30000 }});
+  const { data: clients, isLoading } = useGetClients({ query: { queryKey: ["/api/coach/clients"], refetchInterval: 30000 } });
+  const { data: inviteData } = useGetInviteCode();
+  const { data: joinRequests, isLoading: requestsLoading } = useGetCoachJoinRequests();
   const linkMutation = useCoachLink();
+  const approveMutation = useApproveJoinRequest();
+  const rejectMutation = useRejectJoinRequest();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -27,6 +37,17 @@ export default function ClientsOverview() {
   const [inviteCode, setInviteCode] = useState("");
   const [linkError, setLinkError] = useState("");
   const [linkSuccess, setLinkSuccess] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const myCode = inviteData?.inviteCode ?? null;
+
+  const handleCopyCode = () => {
+    if (!myCode) return;
+    navigator.clipboard.writeText(myCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+    toast({ title: "Copié !", description: "Code d'invitation copié dans le presse-papier." });
+  };
 
   const handleLink = async () => {
     setLinkError("");
@@ -40,7 +61,7 @@ export default function ClientsOverview() {
       const res = await linkMutation.mutateAsync({ data: { inviteCode: code } });
       setLinkSuccess(res.message ?? "Athlète lié avec succès !");
       setInviteCode("");
-      queryClient.invalidateQueries({ queryKey: ['/api/coach/clients'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/coach/clients"] });
     } catch (err: unknown) {
       const serverMsg =
         (err as { data?: { error?: { message?: string } } })?.data?.error?.message;
@@ -55,6 +76,16 @@ export default function ClientsOverview() {
       setLinkError("");
       setLinkSuccess("");
     }
+  };
+
+  const handleApprove = async (requestId: string, name: string) => {
+    await approveMutation.mutateAsync(requestId);
+    toast({ title: "Demande acceptée", description: `${name} a été ajouté(e) à votre liste d'athlètes.` });
+  };
+
+  const handleReject = async (requestId: string, name: string) => {
+    await rejectMutation.mutateAsync(requestId);
+    toast({ title: "Demande refusée", description: `La demande de ${name} a été refusée.`, variant: "destructive" });
   };
 
   if (isLoading) {
@@ -82,8 +113,96 @@ export default function ClientsOverview() {
     );
   }
 
+  const pendingRequests = joinRequests ?? [];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* Invite code banner — always visible at top */}
+      {myCode && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-xl bg-primary/10 border border-primary/30">
+          <div className="flex-1">
+            <p className="text-xs font-mono uppercase tracking-widest text-primary mb-1">Votre code d'invitation</p>
+            <p className="text-sm text-muted-foreground">Partagez ce code avec vos athlètes pour qu'ils puissent rejoindre votre espace coaching.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-6 py-3 rounded-lg bg-background border border-primary/40 font-mono text-3xl font-bold text-primary tracking-[0.3em] select-all">
+              {myCode}
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCopyCode}
+              className="border-primary/30 hover:bg-primary/20 text-primary h-12 w-12"
+              title="Copier le code"
+            >
+              {codeCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Pending join requests */}
+      {pendingRequests.length > 0 && (
+        <div className="rounded-xl bg-card border border-amber-500/30 overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 bg-amber-500/10 border-b border-amber-500/20">
+            <Bell className="w-4 h-4 text-amber-400" />
+            <span className="text-sm font-mono uppercase tracking-wider text-amber-400">
+              Demandes d'accès ({pendingRequests.length})
+            </span>
+          </div>
+          <div className="divide-y divide-border/50">
+            {pendingRequests.map((req: CoachJoinRequestItem) => (
+              <div key={req.id} className="flex items-center gap-4 px-5 py-4">
+                <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center font-bold text-white text-sm flex-shrink-0">
+                  {req.athleteFirstName[0]}{req.athleteLastName?.[0] ?? ""}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white text-sm">{req.athleteFirstName} {req.athleteLastName}</div>
+                  <div className="text-xs text-muted-foreground truncate">{req.athleteEmail}</div>
+                  {(req.athleteFitnessLevel || req.athletePrimaryGoal) && (
+                    <div className="flex gap-2 mt-1">
+                      {req.athleteFitnessLevel && (
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground">
+                          {req.athleteFitnessLevel}
+                        </span>
+                      )}
+                      {req.athletePrimaryGoal && (
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                          {req.athletePrimaryGoal}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    onClick={() => handleApprove(req.id, req.athleteFirstName)}
+                    disabled={approveMutation.isPending}
+                    className="bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary h-8"
+                    variant="outline"
+                  >
+                    {approveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserCheck className="w-3 h-3 mr-1" />}
+                    Accepter
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleReject(req.id, req.athleteFirstName)}
+                    disabled={rejectMutation.isPending}
+                    className="h-8"
+                    variant="ghost"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Refuser
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display text-white">ATHLÈTES</h1>
@@ -105,7 +224,7 @@ export default function ClientsOverview() {
             variant="outline"
           >
             <UserPlus className="w-4 h-4" />
-            Lier un athlète
+            Lier par code
           </Button>
         </div>
       </div>

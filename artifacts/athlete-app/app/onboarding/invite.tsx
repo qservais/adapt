@@ -1,119 +1,153 @@
-import React, { useState } from "react";
+import React from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { InputField } from "@/components/ui/InputField";
-import { useAthleteLink } from "@workspace/api-client-react";
+import { useGetCoaches, useRequestCoach } from "@workspace/api-client-react";
+import type { CoachSummary } from "@workspace/api-client-react";
 
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
-  const linkMutation = useAthleteLink();
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
-  const [linked, setLinked] = useState(false);
+  const { data: coaches, isLoading } = useGetCoaches();
+  const requestMutation = useRequestCoach();
+  const [selectedCoachId, setSelectedCoachId] = React.useState<string | null>(null);
+  const [requested, setRequested] = React.useState(false);
+  const [requestedCoach, setRequestedCoach] = React.useState<CoachSummary | null>(null);
+  const [error, setError] = React.useState("");
 
-  const handleLink = async () => {
+  const handleRequest = async () => {
+    if (!selectedCoachId) return;
     setError("");
-    const trimmed = code.trim().toUpperCase();
-    if (trimmed.length !== 6) {
-      setError("Entre le code à 6 caractères donné par ton coach");
-      return;
-    }
+    const coach = coaches?.find(c => c.id === selectedCoachId) ?? null;
     try {
-      await linkMutation.mutateAsync({ data: { inviteCode: trimmed } });
-      setLinked(true);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Code d'invitation invalide";
-      setError(msg);
+      await requestMutation.mutateAsync({ coachId: selectedCoachId });
+      setRequestedCoach(coach);
+      setRequested(true);
+    } catch {
+      setError("Une erreur est survenue. Réessaie.");
     }
   };
 
+  if (requested && requestedCoach) {
+    return (
+      <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
+        <ScrollView
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.stepIndicator}>
+            <Text style={[styles.step, { fontFamily: FONTS.mono }]}>04 / 05</Text>
+          </View>
+          <View style={styles.successBox}>
+            <View style={styles.successIcon}>
+              <Feather name="send" size={36} color={COLORS.cyan} />
+            </View>
+            <Text style={[styles.successTitle, { fontFamily: FONTS.bodyBold }]}>
+              Demande envoyée !
+            </Text>
+            <Text style={[styles.successDesc, { fontFamily: FONTS.body }]}>
+              Ta demande a été envoyée à{" "}
+              <Text style={{ color: COLORS.cyan }}>
+                {requestedCoach.firstName} {requestedCoach.lastName ?? ""}
+              </Text>
+              . Tu seras connecté(e) dès que ton coach aura accepté.
+            </Text>
+            <GradientButton label="Continuer" onPress={() => router.push("/onboarding/tutorial")} />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[styles.flex, { backgroundColor: COLORS.bg }]}
-    >
+    <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
       <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 },
-        ]}
-        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.stepIndicator}>
           <Text style={[styles.step, { fontFamily: FONTS.mono }]}>04 / 05</Text>
         </View>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>RELIER UN COACH</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>CHOISIR UN COACH</Text>
         <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          Entre le code à 6 caractères fourni par ton coach.
+          Sélectionne ton coach ci-dessous pour envoyer une demande de connexion.
         </Text>
 
-        {linked ? (
-          <View style={styles.successBox}>
-            <View style={styles.successIcon}>
-              <Feather name="check-circle" size={40} color={COLORS.cyan} />
-            </View>
-            <Text style={[styles.successTitle, { fontFamily: FONTS.bodyBold }]}>
-              Coach connecté !
+        {isLoading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={COLORS.cyan} />
+          </View>
+        ) : (coaches ?? []).length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
+              Aucun coach disponible pour le moment.
             </Text>
-            <Text style={[styles.successDesc, { fontFamily: FONTS.body }]}>
-              Ton coach est maintenant lié à ton compte et peut suivre tes séances et check-ins.
-            </Text>
-            <GradientButton label="Continuer" onPress={() => router.push("/onboarding/tutorial")} />
           </View>
         ) : (
-          <>
-            <View style={styles.infoBox}>
-              <Feather name="info" size={16} color={COLORS.cyan} />
-              <Text style={[styles.infoText, { fontFamily: FONTS.body }]}>
-                Ton coach trouve son code d'invitation dans le tableau de bord ADAPT, dans ses paramètres de profil.
-              </Text>
-            </View>
-
-            <View style={styles.form}>
-              <InputField
-                label="Code d'invitation (6 caractères)"
-                value={code}
-                onChangeText={(t) => setCode(t.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                placeholder="ABC123"
-                autoCapitalize="characters"
-                maxLength={6}
-                style={styles.codeInput}
-              />
-              <Text style={[styles.codeHint, { fontFamily: FONTS.mono }]}>
-                {code.length}/6 caractères
-              </Text>
-              {error ? (
-                <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
-              ) : null}
-              <GradientButton
-                label="Connecter mon coach"
-                onPress={handleLink}
-                loading={linkMutation.isPending}
-              />
-              <TouchableOpacity
-                onPress={() => router.push("/onboarding/tutorial")}
-                style={styles.skipBtn}
-              >
-                <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
-              </TouchableOpacity>
-            </View>
-          </>
+          <View style={styles.coachList}>
+            {(coaches ?? []).map(coach => {
+              const selected = selectedCoachId === coach.id;
+              return (
+                <TouchableOpacity
+                  key={coach.id}
+                  style={[styles.coachCard, selected && styles.coachCardSelected]}
+                  onPress={() => setSelectedCoachId(coach.id)}
+                  activeOpacity={0.75}
+                >
+                  <View style={styles.coachAvatar}>
+                    {coach.avatarUrl ? (
+                      <Image source={{ uri: coach.avatarUrl }} style={styles.coachAvatarImg} />
+                    ) : (
+                      <Text style={[styles.coachAvatarInitials, { fontFamily: FONTS.bodyBold }]}>
+                        {coach.firstName[0]}{coach.lastName?.[0] ?? ""}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.coachInfo}>
+                    <Text style={[styles.coachName, { fontFamily: FONTS.bodyBold, color: selected ? COLORS.cyan : COLORS.white }]}>
+                      {coach.firstName} {coach.lastName}
+                    </Text>
+                    <Text style={[styles.coachRole, { fontFamily: FONTS.mono }]}>COACH ADAPT</Text>
+                  </View>
+                  {selected && (
+                    <Feather name="check-circle" size={20} color={COLORS.cyan} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
+
+        {error ? (
+          <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
+        ) : null}
+
+        <View style={styles.actions}>
+          <GradientButton
+            label="Envoyer la demande"
+            onPress={handleRequest}
+            loading={requestMutation.isPending}
+            disabled={!selectedCoachId}
+          />
+          <TouchableOpacity
+            onPress={() => router.push("/onboarding/tutorial")}
+            style={styles.skipBtn}
+          >
+            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -123,33 +157,42 @@ const styles = StyleSheet.create({
   stepIndicator: { marginBottom: 16 },
   step: { fontSize: 13, color: COLORS.cyan, letterSpacing: 2 },
   title: { fontSize: 48, color: COLORS.white, letterSpacing: 4, lineHeight: 52 },
-  subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, marginBottom: 24 },
-  infoBox: {
+  subtitle: { fontSize: 15, color: COLORS.textSecondary, marginTop: 8, marginBottom: 28 },
+  loadingBox: { alignItems: "center", paddingVertical: 40 },
+  emptyBox: { alignItems: "center", paddingVertical: 40 },
+  emptyText: { fontSize: 14, color: COLORS.textMuted, textAlign: "center" },
+  coachList: { gap: 12, marginBottom: 28 },
+  coachCard: {
     flexDirection: "row",
-    gap: 10,
-    backgroundColor: COLORS.cyanDim,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.cyan,
-    padding: 16,
-    marginBottom: 28,
-    alignItems: "flex-start",
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 21,
-  },
-  form: { gap: 14 },
-  codeInput: { letterSpacing: 8, textAlign: "center", fontSize: 22 },
-  codeHint: { fontSize: 11, color: COLORS.textMuted, textAlign: "center" },
-  error: { color: COLORS.red, fontSize: 13, textAlign: "center" },
-  successBox: {
     alignItems: "center",
-    gap: 16,
-    paddingVertical: 32,
+    gap: 14,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
+  coachCardSelected: {
+    borderColor: COLORS.cyan,
+    backgroundColor: "rgba(0,240,255,0.07)",
+  },
+  coachAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  coachAvatarImg: { width: 48, height: 48, borderRadius: 24 },
+  coachAvatarInitials: { fontSize: 18, color: COLORS.white },
+  coachInfo: { flex: 1 },
+  coachName: { fontSize: 16, marginBottom: 2 },
+  coachRole: { fontSize: 10, color: COLORS.cyan, letterSpacing: 2 },
+  error: { color: COLORS.red, fontSize: 13, textAlign: "center", marginBottom: 12 },
+  actions: { gap: 12 },
+  successBox: { alignItems: "center", gap: 18, paddingVertical: 40 },
   successIcon: {
     width: 80,
     height: 80,
@@ -161,7 +204,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   successTitle: { fontSize: 22, color: COLORS.white },
-  successDesc: { fontSize: 15, color: COLORS.textSecondary, textAlign: "center" },
+  successDesc: { fontSize: 15, color: COLORS.textSecondary, textAlign: "center", lineHeight: 22 },
   skipBtn: { alignItems: "center", padding: 12 },
   skipText: { color: COLORS.textMuted, fontSize: 14 },
 });

@@ -840,3 +840,33 @@ export interface UpdateAppointmentRequest {
   location?: string;
   notes?: string;
 }
+
+export interface CoachSummary {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+  email: string;
+  avatarUrl?: string | null;
+}
+
+export interface CoachJoinRequest {
+  id: string;
+  coachId: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  coachFirstName: string;
+  coachLastName?: string | null;
+}
+
+export interface CoachJoinRequestItem {
+  id: string;
+  status: "pending";
+  createdAt: string;
+  athleteId: string;
+  athleteFirstName: string;
+  athleteLastName?: string | null;
+  athleteEmail: string;
+  athleteAvatarUrl?: string | null;
+  athleteFitnessLevel?: string | null;
+  athletePrimaryGoal?: string | null;
+}
