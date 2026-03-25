@@ -71,6 +71,9 @@ import type {
   UpcomingSession,
   UserProfile,
   WeeklyRecapResponse,
+  ScheduledNotification,
+  CreateScheduledNotificationRequest,
+  UpdateScheduledNotificationRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -4055,4 +4058,84 @@ export const useUploadMessageMedia = <
     mutationFn: ({ data }) => uploadMessageMedia(data, requestOptions),
     ...mutationOptions,
   });
+};
+
+export const getScheduledNotifications = async (
+  athleteId?: string,
+  options?: RequestInit
+): Promise<ScheduledNotification[]> => {
+  const qs = athleteId ? `?athleteId=${encodeURIComponent(athleteId)}` : "";
+  return customFetch<ScheduledNotification[]>(`/api/coach/scheduled-notifications${qs}`, { ...options, method: "GET" });
+};
+
+export const useGetScheduledNotifications = <TData = Awaited<ReturnType<typeof getScheduledNotifications>>, TError = ErrorType<unknown>>(
+  athleteId?: string,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getScheduledNotifications>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? ["/api/coach/scheduled-notifications", athleteId];
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getScheduledNotifications>>> = ({ signal }) =>
+    getScheduledNotifications(athleteId, { signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+};
+
+export const createScheduledNotification = async (data: CreateScheduledNotificationRequest, options?: RequestInit): Promise<ScheduledNotification> =>
+  customFetch<ScheduledNotification>("/api/coach/scheduled-notifications", { ...options, method: "POST", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useCreateScheduledNotification = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof createScheduledNotification>>, TError, { data: CreateScheduledNotificationRequest }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof createScheduledNotification>>, TError, { data: CreateScheduledNotificationRequest }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({ mutationFn: ({ data }) => createScheduledNotification(data, requestOptions), ...mutationOptions });
+};
+
+export const updateScheduledNotification = async (id: string, data: UpdateScheduledNotificationRequest, options?: RequestInit): Promise<ScheduledNotification> =>
+  customFetch<ScheduledNotification>(`/api/coach/scheduled-notifications/${id}`, { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useUpdateScheduledNotification = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateScheduledNotification>>, TError, { id: string; data: UpdateScheduledNotificationRequest }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof updateScheduledNotification>>, TError, { id: string; data: UpdateScheduledNotificationRequest }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({ mutationFn: ({ id, data }) => updateScheduledNotification(id, data, requestOptions), ...mutationOptions });
+};
+
+export const deleteScheduledNotification = async (id: string, options?: RequestInit): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(`/api/coach/scheduled-notifications/${id}`, { ...options, method: "DELETE" });
+
+export const useDeleteScheduledNotification = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteScheduledNotification>>, TError, { id: string }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof deleteScheduledNotification>>, TError, { id: string }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({ mutationFn: ({ id }) => deleteScheduledNotification(id, requestOptions), ...mutationOptions });
+};
+
+export const getMorningNotifHour = async (options?: RequestInit): Promise<{ hour: number }> =>
+  customFetch<{ hour: number }>("/api/coach/morning-notif-hour", { ...options, method: "GET" });
+
+export const useGetMorningNotifHour = <TData = Awaited<ReturnType<typeof getMorningNotifHour>>, TError = ErrorType<unknown>>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getMorningNotifHour>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? ["/api/coach/morning-notif-hour"];
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMorningNotifHour>>> = ({ signal }) => getMorningNotifHour({ signal, ...requestOptions });
+  const query = useQuery({ queryKey, queryFn, ...queryOptions }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryKey;
+  return query;
+};
+
+export const updateMorningNotifHour = async (data: { hour: number }, options?: RequestInit): Promise<{ hour: number }> =>
+  customFetch<{ hour: number }>("/api/coach/morning-notif-hour", { ...options, method: "PUT", headers: { "Content-Type": "application/json", ...options?.headers }, body: JSON.stringify(data) });
+
+export const useUpdateMorningNotifHour = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateMorningNotifHour>>, TError, { data: { hour: number } }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof updateMorningNotifHour>>, TError, { data: { hour: number } }, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({ mutationFn: ({ data }) => updateMorningNotifHour(data, requestOptions), ...mutationOptions });
 };

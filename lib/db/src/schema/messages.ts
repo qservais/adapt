@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, timestamp, varchar, smallint, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { usersTable } from "./users";
 import { createInsertSchema } from "drizzle-zod";
@@ -28,7 +28,21 @@ export const notificationsTable = pgTable("notifications", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+export const scheduledNotificationsTable = pgTable("scheduled_notifications", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: uuid("coach_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  athleteId: uuid("athlete_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  message: text("message").notNull(),
+  recurrenceType: varchar("recurrence_type", { length: 20 }).notNull().default("daily"),
+  recurrenceConfig: jsonb("recurrence_config").$type<Record<string, unknown>>().default({}),
+  sendHour: smallint("send_hour").notNull().default(8),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
 export const insertMessageSchema = createInsertSchema(messagesTable).omit({ id: true, createdAt: true });
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messagesTable.$inferSelect;
 export type Notification = typeof notificationsTable.$inferSelect;
+export type ScheduledNotification = typeof scheduledNotificationsTable.$inferSelect;

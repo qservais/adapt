@@ -1,6 +1,7 @@
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { startAlertJob } from "./services/alert-job.js";
+import { startNotificationJob } from "./services/notification-job.js";
 import { ensureAthleteInviteCodes } from "./services/invite-code-migration.js";
 
 const rawPort = process.env["PORT"];
@@ -21,4 +22,5 @@ app.listen(port, async () => {
   logger.info({ port }, "Server listening");
   await ensureAthleteInviteCodes();
   startAlertJob();
+  startNotificationJob();
 });

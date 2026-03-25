@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -65,6 +65,13 @@ export function AppSidebar() {
       subtitle: "Défis pour les athlètes",
       url: "/challenges",
       icon: Trophy,
+      exactMatch: false,
+    },
+    {
+      title: "Notifications",
+      subtitle: "Rappels et motivation",
+      url: "/notifications",
+      icon: BellRing,
       exactMatch: false,
     },
     {

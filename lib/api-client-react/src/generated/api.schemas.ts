@@ -764,3 +764,34 @@ export interface CreateChallengeRequest {
 export interface UpdateProgressRequest {
   progress: number;
 }
+
+export interface ScheduledNotification {
+  id: string;
+  coachId: string;
+  athleteId: string;
+  message: string;
+  recurrenceType: "daily" | "weekly" | "custom";
+  recurrenceConfig: Record<string, unknown>;
+  sendHour: number;
+  active: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  athleteFirstName?: string | null;
+  athleteLastName?: string | null;
+}
+
+export interface CreateScheduledNotificationRequest {
+  athleteId: string;
+  message: string;
+  recurrenceType: "daily" | "weekly" | "custom";
+  recurrenceConfig?: Record<string, unknown>;
+  sendHour: number;
+}
+
+export interface UpdateScheduledNotificationRequest {
+  message?: string;
+  recurrenceType?: "daily" | "weekly" | "custom";
+  recurrenceConfig?: Record<string, unknown>;
+  sendHour?: number;
+  active?: boolean;
+}

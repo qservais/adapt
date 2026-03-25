@@ -18,6 +18,7 @@ import ChatView from "./pages/messages/chat";
 import LibraryPage from "./pages/library/index";
 import ContentPage from "./pages/content/index";
 import ChallengesPage from "./pages/challenges/index";
+import NotificationsPage from "./pages/notifications/index";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ function AppRouter() {
         <Route path="/library" component={LibraryPage} />
         <Route path="/content" component={ContentPage} />
         <Route path="/challenges" component={ChallengesPage} />
+        <Route path="/notifications" component={NotificationsPage} />
         <Route path="/alerts" component={AlertsFeed} />
         <Route path="/messages" component={MessagesList} />
         <Route path="/messages/:id" component={ChatView} />
