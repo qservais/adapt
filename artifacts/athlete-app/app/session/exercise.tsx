@@ -23,7 +23,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { useGetTodaySession } from "@workspace/api-client-react";
+import { useGetTodaySession, equipmentLabelFromKey } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { CircularTimer, type CircularTimerRef } from "@/components/ui/CircularTimer";
 import { Stepper } from "@/components/ui/Stepper";
@@ -422,13 +422,13 @@ export default function ExerciseScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {((exercise.equipment as string[] | null | undefined) ?? []).filter(e => e !== "Aucun").length > 0 && (
+        {((exercise.equipment as string[] | null | undefined) ?? []).filter(e => e !== "Aucun" && e !== "aucun").length > 0 && (
           <View style={styles.equipmentRow}>
             <Feather name="package" size={12} color={COLORS.textMuted} />
             <View style={styles.equipmentTags}>
-              {((exercise.equipment as string[]).filter(e => e !== "Aucun")).map(eq => (
+              {((exercise.equipment as string[]).filter(e => e !== "Aucun" && e !== "aucun")).map(eq => (
                 <View key={eq} style={styles.equipmentTag}>
-                  <Text style={[styles.equipmentTagText, { fontFamily: FONTS.mono }]}>{eq}</Text>
+                  <Text style={[styles.equipmentTagText, { fontFamily: FONTS.mono }]}>{equipmentLabelFromKey(eq)}</Text>
                 </View>
               ))}
             </View>

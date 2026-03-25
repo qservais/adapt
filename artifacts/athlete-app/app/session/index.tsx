@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
-import { useGetTodaySession, useStartSession, useGetTodayCheckin } from "@workspace/api-client-react";
+import { useGetTodaySession, useStartSession, useGetTodayCheckin, equipmentLabelFromKey } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -189,11 +189,12 @@ export default function SessionIntroScreen() {
         </View>
 
         {(() => {
-          const allEquipment = (session.exercises ?? [])
+          const allEquipmentKeys = (session.exercises ?? [])
             .flatMap(ex => ((ex.equipment as string[] | null | undefined) ?? []))
-            .filter(e => e !== "Aucun");
-          const uniqueEquipment = [...new Set(allEquipment)];
-          if (uniqueEquipment.length === 0) return null;
+            .filter(e => e !== "Aucun" && e !== "aucun" && e !== "poids-du-corps");
+          const uniqueKeys = [...new Set(allEquipmentKeys)];
+          const uniqueLabels = uniqueKeys.map(equipmentLabelFromKey);
+          if (uniqueLabels.length === 0) return null;
           return (
             <View style={styles.equipmentCard}>
               <View style={styles.equipmentCardHeader}>
@@ -203,9 +204,9 @@ export default function SessionIntroScreen() {
                 </Text>
               </View>
               <View style={styles.equipmentTagsRow}>
-                {uniqueEquipment.map(eq => (
-                  <View key={eq} style={styles.equipmentTag}>
-                    <Text style={[styles.equipmentTagText, { fontFamily: FONTS.mono }]}>{eq}</Text>
+                {uniqueLabels.map((label, i) => (
+                  <View key={uniqueKeys[i]} style={styles.equipmentTag}>
+                    <Text style={[styles.equipmentTagText, { fontFamily: FONTS.mono }]}>{label}</Text>
                   </View>
                 ))}
               </View>

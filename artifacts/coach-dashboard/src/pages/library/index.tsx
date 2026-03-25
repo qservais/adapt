@@ -1,4 +1,4 @@
-import { EQUIPMENT_CATALOG, EQUIPMENT_CATEGORIES, EQUIPMENT_LABELS as EQUIPMENT_LIST } from "@workspace/api-client-react";
+import { EQUIPMENT_CATALOG, EQUIPMENT_CATEGORIES, equipmentKeyFromLabel } from "@workspace/api-client-react";
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -193,11 +193,12 @@ export default function LibraryPage() {
 
   const openEdit = (ex: ExerciseItem) => {
     setEditExercise(ex);
+    const rawEquipment = (ex.equipment as string[]) ?? [];
     setForm({
       name: ex.name,
       category: ex.category ?? "compound",
       muscleGroups: (ex.muscleGroups as string[]) ?? [],
-      equipment: (ex.equipment as string[]) ?? [],
+      equipment: rawEquipment.map(equipmentKeyFromLabel),
       description: ex.description ?? "",
       demoUrl: ex.demoUrl ?? "",
     });
@@ -490,13 +491,13 @@ export default function LibraryPage() {
                   <div key={cat}>
                     <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest mb-1 font-mono">{cat}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {EQUIPMENT_CATALOG.filter(e => e.category === cat).map(({ labelFr }) => {
-                        const selected = form.equipment.includes(labelFr);
+                      {EQUIPMENT_CATALOG.filter(e => e.category === cat).map(({ key, labelFr }) => {
+                        const selected = form.equipment.includes(key);
                         return (
                           <button
-                            key={labelFr}
+                            key={key}
                             type="button"
-                            onClick={() => toggleMultiSelect(form.equipment, labelFr, v => setForm(f => ({ ...f, equipment: v })))}
+                            onClick={() => toggleMultiSelect(form.equipment, key, v => setForm(f => ({ ...f, equipment: v })))}
                             className={cn(
                               "flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors",
                               selected
@@ -513,10 +514,10 @@ export default function LibraryPage() {
                   </div>
                 ))}
               </div>
-              {form.equipment.filter(e => !EQUIPMENT_LIST.includes(e)).length > 0 && (
+              {form.equipment.filter(e => !EQUIPMENT_CATALOG.some(c => c.key === e)).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   <span className="text-[10px] text-muted-foreground self-center">Personnalisé :</span>
-                  {form.equipment.filter(e => !EQUIPMENT_LIST.includes(e)).map(e => (
+                  {form.equipment.filter(e => !EQUIPMENT_CATALOG.some(c => c.key === e)).map(e => (
                     <span key={e} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs border bg-accent/15 border-accent/40 text-accent">
                       {e}
                       <button
