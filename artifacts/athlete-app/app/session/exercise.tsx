@@ -190,6 +190,10 @@ export default function ExerciseScreen() {
   const [workTimerStarted, setWorkTimerStarted] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
 
+  useEffect(() => {
+    setShowDescription(true);
+  }, [exerciseIndex]);
+
   const encouragementMsg = useMemo(
     () => ENCOURAGEMENT[Math.floor(Math.random() * ENCOURAGEMENT.length)],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -456,7 +460,7 @@ export default function ExerciseScreen() {
             )}
             {showDescription && exercise.demoUrl != null && exercise.demoUrl.length > 0 && (
               <TouchableOpacity
-                onPress={() => Linking.openURL(exercise.demoUrl!)}
+                onPress={() => { Linking.openURL(exercise.demoUrl as string); }}
                 style={[styles.demoBtn, { borderColor: `${cfg.color}50` }]}
               >
                 <Feather name="play-circle" size={14} color={cfg.color} />
