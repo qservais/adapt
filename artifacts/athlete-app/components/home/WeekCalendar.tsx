@@ -28,6 +28,47 @@ const SESSION_TYPE_FR: Record<string, string> = {
   endurance: "Endurance",
 };
 
+const SESSION_TYPE_COLOR: Record<string, string> = {
+  hypertrophie: "#A855F7",
+  strength: "#A855F7",
+  endurance: "#22C55E",
+  mobility: "#22C55E",
+  cardio: "#EF4444",
+  running: "#F59E0B",
+  conditioning: "#EF4444",
+  athletic_development: "#F59E0B",
+  hybrid: "#00F0FF",
+  coordination: "#00F0FF",
+  technique: "#00F0FF",
+};
+
+const SESSION_TYPE_ICON: Record<string, React.ComponentProps<typeof Feather>["name"]> = {
+  hypertrophie: "trending-up",
+  strength: "trending-up",
+  endurance: "activity",
+  cardio: "activity",
+  running: "activity",
+  conditioning: "activity",
+  mobility: "wind",
+  athletic_development: "zap",
+  hybrid: "zap",
+  coordination: "target",
+  technique: "target",
+};
+
+function getSessionTypeColor(session: UpcomingSession): string {
+  if (session.isCompleted) return COLORS.green;
+  const typeColor = SESSION_TYPE_COLOR[session.sessionType];
+  if (typeColor) return typeColor;
+  return session.sessionLocation !== "presentiel" ? COLORS.cyan : COLORS.amber;
+}
+
+function getSessionTypeIcon(session: UpcomingSession): React.ComponentProps<typeof Feather>["name"] {
+  if (session.isCompleted) return "check";
+  if (session.sessionLocation === "presentiel") return "map-pin";
+  return SESSION_TYPE_ICON[session.sessionType] ?? "zap";
+}
+
 function getWeekDays(): Date[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -146,19 +187,16 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
           <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
             {sheetSessions.map((session) => {
               const isOnline = session.sessionLocation !== "presentiel";
-              const locationColor = isOnline ? COLORS.cyan : COLORS.amber;
+              const typeColor = getSessionTypeColor(session);
+              const iconName = getSessionTypeIcon(session);
               const trainingType = SESSION_TYPE_FR[session.sessionType] ?? session.sessionType;
               return (
                 <View key={session.sessionId} style={styles.sheetSessionItem}>
                   <View style={[styles.sheetSessionDot, {
-                    backgroundColor: session.isCompleted ? `${COLORS.green}20` : `${locationColor}20`,
-                    borderColor: session.isCompleted ? COLORS.green : locationColor,
+                    backgroundColor: `${typeColor}20`,
+                    borderColor: typeColor,
                   }]}>
-                    {session.isCompleted ? (
-                      <Feather name="check" size={12} color={COLORS.green} />
-                    ) : (
-                      <Feather name={isOnline ? "video" : "map-pin"} size={12} color={locationColor} />
-                    )}
+                    <Feather name={iconName} size={12} color={typeColor} />
                   </View>
                   <View style={styles.sheetSessionInfo}>
                     <Text style={[styles.sheetSessionName, { fontFamily: FONTS.bodyBold }]}>
@@ -166,15 +204,17 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
                     </Text>
                     <View style={styles.sheetSessionMeta}>
                       {trainingType ? (
-                        <Text style={[styles.sheetMetaText, { fontFamily: FONTS.mono }]}>
-                          {trainingType}
-                        </Text>
+                        <View style={[styles.sheetLocationBadge, {
+                          borderColor: `${typeColor}40`,
+                          backgroundColor: `${typeColor}12`,
+                        }]}>
+                          <Text style={[styles.sheetLocationText, { fontFamily: FONTS.mono, color: typeColor }]}>
+                            {trainingType}
+                          </Text>
+                        </View>
                       ) : null}
-                      <View style={[styles.sheetLocationBadge, {
-                        borderColor: `${locationColor}40`,
-                        backgroundColor: `${locationColor}12`,
-                      }]}>
-                        <Text style={[styles.sheetLocationText, { fontFamily: FONTS.mono, color: locationColor }]}>
+                      <View style={[styles.sheetLocationBadge, { borderColor: "#ffffff20", backgroundColor: "#ffffff08" }]}>
+                        <Text style={[styles.sheetLocationText, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
                           {isOnline ? "En ligne" : "Présentiel"}
                         </Text>
                       </View>
@@ -221,22 +261,12 @@ function SessionDot({
   session: UpcomingSession;
   isPast: boolean;
 }) {
-  const isOnline = session.sessionLocation !== "presentiel";
-  const dotColor = session.isCompleted
-    ? COLORS.green
-    : isPast
-    ? COLORS.textMuted
-    : isOnline
-    ? COLORS.cyan
-    : COLORS.amber;
+  const dotColor = isPast && !session.isCompleted ? COLORS.textMuted : getSessionTypeColor(session);
+  const iconName = getSessionTypeIcon(session);
 
   return (
     <View style={[styles.sessionDot, { backgroundColor: `${dotColor}20`, borderColor: dotColor }]}>
-      {session.isCompleted ? (
-        <Feather name="check" size={8} color={COLORS.green} />
-      ) : (
-        <Feather name={isOnline ? "video" : "map-pin"} size={8} color={dotColor} />
-      )}
+      <Feather name={iconName} size={8} color={dotColor} />
     </View>
   );
 }
