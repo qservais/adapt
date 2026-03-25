@@ -157,12 +157,13 @@ export default function ChatScreen() {
       setRecording(null);
       if (!uri) throw new Error("URI manquant");
 
+      const audioContentType = Platform.OS === "android" ? "audio/mp4" : "audio/m4a";
       const uploadResult = await uploadMutation.mutateAsync({
-        data: { mediaType: "audio", contentType: "audio/m4a" },
+        data: { mediaType: "audio", contentType: audioContentType },
       });
       const { uploadUrl } = uploadResult;
 
-      const rawUrl = await uploadToPresignedUrl(uri, uploadUrl, "audio/m4a");
+      const rawUrl = await uploadToPresignedUrl(uri, uploadUrl, audioContentType);
 
       await sendMutation.mutateAsync({
         data: { recipientId: userIdStr, content: "", mediaType: "audio", mediaUrl: rawUrl },
