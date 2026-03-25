@@ -555,11 +555,11 @@ export default function ExerciseScreen() {
           </View>
         ) : null}
 
-        {(exercise as { tempo?: string | null }).tempo ? (
+        {exercise.tempo ? (
           <View style={[styles.cueBox, { borderColor: "#A855F720" }]}>
             <Feather name="activity" size={14} color="#A855F7" />
             <Text style={[styles.cueText, { fontFamily: FONTS.mono, color: "#A855F7" }]}>
-              Tempo : {(exercise as { tempo?: string | null }).tempo}
+              Tempo : {exercise.tempo}
             </Text>
           </View>
         ) : null}

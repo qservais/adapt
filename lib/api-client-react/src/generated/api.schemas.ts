@@ -216,6 +216,8 @@ export interface SessionDetail {
   mode: string;
   sessionType?: string | null;
   sessionLocation?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   exercises: SessionExerciseItem[];
@@ -383,6 +385,8 @@ export interface SessionWithVariants {
   name: string;
   type: string;
   sessionType?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   variants: VariantWithExercises[];

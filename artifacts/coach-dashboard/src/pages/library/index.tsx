@@ -58,88 +58,89 @@ const MUSCLE_GROUPS = [
   "Fessiers", "Mollets", "Abdominaux", "Trapèzes", "Avant-bras", "Corps entier"
 ];
 
-const EQUIPMENT_LIST = [
-  "Aucun",
-  "Poids du corps",
-  "Haltères",
-  "Barre",
-  "Barre EZ",
-  "Barre Hexagonale",
-  "Barre de traction",
-  "Barre de dips",
-  "Barres parallèles",
-  "Kettlebell",
-  "Médecine ball",
-  "Slam ball",
-  "Wall ball",
-  "Ballon d'exercice",
-  "Bandes élastiques",
-  "Bande de résistance légère",
-  "Bande de résistance moyenne",
-  "Bande de résistance forte",
-  "Bande de résistance très forte",
-  "TRX",
-  "Sangles de suspension",
-  "Box",
-  "Step",
-  "Banc",
-  "Banc incliné",
-  "Banc décliné",
-  "Câbles",
-  "Poulie haute",
-  "Poulie basse",
-  "Machine guidée",
-  "Machine Smith",
-  "Leg press",
-  "Hack squat",
-  "Pec deck",
-  "Butterfly machine",
-  "Chest press machine",
-  "Shoulder press machine",
-  "Lat pulldown machine",
-  "Cable row machine",
-  "Leg curl machine",
-  "Leg extension machine",
-  "Abducteur machine",
-  "Adducteur machine",
-  "Mollet debout machine",
-  "Mollet assis machine",
-  "Tapis de sol",
-  "Foam roller",
-  "Balle de massage",
-  "Rouleau mousse",
-  "Corde à sauter",
-  "Corde de battle",
-  "Ballon BOSU",
-  "Planche d'équilibre",
-  "Disques de glisse",
-  "Trampoline mini",
-  "Sac de frappe",
-  "Gants de boxe",
-  "Vélo stationnaire",
-  "Vélo elliptique",
-  "Rameur",
-  "Tapis de course",
-  "Ski erg",
-  "Bike Assault",
-  "Sled",
-  "Traîneau",
-  "Pneu",
-  "Marteau",
-  "Baguettes de vitesse",
-  "Échelles de vitesse",
-  "Cônes",
-  "Haies",
-  "Perche",
-  "Anneaux de gymnastique",
-  "Parallettes",
-  "Ceinture de dips",
-  "Gilet lesté",
-  "Sac leste",
-  "Barre de fixation murale",
-  "Rack squat",
-  "Cage multifonctions",
+export const EQUIPMENT_CATALOG: { labelFr: string; category: string }[] = [
+  { labelFr: "Aucun", category: "Basique" },
+  { labelFr: "Poids du corps", category: "Basique" },
+  { labelFr: "Haltères", category: "Poids libres" },
+  { labelFr: "Barre", category: "Poids libres" },
+  { labelFr: "Barre EZ", category: "Poids libres" },
+  { labelFr: "Barre Hexagonale", category: "Poids libres" },
+  { labelFr: "Barre de traction", category: "Poids libres" },
+  { labelFr: "Barre de dips", category: "Poids libres" },
+  { labelFr: "Barres parallèles", category: "Poids libres" },
+  { labelFr: "Kettlebell", category: "Poids libres" },
+  { labelFr: "Médecine ball", category: "Poids libres" },
+  { labelFr: "Slam ball", category: "Poids libres" },
+  { labelFr: "Wall ball", category: "Poids libres" },
+  { labelFr: "Ballon d'exercice", category: "Poids libres" },
+  { labelFr: "Bandes élastiques", category: "Élastiques" },
+  { labelFr: "Bande de résistance légère", category: "Élastiques" },
+  { labelFr: "Bande de résistance moyenne", category: "Élastiques" },
+  { labelFr: "Bande de résistance forte", category: "Élastiques" },
+  { labelFr: "Bande de résistance très forte", category: "Élastiques" },
+  { labelFr: "TRX", category: "Suspension" },
+  { labelFr: "Sangles de suspension", category: "Suspension" },
+  { labelFr: "Anneaux de gymnastique", category: "Suspension" },
+  { labelFr: "Parallettes", category: "Suspension" },
+  { labelFr: "Box", category: "Mobilier" },
+  { labelFr: "Step", category: "Mobilier" },
+  { labelFr: "Banc", category: "Mobilier" },
+  { labelFr: "Banc incliné", category: "Mobilier" },
+  { labelFr: "Banc décliné", category: "Mobilier" },
+  { labelFr: "Rack squat", category: "Mobilier" },
+  { labelFr: "Cage multifonctions", category: "Mobilier" },
+  { labelFr: "Barre de fixation murale", category: "Mobilier" },
+  { labelFr: "Câbles", category: "Machines" },
+  { labelFr: "Poulie haute", category: "Machines" },
+  { labelFr: "Poulie basse", category: "Machines" },
+  { labelFr: "Machine guidée", category: "Machines" },
+  { labelFr: "Machine Smith", category: "Machines" },
+  { labelFr: "Leg press", category: "Machines" },
+  { labelFr: "Hack squat", category: "Machines" },
+  { labelFr: "Pec deck", category: "Machines" },
+  { labelFr: "Butterfly machine", category: "Machines" },
+  { labelFr: "Chest press machine", category: "Machines" },
+  { labelFr: "Shoulder press machine", category: "Machines" },
+  { labelFr: "Lat pulldown machine", category: "Machines" },
+  { labelFr: "Cable row machine", category: "Machines" },
+  { labelFr: "Leg curl machine", category: "Machines" },
+  { labelFr: "Leg extension machine", category: "Machines" },
+  { labelFr: "Abducteur machine", category: "Machines" },
+  { labelFr: "Adducteur machine", category: "Machines" },
+  { labelFr: "Mollet debout machine", category: "Machines" },
+  { labelFr: "Mollet assis machine", category: "Machines" },
+  { labelFr: "Tapis de sol", category: "Récupération" },
+  { labelFr: "Foam roller", category: "Récupération" },
+  { labelFr: "Balle de massage", category: "Récupération" },
+  { labelFr: "Rouleau mousse", category: "Récupération" },
+  { labelFr: "Corde à sauter", category: "Cardio & Fonctionnel" },
+  { labelFr: "Corde de battle", category: "Cardio & Fonctionnel" },
+  { labelFr: "Ballon BOSU", category: "Cardio & Fonctionnel" },
+  { labelFr: "Planche d'équilibre", category: "Cardio & Fonctionnel" },
+  { labelFr: "Disques de glisse", category: "Cardio & Fonctionnel" },
+  { labelFr: "Sac de frappe", category: "Cardio & Fonctionnel" },
+  { labelFr: "Gants de boxe", category: "Cardio & Fonctionnel" },
+  { labelFr: "Vélo stationnaire", category: "Cardio & Fonctionnel" },
+  { labelFr: "Vélo elliptique", category: "Cardio & Fonctionnel" },
+  { labelFr: "Rameur", category: "Cardio & Fonctionnel" },
+  { labelFr: "Tapis de course", category: "Cardio & Fonctionnel" },
+  { labelFr: "Ski erg", category: "Cardio & Fonctionnel" },
+  { labelFr: "Bike Assault", category: "Cardio & Fonctionnel" },
+  { labelFr: "Sled", category: "Athlétisme" },
+  { labelFr: "Traîneau", category: "Athlétisme" },
+  { labelFr: "Pneu", category: "Athlétisme" },
+  { labelFr: "Marteau", category: "Athlétisme" },
+  { labelFr: "Baguettes de vitesse", category: "Athlétisme" },
+  { labelFr: "Échelles de vitesse", category: "Athlétisme" },
+  { labelFr: "Cônes", category: "Athlétisme" },
+  { labelFr: "Haies", category: "Athlétisme" },
+  { labelFr: "Ceinture de dips", category: "Accessoires" },
+  { labelFr: "Gilet lesté", category: "Accessoires" },
+  { labelFr: "Sac leste", category: "Accessoires" },
 ];
+
+const EQUIPMENT_CATEGORIES = [...new Set(EQUIPMENT_CATALOG.map(e => e.category))];
+const EQUIPMENT_LIST = EQUIPMENT_CATALOG.map(e => e.labelFr);
 
 const getCategoryStyle = (cat: string | null) => {
   return CATEGORIES.find(c => c.value === cat) ?? { color: "text-muted-foreground", bg: "bg-white/5 border-white/10", label: cat ?? "Autre" };
@@ -567,26 +568,33 @@ export default function LibraryPage() {
 
             <div className="space-y-1.5">
               <Label className="text-muted-foreground text-xs uppercase tracking-wider">Équipement</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {EQUIPMENT_LIST.map(item => {
-                  const selected = form.equipment.includes(item);
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleMultiSelect(form.equipment, item, v => setForm(f => ({ ...f, equipment: v })))}
-                      className={cn(
-                        "flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors",
-                        selected
-                          ? "bg-accent/15 border-accent/40 text-accent"
-                          : "text-muted-foreground border-border hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      {selected && <CheckCircle className="w-3 h-3" />}
-                      {item}
-                    </button>
-                  );
-                })}
+              <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                {EQUIPMENT_CATEGORIES.map(cat => (
+                  <div key={cat}>
+                    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest mb-1 font-mono">{cat}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {EQUIPMENT_CATALOG.filter(e => e.category === cat).map(({ labelFr }) => {
+                        const selected = form.equipment.includes(labelFr);
+                        return (
+                          <button
+                            key={labelFr}
+                            type="button"
+                            onClick={() => toggleMultiSelect(form.equipment, labelFr, v => setForm(f => ({ ...f, equipment: v })))}
+                            className={cn(
+                              "flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors",
+                              selected
+                                ? "bg-accent/15 border-accent/40 text-accent"
+                                : "text-muted-foreground border-border hover:text-white hover:bg-white/5"
+                            )}
+                          >
+                            {selected && <CheckCircle className="w-3 h-3" />}
+                            {labelFr}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
               {form.equipment.filter(e => !EQUIPMENT_LIST.includes(e)).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">

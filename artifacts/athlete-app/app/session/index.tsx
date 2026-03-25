@@ -151,23 +151,23 @@ export default function SessionIntroScreen() {
                 </View>
               );
             })()}
-            {(session as { scheduledTime?: string | null }).scheduledTime ? (
+            {session.scheduledTime ? (
               <View style={[styles.metaChip, { borderColor: "#ffffff20", backgroundColor: "#ffffff08" }]}>
                 <Feather name="clock" size={12} color={COLORS.textMuted} />
                 <Text style={[styles.metaText, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
-                  {(session as { scheduledTime?: string | null }).scheduledTime}
+                  {session.scheduledTime}
                 </Text>
               </View>
             ) : null}
           </View>
-          {(session as { visioLink?: string | null }).visioLink && session.sessionLocation !== "presentiel" ? (
+          {session.visioLink && session.sessionLocation !== "presentiel" ? (
             <View style={[styles.metaChip, { borderColor: `${COLORS.cyan}30`, backgroundColor: `${COLORS.cyan}08`, marginTop: 6 }]}>
               <Feather name="link" size={12} color={COLORS.cyan} />
               <Text
                 style={[styles.metaText, { fontFamily: FONTS.mono, color: COLORS.cyan, flex: 1 }]}
                 numberOfLines={1}
               >
-                {(session as { visioLink?: string | null }).visioLink}
+                {session.visioLink}
               </Text>
             </View>
           ) : null}

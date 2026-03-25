@@ -208,7 +208,7 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
       loadKg: e.nominalLoadKg || 0,
       restSeconds: e.restSeconds || 60,
       coachCue: e.coachCue || "",
-      tempo: (e as { tempo?: string }).tempo || "",
+      tempo: e.tempo || "",
       supersetGroup: e.supersetGroup ?? undefined,
       supersetLabel: e.supersetLabel ?? undefined,
     };
@@ -259,8 +259,8 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
     name: session.name,
     type: session.type as typeof SESSION_TYPES[number],
     sessionType: (session.sessionType === "presentiel" ? "presentiel" : "online") as "online" | "presentiel",
-    scheduledTime: (session as { scheduledTime?: string | null }).scheduledTime ?? "",
-    visioLink: (session as { visioLink?: string | null }).visioLink ?? "",
+    scheduledTime: session.scheduledTime ?? "",
+    visioLink: session.visioLink ?? "",
     estimatedDurationMin: session.estimatedDurationMin || 60,
     coachNotes: session.coachNotes || "",
     blocks,
@@ -559,9 +559,14 @@ function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <div>
-              <label className={labelCls}>Tempo (exc-pause-ret)</label>
-              <Input value={ex.tempo} onChange={e => onChange({ tempo: e.target.value })}
-                placeholder="3-1-1" className={fieldCls} />
+              <label className={labelCls}>Tempo (exc-bas-con-haut)</label>
+              <Input
+                value={ex.tempo}
+                onChange={e => onChange({ tempo: e.target.value })}
+                placeholder="3-1-1-0"
+                pattern="^\d-\d-\d-\d$"
+                className={cn(fieldCls, ex.tempo && !/^\d-\d-\d-\d$/.test(ex.tempo) && "border-red-500/60 focus-visible:ring-red-500/40")}
+              />
             </div>
             <div>
               <label className={labelCls}>Indication coach</label>
