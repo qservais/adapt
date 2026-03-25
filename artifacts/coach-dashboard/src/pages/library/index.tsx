@@ -40,14 +40,17 @@ interface ExerciseItem {
 }
 
 const CATEGORIES = [
+  { value: "force", label: "Force", color: "text-[#F59E0B]", bg: "bg-[#F59E0B]/10 border-[#F59E0B]/30" },
+  { value: "pliométrie", label: "Pliométrie", color: "text-[#FF8C42]", bg: "bg-[#FF8C42]/10 border-[#FF8C42]/30" },
+  { value: "cardio", label: "Cardio", color: "text-[#00F5A0]", bg: "bg-[#00F5A0]/10 border-[#00F5A0]/30" },
+  { value: "mobilité", label: "Mobilité", color: "text-[#FFB800]", bg: "bg-[#FFB800]/10 border-[#FFB800]/30" },
+  { value: "core", label: "Gainage/Core", color: "text-[#F97316]", bg: "bg-[#F97316]/10 border-[#F97316]/30" },
+  { value: "réathlétisation", label: "Réathlétisation", color: "text-[#22C55E]", bg: "bg-[#22C55E]/10 border-[#22C55E]/30" },
   { value: "compound", label: "Polyarticulaire", color: "text-[#00F0FF]", bg: "bg-[#00F0FF]/10 border-[#00F0FF]/30" },
   { value: "isolation", label: "Isolation", color: "text-[#A855F7]", bg: "bg-[#A855F7]/10 border-[#A855F7]/30" },
-  { value: "cardio", label: "Cardio", color: "text-[#00F5A0]", bg: "bg-[#00F5A0]/10 border-[#00F5A0]/30" },
-  { value: "mobility", label: "Mobilité", color: "text-[#FFB800]", bg: "bg-[#FFB800]/10 border-[#FFB800]/30" },
-  { value: "core", label: "Gainage/Core", color: "text-[#F97316]", bg: "bg-[#F97316]/10 border-[#F97316]/30" },
   { value: "power", label: "Puissance", color: "text-[#EF4444]", bg: "bg-[#EF4444]/10 border-[#EF4444]/30" },
-  { value: "plyometric", label: "Pliométrie", color: "text-[#FF8C42]", bg: "bg-[#FF8C42]/10 border-[#FF8C42]/30" },
-  { value: "réathlétisation", label: "Réathlétisation", color: "text-[#22C55E]", bg: "bg-[#22C55E]/10 border-[#22C55E]/30" },
+  { value: "plyometric", label: "Pliométrie (anc.)", color: "text-[#FF8C42]", bg: "bg-[#FF8C42]/10 border-[#FF8C42]/30" },
+  { value: "mobility", label: "Mobilité (anc.)", color: "text-[#FFB800]", bg: "bg-[#FFB800]/10 border-[#FFB800]/30" },
 ];
 
 const MUSCLE_GROUPS = [

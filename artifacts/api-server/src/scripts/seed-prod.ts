@@ -11,6 +11,7 @@
 import { spawnSync } from "child_process";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { seedExercises } from "./seed-exercises.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -72,9 +73,12 @@ async function main() {
   // Step 4: Exercises seed (bibliothèque 100+ exercices pré-remplis)
   const globalExerciseCount = psql("SELECT COUNT(*) FROM exercises WHERE created_by IS NULL");
   if (parseInt(globalExerciseCount, 10) < 100) {
-    runSqlFile(join(__dirname, "seed-exercises.sql"), "seed-exercises.sql");
+    console.log("🌱 Exécution seed-exercises.ts...");
+    const { inserted, levelUpdated, categoryUpdated } = await seedExercises();
+    console.log(`✅ Seed exercices terminé (+${inserted} insérés, ${levelUpdated} niveaux mis à jour, ${categoryUpdated} catégories corrigées)`);
   } else {
     console.log(`✅ Bibliothèque d'exercices déjà remplie (${globalExerciseCount} exercices globaux)`);
+    await seedExercises();
   }
 
   // Verify final state
