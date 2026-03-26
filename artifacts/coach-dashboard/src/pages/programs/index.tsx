@@ -657,7 +657,7 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
           <p className="text-sm">Aucun bloc trouvé</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
           {filtered.map((block) => (
             <BlockCard key={`${block.programId}-${block.id}`} block={block} programs={programs} />
           ))}
