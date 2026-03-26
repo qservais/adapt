@@ -5,7 +5,7 @@ import {
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
   performanceTestsTable, coachAppointmentsTable,
 } from "@workspace/db";
-import { eq, and, desc, asc, gte, lt, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, gte, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { calculateAdaptedLoad } from "../services/adapt-engine.js";
 import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
@@ -339,6 +339,57 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
   }
 });
 
+router.get("/sessions/today-all", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const today = getTodayLocalDate();
+    const athleteId = req.user!.userId;
+
+    const [checkin] = await db.select().from(checkinsTable)
+      .where(and(eq(checkinsTable.athleteId, athleteId), eq(checkinsTable.date, today)));
+
+    if (!checkin) {
+      res.json([]);
+      return;
+    }
+
+    const painAlerts = await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(
+        eq(alertsTable.athleteId, athleteId),
+        eq(alertsTable.type, "pain"),
+        eq(alertsTable.isResolved, false)
+      ));
+    const overriddenByCoach = painAlerts.length > 0;
+    const forcedMode = overriddenByCoach ? "recovery" : checkin.sessionMode;
+
+    const [program] = await db.select().from(programsTable)
+      .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)));
+
+    const { logs, total, completed } = await getOrCreateTodaySessionLogs(
+      athleteId, checkin, forcedMode, program ?? null
+    );
+
+    const athletePRs = await getAthleteCurrentPRs(athleteId);
+
+    const details = await Promise.all(
+      logs.map(async (log, i) => {
+        const detail = await buildSessionDetail(log, checkin);
+        return {
+          ...detail,
+          athletePRs,
+          overriddenByCoach,
+          sessionsToday: total,
+          sessionsTodayCompleted: completed,
+          sessionIndex: i + 1,
+        };
+      })
+    );
+
+    res.json(details);
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 router.put("/sessions/:sessionId/start", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const sessionId = String(req.params["sessionId"]);
@@ -521,21 +572,34 @@ router.get("/sessions/missed", authenticate, requireRole("athlete"), async (req,
           .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
       }
 
-      const dayStart = new Date(dateStr + "T00:00:00.000Z");
-      const dayEnd = new Date(dateStr + "T23:59:59.999Z");
+      const [checkinForDay] = await db.select({ id: checkinsTable.id })
+        .from(checkinsTable)
+        .where(and(
+          eq(checkinsTable.athleteId, athleteId),
+          eq(checkinsTable.date, dateStr)
+        ));
 
       for (const session of sessions) {
-        const completedLogs = await db.select({ id: sessionLogsTable.id })
+        if (!checkinForDay) {
+          missedSessions.push({
+            date: dateStr,
+            sessionId: session.id,
+            sessionName: session.name,
+            estimatedDurationMin: session.estimatedDurationMin ?? null,
+          });
+          continue;
+        }
+
+        const [completedLog] = await db.select({ id: sessionLogsTable.id })
           .from(sessionLogsTable)
           .where(and(
             eq(sessionLogsTable.athleteId, athleteId),
             eq(sessionLogsTable.sessionId, session.id),
-            gte(sessionLogsTable.createdAt, dayStart),
-            lt(sessionLogsTable.createdAt, dayEnd),
+            eq(sessionLogsTable.checkinId, checkinForDay.id),
             isNotNull(sessionLogsTable.completedAt)
           ));
 
-        if (completedLogs.length === 0) {
+        if (!completedLog) {
           missedSessions.push({
             date: dateStr,
             sessionId: session.id,

@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import {
   useGetTodayCheckin,
-  useGetTodaySession,
+  useGetTodaySessions,
   useGetCheckinHistory,
   useGetAthleteUpcomingSessions,
   useGetActiveChallenges,
@@ -39,19 +39,19 @@ export default function HomeScreen() {
   const { user } = useAuth();
 
   const checkinQuery = useGetTodayCheckin();
-  const sessionQuery = useGetTodaySession();
+  const sessionsQuery = useGetTodaySessions();
   const historyQuery = useGetCheckinHistory();
   const upcomingQuery = useGetAthleteUpcomingSessions();
   const challengesQuery = useGetActiveChallenges();
 
   const todayCheckin = checkinQuery.data;
-  const todaySession = sessionQuery.data;
+  const todaySessions = sessionsQuery.data ?? [];
 
-  const isLoading = checkinQuery.isPending || sessionQuery.isPending;
-  const isRefreshing = checkinQuery.isFetching || sessionQuery.isFetching;
+  const isLoading = checkinQuery.isPending || sessionsQuery.isPending;
+  const isRefreshing = checkinQuery.isFetching || sessionsQuery.isFetching;
   const onRefresh = () => {
     checkinQuery.refetch();
-    sessionQuery.refetch();
+    sessionsQuery.refetch();
     historyQuery.refetch();
     upcomingQuery.refetch();
     challengesQuery.refetch();
@@ -60,7 +60,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       checkinQuery.refetch();
-      sessionQuery.refetch();
+      sessionsQuery.refetch();
       upcomingQuery.refetch();
       challengesQuery.refetch();
     }, [])
@@ -151,7 +151,7 @@ export default function HomeScreen() {
       ) : (
         <StateCheckedIn
           checkin={todayCheckin}
-          session={todaySession}
+          sessions={todaySessions}
           modeColor={modeColor}
           upcomingSessions={upcomingQuery.data ?? []}
           activeChallenges={challengesQuery.data ?? []}
@@ -226,22 +226,129 @@ function StateNoPending({
   );
 }
 
+function SessionCard({
+  session,
+  modeKey,
+  modeColor,
+  total,
+}: {
+  session: SessionDetail;
+  modeKey: SessionMode;
+  modeColor: string;
+  total: number;
+}) {
+  const isCompleted = session.completedAt != null;
+  const durationMin = session.durationMin ?? session.estimatedDurationMin;
+
+  if (isCompleted) {
+    return (
+      <View style={[styles.sessionCard, { borderColor: `${COLORS.green}30`, backgroundColor: `${COLORS.green}08` }]}>
+        <View style={styles.sessionTopRow}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Feather name="check-circle" size={16} color={COLORS.green} />
+            {total > 1 && (
+              <Text style={[styles.sessionCounter, { fontFamily: FONTS.mono, color: COLORS.green }]}>
+                SÉANCE {session.sessionIndex}/{total}
+              </Text>
+            )}
+          </View>
+          {durationMin != null && (
+            <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+              {durationMin} MIN
+            </Text>
+          )}
+        </View>
+        <Text style={[styles.sessionName, { fontFamily: FONTS.title, color: COLORS.green, fontSize: 22 }]}>
+          {session.name}
+        </Text>
+        <Text style={[styles.coachNote, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
+          Terminée ✓
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.sessionCard, { borderColor: `${modeColor}30` }]}>
+      <View style={styles.sessionTopRow}>
+        <ModeBadge mode={modeKey} size="sm" />
+        <View style={styles.sessionMeta}>
+          {session.sessionLocation != null && (
+            <View style={[styles.locationChip, {
+              borderColor: session.sessionLocation === "presentiel" ? `${COLORS.amber}50` : `${COLORS.cyan}50`,
+              backgroundColor: session.sessionLocation === "presentiel" ? `${COLORS.amber}15` : COLORS.cyanDim,
+            }]}>
+              <Feather
+                name={session.sessionLocation === "presentiel" ? "map-pin" : "video"}
+                size={9}
+                color={session.sessionLocation === "presentiel" ? COLORS.amber : COLORS.cyan}
+              />
+              <Text style={[styles.locationText, {
+                fontFamily: FONTS.mono,
+                color: session.sessionLocation === "presentiel" ? COLORS.amber : COLORS.cyan,
+              }]}>
+                {session.sessionLocation === "presentiel" ? "PRÉSENTIEL" : "EN LIGNE"}
+              </Text>
+            </View>
+          )}
+          {session.estimatedDurationMin != null && (
+            <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
+              {session.estimatedDurationMin} MIN
+            </Text>
+          )}
+          <View style={styles.exCountChip}>
+            <Text style={[styles.exCountText, { fontFamily: FONTS.mono }]}>
+              {session.exercises?.length ?? 0} EX.
+            </Text>
+          </View>
+        </View>
+      </View>
+      {total > 1 && (
+        <Text style={[styles.sessionCounter, { fontFamily: FONTS.mono, color: modeColor }]}>
+          SÉANCE {session.sessionIndex}/{total}
+        </Text>
+      )}
+      <Text style={[styles.sessionName, { fontFamily: FONTS.title, color: modeColor }]}>
+        {session.name}
+      </Text>
+      {session.coachNotes != null && (
+        <View style={styles.coachNoteRow}>
+          <Feather name="message-square" size={13} color={COLORS.cyan} />
+          <Text style={[styles.coachNote, { fontFamily: FONTS.body }]}>
+            {session.coachNotes}
+          </Text>
+        </View>
+      )}
+      <TouchableOpacity
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          router.push("/session");
+        }}
+        style={[styles.startBtn, { backgroundColor: modeColor }]}
+      >
+        <Feather name="play" size={18} color={COLORS.bg} />
+        <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>DÉMARRER</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function StateCheckedIn({
   checkin,
-  session,
+  sessions,
   modeColor,
   upcomingSessions,
   activeChallenges,
 }: {
   checkin: CheckinData;
-  session: SessionDetail | undefined;
+  sessions: SessionDetail[];
   modeColor: string;
   upcomingSessions: import("@workspace/api-client-react").UpcomingSession[];
   activeChallenges: Challenge[];
 }) {
   const modeKey = checkin.sessionMode as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
-  const isCompleted = session != null && session.completedAt != null;
+  const allCompleted = sessions.length > 0 && sessions.every(s => s.completedAt != null);
 
   return (
     <View style={styles.checkedContainer}>
@@ -260,69 +367,19 @@ function StateCheckedIn({
         <ChallengeCard challenge={activeChallenges[0]!} />
       )}
 
-      {isCompleted ? (
-        <SessionDoneCard session={session!} modeColor={modeColor} cfg={cfg} />
-      ) : session != null ? (
-        <View style={[styles.sessionCard, { borderColor: `${modeColor}30` }]}>
-          <View style={styles.sessionTopRow}>
-            <ModeBadge mode={modeKey} size="sm" />
-            <View style={styles.sessionMeta}>
-              {session.sessionLocation != null && (
-                <View style={[styles.locationChip, {
-                  borderColor: session.sessionLocation === "presentiel" ? `${COLORS.amber}50` : `${COLORS.cyan}50`,
-                  backgroundColor: session.sessionLocation === "presentiel" ? `${COLORS.amber}15` : COLORS.cyanDim,
-                }]}>
-                  <Feather
-                    name={session.sessionLocation === "presentiel" ? "map-pin" : "video"}
-                    size={9}
-                    color={session.sessionLocation === "presentiel" ? COLORS.amber : COLORS.cyan}
-                  />
-                  <Text style={[styles.locationText, {
-                    fontFamily: FONTS.mono,
-                    color: session.sessionLocation === "presentiel" ? COLORS.amber : COLORS.cyan,
-                  }]}>
-                    {session.sessionLocation === "presentiel" ? "PRÉSENTIEL" : "EN LIGNE"}
-                  </Text>
-                </View>
-              )}
-              {session.estimatedDurationMin != null && (
-                <Text style={[styles.sessionDuration, { fontFamily: FONTS.mono }]}>
-                  {session.estimatedDurationMin} MIN
-                </Text>
-              )}
-              <View style={styles.exCountChip}>
-                <Text style={[styles.exCountText, { fontFamily: FONTS.mono }]}>
-                  {session.exercises?.length ?? 0} EX.
-                </Text>
-              </View>
-            </View>
-          </View>
-          {(session.sessionsToday ?? 1) > 1 && (
-            <Text style={[styles.sessionCounter, { fontFamily: FONTS.mono, color: modeColor }]}>
-              SÉANCE {session.sessionIndex}/{session.sessionsToday}
-            </Text>
-          )}
-          <Text style={[styles.sessionName, { fontFamily: FONTS.title, color: modeColor }]}>
-            {session.name}
-          </Text>
-          {session.coachNotes != null && (
-            <View style={styles.coachNoteRow}>
-              <Feather name="message-square" size={13} color={COLORS.cyan} />
-              <Text style={[styles.coachNote, { fontFamily: FONTS.body }]}>
-                {session.coachNotes}
-              </Text>
-            </View>
-          )}
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/session");
-            }}
-            style={[styles.startBtn, { backgroundColor: modeColor }]}
-          >
-            <Feather name="play" size={18} color={COLORS.bg} />
-            <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>DÉMARRER</Text>
-          </TouchableOpacity>
+      {allCompleted ? (
+        <SessionDoneCard session={sessions[sessions.length - 1]!} modeColor={modeColor} cfg={cfg} />
+      ) : sessions.length > 0 ? (
+        <View style={{ gap: 12 }}>
+          {sessions.map(session => (
+            <SessionCard
+              key={session.sessionLogId}
+              session={session}
+              modeKey={modeKey}
+              modeColor={modeColor}
+              total={sessions.length}
+            />
+          ))}
         </View>
       ) : (
         <View style={styles.noSessionCard}>
