@@ -80,7 +80,7 @@ async function buildSessionDetail(
       coachNotes = sess.coachNotes ?? null;
       estimatedDurationMin = sess.estimatedDurationMin ?? null;
       sessionType = sess.type ?? null;
-      sessionLocation = sess.sessionType ?? "online";
+      sessionLocation = sess.sessionType ?? "presentiel";
       scheduledTime = sess.scheduledTime ?? null;
       visioLink = sess.visioLink ?? null;
     }
@@ -659,7 +659,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           sessionId: session.id,
           sessionName: session.name,
           sessionType: session.type,
-          sessionLocation: session.sessionType ?? "online",
+          sessionLocation: session.sessionType ?? "presentiel",
           weekNumber: session.weekNumber,
           dayNumber: session.dayNumber,
           scheduledDate: localDateFromTimestamp(sessionDate),

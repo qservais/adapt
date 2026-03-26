@@ -463,7 +463,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
           sessionId: session.id,
           sessionName: session.name,
           sessionType: session.type,
-          sessionLocation: session.sessionType ?? "online",
+          sessionLocation: session.sessionType ?? "presentiel",
           scheduledTime: session.scheduledTime ?? null,
           visioLink: session.visioLink ?? null,
           weekNumber: session.weekNumber,
