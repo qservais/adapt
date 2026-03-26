@@ -321,7 +321,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       <div>
-        <h1 className="text-3xl font-display text-white">TABLEAU DE BORD</h1>
+        <h1 className="text-2xl md:text-3xl font-display text-white">TABLEAU DE BORD</h1>
         <p className="text-muted-foreground text-sm mt-1">Vue opérationnelle du jour · {dayStrCapitalized}</p>
       </div>
 

@@ -728,10 +728,10 @@ export default function ProgramsList() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display text-white">PROGRAMMES D'ENTRAÎNEMENT</h1>
-          <p className="text-muted-foreground text-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-display text-white">PROGRAMMES D'ENTRAÎNEMENT</h1>
+          <p className="text-muted-foreground text-sm truncate">
             Gérez les protocoles par athlète et votre bibliothèque de blocs.
           </p>
         </div>

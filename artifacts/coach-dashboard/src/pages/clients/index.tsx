@@ -203,39 +203,40 @@ export default function ClientsOverview() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display text-white">ATHLÈTES</h1>
-          <p className="text-muted-foreground text-sm">Gestion des profils, alertes et check-ins quotidiens.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-display text-white">ATHLÈTES</h1>
+          <p className="text-muted-foreground text-sm truncate">Gestion des profils, alertes et check-ins quotidiens.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap sm:flex-nowrap">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher un athlète..."
+              placeholder="Rechercher..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9 w-full sm:w-[250px] bg-card border-border"
+              className="pl-9 w-full sm:w-[200px] lg:w-[250px] bg-card border-border"
             />
           </div>
           <Button
             onClick={() => setLinkDialogOpen(true)}
-            className="flex items-center gap-2 bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary"
+            className="flex items-center gap-2 bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary shrink-0"
             variant="outline"
           >
             <UserPlus className="w-4 h-4" />
-            Lier par code
+            <span className="hidden sm:inline">Lier par code</span>
+            <span className="sm:hidden">Lier</span>
           </Button>
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-lg">
         <div className="border-b border-border p-4 bg-background/50">
-          <Tabs value={filter} onValueChange={setFilter} className="w-full">
-            <TabsList className="bg-background/50 border border-border">
-              <TabsTrigger value="all">Tous les athlètes</TabsTrigger>
-              <TabsTrigger value="active">Actifs aujourd'hui</TabsTrigger>
-              <TabsTrigger value="alerts" className="data-[state=active]:text-destructive">Avec alertes</TabsTrigger>
+          <Tabs value={filter} onValueChange={setFilter} className="w-full overflow-x-auto">
+            <TabsList className="bg-background/50 border border-border w-full sm:w-auto">
+              <TabsTrigger value="all" className="text-xs sm:text-sm">Tous</TabsTrigger>
+              <TabsTrigger value="active" className="text-xs sm:text-sm">Actifs aujourd'hui</TabsTrigger>
+              <TabsTrigger value="alerts" className="text-xs sm:text-sm data-[state=active]:text-destructive">Alertes</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

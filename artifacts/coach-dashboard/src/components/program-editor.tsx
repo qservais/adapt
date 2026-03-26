@@ -995,7 +995,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="bg-card border-border max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="bg-card border-border w-[95vw] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="font-display text-2xl tracking-widest text-white">
             {isEdit ? "MODIFIER" : "NOUVELLE"} SÉANCE — S{weekNumber} {dayName}

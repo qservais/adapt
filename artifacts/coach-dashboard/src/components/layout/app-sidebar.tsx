@@ -99,9 +99,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset" className="border-r border-border bg-card">
-      <SidebarContent>
-        <div className="p-6 pb-4">
-          <h1 className="text-3xl font-display text-white tracking-widest text-shadow-neon-primary">
+      <SidebarContent className="overflow-y-auto">
+        <div className="p-4 lg:p-6 pb-3">
+          <h1 className="text-2xl lg:text-3xl font-display text-white tracking-widest text-shadow-neon-primary">
             ADAPT <span className="text-primary">COACH</span>
           </h1>
         </div>
@@ -117,11 +117,11 @@ export function AppSidebar() {
                     className="data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:border-r-2 data-[active=true]:border-primary transition-all duration-200 h-auto py-2.5"
                   >
                     <Link href={item.url} className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-3">
-                        <item.icon className="w-5 h-5 shrink-0" />
-                        <div className="flex flex-col gap-0">
-                          <span className="font-medium text-sm leading-tight">{item.title}</span>
-                          <span className="text-[10px] text-muted-foreground leading-tight font-normal">{item.subtitle}</span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <item.icon className="w-4 h-4 lg:w-5 lg:h-5 shrink-0" />
+                        <div className="flex flex-col gap-0 min-w-0">
+                          <span className="font-medium text-sm leading-tight truncate">{item.title}</span>
+                          <span className="text-[10px] text-muted-foreground leading-tight font-normal truncate">{item.subtitle}</span>
                         </div>
                       </div>
                       {item.badge !== null && item.badge !== undefined && (
@@ -137,14 +137,14 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t border-border">
-        <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold font-display">
+      <SidebarFooter className="p-3 lg:p-4 border-t border-border">
+        <div className="flex items-center gap-2.5 mb-3 px-1.5 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold font-display shrink-0">
             {user?.firstName?.[0]}{user?.lastName?.[0] || ''}
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-white">{user?.firstName} {user?.lastName}</span>
-            <span className="text-xs text-muted-foreground font-mono">{user?.email}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-semibold text-white truncate">{user?.firstName} {user?.lastName}</span>
+            <span className="text-xs text-muted-foreground font-mono truncate">{user?.email}</span>
           </div>
         </div>
         <button

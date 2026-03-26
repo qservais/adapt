@@ -4,8 +4,8 @@ import { AppSidebar } from "./app-sidebar";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const style = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "4rem",
+    "--sidebar-width": "15rem",
+    "--sidebar-width-icon": "3.5rem",
   };
 
   return (
@@ -13,12 +13,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
         <AppSidebar />
         <div className="flex flex-col flex-1 relative min-w-0">
-          <header className="flex items-center h-16 px-4 border-b border-border bg-background/50 backdrop-blur-md sticky top-0 z-10 lg:hidden">
+          <header className="flex items-center h-14 px-4 border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-10 lg:hidden shrink-0">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <span className="ml-4 font-display text-xl tracking-widest text-primary">ADAPT</span>
+            <span className="ml-3 font-display text-lg tracking-widest text-primary">ADAPT</span>
           </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-            <div className="max-w-7xl mx-auto">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto w-full">
               {children}
             </div>
           </main>
