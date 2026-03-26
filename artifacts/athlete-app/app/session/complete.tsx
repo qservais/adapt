@@ -103,6 +103,7 @@ export default function SessionCompleteScreen() {
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["/api/sessions/today"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/sessions/today-all"] });
           },
         }
       );
@@ -126,6 +127,7 @@ export default function SessionCompleteScreen() {
         data: { rpe, perceivedDifficulty: difficulty, athleteNotes: notes.trim() || null, theme: theme ?? null },
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/sessions/today"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/sessions/today-all"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       setFeedbackSubmitted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
