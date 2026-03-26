@@ -465,7 +465,7 @@ export default function ClientDetail() {
       </div>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 bg-card border border-border rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-card border border-border rounded-xl p-1 w-fit overflow-x-auto max-w-full">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -826,7 +826,8 @@ export default function ClientDetail() {
                       };
 
                       return (
-                        <div>
+                        <div className="overflow-x-auto">
+                          <div className="min-w-[450px]">
                           <div className="grid grid-cols-7 gap-px mb-1">
                             {DAY_HEADERS.map(h => (
                               <div key={h} className="text-center text-[10px] font-mono text-muted-foreground uppercase py-1">
@@ -897,6 +898,7 @@ export default function ClientDetail() {
                                 })}
                               </div>
                             ))}
+                          </div>
                           </div>
                           {!activeProgram && (
                             <p className="text-xs text-muted-foreground text-center mt-3 italic">

@@ -583,7 +583,8 @@ export default function Dashboard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 overflow-x-auto">
+          <div className="min-w-[500px]">
           <div className="grid grid-cols-7 gap-px mb-2">
             {DAY_HEADERS.map(h => (
               <div key={h} className="text-center text-[10px] font-mono text-muted-foreground uppercase py-1">
@@ -646,6 +647,7 @@ export default function Dashboard() {
                 })}
               </div>
             ))}
+          </div>
           </div>
 
           {/* Selected day detail */}

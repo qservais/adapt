@@ -843,8 +843,8 @@ export default function ProgramDetail() {
       )}
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-border gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-border gap-3 flex-wrap overflow-x-auto">
+          <div className="flex items-center gap-2 shrink-0">
             {viewMode === "week" && (
               <>
                 <Button
@@ -891,7 +891,7 @@ export default function ProgramDetail() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             {viewMode === "week" && (
               <>
                 <Button
@@ -961,8 +961,8 @@ export default function ProgramDetail() {
         <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* WEEK VIEW */}
           {viewMode === "week" && (
-            <div className="p-3">
-              <div className="grid grid-cols-7 gap-1.5">
+            <div className="p-3 overflow-x-auto">
+              <div className="grid grid-cols-7 gap-1.5 min-w-[700px]">
                 {DAY_NAMES.map((dayLabel, idx) => {
                   const dayNumber = idx + 1;
                   const daySessions = sessionMap.get(`${safeCurrentWeek}-${dayNumber}`) ?? [];
