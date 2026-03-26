@@ -343,15 +343,7 @@ const sessionBaseSchema = z.object({
   })).optional(),
 });
 
-const createSessionSchema = sessionBaseSchema.superRefine((data, ctx) => {
-  const st = data.sessionType ?? "online";
-  if (!data.scheduledTime) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["scheduledTime"], message: "L'heure de séance est obligatoire" });
-  }
-  if (st === "online" && !data.visioLink) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["visioLink"], message: "Le lien visio est obligatoire pour les séances en ligne" });
-  }
-});
+const createSessionSchema = sessionBaseSchema;
 
 const updateSessionSchema = sessionBaseSchema.partial();
 

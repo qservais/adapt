@@ -480,7 +480,10 @@ function BlockCard({
   programs: ProgramSummary[];
 }) {
   const [reutiliserOpen, setReutiliserOpen] = useState(false);
-  const exerciseCount = block.variants.find((v) => v.mode === "normal")?.exercises.length ?? 0;
+  const [expanded, setExpanded] = useState(false);
+  const normalVariant = block.variants.find((v) => v.mode === "normal");
+  const exercises = normalVariant?.exercises ?? [];
+  const exerciseCount = exercises.length;
   const typeStyle = TYPE_COLORS[block.type] || "text-muted-foreground bg-white/5 border-white/10";
   const typeLabel = TYPE_LABELS[block.type] || block.type;
 
@@ -502,7 +505,11 @@ function BlockCard({
           </span>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-3 text-xs text-muted-foreground w-full text-left hover:text-white/80 transition-colors"
+        >
           <span className="flex items-center gap-1">
             <Dumbbell className="w-3 h-3" />
             {exerciseCount} exercice{exerciseCount > 1 ? "s" : ""}
@@ -513,10 +520,34 @@ function BlockCard({
               {block.estimatedDurationMin} min
             </span>
           )}
-          <span className="ml-auto text-[10px] font-mono text-muted-foreground/60 truncate max-w-[120px]">
-            {block.programName}
+          <span className="ml-auto flex items-center gap-1">
+            <span className="text-[10px] font-mono text-muted-foreground/60 truncate max-w-[80px]">
+              {block.programName}
+            </span>
+            {expanded ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
           </span>
-        </div>
+        </button>
+
+        {expanded && exercises.length > 0 && (
+          <div className="border-t border-border pt-2 space-y-1.5">
+            {exercises.map((ex, i) => (
+              <div key={ex.id || i} className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground/50 font-mono w-4 text-right shrink-0">{i + 1}.</span>
+                <span className="text-white/90 truncate flex-1">{ex.exerciseName}</span>
+                {ex.sets > 0 && (
+                  <span className="text-muted-foreground font-mono shrink-0">
+                    {ex.sets}×{ex.reps ?? "?"}
+                  </span>
+                )}
+                {ex.nominalLoadKg != null && ex.nominalLoadKg > 0 && (
+                  <span className="text-primary/70 font-mono shrink-0">
+                    {ex.nominalLoadKg}kg
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <button
           type="button"
