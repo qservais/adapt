@@ -226,6 +226,9 @@ export interface SessionDetail {
   athletePRs?: Record<string, number>;
   completedAt?: string | null;
   durationMin?: number | null;
+  sessionsToday?: number;
+  sessionsTodayCompleted?: number;
+  sessionIndex?: number;
 }
 
 export interface CompleteSessionNewPR {

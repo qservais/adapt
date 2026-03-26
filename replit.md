@@ -30,6 +30,10 @@ Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/
 ## Completed Features (Tasks)
 - **Task #26**: Daily step counter (`daily_steps` DB table, `GET/POST /stats/steps`, `GET/PUT /users/me/stats-order`), `StepsSection` component with bar chart (7/14/30d) + manual entry modal. `DraggableSectionList` using `PanResponder` for drag-and-drop section reordering — long-press activates mode, drag handles visible per section, hover indicator shown, order persisted to DB. Migration: `lib/db/migrations/0020_task26_steps_stats_order.sql`.
 
+## Completed Features (Tasks) cont.
+- **Task #38**: Timezone fix — `getLocalDayNumber()` and `dateDiffDays()` helpers added to `lib/dateUtils.ts` using `"T12:00:00Z"` suffix trick (avoids UTC midnight boundary issues for Europe/Brussels). `/sessions/today` rewrites to `getOrCreateTodaySessionLogs()` — creates a session log for EVERY session scheduled on the current day, returns the first uncompleted one. API response now includes `sessionsToday`, `sessionsTodayCompleted`, `sessionIndex`. Home screen shows "SÉANCE X/Y" badge when multiple sessions exist; done card handles multi-session messaging. `/sessions/missed` also fixed for local dates.
+- **Task #39**: `sharp` native addon fixed — added `pnpm.onlyBuiltDependencies: ["sharp"]` to root `package.json`; `pnpm install` now builds the sharp native addon successfully (verified `sharp@0.34.5` loads from api-server workspace).
+
 ## Key Implementation Notes
 
 - Express 5 `req.params` returns `string | string[]` — always use `String(req.params["x"])` pattern

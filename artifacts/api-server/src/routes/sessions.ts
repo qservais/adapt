@@ -5,13 +5,13 @@ import {
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
   performanceTestsTable, coachAppointmentsTable,
 } from "@workspace/db";
-import { eq, and, desc, gte, lt, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lt, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { calculateAdaptedLoad } from "../services/adapt-engine.js";
 import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
 import { checkAfterSession, checkAfterFeedback } from "../services/badgeService.js";
 import { z } from "zod";
-import { getTodayLocalDate, localDateFromTimestamp } from "../lib/dateUtils.js";
+import { getTodayLocalDate, localDateFromTimestamp, getLocalDayNumber, dateDiffDays } from "../lib/dateUtils.js";
 
 const router = Router();
 
@@ -205,6 +205,92 @@ async function buildSessionDetail(
   };
 }
 
+async function getTodaySessionsForProgram(
+  program: typeof programsTable.$inferSelect
+): Promise<typeof sessionsTable.$inferSelect[]> {
+  const todayStr = getTodayLocalDate();
+  const startDateStr = program.startDate ?? todayStr;
+  const dayNum = getLocalDayNumber(todayStr);
+  const diff = dateDiffDays(startDateStr, todayStr);
+  const trainingWeek = Math.min(Math.max(1, Math.floor(diff / 7) + 1), program.durationWeeks ?? 1);
+
+  let sessions = await db.select().from(sessionsTable)
+    .where(and(
+      eq(sessionsTable.programId, program.id),
+      eq(sessionsTable.weekNumber, trainingWeek),
+      eq(sessionsTable.dayNumber, dayNum)
+    ))
+    .orderBy(asc(sessionsTable.createdAt));
+
+  if (sessions.length === 0) {
+    sessions = await db.select().from(sessionsTable)
+      .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)))
+      .orderBy(asc(sessionsTable.createdAt));
+  }
+
+  return sessions;
+}
+
+async function getOrCreateTodaySessionLogs(
+  athleteId: string,
+  checkin: typeof checkinsTable.$inferSelect,
+  forcedMode: string,
+  program: typeof programsTable.$inferSelect | null
+): Promise<{ logs: typeof sessionLogsTable.$inferSelect[]; total: number; completed: number }> {
+  const existingLogs = await db.select().from(sessionLogsTable)
+    .where(and(
+      eq(sessionLogsTable.athleteId, athleteId),
+      eq(sessionLogsTable.checkinId, checkin.id)
+    ))
+    .orderBy(asc(sessionLogsTable.createdAt));
+
+  if (!program) {
+    if (existingLogs.length === 0) {
+      const [newLog] = await db.insert(sessionLogsTable).values({
+        athleteId, sessionId: null, variantMode: forcedMode, checkinId: checkin.id,
+      }).returning();
+      const logs = [newLog!];
+      return { logs, total: 1, completed: 0 };
+    }
+    const completed = existingLogs.filter(l => l.completedAt != null).length;
+    return { logs: existingLogs, total: existingLogs.length, completed };
+  }
+
+  const todaySessions = await getTodaySessionsForProgram(program);
+
+  if (todaySessions.length === 0) {
+    const freeLog = existingLogs.find(l => l.sessionId === null);
+    if (freeLog) {
+      const completed = existingLogs.filter(l => l.completedAt != null).length;
+      return { logs: [freeLog], total: 1, completed };
+    }
+    const [newLog] = await db.insert(sessionLogsTable).values({
+      athleteId, sessionId: null, variantMode: forcedMode, checkinId: checkin.id,
+    }).returning();
+    return { logs: [newLog!], total: 1, completed: 0 };
+  }
+
+  const logBySessionId = new Map<string, typeof sessionLogsTable.$inferSelect>();
+  for (const log of existingLogs) {
+    if (log.sessionId) logBySessionId.set(log.sessionId, log);
+  }
+
+  const allLogs: typeof sessionLogsTable.$inferSelect[] = [];
+  for (const session of todaySessions) {
+    let log = logBySessionId.get(session.id);
+    if (!log) {
+      const [newLog] = await db.insert(sessionLogsTable).values({
+        athleteId, sessionId: session.id, variantMode: forcedMode, checkinId: checkin.id,
+      }).returning();
+      log = newLog!;
+    }
+    allLogs.push(log);
+  }
+
+  const completed = allLogs.filter(l => l.completedAt != null).length;
+  return { logs: allLogs, total: allLogs.length, completed };
+}
+
 router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const today = getTodayLocalDate();
@@ -218,225 +304,35 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
       return;
     }
 
-    const [existingLog] = await db.select().from(sessionLogsTable)
-      .where(and(
-        eq(sessionLogsTable.athleteId, athleteId),
-        eq(sessionLogsTable.checkinId, checkin.id)
-      ));
-
-    if (existingLog) {
-      let activeLog = existingLog;
-
-      if (existingLog.sessionId === null) {
-        const [program] = await db.select().from(programsTable)
-          .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)));
-
-        if (program) {
-          const now = new Date();
-          const startDate = program.startDate ? new Date(program.startDate) : new Date();
-          const daysSinceStart = Math.floor((now.getTime() - startDate.getTime()) / 86400000);
-          const trainingWeek = Math.min(Math.max(1, Math.floor(daysSinceStart / 7) + 1), program.durationWeeks ?? 1);
-          const dayOfWeek = now.getDay();
-          const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
-          const dayNum = dayMap[dayOfWeek] ?? 1;
-
-          let [matchedSession] = await db.select().from(sessionsTable)
-            .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.weekNumber, trainingWeek), eq(sessionsTable.dayNumber, dayNum)));
-
-          if (!matchedSession) {
-            [matchedSession] = await db.select().from(sessionsTable)
-              .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
-          }
-
-          if (matchedSession) {
-            const [updatedLog] = await db.update(sessionLogsTable)
-              .set({ sessionId: matchedSession.id })
-              .where(eq(sessionLogsTable.id, existingLog.id))
-              .returning();
-            if (updatedLog) activeLog = updatedLog;
-          }
-        }
-      }
-
-      const detail = await buildSessionDetail(activeLog, checkin);
-      const athletePRs = await getAthleteCurrentPRs(athleteId);
-      res.json({ ...detail, athletePRs });
-      return;
-    }
-
     const painAlerts = await db.select({ id: alertsTable.id }).from(alertsTable)
       .where(and(
         eq(alertsTable.athleteId, athleteId),
         eq(alertsTable.type, "pain"),
         eq(alertsTable.isResolved, false)
       ));
-
     const forcedMode = painAlerts.length > 0 ? "recovery" : checkin.sessionMode;
 
     const [program] = await db.select().from(programsTable)
       .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)));
 
-    let sessionId: string | null = null;
-    let sessionName = "Session libre";
-    let sessionTypeValue: string | null = null;
-    let sessionLocationValue: string | null = null;
-    let scheduledTimeValue: string | null = null;
-    let visioLinkValue: string | null = null;
-    let estimatedDuration: number | null = null;
-    let coachNotes: string | null = null;
-    let exercises: {
-      id: string;
-      exerciseId: string;
-      exerciseName: string;
-      category: string | null;
-      imageUrl: string | null;
-      gifUrl: string | null;
-      muscleGroups: unknown;
-      equipment: unknown;
-      description: string | null;
-      demoUrl: string | null;
-      orderIndex: number;
-      sets: number;
-      reps: string | null;
-      nominalLoadKg: number | null;
-      adaptedLoadKg: number | null;
-      restSeconds: number | null;
-      durationSeconds: number | null;
-      coachCue: string | null;
-      tempo: string | null;
-      lastUsedLoadKg: number | null;
-      lastUsedDate: string | null;
-    }[] = [];
+    const { logs, total, completed } = await getOrCreateTodaySessionLogs(
+      athleteId, checkin, forcedMode, program ?? null
+    );
 
-    if (program) {
-      const startDate = program.startDate ? new Date(program.startDate) : new Date();
-      const now = new Date();
-      const daysSinceStart = Math.floor((now.getTime() - startDate.getTime()) / 86400000);
-      const trainingWeek = Math.min(
-        Math.max(1, Math.floor(daysSinceStart / 7) + 1),
-        program.durationWeeks ?? 1
-      );
+    const uncompletedLogs = logs.filter(l => l.completedAt == null);
+    const activeLog = uncompletedLogs[0] ?? logs[logs.length - 1]!;
+    const sessionIndex = logs.indexOf(activeLog) + 1;
 
-      const dayOfWeek = now.getDay();
-      const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
-      const dayNum = dayMap[dayOfWeek] ?? 1;
-
-      let [session] = await db.select().from(sessionsTable)
-        .where(and(
-          eq(sessionsTable.programId, program.id),
-          eq(sessionsTable.weekNumber, trainingWeek),
-          eq(sessionsTable.dayNumber, dayNum)
-        ));
-
-      if (!session) {
-        [session] = await db.select().from(sessionsTable)
-          .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
-      }
-
-      if (session) {
-        sessionId = session.id;
-        sessionName = session.name;
-        sessionTypeValue = session.type ?? null;
-        sessionLocationValue = session.sessionType ?? "online";
-        scheduledTimeValue = session.scheduledTime ?? null;
-        visioLinkValue = session.visioLink ?? null;
-        estimatedDuration = session.estimatedDurationMin ?? null;
-        coachNotes = session.coachNotes ?? null;
-
-        let [variant] = await db.select().from(sessionVariantsTable)
-          .where(and(
-            eq(sessionVariantsTable.sessionId, session.id),
-            eq(sessionVariantsTable.mode, forcedMode)
-          ));
-
-        if (!variant) {
-          [variant] = await db.select().from(sessionVariantsTable)
-            .where(and(
-              eq(sessionVariantsTable.sessionId, session.id),
-              eq(sessionVariantsTable.mode, "normal")
-            ));
-        }
-
-        if (variant) {
-          const exs = await db.select({
-            id: sessionExercisesTable.id,
-            exerciseId: sessionExercisesTable.exerciseId,
-            orderIndex: sessionExercisesTable.orderIndex,
-            sets: sessionExercisesTable.sets,
-            reps: sessionExercisesTable.reps,
-            loadKg: sessionExercisesTable.loadKg,
-            restSeconds: sessionExercisesTable.restSeconds,
-            durationSeconds: sessionExercisesTable.durationSeconds,
-            coachCue: sessionExercisesTable.coachCue,
-            tempo: sessionExercisesTable.tempo,
-            exerciseName: exercisesTable.name,
-            category: exercisesTable.category,
-            demoUrl: exercisesTable.demoUrl,
-            demoGifUrl: exercisesTable.demoGifUrl,
-            muscleGroups: exercisesTable.muscleGroups,
-            equipment: exercisesTable.equipment,
-            description: exercisesTable.description,
-          })
-            .from(sessionExercisesTable)
-            .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
-            .where(eq(sessionExercisesTable.variantId, variant.id))
-            .orderBy(sessionExercisesTable.orderIndex);
-
-          const exerciseIds = exs.map(e => e.exerciseId);
-          const lastUsed = await getLastUsedLoads(athleteId, exerciseIds);
-
-          exercises = exs.map(ex => ({
-            id: ex.id,
-            exerciseId: ex.exerciseId,
-            exerciseName: ex.exerciseName,
-            category: ex.category ?? null,
-            imageUrl: ex.demoUrl ?? null,
-            gifUrl: ex.demoGifUrl ?? null,
-            muscleGroups: ex.muscleGroups,
-            equipment: ex.equipment,
-            description: ex.description ?? null,
-            demoUrl: ex.demoUrl ?? null,
-            orderIndex: ex.orderIndex,
-            sets: ex.sets,
-            reps: ex.reps ?? null,
-            nominalLoadKg: ex.loadKg ? parseFloat(ex.loadKg) : null,
-            adaptedLoadKg: calculateAdaptedLoad(ex.loadKg ? parseFloat(ex.loadKg) : null, forcedMode),
-            restSeconds: ex.restSeconds ?? null,
-            durationSeconds: ex.durationSeconds ?? null,
-            coachCue: ex.coachCue ?? null,
-            tempo: ex.tempo ?? null,
-            lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
-            lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
-          }));
-        }
-      }
-    }
-
-    const [sessionLog] = await db.insert(sessionLogsTable).values({
-      athleteId,
-      sessionId,
-      variantMode: forcedMode,
-      checkinId: checkin.id,
-    }).returning();
-
+    const detail = await buildSessionDetail(activeLog, checkin);
     const athletePRs = await getAthleteCurrentPRs(athleteId);
 
     res.json({
-      sessionLogId: sessionLog.id,
-      sessionId,
-      name: sessionName,
-      mode: forcedMode,
-      sessionType: sessionTypeValue,
-      sessionLocation: sessionLocationValue,
-      scheduledTime: scheduledTimeValue,
-      visioLink: visioLinkValue,
-      estimatedDurationMin: estimatedDuration,
-      coachNotes,
-      exercises,
-      adaptScore: checkin.adaptScore,
-      overriddenByCoach: painAlerts.length > 0,
+      ...detail,
       athletePRs,
-      completedAt: null,
+      overriddenByCoach: painAlerts.length > 0,
+      sessionsToday: total,
+      sessionsTodayCompleted: completed,
+      sessionIndex,
     });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
@@ -596,7 +492,7 @@ router.get("/sessions/missed", authenticate, requireRole("athlete"), async (req,
       return;
     }
 
-    const now = new Date();
+    const todayStr = getTodayLocalDate();
     const missedSessions: Array<{
       date: string;
       sessionId: string;
@@ -605,52 +501,48 @@ router.get("/sessions/missed", authenticate, requireRole("athlete"), async (req,
     }> = [];
 
     for (let daysAgo = 1; daysAgo <= 7; daysAgo++) {
-      const targetDate = new Date(now);
-      targetDate.setDate(now.getDate() - daysAgo);
-      const dateStr = targetDate.toISOString().split("T")[0]!;
+      const targetMs = new Date(todayStr + "T12:00:00Z").getTime() - daysAgo * 86400000;
+      const dateStr = new Date(targetMs).toISOString().split("T")[0]!;
 
-      const dayOfWeek = targetDate.getDay();
-      const dayMap: Record<number, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 0: 7 };
-      const dayNum = dayMap[dayOfWeek] ?? 1;
+      const dayNum = getLocalDayNumber(dateStr);
+      const startDateStr = program.startDate ?? todayStr;
+      const diff = dateDiffDays(startDateStr, dateStr);
+      const trainingWeek = Math.min(Math.max(1, Math.floor(diff / 7) + 1), program.durationWeeks ?? 1);
 
-      const startDate = program.startDate ? new Date(program.startDate) : new Date();
-      const daysSinceStart = Math.floor((targetDate.getTime() - startDate.getTime()) / 86400000);
-      const trainingWeek = Math.min(Math.max(1, Math.floor(daysSinceStart / 7) + 1), program.durationWeeks ?? 1);
-
-      let [session] = await db.select().from(sessionsTable)
+      let sessions = await db.select().from(sessionsTable)
         .where(and(
           eq(sessionsTable.programId, program.id),
           eq(sessionsTable.weekNumber, trainingWeek),
           eq(sessionsTable.dayNumber, dayNum)
         ));
 
-      if (!session) {
-        [session] = await db.select().from(sessionsTable)
+      if (sessions.length === 0) {
+        sessions = await db.select().from(sessionsTable)
           .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)));
       }
-
-      if (!session) continue;
 
       const dayStart = new Date(dateStr + "T00:00:00.000Z");
       const dayEnd = new Date(dateStr + "T23:59:59.999Z");
 
-      const completedLogs = await db.select({ id: sessionLogsTable.id })
-        .from(sessionLogsTable)
-        .where(and(
-          eq(sessionLogsTable.athleteId, athleteId),
-          eq(sessionLogsTable.sessionId, session.id),
-          gte(sessionLogsTable.createdAt, dayStart),
-          lt(sessionLogsTable.createdAt, dayEnd),
-          isNotNull(sessionLogsTable.completedAt)
-        ));
+      for (const session of sessions) {
+        const completedLogs = await db.select({ id: sessionLogsTable.id })
+          .from(sessionLogsTable)
+          .where(and(
+            eq(sessionLogsTable.athleteId, athleteId),
+            eq(sessionLogsTable.sessionId, session.id),
+            gte(sessionLogsTable.createdAt, dayStart),
+            lt(sessionLogsTable.createdAt, dayEnd),
+            isNotNull(sessionLogsTable.completedAt)
+          ));
 
-      if (completedLogs.length === 0) {
-        missedSessions.push({
-          date: dateStr,
-          sessionId: session.id,
-          sessionName: session.name,
-          estimatedDurationMin: session.estimatedDurationMin ?? null,
-        });
+        if (completedLogs.length === 0) {
+          missedSessions.push({
+            date: dateStr,
+            sessionId: session.id,
+            sessionName: session.name,
+            estimatedDurationMin: session.estimatedDurationMin ?? null,
+          });
+        }
       }
     }
 

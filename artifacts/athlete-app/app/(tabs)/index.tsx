@@ -297,6 +297,11 @@ function StateCheckedIn({
               </View>
             </View>
           </View>
+          {(session.sessionsToday ?? 1) > 1 && (
+            <Text style={[styles.sessionCounter, { fontFamily: FONTS.mono, color: modeColor }]}>
+              SÉANCE {session.sessionIndex}/{session.sessionsToday}
+            </Text>
+          )}
           <Text style={[styles.sessionName, { fontFamily: FONTS.title, color: modeColor }]}>
             {session.name}
           </Text>
@@ -342,6 +347,7 @@ function SessionDoneCard({
 }) {
   const durationMin = session.durationMin ?? session.estimatedDurationMin;
   const exCount = session.exercises?.length ?? 0;
+  const multiSession = (session.sessionsToday ?? 1) > 1;
 
   return (
     <View style={[styles.doneCard, { borderColor: `${modeColor}30` }]}>
@@ -351,13 +357,13 @@ function SessionDoneCard({
         </View>
       </View>
       <Text style={[styles.doneTitleSmall, { fontFamily: FONTS.mono, color: modeColor }]}>
-        SÉANCE TERMINÉE
+        {multiSession ? `TOUTES LES SÉANCES TERMINÉES` : "SÉANCE TERMINÉE"}
       </Text>
       <Text style={[styles.doneTitle, { fontFamily: FONTS.title, color: COLORS.white }]}>
-        BIEN JOUÉ !
+        {multiSession ? `BELLE JOURNÉE !` : "BIEN JOUÉ !"}
       </Text>
       <Text style={[styles.doneName, { fontFamily: FONTS.body, color: COLORS.textSecondary }]}>
-        {session.name}
+        {multiSession ? `${session.sessionsToday} séances effectuées` : session.name}
       </Text>
       <View style={styles.doneStatsRow}>
         {durationMin != null && (
@@ -523,6 +529,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   locationText: { fontSize: 9, letterSpacing: 0.5 },
+  sessionCounter: { fontSize: 11, letterSpacing: 2, marginBottom: 4, opacity: 0.8 },
   sessionName: { fontSize: 32, letterSpacing: 2, lineHeight: 36 },
   coachNoteRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   coachNote: { flex: 1, fontSize: 13, color: COLORS.textMuted, fontStyle: "italic", lineHeight: 18 },
