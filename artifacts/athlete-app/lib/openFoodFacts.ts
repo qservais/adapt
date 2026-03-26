@@ -34,7 +34,7 @@ export async function fetchProductByBarcode(barcode: string): Promise<OFFProduct
     return {
       barcode,
       name,
-      kcalPer100g: safeNum(n["energy-kcal_100g"] ?? n["energy_100g"]),
+      kcalPer100g: safeNum(n["energy-kcal_100g"]),
       proteinPer100g: safeNum(n["proteins_100g"]),
       carbsPer100g: safeNum(n["carbohydrates_100g"]),
       fatPer100g: safeNum(n["fat_100g"]),
