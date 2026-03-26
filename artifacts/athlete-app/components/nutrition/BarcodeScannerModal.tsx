@@ -1,6 +1,7 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   StyleSheet,
   Text,
@@ -21,6 +22,15 @@ export function BarcodeScannerModal({ visible, onScanned, onClose }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const scannedRef = useRef(false);
 
+  useEffect(() => {
+    if (!visible) return;
+    scannedRef.current = false;
+    if (permission === null) return;
+    if (!permission.granted && permission.canAskAgain) {
+      void requestPermission();
+    }
+  }, [visible, permission, requestPermission]);
+
   const handleBarcodeScanned = useCallback(({ data }: { data: string }) => {
     if (scannedRef.current) return;
     scannedRef.current = true;
@@ -32,8 +42,94 @@ export function BarcodeScannerModal({ visible, onScanned, onClose }: Props) {
     onClose();
   };
 
-  const handleOpen = () => {
-    scannedRef.current = false;
+  const handleOpenSettings = () => {
+    void Linking.openSettings();
+  };
+
+  const renderContent = () => {
+    if (permission === null) {
+      return (
+        <View style={styles.center}>
+          <ActivityIndicator color={COLORS.cyan} size="large" />
+          <Text style={[styles.permDesc, { fontFamily: FONTS.body }]}>
+            Initialisation de la caméra…
+          </Text>
+        </View>
+      );
+    }
+
+    if (!permission.granted) {
+      if (!permission.canAskAgain) {
+        return (
+          <View style={styles.center}>
+            <Feather name="camera-off" size={48} color={COLORS.textMuted} />
+            <Text style={[styles.permTitle, { fontFamily: FONTS.bodyBold }]}>
+              Accès caméra refusé
+            </Text>
+            <Text style={[styles.permDesc, { fontFamily: FONTS.body }]}>
+              L'accès à la caméra a été refusé définitivement. Autorisez-le dans les réglages de l'application.
+            </Text>
+            <TouchableOpacity onPress={handleOpenSettings} style={styles.permBtn}>
+              <Text style={[styles.permBtnText, { fontFamily: FONTS.mono }]}>
+                OUVRIR LES RÉGLAGES
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleClose} style={styles.cancelLinkBtn}>
+              <Text style={[styles.cancelLinkText, { fontFamily: FONTS.body }]}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+
+      return (
+        <View style={styles.center}>
+          <ActivityIndicator color={COLORS.cyan} size="large" />
+          <Text style={[styles.permDesc, { fontFamily: FONTS.body }]}>
+            Demande d'accès à la caméra…
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.cancelLinkBtn}>
+            <Text style={[styles.cancelLinkText, { fontFamily: FONTS.body }]}>Annuler</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          onBarcodeScanned={handleBarcodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "qr"],
+          }}
+        />
+        <View style={styles.overlay} pointerEvents="none">
+          <View style={styles.topDim} />
+          <View style={styles.middleRow}>
+            <View style={styles.sideDim} />
+            <View style={styles.viewfinder}>
+              <View style={[styles.corner, styles.cornerTL]} />
+              <View style={[styles.corner, styles.cornerTR]} />
+              <View style={[styles.corner, styles.cornerBL]} />
+              <View style={[styles.corner, styles.cornerBR]} />
+              <View style={styles.scanLine} />
+            </View>
+            <View style={styles.sideDim} />
+          </View>
+          <View style={styles.bottomDim} />
+        </View>
+        <View style={styles.hintBox} pointerEvents="none">
+          <Text style={[styles.hintText, { fontFamily: FONTS.body }]}>
+            Pointez la caméra vers le code-barres du produit
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.cancelBtn} onPress={handleClose} activeOpacity={0.8}>
+          <Feather name="x" size={20} color={COLORS.white} />
+          <Text style={[styles.cancelBtnText, { fontFamily: FONTS.mono }]}>ANNULER</Text>
+        </TouchableOpacity>
+      </>
+    );
   };
 
   return (
@@ -41,68 +137,10 @@ export function BarcodeScannerModal({ visible, onScanned, onClose }: Props) {
       visible={visible}
       animationType="slide"
       onRequestClose={handleClose}
-      onShow={handleOpen}
       statusBarTranslucent
     >
       <View style={styles.root}>
-        {!permission ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={COLORS.cyan} size="large" />
-          </View>
-        ) : !permission.granted ? (
-          <View style={styles.center}>
-            <Feather name="camera-off" size={48} color={COLORS.textMuted} />
-            <Text style={[styles.permTitle, { fontFamily: FONTS.bodyBold }]}>
-              Accès caméra requis
-            </Text>
-            <Text style={[styles.permDesc, { fontFamily: FONTS.body }]}>
-              L'accès à la caméra est nécessaire pour scanner les codes-barres.
-            </Text>
-            <TouchableOpacity onPress={requestPermission} style={styles.permBtn}>
-              <Text style={[styles.permBtnText, { fontFamily: FONTS.mono }]}>
-                AUTORISER LA CAMÉRA
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleClose} style={styles.cancelLinkBtn}>
-              <Text style={[styles.cancelLinkText, { fontFamily: FONTS.body }]}>Annuler</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            <CameraView
-              style={styles.camera}
-              facing="back"
-              onBarcodeScanned={handleBarcodeScanned}
-              barcodeScannerSettings={{
-                barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "qr"],
-              }}
-            />
-            <View style={styles.overlay} pointerEvents="none">
-              <View style={styles.topDim} />
-              <View style={styles.middleRow}>
-                <View style={styles.sideDim} />
-                <View style={styles.viewfinder}>
-                  <View style={[styles.corner, styles.cornerTL]} />
-                  <View style={[styles.corner, styles.cornerTR]} />
-                  <View style={[styles.corner, styles.cornerBL]} />
-                  <View style={[styles.corner, styles.cornerBR]} />
-                  <View style={styles.scanLine} />
-                </View>
-                <View style={styles.sideDim} />
-              </View>
-              <View style={styles.bottomDim} />
-            </View>
-            <View style={styles.hintBox} pointerEvents="none">
-              <Text style={[styles.hintText, { fontFamily: FONTS.body }]}>
-                Pointez la caméra vers le code-barres du produit
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.cancelBtn} onPress={handleClose} activeOpacity={0.8}>
-              <Feather name="x" size={20} color={COLORS.white} />
-              <Text style={[styles.cancelBtnText, { fontFamily: FONTS.mono }]}>ANNULER</Text>
-            </TouchableOpacity>
-          </>
-        )}
+        {renderContent()}
       </View>
     </Modal>
   );
