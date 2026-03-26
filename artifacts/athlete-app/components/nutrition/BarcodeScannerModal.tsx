@@ -21,12 +21,17 @@ interface Props {
 export function BarcodeScannerModal({ visible, onScanned, onClose }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const scannedRef = useRef(false);
+  const permissionRequestedRef = useRef(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      permissionRequestedRef.current = false;
+      return;
+    }
     scannedRef.current = false;
     if (permission === null) return;
-    if (!permission.granted && permission.canAskAgain) {
+    if (!permission.granted && permission.canAskAgain && !permissionRequestedRef.current) {
+      permissionRequestedRef.current = true;
       void requestPermission();
     }
   }, [visible, permission, requestPermission]);
