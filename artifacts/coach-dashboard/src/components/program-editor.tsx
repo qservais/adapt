@@ -182,7 +182,7 @@ export const emptyBlock = (orderIndex: number, type: BlockType = "strength"): Bl
 export const emptySession = (): SessionDraft => ({
   name: "",
   type: "strength",
-  sessionType: "presentiel",
+  sessionType: "online",
   scheduledTime: "",
   visioLink: "",
   estimatedDurationMin: 60,
