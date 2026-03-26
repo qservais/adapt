@@ -805,10 +805,10 @@ export default function ProgramsList() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex gap-1 p-1 bg-card border border-border rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-card border border-border rounded-xl w-fit max-w-full overflow-x-auto">
         <button
           onClick={() => setTab("athletes")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 ${
             tab === "athletes"
               ? "bg-primary text-black"
               : "text-muted-foreground hover:text-white hover:bg-white/5"
@@ -819,7 +819,7 @@ export default function ProgramsList() {
         </button>
         <button
           onClick={() => setTab("bibliotheque")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 ${
             tab === "bibliotheque"
               ? "bg-primary text-black"
               : "text-muted-foreground hover:text-white hover:bg-white/5"
