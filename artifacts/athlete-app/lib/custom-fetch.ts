@@ -5,6 +5,11 @@ const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : "";
 
+export function resolveMediaUrl(relativeOrAbsolute: string): string {
+  if (relativeOrAbsolute.startsWith("http")) return relativeOrAbsolute;
+  return `${BASE_URL}${relativeOrAbsolute}`;
+}
+
 let isRefreshing = false;
 let refreshQueue: Array<(token: string | null) => void> = [];
 

@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { resolveMediaUrl } from "@/lib/custom-fetch";
 import {
   useGetTodayCheckin,
   useGetTodaySessions,
@@ -126,7 +127,7 @@ export default function HomeScreen() {
         <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} activeOpacity={0.8}>
           {user?.avatarUrl ? (
             <Image
-              source={{ uri: user.avatarUrl }}
+              source={{ uri: resolveMediaUrl(user.avatarUrl) }}
               style={styles.headerAvatar}
               contentFit="cover"
             />

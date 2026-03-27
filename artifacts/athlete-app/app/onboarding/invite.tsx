@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Image } from "expo-image";
+import { resolveMediaUrl } from "@/lib/custom-fetch";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -106,7 +107,7 @@ export default function InviteScreen() {
                 >
                   <View style={styles.coachAvatar}>
                     {coach.avatarUrl ? (
-                      <Image source={{ uri: coach.avatarUrl }} style={styles.coachAvatarImg} />
+                      <Image source={{ uri: resolveMediaUrl(coach.avatarUrl) }} style={styles.coachAvatarImg} />
                     ) : (
                       <Text style={[styles.coachAvatarInitials, { fontFamily: FONTS.bodyBold }]}>
                         {coach.firstName[0]}{coach.lastName?.[0] ?? ""}

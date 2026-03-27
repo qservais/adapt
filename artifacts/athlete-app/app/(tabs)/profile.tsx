@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { Image } from "expo-image";
+import { resolveMediaUrl } from "@/lib/custom-fetch";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { router } from "expo-router";
@@ -426,7 +427,7 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.8} style={styles.avatarWrap}>
           {profile?.avatarUrl ? (
             <Image
-              source={{ uri: profile.avatarUrl }}
+              source={{ uri: resolveMediaUrl(profile.avatarUrl) }}
               style={styles.avatarImg}
               contentFit="cover"
               transition={200}
@@ -859,7 +860,7 @@ export default function ProfileScreen() {
                     >
                       <View style={styles.coachPickerAvatar}>
                         {coach.avatarUrl ? (
-                          <Image source={{ uri: coach.avatarUrl }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                          <Image source={{ uri: resolveMediaUrl(coach.avatarUrl) }} style={{ width: 40, height: 40, borderRadius: 20 }} />
                         ) : (
                           <Text style={[styles.coachPickerInitials, { fontFamily: FONTS.bodyBold }]}>
                             {coach.firstName[0]}{coach.lastName?.[0] ?? ""}
