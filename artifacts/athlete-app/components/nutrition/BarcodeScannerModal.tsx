@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -22,10 +22,12 @@ export function BarcodeScannerModal({ visible, onScanned, onClose }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const scannedRef = useRef(false);
   const permissionRequestedRef = useRef(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       permissionRequestedRef.current = false;
+      setCameraReady(false);
       return;
     }
     scannedRef.current = false;
@@ -44,6 +46,7 @@ export function BarcodeScannerModal({ visible, onScanned, onClose }: Props) {
 
   const handleClose = () => {
     scannedRef.current = false;
+    setCameraReady(false);
     onClose();
   };
 
@@ -101,9 +104,19 @@ export function BarcodeScannerModal({ visible, onScanned, onClose }: Props) {
 
     return (
       <>
+        {!cameraReady && (
+          <View style={[styles.center, StyleSheet.absoluteFillObject, { zIndex: 10 }]}>
+            <ActivityIndicator color={COLORS.cyan} size="large" />
+            <Text style={[styles.permDesc, { fontFamily: FONTS.body }]}>
+              Démarrage de la caméra…
+            </Text>
+          </View>
+        )}
         <CameraView
           style={styles.camera}
           facing="back"
+          active={visible}
+          onCameraReady={() => setCameraReady(true)}
           onBarcodeScanned={handleBarcodeScanned}
           barcodeScannerSettings={{
             barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "qr"],

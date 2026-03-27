@@ -229,6 +229,8 @@ export interface SessionDetail {
   sessionsToday?: number;
   sessionsTodayCompleted?: number;
   sessionIndex?: number;
+  rpe?: number | null;
+  perceivedDifficulty?: string | null;
 }
 
 export interface CompleteSessionNewPR {

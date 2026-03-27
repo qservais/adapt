@@ -24,6 +24,12 @@ const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
 
 const router = Router();
 
+function resolveAvatarUrl(user: { id: string; avatarUrl: string | null }): string | null {
+  if (!user.avatarUrl) return null;
+  if (user.avatarUrl.startsWith("http")) return user.avatarUrl;
+  return `/api/users/avatar/${user.id}`;
+}
+
 function userProfile(user: typeof usersTable.$inferSelect) {
   return {
     id: user.id,
@@ -45,7 +51,7 @@ function userProfile(user: typeof usersTable.$inferSelect) {
     avgCycleDays: user.avgCycleDays,
     coachId: user.coachId,
     inviteCode: user.inviteCode,
-    avatarUrl: user.avatarUrl ?? null,
+    avatarUrl: resolveAvatarUrl(user),
   };
 }
 
@@ -123,6 +129,40 @@ router.put("/users/me", authenticate, async (req, res) => {
   }
 });
 
+router.get("/users/avatar/:userId", async (req, res) => {
+  const userId = String(req.params["userId"]);
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(userId)) {
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "Pas d'avatar" } });
+    return;
+  }
+  try {
+    const [user] = await db.select({ avatarUrl: usersTable.avatarUrl })
+      .from(usersTable).where(eq(usersTable.id, userId));
+
+    if (!user?.avatarUrl) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Pas d'avatar" } });
+      return;
+    }
+
+    const objectName = user.avatarUrl;
+    const bucket = objectStorageClient.bucket(BUCKET_ID);
+    const storageFile = bucket.file(objectName);
+    const [exists] = await storageFile.exists();
+    if (!exists) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Avatar introuvable" } });
+      return;
+    }
+
+    res.set("Content-Type", "image/jpeg");
+    res.set("Cache-Control", "public, max-age=3600");
+    storageFile.createReadStream().pipe(res);
+  } catch (err) {
+    console.error("Avatar serve error:", err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 router.post("/users/me/avatar", authenticate, (req, res, next) => {
   upload.single("avatar")(req, res, (err) => {
     if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
@@ -151,16 +191,13 @@ router.post("/users/me/avatar", authenticate, (req, res, next) => {
     const bucket = objectStorageClient.bucket(BUCKET_ID);
     const storageFile = bucket.file(objectName);
     await storageFile.save(resized, { contentType: "image/jpeg", resumable: false });
-    await storageFile.makePublic();
-
-    const publicUrl = `https://storage.googleapis.com/${BUCKET_ID}/${objectName}`;
 
     const [updatedUser] = await db.update(usersTable)
-      .set({ avatarUrl: publicUrl, updatedAt: new Date() })
+      .set({ avatarUrl: objectName, updatedAt: new Date() })
       .where(eq(usersTable.id, req.user!.userId))
       .returning();
 
-    res.json({ avatarUrl: publicUrl, user: userProfile(updatedUser) });
+    res.json({ avatarUrl: `/api/users/avatar/${req.user!.userId}?t=${timestamp}`, user: userProfile(updatedUser) });
   } catch (err) {
     console.error("Avatar upload error:", err);
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur lors de l'upload de la photo" } });

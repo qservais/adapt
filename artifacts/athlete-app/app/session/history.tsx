@@ -77,8 +77,22 @@ export default function SessionHistoryScreen() {
                   </Text>
                 </View>
                 <View style={styles.historyRight}>
-                  {item.rpe != null && (
+                  {item.rpe != null ? (
                     <Text style={[styles.rpe, { fontFamily: FONTS.mono }]}>RPE {item.rpe}</Text>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => {
+                        router.push({
+                          pathname: "/session/rate",
+                          params: { sessionLogId: item.id, sessionName: item.sessionName ?? "" },
+                        });
+                      }}
+                      style={styles.rateChip}
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="star" size={10} color={COLORS.amber} />
+                      <Text style={[styles.rateChipText, { fontFamily: FONTS.mono }]}>Évaluer</Text>
+                    </TouchableOpacity>
                   )}
                   {item.durationMin != null && (
                     <Text style={[styles.duration, { fontFamily: FONTS.mono }]}>
@@ -132,6 +146,18 @@ const styles = StyleSheet.create({
   historyDate: { fontSize: 11, color: COLORS.textMuted },
   historyRight: { alignItems: "flex-end", gap: 2 },
   rpe: { fontSize: 12, color: COLORS.amber },
+  rateChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: `${COLORS.amber}40`,
+    backgroundColor: `${COLORS.amber}12`,
+  },
+  rateChipText: { fontSize: 10, color: COLORS.amber },
   duration: { fontSize: 11, color: COLORS.textMuted },
   separator: {
     height: 1,

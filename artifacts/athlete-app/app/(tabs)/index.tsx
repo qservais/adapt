@@ -241,6 +241,7 @@ function SessionCard({
   const durationMin = session.durationMin ?? session.estimatedDurationMin;
 
   if (isCompleted) {
+    const hasRPE = session.rpe != null;
     return (
       <View style={[styles.sessionCard, { borderColor: `${COLORS.green}30`, backgroundColor: `${COLORS.green}08` }]}>
         <View style={styles.sessionTopRow}>
@@ -261,9 +262,28 @@ function SessionCard({
         <Text style={[styles.sessionName, { fontFamily: FONTS.title, color: COLORS.green, fontSize: 22 }]}>
           {session.name}
         </Text>
-        <Text style={[styles.coachNote, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
-          Terminée ✓
-        </Text>
+        {hasRPE ? (
+          <Text style={[styles.coachNote, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
+            Terminée ✓ — RPE {session.rpe}/10
+          </Text>
+        ) : (
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push({
+                pathname: "/session/rate",
+                params: { sessionLogId: session.sessionLogId, sessionName: session.name },
+              });
+            }}
+            style={styles.rateBtn}
+            activeOpacity={0.7}
+          >
+            <Feather name="star" size={14} color={COLORS.amber} />
+            <Text style={[styles.rateBtnText, { fontFamily: FONTS.bodyMedium }]}>
+              Évaluer ma séance
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -368,7 +388,7 @@ function StateCheckedIn({
       )}
 
       {allCompleted ? (
-        <SessionDoneCard session={sessions[sessions.length - 1]!} modeColor={modeColor} cfg={cfg} />
+        <SessionDoneCard session={sessions[sessions.length - 1]!} allSessions={sessions} modeColor={modeColor} cfg={cfg} />
       ) : sessions.length > 0 ? (
         <View style={{ gap: 12 }}>
           {sessions.map(session => (
@@ -395,16 +415,19 @@ function StateCheckedIn({
 
 function SessionDoneCard({
   session,
+  allSessions,
   modeColor,
   cfg,
 }: {
   session: SessionDetail;
+  allSessions: SessionDetail[];
   modeColor: string;
   cfg: { color: string; label: string };
 }) {
   const durationMin = session.durationMin ?? session.estimatedDurationMin;
   const exCount = session.exercises?.length ?? 0;
   const multiSession = (session.sessionsToday ?? 1) > 1;
+  const unratedSessions = allSessions.filter(s => s.completedAt != null && s.rpe == null);
 
   return (
     <View style={[styles.doneCard, { borderColor: `${modeColor}30` }]}>
@@ -446,6 +469,29 @@ function SessionDoneCard({
           <Text style={[styles.doneStatLabel, { fontFamily: FONTS.body }]}>streak</Text>
         </View>
       </View>
+      {unratedSessions.length > 0 && (
+        <View style={{ width: "100%", gap: 8 }}>
+          {unratedSessions.map(s => (
+            <TouchableOpacity
+              key={s.sessionLogId}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({
+                  pathname: "/session/rate",
+                  params: { sessionLogId: s.sessionLogId, sessionName: s.name },
+                });
+              }}
+              style={styles.rateBtn}
+              activeOpacity={0.7}
+            >
+              <Feather name="star" size={14} color={COLORS.amber} />
+              <Text style={[styles.rateBtnText, { fontFamily: FONTS.bodyMedium }]}>
+                Évaluer : {s.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
       <TouchableOpacity
         onPress={() => router.push("/(tabs)/session")}
         style={[styles.doneHistBtn, { borderColor: `${modeColor}40` }]}
@@ -650,6 +696,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   doneHistBtnText: { fontSize: 14 },
+  rateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: `${COLORS.amber}40`,
+    backgroundColor: `${COLORS.amber}12`,
+    marginTop: 4,
+  },
+  rateBtnText: { fontSize: 13, color: COLORS.amber, letterSpacing: 0.5 },
   streakSection: {
     marginTop: 28,
   },

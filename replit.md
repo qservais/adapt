@@ -34,6 +34,11 @@ Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/
 - **Task #38**: Timezone fix — `getLocalDayNumber()` and `dateDiffDays()` helpers added to `lib/dateUtils.ts` using `"T12:00:00Z"` suffix trick (avoids UTC midnight boundary issues for Europe/Brussels). `/sessions/today` rewrites to `getOrCreateTodaySessionLogs()` — creates a session log for EVERY session scheduled on the current day, returns the first uncompleted one. API response now includes `sessionsToday`, `sessionsTodayCompleted`, `sessionIndex`. Home screen shows "SÉANCE X/Y" badge when multiple sessions exist; done card handles multi-session messaging. `/sessions/missed` also fixed for local dates.
 - **Task #39**: `sharp` native addon fixed — added `pnpm.onlyBuiltDependencies: ["sharp"]` to root `package.json`; `pnpm install` now builds the sharp native addon successfully (verified `sharp@0.34.5` loads from api-server workspace).
 
+## Task #42: Avatar Upload Fix, Barcode Scanner, RPE Retroactive
+- **Avatar upload**: Removed `makePublic()` call (fails on Replit GCS sidecar ACLs). Now stores the GCS object name (e.g. `avatars/{userId}-{timestamp}.jpg`) in `avatarUrl` DB column. A public `GET /api/users/avatar/:userId` endpoint reads from GCS and streams the image. `resolveAvatarUrl()` helper in users.ts and coach.ts converts stored object names to API URLs.
+- **Barcode scanner**: Added `active` prop to `CameraView` (pauses when modal closes), `onCameraReady` callback with loading overlay, and `cameraReady` state for clean lifecycle management.
+- **RPE retroactive**: New `session/rate.tsx` screen accepts `sessionLogId` + `sessionName` params. "Évaluer" button shown on completed session cards without RPE (home screen SessionCard + SessionDoneCard + history screen). Uses existing `POST /sessions/:sessionId/feedback` API. `SessionDetail` type now includes `rpe` and `perceivedDifficulty` fields returned from `buildSessionDetail()`.
+
 ## Key Implementation Notes
 
 - Express 5 `req.params` returns `string | string[]` — always use `String(req.params["x"])` pattern

@@ -7,6 +7,12 @@ import { z } from "zod";
 
 const router = Router();
 
+function resolveAvatarUrl(user: { id: string; avatarUrl: string | null }): string | null {
+  if (!user.avatarUrl) return null;
+  if (user.avatarUrl.startsWith("http")) return user.avatarUrl;
+  return `/api/users/avatar/${user.id}`;
+}
+
 router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const coachId = req.user!.userId;
@@ -361,7 +367,7 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         firstName: athlete.firstName,
         lastName: athlete.lastName,
         email: athlete.email,
-        avatarUrl: athlete.avatarUrl ?? null,
+        avatarUrl: resolveAvatarUrl(athlete),
         fitnessLevel: athlete.fitnessLevel,
         primaryGoal: athlete.primaryGoal,
         todayCheckin: todayCheckin ? {
@@ -482,7 +488,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       firstName: athlete.firstName,
       lastName: athlete.lastName,
       email: athlete.email,
-      avatarUrl: athlete.avatarUrl ?? null,
+      avatarUrl: resolveAvatarUrl(athlete),
       age: athlete.age,
       weightKg: athlete.weightKg,
       heightCm: athlete.heightCm,
@@ -1058,7 +1064,7 @@ router.get("/coach/clients/:clientId/sessions/:sessionLogId", authenticate, requ
 
 router.get("/coaches", authenticate, async (req, res) => {
   try {
-    const coaches = await db
+    const rawCoaches = await db
       .select({
         id: usersTable.id,
         firstName: usersTable.firstName,
@@ -1068,6 +1074,7 @@ router.get("/coaches", authenticate, async (req, res) => {
       })
       .from(usersTable)
       .where(eq(usersTable.role, "coach"));
+    const coaches = rawCoaches.map(c => ({ ...c, avatarUrl: resolveAvatarUrl(c) }));
     res.json(coaches);
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
@@ -1157,7 +1164,13 @@ router.get("/coach/join-requests", authenticate, requireRole("coach"), async (re
       .innerJoin(usersTable, eq(usersTable.id, coachJoinRequestsTable.athleteId))
       .where(and(eq(coachJoinRequestsTable.coachId, coachId), eq(coachJoinRequestsTable.status, "pending")))
       .orderBy(asc(coachJoinRequestsTable.createdAt));
-    res.json(requests);
+    const resolved = requests.map(r => ({
+      ...r,
+      athleteAvatarUrl: r.athleteAvatarUrl
+        ? (r.athleteAvatarUrl.startsWith("http") ? r.athleteAvatarUrl : `/api/users/avatar/${r.athleteId}`)
+        : null,
+    }));
+    res.json(resolved);
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }

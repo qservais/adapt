@@ -202,6 +202,8 @@ async function buildSessionDetail(
     estimatedDurationMin,
     overriddenByCoach: false,
     exercises,
+    rpe: sessionLog.rpe ?? null,
+    perceivedDifficulty: sessionLog.perceivedDifficulty ?? null,
   };
 }
 
