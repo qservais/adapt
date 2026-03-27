@@ -8,7 +8,7 @@ const LMJCOACH_HASH =
 const OWEN_HASH =
   "$2b$12$tVjcXUqssr8mKfuYzW8K8e7894xtmfoPD0S.JKXp0cLGPjYOyph/e";
 
-const TEST_EMAILS_TO_REMOVE = [
+const TEST_EMAILS = [
   "dylandecoster7@outlook.com",
   "julien@adapt.demo",
   "lmj-trainer@hotmail.com",
@@ -26,12 +26,27 @@ export async function fixProdData(): Promise<void> {
       .where(eq(usersTable.email, "coach@adapt.demo"))
       .limit(1);
 
-    if (oldCoach.length === 0) {
+    const needsCoachCleanup = oldCoach.length > 0;
+
+    if (!needsCoachCleanup) {
+      const owenRow = await db
+        .select({ id: usersTable.id, passwordHash: usersTable.passwordHash })
+        .from(usersTable)
+        .where(eq(usersTable.email, "o.soontjens@gmail.com"))
+        .limit(1);
+
+      if (owenRow.length > 0 && owenRow[0]!.passwordHash !== OWEN_HASH) {
+        await db
+          .update(usersTable)
+          .set({ passwordHash: OWEN_HASH })
+          .where(eq(usersTable.email, "o.soontjens@gmail.com"));
+        logger.info("fixProdData: mot de passe Owen mis à jour");
+      }
       return;
     }
 
     const oldCoachId = oldCoach[0]!.id;
-    logger.info("fixProdData: ancien compte coach détecté, correction en cours");
+    logger.info("fixProdData: correction prod en cours");
 
     const lmj = await db
       .select({ id: usersTable.id })
@@ -40,7 +55,7 @@ export async function fixProdData(): Promise<void> {
       .limit(1);
 
     if (lmj.length === 0) {
-      logger.warn("fixProdData: loicmehdi@msn.com introuvable, abandon");
+      logger.warn("fixProdData: loicmehdi@msn.com introuvable");
       return;
     }
 
@@ -48,7 +63,7 @@ export async function fixProdData(): Promise<void> {
 
     await db
       .update(usersTable)
-      .set({ role: "coach", passwordHash: LMJCOACH_HASH, coachId: null })
+      .set({ role: "coach", passwordHash: LMJCOACH_HASH, coachId: null, firstName: "Loïc Mehdi", lastName: "Jaumotte" })
       .where(eq(usersTable.id, newCoachId));
 
     await db
@@ -57,28 +72,37 @@ export async function fixProdData(): Promise<void> {
       .where(eq(usersTable.coachId, oldCoachId));
 
     await db
-      .delete(usersTable)
-      .where(eq(usersTable.email, "coach@adapt.demo"));
-
-    await db
       .update(usersTable)
       .set({ passwordHash: OWEN_HASH })
       .where(eq(usersTable.email, "o.soontjens@gmail.com"));
+
+    await db.execute(sql`UPDATE alerts SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE challenges SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE coach_appointments SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE coach_join_requests SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE content_routines SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE exercises SET created_by = NULL WHERE created_by = ${oldCoachId}`);
+    await db.execute(sql`UPDATE guides SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE nutrition_pdfs SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE performance_tests SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE programs SET coach_id = ${newCoachId} WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`UPDATE scheduled_notifications SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+    await db.execute(sql`DELETE FROM messages WHERE sender_id = ${oldCoachId} OR recipient_id = ${oldCoachId}`);
+
+    await db.delete(usersTable).where(eq(usersTable.email, "coach@adapt.demo"));
+
+    await db
+      .update(usersTable)
+      .set({ isActive: false, coachId: null })
+      .where(sql`email = ANY(${TEST_EMAILS})`);
 
     await db
       .update(usersTable)
       .set({ coachId: newCoachId })
       .where(eq(usersTable.email, "tom@adapt.demo"));
 
-    for (const email of TEST_EMAILS_TO_REMOVE) {
-      await db.execute(
-        sql`UPDATE users SET coach_id = NULL WHERE coach_id IN (SELECT id FROM users WHERE email = ${email})`,
-      );
-      await db.delete(usersTable).where(eq(usersTable.email, email));
-    }
-
     logger.info("fixProdData: correction terminée avec succès");
   } catch (err) {
-    logger.error({ err }, "fixProdData: erreur lors de la correction");
+    logger.error({ err }, "fixProdData: erreur");
   }
 }
