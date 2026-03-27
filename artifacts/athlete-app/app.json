@@ -2,7 +2,6 @@
   "expo": {
     "name": "ADAPT by LMJ",
     "slug": "athlete-app",
-    "owner": "done-agency",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,16 +14,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "app.replit.adaptbylmj",
-      "buildNumber": "3"
+      "supportsTablet": false
     },
-    "android": {
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ]
-    },
+    "android": {},
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -47,11 +39,6 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "eas": {
-        "projectId": "00669ea0-66fb-4646-865d-9a446dceb2a2"
-      }
     }
   }
 }
