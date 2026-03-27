@@ -129,6 +129,27 @@ router.put("/users/me", authenticate, async (req, res) => {
   }
 });
 
+const pushTokenSchema = z.object({
+  token: z.string().min(1),
+});
+
+router.post("/users/push-token", authenticate, async (req, res) => {
+  const parsed = pushTokenSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    await db
+      .update(usersTable)
+      .set({ pushToken: parsed.data.token, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.userId));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 router.get("/users/avatar/:userId", async (req, res) => {
   const userId = String(req.params["userId"]);
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

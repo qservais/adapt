@@ -13,6 +13,11 @@ const DEFAULT_PREFS = {
   messages: true,
   encouragements: true,
   performance: true,
+  push_session: true,
+  push_checkin: true,
+  push_messages: true,
+  push_encouragements: true,
+  push_performance: true,
 };
 
 const PAGE_SIZE = 20;
@@ -94,6 +99,11 @@ const prefsSchema = z.object({
   messages: z.boolean().optional(),
   encouragements: z.boolean().optional(),
   performance: z.boolean().optional(),
+  push_session: z.boolean().optional(),
+  push_checkin: z.boolean().optional(),
+  push_messages: z.boolean().optional(),
+  push_encouragements: z.boolean().optional(),
+  push_performance: z.boolean().optional(),
 });
 
 router.get("/notifications/preferences", authenticate, requireRole("athlete"), async (req, res) => {

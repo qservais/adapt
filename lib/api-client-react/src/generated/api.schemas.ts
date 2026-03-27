@@ -725,6 +725,11 @@ export interface NotificationPreferences {
   messages: boolean;
   encouragements: boolean;
   performance: boolean;
+  push_session?: boolean;
+  push_checkin?: boolean;
+  push_messages?: boolean;
+  push_encouragements?: boolean;
+  push_performance?: boolean;
 }
 
 export interface UpdateNotificationPreferencesRequest {
@@ -733,6 +738,11 @@ export interface UpdateNotificationPreferencesRequest {
   messages?: boolean;
   encouragements?: boolean;
   performance?: boolean;
+  push_session?: boolean;
+  push_checkin?: boolean;
+  push_messages?: boolean;
+  push_encouragements?: boolean;
+  push_performance?: boolean;
 }
 
 export interface Challenge {

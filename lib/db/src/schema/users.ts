@@ -31,6 +31,7 @@ export const usersTable = pgTable("users", {
   statsOrder: json("stats_order").$type<string[]>(),
   avatarUrl: text("avatar_url"),
   morningNotifHour: integer("morning_notif_hour").default(7),
+  pushToken: text("push_token"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

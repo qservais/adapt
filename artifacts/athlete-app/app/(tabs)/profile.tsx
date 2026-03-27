@@ -969,7 +969,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold }]}>Notifications</Text>
+        <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold }]}>Notifications in-app</Text>
         {([
           { key: "session", label: "Rappels de séance" },
           { key: "checkin", label: "Rappels de check-in" },
@@ -983,6 +983,27 @@ export default function ProfileScreen() {
               value={notifPrefs ? notifPrefs[key] : true}
               onValueChange={(val) => updatePrefsMutation.mutate({ [key]: val })}
               trackColor={{ false: COLORS.border, true: COLORS.cyan }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold }]}>Notifications push</Text>
+        {([
+          { key: "push_session", label: "Rappels de séance" },
+          { key: "push_checkin", label: "Rappels de check-in" },
+          { key: "push_messages", label: "Nouveaux messages" },
+          { key: "push_encouragements", label: "Encouragements du coach" },
+          { key: "push_performance", label: "Performances & alertes" },
+        ] as const).map(({ key, label }) => (
+          <View key={key} style={styles.prefRow}>
+            <Text style={[styles.prefLabel, { fontFamily: FONTS.body }]}>{label}</Text>
+            <Switch
+              value={notifPrefs ? (notifPrefs as unknown as Record<string, boolean>)[key] !== false : true}
+              onValueChange={(val) => updatePrefsMutation.mutate({ [key]: val })}
+              trackColor={{ false: COLORS.border, true: COLORS.violet }}
               thumbColor="#FFFFFF"
             />
           </View>

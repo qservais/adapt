@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable, SESSION_BLOCK_TYPES } from "@workspace/db";
+import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable, notificationsTable, SESSION_BLOCK_TYPES } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
+import { sendPushNotification } from "../services/push-notification.service.js";
 
 const ALL_SESSION_TYPES = [
   "strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning",
@@ -61,7 +62,15 @@ router.post("/programs", authenticate, requireRole("coach"), async (req, res) =>
   }
 
   try {
-    const [athlete] = await db.select().from(usersTable)
+    const [athlete] = await db
+      .select({
+        id: usersTable.id,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+        pushToken: usersTable.pushToken,
+        notificationPrefs: usersTable.notificationPrefs,
+      })
+      .from(usersTable)
       .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
       res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlete not linked to you" } });
@@ -76,6 +85,27 @@ router.post("/programs", authenticate, requireRole("coach"), async (req, res) =>
       durationWeeks: parsed.data.durationWeeks,
       startDate: parsed.data.startDate,
     }).returning();
+
+    const notifTitle = "Nouveau programme disponible 🏋️";
+    const notifBody = `Ton coach t'a attribué un nouveau programme : ${program.name}`;
+
+    await db.insert(notificationsTable).values({
+      userId: parsed.data.athleteId,
+      type: "new_program",
+      title: notifTitle,
+      body: notifBody,
+      link: "/(tabs)/session",
+    });
+
+    const prefs = (athlete.notificationPrefs as Record<string, boolean> | null);
+    const pushEnabled = prefs ? prefs["push_session"] !== false && prefs["session"] !== false : true;
+    if (pushEnabled) {
+      await sendPushNotification(athlete.pushToken ?? null, {
+        title: notifTitle,
+        body: notifBody,
+        data: { link: "/(tabs)/session" },
+      });
+    }
 
     res.status(201).json({
       id: program.id,

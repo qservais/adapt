@@ -30,6 +30,15 @@
       "expo-font",
       "expo-web-browser",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#00F0FF",
+          "sounds": [],
+          "iosDisplayInForeground": true
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "ADAPT utilise la caméra pour scanner les codes-barres des aliments."

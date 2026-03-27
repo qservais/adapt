@@ -24,6 +24,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { setupApiClient } from "@/lib/api-setup";
 import { COLORS } from "@/constants/theme";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,7 +40,9 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, user } = useAuth();
+
+  usePushNotifications(isAuthenticated && user ? user.id : null);
 
   useEffect(() => {
     if (!isLoading) {
