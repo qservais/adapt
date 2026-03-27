@@ -14,8 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false,
-      "buildNumber": "3"
+      "supportsTablet": false
     },
     "android": {},
     "web": {
