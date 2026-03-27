@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,7 +14,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
+import type { LibrarySession, FreeSessionStartResponse } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { setFreeSession } from "@/lib/freeSessionStore";
 
 interface Routine {
   id: string;
@@ -38,14 +41,81 @@ export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const [activeCategory, setActiveCategory] = useState<string>("warmup");
+  const [startingRoutineId, setStartingRoutineId] = useState<string | null>(null);
+  const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
 
   const { data: routines, isLoading, error } = useQuery<Routine[]>({
     queryKey: ["/api/content-routines"],
     queryFn: () => customFetch("/api/content-routines"),
   });
 
+  const { data: programSessions = [] } = useQuery<LibrarySession[]>({
+    queryKey: ["/api/athlete/library-sessions"],
+    queryFn: () => customFetch("/api/athlete/library-sessions") as Promise<LibrarySession[]>,
+  });
+
   const filtered = (routines ?? []).filter(r => r.category === activeCategory);
   const activeCat = CATEGORIES.find(c => c.key === activeCategory);
+
+  const handleStartFreeSession = async (sessionId: string, sessionName: string) => {
+    if (startingSessionId) return;
+    setStartingSessionId(sessionId);
+    try {
+      const data = await customFetch(`/api/sessions/${sessionId}/start-free`, {
+        method: "POST",
+      }) as FreeSessionStartResponse;
+      setFreeSession({
+        sessionLogId: data.sessionLogId,
+        name: data.name,
+        mode: data.mode,
+        isFreeSession: true,
+        isRoutine: false,
+        routineId: null,
+        adaptScore: data.adaptScore ?? 50,
+        coachNotes: data.coachNotes ?? null,
+        estimatedDurationMin: data.estimatedDurationMin ?? null,
+        exercises: data.exercises ?? [],
+        athletePRs: data.athletePRs ?? {},
+      });
+      router.push("/session/free");
+    } catch {
+      Alert.alert("Erreur", "Impossible de démarrer cette séance. Réessaie.");
+    } finally {
+      setStartingSessionId(null);
+    }
+  };
+
+  const handleStartFree = async (routine: Routine) => {
+    if (startingRoutineId) return;
+    if (routine.exercises.length === 0) {
+      Alert.alert("Aucun exercice", "Cette routine ne contient aucun exercice.");
+      return;
+    }
+    setStartingRoutineId(routine.id);
+    try {
+      const data = await customFetch(`/api/routines/${routine.id}/start-free`, {
+        method: "POST",
+      }) as FreeSessionStartResponse;
+      setFreeSession({
+        sessionLogId: data.sessionLogId,
+        name: data.name,
+        mode: data.mode,
+        isFreeSession: true,
+        isRoutine: true,
+        routineId: routine.id,
+        adaptScore: data.adaptScore ?? 50,
+        coachNotes: data.coachNotes ?? null,
+        estimatedDurationMin: data.estimatedDurationMin ?? null,
+        exercises: data.exercises ?? [],
+        athletePRs: data.athletePRs ?? {},
+      });
+      router.push("/session/free");
+    } catch {
+      Alert.alert("Erreur", "Impossible de démarrer cette routine. Réessaie.");
+    } finally {
+      setStartingRoutineId(null);
+    }
+  };
 
   return (
     <ScrollView
@@ -66,8 +136,48 @@ export default function LibraryScreen() {
       </View>
 
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        Routines de soutien à consulter librement.
+        Routines de soutien à consulter ou démarrer librement.
       </Text>
+
+      {programSessions.length > 0 && (
+        <View style={styles.programSection}>
+          <Text style={[styles.sectionLabel, { fontFamily: FONTS.bodyBold }]}>
+            ⚡ SÉANCES DU PROGRAMME
+          </Text>
+          {programSessions.map((s) => {
+            const isStarting = startingSessionId === s.sessionId;
+            return (
+              <View key={s.sessionId} style={styles.programCard}>
+                <View style={styles.programCardInfo}>
+                  <Text style={[styles.programCardName, { fontFamily: FONTS.bodyBold }]}>
+                    {s.sessionName}
+                  </Text>
+                  {s.estimatedDurationMin != null && (
+                    <Text style={[styles.programCardMeta, { fontFamily: FONTS.mono }]}>
+                      {s.estimatedDurationMin} min · J{s.dayNumber} S{s.weekNumber}
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleStartFreeSession(s.sessionId, s.sessionName)}
+                  disabled={!!startingSessionId}
+                  style={[styles.startBtn, { backgroundColor: COLORS.violet, opacity: startingSessionId ? 0.6 : 1 }]}
+                  activeOpacity={0.8}
+                >
+                  {isStarting ? (
+                    <ActivityIndicator size="small" color={COLORS.bg} />
+                  ) : (
+                    <Feather name="play" size={13} color={COLORS.bg} />
+                  )}
+                  <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
+                    {isStarting ? "..." : "Démarrer"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       <ScrollView
         horizontal
@@ -113,41 +223,65 @@ export default function LibraryScreen() {
         </View>
       )}
 
-      {filtered.map((routine) => (
-        <TouchableOpacity
-          key={routine.id}
-          style={[styles.card, activeCat && { borderColor: `${activeCat.color}30` }]}
-          onPress={() => router.push(`/library/${routine.id}` as any)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.cardTop}>
-            <View style={styles.cardTitleRow}>
-              <Text style={[styles.cardTitle, { fontFamily: FONTS.bodyBold }]}>
-                {routine.title}
-              </Text>
-              {routine.durationMin != null && (
-                <View style={[styles.durationBadge, activeCat && { borderColor: `${activeCat.color}40` }]}>
-                  <Feather name="clock" size={11} color={activeCat?.color ?? COLORS.textMuted} />
-                  <Text style={[styles.durationText, { fontFamily: FONTS.mono, color: activeCat?.color ?? COLORS.textMuted }]}>
-                    {routine.durationMin} min
-                  </Text>
-                </View>
+      {filtered.map((routine) => {
+        const isStarting = startingRoutineId === routine.id;
+        const catColor = activeCat?.color ?? COLORS.cyan;
+        return (
+          <TouchableOpacity
+            key={routine.id}
+            style={[styles.card, activeCat && { borderColor: `${activeCat.color}30` }]}
+            onPress={() => router.push(`/library/${routine.id}` as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.cardTop}>
+              <View style={styles.cardTitleRow}>
+                <Text style={[styles.cardTitle, { fontFamily: FONTS.bodyBold }]}>
+                  {routine.title}
+                </Text>
+                {routine.durationMin != null && (
+                  <View style={[styles.durationBadge, activeCat && { borderColor: `${activeCat.color}40` }]}>
+                    <Feather name="clock" size={11} color={activeCat?.color ?? COLORS.textMuted} />
+                    <Text style={[styles.durationText, { fontFamily: FONTS.mono, color: activeCat?.color ?? COLORS.textMuted }]}>
+                      {routine.durationMin} min
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {routine.description != null && (
+                <Text style={[styles.cardDesc, { fontFamily: FONTS.body }]} numberOfLines={2}>
+                  {routine.description}
+                </Text>
               )}
             </View>
-            {routine.description != null && (
-              <Text style={[styles.cardDesc, { fontFamily: FONTS.body }]} numberOfLines={2}>
-                {routine.description}
+            <View style={styles.cardFooter}>
+              <Text style={[styles.exerciseCount, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+                {routine.exercises.length} exercice{routine.exercises.length !== 1 ? "s" : ""}
               </Text>
-            )}
-          </View>
-          <View style={styles.cardFooter}>
-            <Text style={[styles.exerciseCount, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
-              {routine.exercises.length} exercice{routine.exercises.length !== 1 ? "s" : ""}
-            </Text>
-            <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
-          </View>
-        </TouchableOpacity>
-      ))}
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleStartFree(routine);
+                }}
+                disabled={!!startingRoutineId}
+                style={[
+                  styles.startBtn,
+                  { backgroundColor: catColor, opacity: startingRoutineId ? 0.6 : 1 },
+                ]}
+                activeOpacity={0.8}
+              >
+                {isStarting ? (
+                  <ActivityIndicator size="small" color={COLORS.bg} />
+                ) : (
+                  <Feather name="play" size={13} color={COLORS.bg} />
+                )}
+                <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
+                  {isStarting ? "..." : "Démarrer"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
 
       {!isLoading && filtered.length === 0 && (
         <View style={styles.emptyBox}>
@@ -212,6 +346,31 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
   cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   exerciseCount: { fontSize: 12, letterSpacing: 0.5 },
+  startBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  startBtnText: { fontSize: 13, color: COLORS.bg },
   emptyBox: { paddingVertical: 32, alignItems: "center" },
   emptyText: { fontSize: 14, color: COLORS.textMuted, textAlign: "center" },
+  programSection: { gap: 10 },
+  sectionLabel: { fontSize: 11, color: COLORS.violet, letterSpacing: 1.5, marginBottom: 2 },
+  programCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${COLORS.violet}30`,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  programCardInfo: { flex: 1, gap: 3 },
+  programCardName: { fontSize: 14, color: COLORS.white },
+  programCardMeta: { fontSize: 12, color: COLORS.textMuted },
 });

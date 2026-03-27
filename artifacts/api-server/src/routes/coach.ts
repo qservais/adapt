@@ -1047,7 +1047,8 @@ router.get("/coach/clients/:clientId/sessions/:sessionLogId", authenticate, requ
 
     res.json({
       id: sessionLog.id,
-      sessionName,
+      sessionName: (sessionLog.isFreeSession && sessionLog.freeSessionName) ? sessionLog.freeSessionName : sessionName,
+      isFreeSession: sessionLog.isFreeSession ?? false,
       variantMode: sessionLog.variantMode,
       rpe: sessionLog.rpe,
       athleteNotes: sessionLog.athleteNotes ?? null,

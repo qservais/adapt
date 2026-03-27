@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import {
   checkinsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable,
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
-  performanceTestsTable, coachAppointmentsTable,
+  performanceTestsTable, coachAppointmentsTable, contentRoutinesTable,
 } from "@workspace/db";
 import { eq, and, desc, asc, gte, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
@@ -53,9 +53,26 @@ async function getLastUsedLoads(
   return result;
 }
 
+interface CheckinContext {
+  id: string;
+  athleteId: string;
+  date: string;
+  adaptScore: number;
+  sessionMode: string;
+  sleep?: number | null;
+  energy?: number | null;
+  stress?: number | null;
+  soreness?: number | null;
+  motivation?: number | null;
+  hasPain?: boolean | null;
+  painNotes?: string | null;
+  cyclePhase?: string | null;
+  createdAt?: Date | null;
+}
+
 async function buildSessionDetail(
   sessionLog: typeof sessionLogsTable.$inferSelect,
-  checkin: typeof checkinsTable.$inferSelect
+  checkin: CheckinContext
 ) {
   let sessionName = "Séance du jour";
   let coachNotes: string | null = null;
@@ -690,6 +707,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           isCompleted: completedSessionIds.has(session.id),
           scheduledTime: session.scheduledTime ?? null,
           visioLink: session.visioLink ?? null,
+          isAppointment: false,
         });
       }
     }
@@ -716,12 +734,51 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           scheduledDate: apptScheduledDate,
           estimatedDurationMin: appt.durationMin,
           isCompleted: false,
+          isAppointment: true,
         });
       }
     }
 
     result.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
     res.json(result);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/athlete/library-sessions", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    const [activeProgram] = await db.select().from(programsTable)
+      .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)))
+      .limit(1);
+
+    if (!activeProgram) {
+      res.json([]);
+      return;
+    }
+
+    const allSessions = await db.select({
+      id: sessionsTable.id,
+      name: sessionsTable.name,
+      type: sessionsTable.type,
+      weekNumber: sessionsTable.weekNumber,
+      dayNumber: sessionsTable.dayNumber,
+      estimatedDurationMin: sessionsTable.estimatedDurationMin,
+      sessionType: sessionsTable.sessionType,
+    }).from(sessionsTable)
+      .where(eq(sessionsTable.programId, activeProgram.id))
+      .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
+
+    res.json(allSessions.map(s => ({
+      sessionId: s.id,
+      sessionName: s.name,
+      sessionType: s.type,
+      sessionLocation: s.sessionType ?? "presentiel",
+      weekNumber: s.weekNumber,
+      dayNumber: s.dayNumber,
+      estimatedDurationMin: s.estimatedDurationMin,
+    })));
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
@@ -754,6 +811,8 @@ router.get("/sessions/history", authenticate, requireRole("athlete"), async (req
         completedAt: sessionLogsTable.completedAt,
         createdAt: sessionLogsTable.createdAt,
         sessionName: sessionsTable.name,
+        isFreeSession: sessionLogsTable.isFreeSession,
+        freeSessionName: sessionLogsTable.freeSessionName,
       })
       .from(sessionLogsTable)
       .leftJoin(sessionsTable, eq(sessionLogsTable.sessionId, sessionsTable.id))
@@ -781,10 +840,16 @@ router.get("/sessions/history", authenticate, requireRole("athlete"), async (req
             ? Math.max(1, Math.round((new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()) / 60000))
             : null;
 
+        const isFree = log.isFreeSession ?? false;
+        const displayName = isFree
+          ? (log.freeSessionName ?? log.sessionName ?? "Séance libre")
+          : (log.sessionName ?? "Séance libre");
+
         return {
           id: log.id,
           sessionId: log.sessionId,
-          sessionName: log.sessionName ?? "Session libre",
+          sessionName: displayName,
+          isFreeSession: isFree,
           variantMode: log.variantMode,
           rpe: log.rpe,
           perceivedDifficulty: log.perceivedDifficulty,
@@ -804,6 +869,179 @@ router.get("/sessions/history", authenticate, requireRole("athlete"), async (req
     );
 
     res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.post("/sessions/:sessionId/start-free", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const sessionId = String(req.params["sessionId"]);
+    const athleteId = req.user!.userId;
+    const today = getTodayLocalDate();
+
+    const [session] = await db
+      .select({ id: sessionsTable.id, name: sessionsTable.name, programId: sessionsTable.programId })
+      .from(sessionsTable)
+      .where(eq(sessionsTable.id, sessionId));
+
+    if (!session) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Séance introuvable" } });
+      return;
+    }
+
+    const [athleteProgram] = await db
+      .select({ id: programsTable.id })
+      .from(programsTable)
+      .where(and(
+        eq(programsTable.id, session.programId),
+        eq(programsTable.athleteId, athleteId)
+      ));
+
+    if (!athleteProgram) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Vous n'avez pas accès à cette séance" } });
+      return;
+    }
+
+    const [todayCheckin] = await db.select().from(checkinsTable)
+      .where(and(eq(checkinsTable.athleteId, athleteId), eq(checkinsTable.date, today)));
+
+    const painAlerts = todayCheckin ? await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(
+        eq(alertsTable.athleteId, athleteId),
+        eq(alertsTable.type, "pain"),
+        eq(alertsTable.isResolved, false)
+      )) : [];
+
+    const variantMode = todayCheckin
+      ? (painAlerts.length > 0 ? "recovery" : todayCheckin.sessionMode)
+      : "normal";
+
+    const [newLog] = await db.insert(sessionLogsTable).values({
+      athleteId,
+      sessionId: session.id,
+      variantMode,
+      checkinId: todayCheckin?.id ?? null,
+      isFreeSession: true,
+      freeSessionName: null,
+    }).returning();
+
+    const athletePRs = await getAthleteCurrentPRs(athleteId);
+
+    const fakeCheckin = todayCheckin ?? {
+      id: "",
+      athleteId,
+      date: today,
+      adaptScore: 50,
+      sessionMode: "normal",
+      sleep: null,
+      energy: null,
+      stress: null,
+      soreness: null,
+      motivation: null,
+      hasPain: false,
+      painNotes: null,
+      cyclePhase: null,
+      createdAt: new Date(),
+    };
+
+    const detail = await buildSessionDetail(newLog!, fakeCheckin);
+
+    res.status(201).json({
+      ...detail,
+      athletePRs,
+      isFreeSession: true,
+      overriddenByCoach: false,
+      sessionsToday: 1,
+      sessionsTodayCompleted: 0,
+      sessionIndex: 1,
+    });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.post("/routines/:routineId/start-free", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const routineId = String(req.params["routineId"]);
+    const athleteId = req.user!.userId;
+    const today = getTodayLocalDate();
+
+    const [routine] = await db.select().from(contentRoutinesTable)
+      .where(eq(contentRoutinesTable.id, routineId));
+
+    if (!routine) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Routine introuvable" } });
+      return;
+    }
+
+    const [todayCheckin] = await db.select().from(checkinsTable)
+      .where(and(eq(checkinsTable.athleteId, athleteId), eq(checkinsTable.date, today)));
+
+    const painAlerts = todayCheckin ? await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(
+        eq(alertsTable.athleteId, athleteId),
+        eq(alertsTable.type, "pain"),
+        eq(alertsTable.isResolved, false)
+      )) : [];
+
+    const variantMode = todayCheckin
+      ? (painAlerts.length > 0 ? "recovery" : todayCheckin.sessionMode)
+      : "normal";
+
+    const [newLog] = await db.insert(sessionLogsTable).values({
+      athleteId,
+      sessionId: null,
+      variantMode,
+      checkinId: todayCheckin?.id ?? null,
+      isFreeSession: true,
+      freeSessionName: routine.title,
+    }).returning();
+
+    const routineExercises = (routine.exercises as Array<{ name: string; sets?: string; notes?: string }> | null) ?? [];
+    const exerciseCount = routineExercises.length;
+
+    res.status(201).json({
+      sessionLogId: newLog!.id,
+      sessionId: null,
+      name: routine.title,
+      mode: variantMode,
+      isFreeSession: true,
+      isRoutine: true,
+      routineId: routine.id,
+      adaptScore: todayCheckin?.adaptScore ?? 50,
+      completedAt: null,
+      durationMin: null,
+      coachNotes: routine.description ?? null,
+      estimatedDurationMin: routine.durationMin ?? null,
+      overriddenByCoach: false,
+      exercises: routineExercises.map((ex, i) => ({
+        id: `routine-ex-${i}`,
+        exerciseId: `routine-ex-${i}`,
+        exerciseName: ex.name,
+        category: null,
+        imageUrl: null,
+        gifUrl: null,
+        muscleGroups: [],
+        equipment: [],
+        description: ex.notes ?? null,
+        demoUrl: null,
+        orderIndex: i,
+        sets: ex.sets ? parseInt(ex.sets) || 3 : 3,
+        reps: ex.sets ?? "10",
+        nominalLoadKg: null,
+        adaptedLoadKg: null,
+        restSeconds: 60,
+        durationSeconds: null,
+        coachCue: ex.notes ?? null,
+        tempo: null,
+        lastUsedLoadKg: null,
+        lastUsedDate: null,
+      })),
+      sessionsToday: 1,
+      sessionsTodayCompleted: 0,
+      sessionIndex: 1,
+    });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

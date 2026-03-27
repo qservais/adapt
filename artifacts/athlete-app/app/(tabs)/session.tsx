@@ -1,5 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,11 +17,14 @@ import {
   useGetSessionHistory,
   useGetTodayCheckin,
   useGetAthleteUpcomingSessions,
+  customFetch,
 } from "@workspace/api-client-react";
+import type { FreeSessionStartResponse } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { setFreeSession } from "@/lib/freeSessionStore";
 
 type SubTab = "today" | "upcoming" | "history";
 
@@ -63,6 +68,7 @@ export default function SessionTab() {
   useScrollToTop(scrollRef);
 
   const [activeTab, setActiveTab] = useState<SubTab>("today");
+  const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
 
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
@@ -90,6 +96,30 @@ export default function SessionTab() {
   const exerciseIndexMap = new Map(exercises.map((ex, i) => [ex.id, i]));
 
   const completedLogs = historyQuery.data?.filter((l) => l.completedAt != null) ?? [];
+
+  const handleStartFreeSession = async (sessionId: string, sessionName: string) => {
+    if (startingSessionId) return;
+    setStartingSessionId(sessionId);
+    try {
+      const data = await customFetch(`/api/sessions/${sessionId}/start-free`, { method: "POST" }) as FreeSessionStartResponse;
+      setFreeSession({
+        sessionLogId: data.sessionLogId,
+        name: data.name,
+        mode: data.mode,
+        isFreeSession: true,
+        adaptScore: data.adaptScore ?? 50,
+        coachNotes: data.coachNotes ?? null,
+        estimatedDurationMin: data.estimatedDurationMin ?? null,
+        exercises: data.exercises ?? [],
+        athletePRs: data.athletePRs ?? {},
+      });
+      router.push("/session/free");
+    } catch {
+      Alert.alert("Erreur", "Impossible de démarrer cette séance. Réessaie.");
+    } finally {
+      setStartingSessionId(null);
+    }
+  };
 
   const upcomingSessions = upcomingQuery.data ?? [];
   const todayStr = new Date().toISOString().split("T")[0]!;
@@ -296,6 +326,23 @@ export default function SessionTab() {
                         {s.estimatedDurationMin} min
                       </Text>
                     )}
+                    {!s.isAppointment && (
+                      <TouchableOpacity
+                        onPress={() => handleStartFreeSession(s.sessionId, s.sessionName)}
+                        disabled={!!startingSessionId}
+                        style={[
+                          styles.upcomingStartBtn,
+                          { opacity: startingSessionId ? 0.5 : 1 },
+                        ]}
+                        activeOpacity={0.8}
+                      >
+                        {startingSessionId === s.sessionId ? (
+                          <ActivityIndicator size="small" color={COLORS.bg} />
+                        ) : (
+                          <Feather name="play" size={13} color={COLORS.bg} />
+                        )}
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })}
@@ -333,14 +380,22 @@ export default function SessionTab() {
                     }
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.historyDot, { backgroundColor: c.color }]} />
+                    <View style={[styles.historyDot, { backgroundColor: log.isFreeSession ? COLORS.cyan : c.color }]} />
                     <View style={{ flex: 1 }}>
-                      <Text
-                        style={[styles.historyMode, { fontFamily: FONTS.bodyMedium, color: c.color }]}
-                        numberOfLines={1}
-                      >
-                        {log.sessionName ?? c.label}
-                      </Text>
+                      <View style={styles.historyTitleRow}>
+                        <Text
+                          style={[styles.historyMode, { fontFamily: FONTS.bodyMedium, color: log.isFreeSession ? COLORS.cyan : c.color }]}
+                          numberOfLines={1}
+                        >
+                          {log.sessionName ?? c.label}
+                        </Text>
+                        {log.isFreeSession && (
+                          <View style={styles.freeSessionBadge}>
+                            <Feather name="zap" size={9} color={COLORS.cyan} />
+                            <Text style={[styles.freeSessionBadgeText, { fontFamily: FONTS.mono }]}>LIBRE</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={[styles.historyDate, { fontFamily: FONTS.mono }]}>
                         {log.completedAt != null
                           ? new Date(log.completedAt).toLocaleDateString("fr-FR", {
@@ -493,6 +548,15 @@ const styles = StyleSheet.create({
   upcomingName: { fontSize: 14, color: COLORS.white, marginBottom: 2 },
   upcomingType: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 1 },
   upcomingDuration: { fontSize: 11, color: COLORS.textSecondary },
+  upcomingStartBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.cyan,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   historyList: { gap: 0 },
   historyRow: {
     flexDirection: "row",
@@ -503,8 +567,22 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   historyDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  historyTitleRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
   historyMode: { fontSize: 14, marginBottom: 2 },
   historyDate: { fontSize: 11, color: COLORS.textMuted },
+  freeSessionBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: `${COLORS.cyan}15`,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}40`,
+    marginBottom: 2,
+  },
+  freeSessionBadgeText: { fontSize: 9, color: COLORS.cyan, letterSpacing: 1 },
   historyRight: { alignItems: "flex-end", gap: 2 },
   rpe: { fontSize: 12, color: COLORS.amber },
   duration: { fontSize: 11, color: COLORS.textMuted },

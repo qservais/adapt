@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, smallint, text, timestamp, integer, decimal, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, smallint, text, timestamp, integer, decimal, jsonb, boolean } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { usersTable } from "./users";
 import { sessionsTable } from "./programs";
@@ -19,6 +19,8 @@ export const sessionLogsTable = pgTable("session_logs", {
   perceivedDifficulty: varchar("perceived_difficulty", { length: 20 }),
   athleteNotes: text("athlete_notes"),
   theme: varchar("theme", { length: 30 }),
+  isFreeSession: boolean("is_free_session").notNull().default(false),
+  freeSessionName: varchar("free_session_name", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

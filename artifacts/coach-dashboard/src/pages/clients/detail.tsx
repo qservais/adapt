@@ -1086,11 +1086,21 @@ export default function ClientDetail() {
                                 >
                                   <div className="flex items-center gap-3 min-w-0">
                                     <div>
-                                      <div className="text-xs font-medium text-white">
-                                        {session.completedAt ? format(new Date(session.completedAt), 'd MMM yyyy', { locale: fr }) : 'Incomplète'}
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-xs font-medium text-white">
+                                          {session.completedAt ? format(new Date(session.completedAt), 'd MMM yyyy', { locale: fr }) : 'Incomplète'}
+                                        </div>
+                                        {session.isFreeSession && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium tracking-wider border bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
+                                            ⚡ LIBRE
+                                          </span>
+                                        )}
                                       </div>
-                                      <div className="mt-0.5">
+                                      <div className="mt-0.5 flex items-center gap-1.5">
                                         <ModeBadge mode={session.variantMode} />
+                                        {session.freeSessionName && (
+                                          <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{session.freeSessionName}</span>
+                                        )}
                                       </div>
                                     </div>
                                   </div>

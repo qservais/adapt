@@ -321,6 +321,8 @@ export interface SessionLogSummary {
   id: string;
   sessionId?: string | null;
   sessionName?: string | null;
+  isFreeSession?: boolean;
+  freeSessionName?: string | null;
   variantMode: string;
   startedAt?: string | null;
   completedAt?: string | null;
@@ -535,6 +537,7 @@ export interface UpcomingSession {
   scheduledDate: string;
   estimatedDurationMin?: number | null;
   isCompleted: boolean;
+  isAppointment?: boolean;
 }
 
 export interface CoachUpdateAthleteRequest {
@@ -884,4 +887,63 @@ export interface CoachJoinRequestItem {
   athleteAvatarUrl?: string | null;
   athleteFitnessLevel?: string | null;
   athletePrimaryGoal?: string | null;
+}
+
+export interface LibrarySession {
+  sessionId: string;
+  sessionName: string;
+  sessionType: string;
+  sessionLocation?: string | null;
+  weekNumber: number;
+  dayNumber: number;
+  estimatedDurationMin?: number | null;
+}
+
+export interface FreeSessionExercise {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  category: string | null;
+  imageUrl: string | null;
+  gifUrl: string | null;
+  muscleGroups: unknown;
+  equipment: unknown;
+  description: string | null;
+  demoUrl: string | null;
+  orderIndex: number;
+  sets: number;
+  reps: string | null;
+  nominalLoadKg: number | null;
+  adaptedLoadKg: number | null;
+  restSeconds: number | null;
+  durationSeconds: number | null;
+  coachCue: string | null;
+  tempo: string | null;
+  lastUsedLoadKg: number | null;
+  lastUsedDate: string | null;
+}
+
+export interface FreeSessionStartResponse {
+  sessionLogId: string;
+  sessionId?: string | null;
+  name: string;
+  mode: string;
+  sessionType?: string | null;
+  sessionLocation?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
+  adaptScore: number;
+  completedAt?: string | null;
+  durationMin?: number | null;
+  coachNotes?: string | null;
+  estimatedDurationMin?: number | null;
+  overriddenByCoach: boolean;
+  exercises: FreeSessionExercise[];
+  rpe?: number | null;
+  perceivedDifficulty?: string | null;
+  athletePRs?: Record<string, number>;
+  isFreeSession: boolean;
+  sessionsToday?: number;
+  sessionsTodayCompleted?: number;
+  sessionIndex?: number;
 }
