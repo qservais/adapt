@@ -20,15 +20,21 @@ import ContentPage from "./pages/content/index";
 import ChallengesPage from "./pages/challenges/index";
 import NotificationsPage from "./pages/notifications/index";
 import NotFound from "@/pages/not-found";
+import PrivacyPage from "./pages/privacy";
 
 const queryClient = new QueryClient();
 
-const PUBLIC_PATHS = ['/login'];
+const PUBLIC_PATHS = ['/login', '/privacy'];
 
 function AppRouter() {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
   const tokenExists = !!localStorage.getItem('adapt_coach_access');
+
+  if (location === '/privacy' || location.startsWith('/privacy')) {
+    return <PrivacyPage />;
+  }
+
   const isPublic = PUBLIC_PATHS.includes(location);
 
   if (!tokenExists && !isPublic) {

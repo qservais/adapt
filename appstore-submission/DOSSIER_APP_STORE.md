@@ -85,11 +85,11 @@ coaching,fitness,sport,entraînement,musculation,nutrition,RPE,programme,perform
 
 | Champ | Valeur |
 |-------|--------|
-| **URL de l'assistance** | https://adapt-hello3407.replit.app |
+| **URL de l'assistance** | https://adapt-hello3407.replit.app/coach-dashboard/ |
 | **URL marketing** | *(laisser vide)* |
-| **URL de politique de confidentialité** | https://adapt-hello3407.replit.app/privacy *(à créer, voir note ci-dessous)* |
+| **URL de politique de confidentialité** | https://adapt-hello3407.replit.app/coach-dashboard/privacy |
 
-> ⚠️ **Note importante** : Apple exige une URL de politique de confidentialité valide. Si tu n'en as pas encore, tu peux utiliser un générateur comme https://www.iubenda.com ou créer une page simple sur ton site. Je peux créer cette page directement dans l'app web si tu le souhaites.
+> ✅ La page de politique de confidentialité a été créée et est disponible à cette URL après le prochain déploiement.
 
 ---
 

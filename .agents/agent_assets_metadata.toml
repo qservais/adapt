@@ -24,3 +24,9 @@ id = "q_CsRmcJXZlaNYpH9p0ko"
 uri = "file://ADAPT_Guide_Coach.pdf"
 type = "pdf"
 title = "ADAPT by LMJ — Guide Coach (PDF)"
+
+[[outputs]]
+id = "6ZwpNysTYFO-ydH6i_2-E"
+uri = "file://appstore-submission/DOSSIER_APP_STORE.md"
+type = "text"
+title = "Dossier App Store — ADAPT by LMJ v1.0"
