@@ -30,3 +30,39 @@ id = "6ZwpNysTYFO-ydH6i_2-E"
 uri = "file://appstore-submission/DOSSIER_APP_STORE.md"
 type = "text"
 title = "Dossier App Store — ADAPT by LMJ v1.0"
+
+[[outputs]]
+id = "SiLCNcVBGkVW2L1rtn8Q1"
+uri = "file://appstore-submission/icon-1024.png"
+type = "image"
+title = "Icône App Store — 1024×1024px"
+
+[[outputs]]
+id = "TriJWRgvGJBjTXTh8QJ23"
+uri = "file://appstore-submission/screen1-accueil.jpg"
+type = "image"
+title = "Capture 1 — Accueil & Score ADAPT"
+
+[[outputs]]
+id = "ONv6aMA1c7tPaBGZX1yKz"
+uri = "file://appstore-submission/screen2-bilan.jpg"
+type = "image"
+title = "Capture 2 — Bilan quotidien"
+
+[[outputs]]
+id = "7X1Ypud97O8Dcd2MfBv1N"
+uri = "file://appstore-submission/screen3-seance.jpg"
+type = "image"
+title = "Capture 3 — Séance en cours"
+
+[[outputs]]
+id = "k8cQPpvGtJUIKnlO3x2yr"
+uri = "file://appstore-submission/screen4-profil.jpg"
+type = "image"
+title = "Capture 4 — Profil & Historique"
+
+[[outputs]]
+id = "AljHFlDTkZPf-HuzpNUi2"
+uri = "file://appstore-submission/screen5-nutrition.jpg"
+type = "image"
+title = "Capture 5 — Nutrition"

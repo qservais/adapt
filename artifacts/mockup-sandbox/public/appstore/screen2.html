@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1242, initial-scale=1">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  body {
+    width: 1242px; height: 2688px;
+    background: #0A0A0A;
+    font-family: 'DM Sans', sans-serif;
+    color: white;
+    overflow: hidden;
+    position: relative;
+  }
+  .status-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 60px 80px 20px;
+    font-size: 36px; font-weight: 600;
+  }
+  .page-header {
+    padding: 40px 80px 60px;
+  }
+  .page-title { font-size: 72px; font-weight: 800; }
+  .page-subtitle { font-size: 36px; color: #888; margin-top: 16px; }
+  .progress-row { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; }
+  .progress-label { font-size: 32px; color: #888; }
+  .progress-dots { display: flex; gap: 16px; }
+  .dot { width: 20px; height: 20px; border-radius: 50%; background: #1E1E1E; }
+  .dot.active { background: #00F5A0; }
+  .dot.done { background: #00F5A0; opacity: 0.4; }
+  
+  .slider-card {
+    margin: 0 80px 50px;
+    background: #141414;
+    border-radius: 40px;
+    padding: 60px;
+    border: 1px solid #1E1E1E;
+  }
+  .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+  .slider-icon { font-size: 72px; }
+  .slider-name { font-size: 50px; font-weight: 700; }
+  .slider-question { font-size: 34px; color: #888; margin-top: 10px; line-height: 1.4; }
+  .slider-score {
+    font-family: 'Space Mono', monospace;
+    font-size: 100px; font-weight: 700;
+    color: #00D9FF;
+    text-align: right;
+  }
+  .slider-track {
+    height: 20px; background: #1E1E1E; border-radius: 10px;
+    position: relative; margin-bottom: 20px;
+  }
+  .slider-fill { height: 100%; border-radius: 10px; }
+  .slider-thumb {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 52px; height: 52px; border-radius: 50%;
+    background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .slider-labels { display: flex; justify-content: space-between; font-size: 26px; color: #555; }
+
+  .mini-sliders { margin: 0 80px; display: flex; flex-direction: column; gap: 30px; }
+  .mini-card {
+    background: #141414; border-radius: 30px; padding: 50px 60px;
+    border: 1px solid #1E1E1E;
+    display: flex; align-items: center; gap: 50px;
+  }
+  .mini-icon { font-size: 60px; }
+  .mini-body { flex: 1; }
+  .mini-name { font-size: 40px; font-weight: 700; margin-bottom: 16px; }
+  .mini-bar-bg { height: 16px; background: #1E1E1E; border-radius: 8px; overflow: hidden; }
+  .mini-bar { height: 100%; border-radius: 8px; }
+  .mini-score { font-family: 'Space Mono', monospace; font-size: 48px; font-weight: 700; }
+
+  .next-btn {
+    margin: 50px 80px 0;
+    background: #00F5A0; color: #0A0A0A;
+    border-radius: 30px; padding: 50px;
+    text-align: center; font-size: 42px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 3px;
+  }
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: #111; border-top: 1px solid #1A1A1A;
+    display: flex; padding: 40px 80px 80px;
+    justify-content: space-between; align-items: center;
+  }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .nav-icon { font-size: 52px; }
+  .nav-label { font-size: 26px; color: #555; }
+</style>
+</head>
+<body>
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>●●● 5G 🔋</span>
+  </div>
+
+  <div class="page-header">
+    <div class="page-title">🌅 Bilan du jour</div>
+    <div class="page-subtitle">Comment tu te sens ce matin ?</div>
+    <div class="progress-row">
+      <div class="progress-label">Question 1 sur 5</div>
+      <div class="progress-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main slider -->
+  <div class="slider-card">
+    <div class="slider-header">
+      <div>
+        <div class="slider-icon">😴</div>
+        <div class="slider-name">Sommeil</div>
+        <div class="slider-question">Comment as-tu dormi cette nuit ?</div>
+      </div>
+      <div class="slider-score" style="color:#00D9FF">7</div>
+    </div>
+    <div class="slider-track">
+      <div class="slider-fill" style="width:70%;background:linear-gradient(90deg,#00D9FF,#00F5A0)"></div>
+      <div class="slider-thumb" style="left:70%"></div>
+    </div>
+    <div class="slider-labels">
+      <span>Très mauvais</span>
+      <span>Excellent</span>
+    </div>
+  </div>
+
+  <!-- Done mini cards -->
+  <div class="mini-sliders">
+    <div class="mini-card">
+      <div class="mini-icon">⚡</div>
+      <div class="mini-body">
+        <div class="mini-name">Niveau d'énergie</div>
+        <div class="mini-bar-bg">
+          <div class="mini-bar" style="width:80%;background:linear-gradient(90deg,#00F5A0,#00D9FF)"></div>
+        </div>
+      </div>
+      <div class="mini-score" style="color:#00F5A0">8</div>
+    </div>
+    <div class="mini-card">
+      <div class="mini-icon">😤</div>
+      <div class="mini-body">
+        <div class="mini-name">Niveau de stress</div>
+        <div class="mini-bar-bg">
+          <div class="mini-bar" style="width:50%;background:linear-gradient(90deg,#F59E0B,#EF4444)"></div>
+        </div>
+      </div>
+      <div class="mini-score" style="color:#F59E0B">5</div>
+    </div>
+    <div class="mini-card">
+      <div class="mini-icon">💪</div>
+      <div class="mini-body">
+        <div class="mini-name">Courbatures musculaires</div>
+        <div class="mini-bar-bg">
+          <div class="mini-bar" style="width:20%;background:linear-gradient(90deg,#A855F7,#00D9FF)"></div>
+        </div>
+      </div>
+      <div class="mini-score" style="color:#A855F7">2</div>
+    </div>
+  </div>
+
+  <div class="next-btn">Suivant →</div>
+
+  <div class="bottom-nav">
+    <div class="nav-item">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Accueil</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">📊</div>
+      <div class="nav-label">Nutrition</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">👤</div>
+      <div class="nav-label">Profil</div>
+    </div>
+  </div>
+</body>
+</html>
