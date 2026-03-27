@@ -1069,7 +1069,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
           {draft.sessionType === "online" && (
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">
-                Lien visio
+                Lien visio <span className="normal-case opacity-60">(optionnel)</span>
               </label>
               <Input
                 value={draft.visioLink}
