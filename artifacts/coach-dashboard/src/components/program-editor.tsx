@@ -23,7 +23,8 @@ import {
   Sparkles, Plus, Trash2, Loader2, Dumbbell, Search, X,
   ChevronDown, ChevronUp, Clock, Flame, Zap, Activity,
   Shield, Wind, GripVertical, Link as LinkIcon,
-  Heart, Timer, PersonStanding,
+  Heart, Timer, PersonStanding, Radius, Crosshair, Layers,
+  Gauge, BarChart2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,17 +114,23 @@ export const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 export const BLOCK_TYPES = [
   "warm_up", "strength", "power", "conditioning", "core", "cool_down",
+  "mobility", "activation", "technique", "plyometric", "hiit",
 ] as const;
 
 export type BlockType = typeof BLOCK_TYPES[number];
 
 export const BLOCK_TYPE_META: Record<BlockType, { label: string; color: string; bg: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
-  warm_up:       { label: "Échauffement", color: "text-[#FFB800]",  bg: "bg-[#FFB800]/10",  border: "border-[#FFB800]/30", icon: Flame },
-  strength:      { label: "Force",         color: "text-[#00F0FF]",  bg: "bg-[#00F0FF]/10",  border: "border-[#00F0FF]/30", icon: Dumbbell },
-  power:         { label: "Puissance",     color: "text-[#A855F7]",  bg: "bg-[#A855F7]/10",  border: "border-[#A855F7]/30", icon: Zap },
-  conditioning:  { label: "Conditioning",  color: "text-[#EF4444]",  bg: "bg-[#EF4444]/10",  border: "border-[#EF4444]/30", icon: Activity },
-  core:          { label: "Gainage/Core",  color: "text-[#00F5A0]",  bg: "bg-[#00F5A0]/10",  border: "border-[#00F5A0]/30", icon: Shield },
-  cool_down:     { label: "Récupération",  color: "text-[#94A3B8]",  bg: "bg-[#94A3B8]/10",  border: "border-[#94A3B8]/30", icon: Wind },
+  warm_up:       { label: "Échauffement",  color: "text-[#FFB800]",  bg: "bg-[#FFB800]/10",  border: "border-[#FFB800]/30", icon: Flame },
+  strength:      { label: "Force",          color: "text-[#00F0FF]",  bg: "bg-[#00F0FF]/10",  border: "border-[#00F0FF]/30", icon: Dumbbell },
+  power:         { label: "Puissance",      color: "text-[#A855F7]",  bg: "bg-[#A855F7]/10",  border: "border-[#A855F7]/30", icon: Zap },
+  conditioning:  { label: "Conditioning",   color: "text-[#EF4444]",  bg: "bg-[#EF4444]/10",  border: "border-[#EF4444]/30", icon: Activity },
+  core:          { label: "Gainage/Core",   color: "text-[#00F5A0]",  bg: "bg-[#00F5A0]/10",  border: "border-[#00F5A0]/30", icon: Shield },
+  cool_down:     { label: "Récupération",   color: "text-[#94A3B8]",  bg: "bg-[#94A3B8]/10",  border: "border-[#94A3B8]/30", icon: Wind },
+  mobility:      { label: "Mobilité",       color: "text-[#00D4FF]",  bg: "bg-[#00D4FF]/10",  border: "border-[#00D4FF]/30", icon: Radius },
+  activation:    { label: "Activation",     color: "text-[#FF6B35]",  bg: "bg-[#FF6B35]/10",  border: "border-[#FF6B35]/30", icon: Crosshair },
+  technique:     { label: "Technique",      color: "text-[#F59E0B]",  bg: "bg-[#F59E0B]/10",  border: "border-[#F59E0B]/30", icon: Layers },
+  plyometric:    { label: "Pliométrie",     color: "text-[#FB7185]",  bg: "bg-[#FB7185]/10",  border: "border-[#FB7185]/30", icon: BarChart2 },
+  hiit:          { label: "Cardio HIIT",    color: "text-[#F97316]",  bg: "bg-[#F97316]/10",  border: "border-[#F97316]/30", icon: Gauge },
 };
 
 export const CONDITIONING_FORMATS = [
@@ -506,9 +513,10 @@ function TempoInput({ value, onChange }: { value: string; onChange: (v: string) 
 function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove, canSuperset, onLinkSuperset, onUnlinkSuperset }: ExerciseRowCardProps) {
   const isInSuperset = !!ex.supersetGroup;
   const label = ex.supersetLabel || "";
-  const isSimple = blockType === "warm_up" || blockType === "cool_down";
-  const isCore = blockType === "core";
-  const isConditioning = blockType === "conditioning";
+  const isSimple = blockType === "warm_up" || blockType === "cool_down" || blockType === "mobility";
+  const isCore = blockType === "core" || blockType === "activation";
+  const isConditioning = blockType === "conditioning" || blockType === "hiit" || blockType === "plyometric";
+  const isTechnique = blockType === "technique";
 
   const fieldCls = "h-6 text-xs bg-background border-border mt-0.5 px-2";
   const labelCls = "text-[9px] text-muted-foreground uppercase tracking-wider";
@@ -603,6 +611,34 @@ function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove
             <label className={labelCls}>Indication coach</label>
             <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
               placeholder="Intensité, technique..." className={fieldCls} />
+          </div>
+        </>
+      ) : isTechnique ? (
+        <>
+          <div className="grid grid-cols-3 gap-1.5">
+            <div>
+              <label className={labelCls}>Sets</label>
+              <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Reps / Durée</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="5 / 30s" className={fieldCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Repos (s)</label>
+              <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div>
+              <label className={labelCls}>Tempo</label>
+              <TempoInput value={ex.tempo} onChange={v => onChange({ tempo: v })} />
+            </div>
+            <div>
+              <label className={labelCls}>Point technique clé</label>
+              <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
+                placeholder="Alignement, trajectoire..." className={fieldCls} />
+            </div>
           </div>
         </>
       ) : (
@@ -811,7 +847,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                           />
                           <span className="text-[10px] text-muted-foreground">min</span>
                         </div>
-                        {block.type === "conditioning" && (
+                        {(block.type === "conditioning" || block.type === "hiit") && (
                           <select
                             value={block.conditioningFormat || ""}
                             onChange={e => updateBlock(bIdx, { conditioningFormat: e.target.value || undefined })}
@@ -836,7 +872,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                       <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
                         <div className="space-y-1.5">
                           {block.exercises.map((ex, eIdx) => {
-                            const supportsSuperset = block.type === "strength" || block.type === "power";
+                            const supportsSuperset = block.type === "strength" || block.type === "power" || block.type === "plyometric" || block.type === "technique";
                             const canLink = supportsSuperset && eIdx < block.exercises.length - 1 && !block.exercises[eIdx + 1]?.supersetGroup;
                             return (
                               <ExerciseRowCard

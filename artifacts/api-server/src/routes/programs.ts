@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable } from "@workspace/db";
+import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable, SESSION_BLOCK_TYPES } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
@@ -316,7 +316,7 @@ const exerciseInputSchema = z.object({
 });
 
 const blockInputSchema = z.object({
-  type: z.enum(["warm_up", "strength", "power", "conditioning", "core", "cool_down"]),
+  type: z.enum(SESSION_BLOCK_TYPES),
   orderIndex: z.number().int(),
   name: z.string().optional(),
   notes: z.string().optional(),

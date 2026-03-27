@@ -4,7 +4,7 @@ import { usersTable } from "./users";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const SESSION_BLOCK_TYPES = ["warm_up", "strength", "power", "conditioning", "core", "cool_down"] as const;
+export const SESSION_BLOCK_TYPES = ["warm_up", "strength", "power", "conditioning", "core", "cool_down", "mobility", "activation", "technique", "plyometric", "hiit"] as const;
 export type SessionBlockType = typeof SESSION_BLOCK_TYPES[number];
 
 export const programsTable = pgTable("programs", {

@@ -26,6 +26,9 @@ interface Routine {
 
 const CATEGORIES: { key: string; label: string; icon: React.ComponentProps<typeof Feather>["name"]; color: string; emoji: string }[] = [
   { key: "warmup", label: "Échauffements", icon: "zap", color: COLORS.amber, emoji: "🔥" },
+  { key: "mobility", label: "Mobilité", icon: "rotate-cw", color: "#00D4FF", emoji: "🔄" },
+  { key: "activation", label: "Activation", icon: "radio", color: "#FF6B35", emoji: "⚡" },
+  { key: "stretching", label: "Étirements", icon: "feather", color: "#A78BFA", emoji: "🧘" },
   { key: "reathletisation", label: "Réathlétisation", icon: "activity", color: COLORS.cyan, emoji: "🫀" },
   { key: "relaxation", label: "Relaxation", icon: "moon", color: COLORS.violet, emoji: "🌙" },
   { key: "breathing", label: "Respiration", icon: "wind", color: COLORS.green, emoji: "🍃" },
