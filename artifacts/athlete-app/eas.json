@@ -8,16 +8,16 @@
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release",
-        "distribution": "store"
-      },
-      "channel": "production"
+        "distribution": "store",
+        "autoIncrement": false
+      }
     },
     "preview": {
       "ios": {
         "simulator": false,
-        "distribution": "internal"
-      },
-      "channel": "preview"
+        "distribution": "internal",
+        "autoIncrement": false
+      }
     }
   },
   "submit": {
