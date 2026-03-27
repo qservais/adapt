@@ -204,7 +204,7 @@ export default function ProfileScreen() {
 
       const data = await response.json();
       if (data?.user) {
-        updateUser(data.user);
+        updateUser({ ...data.user, avatarUrl: data.avatarUrl ?? data.user.avatarUrl });
       }
       queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch (err) {

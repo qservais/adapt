@@ -508,6 +508,23 @@ router.post("/sessions/:sessionId/feedback", authenticate, requireRole("athlete"
   }
 
   try {
+    const [existing] = await db.select({
+      id: sessionLogsTable.id,
+      completedAt: sessionLogsTable.completedAt,
+    }).from(sessionLogsTable).where(and(
+      eq(sessionLogsTable.id, sessionId),
+      eq(sessionLogsTable.athleteId, req.user!.userId)
+    ));
+    if (!existing) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session log introuvable" } });
+      return;
+    }
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    if (existing.completedAt && new Date(existing.completedAt) < sevenDaysAgo) {
+      res.status(422).json({ error: { code: "RPE_WINDOW_CLOSED", message: "Le délai pour évaluer cette séance est dépassé (7 jours max)" } });
+      return;
+    }
+
     const [updated] = await db.update(sessionLogsTable)
       .set({
         rpe: parsed.data.rpe,
@@ -522,7 +539,7 @@ router.post("/sessions/:sessionId/feedback", authenticate, requireRole("athlete"
       .returning({ id: sessionLogsTable.id });
 
     if (!updated) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session log not found" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session log introuvable" } });
       return;
     }
 

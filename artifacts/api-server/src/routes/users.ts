@@ -155,7 +155,7 @@ router.get("/users/avatar/:userId", async (req, res) => {
     }
 
     res.set("Content-Type", "image/jpeg");
-    res.set("Cache-Control", "public, max-age=3600");
+    res.set("Cache-Control", "public, max-age=60");
     storageFile.createReadStream().pipe(res);
   } catch (err) {
     console.error("Avatar serve error:", err);

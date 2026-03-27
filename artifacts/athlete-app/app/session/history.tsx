@@ -79,7 +79,7 @@ export default function SessionHistoryScreen() {
                 <View style={styles.historyRight}>
                   {item.rpe != null ? (
                     <Text style={[styles.rpe, { fontFamily: FONTS.mono }]}>RPE {item.rpe}</Text>
-                  ) : (
+                  ) : item.completedAt && (Date.now() - new Date(item.completedAt).getTime()) < 7 * 24 * 60 * 60 * 1000 ? (
                     <TouchableOpacity
                       onPress={() => {
                         router.push({
@@ -93,7 +93,7 @@ export default function SessionHistoryScreen() {
                       <Feather name="star" size={10} color={COLORS.amber} />
                       <Text style={[styles.rateChipText, { fontFamily: FONTS.mono }]}>Évaluer</Text>
                     </TouchableOpacity>
-                  )}
+                  ) : null}
                   {item.durationMin != null && (
                     <Text style={[styles.duration, { fontFamily: FONTS.mono }]}>
                       {item.durationMin} min
