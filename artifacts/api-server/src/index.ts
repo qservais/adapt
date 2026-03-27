@@ -3,6 +3,7 @@ import { logger } from "./lib/logger.js";
 import { startAlertJob } from "./services/alert-job.js";
 import { startNotificationJob } from "./services/notification-job.js";
 import { ensureAthleteInviteCodes } from "./services/invite-code-migration.js";
+import { fixProdData } from "./services/fix-prod-data.js";
 
 const rawPort = process.env["PORT"];
 
@@ -20,6 +21,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 app.listen(port, async () => {
   logger.info({ port }, "Server listening");
+  await fixProdData();
   await ensureAthleteInviteCodes();
   startAlertJob();
   startNotificationJob();
