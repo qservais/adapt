@@ -1,26 +1,23 @@
 kind = "api"
-  previewPath = "/api" # TODO - should be excluded from preview in the first place
-  title = "API Server"
-  version = "1.0.0"
-  id = "3B4_FFSkEVBkAeYMFRJ2e"
+previewPath = "/api"
+title = "API Server"
+version = "1.0.0"
+id = "3B4_FFSkEVBkAeYMFRJ2e"
 
-  [[services]]
-  localPort = 8080
-  name = "API Server"
-  paths = ["/api"]
+[[services]]
+localPort = 8080
+name = "API Server"
+paths = ["/api"]
 
-  [services.development]
-  run = "pnpm --filter @workspace/api-server run dev"
+[services.development]
+run = "pnpm --filter @workspace/api-server run dev"
 
-  [services.production]
-  build = "pnpm --filter @workspace/api-server run build"
+[services.production]
+build = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
+run = ["/bin/bash", "artifacts/api-server/start-prod.sh"]
 
-  [services.production.run]
-  args = ["/bin/bash", "artifacts/api-server/start-prod.sh"]
+[services.env]
+PORT = "8080"
 
-  [services.production.run.env]
-  PORT = "8080"
-
-  [services.production.health.startup]
-  path = "/api/healthz"
-  
+[services.production.health.startup]
+path = "/api/healthz"
