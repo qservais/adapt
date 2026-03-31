@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
 const LMJCOACH_HASH =
@@ -40,57 +40,77 @@ export async function fixProdData(): Promise<void> {
 
       if (lmj.length === 0) {
         logger.warn("fixProdData: loicmehdi@msn.com introuvable");
-        return;
+      } else {
+        const newCoachId = lmj[0]!.id;
+
+        await db.update(usersTable).set({
+          role: "coach",
+          passwordHash: LMJCOACH_HASH,
+          coachId: null,
+          firstName: "Loïc Mehdi",
+          lastName: "Jaumotte",
+        }).where(eq(usersTable.id, newCoachId));
+
+        await db.update(usersTable)
+          .set({ coachId: newCoachId })
+          .where(eq(usersTable.coachId, oldCoachId));
+
+        await db.update(usersTable)
+          .set({ passwordHash: OWEN_HASH })
+          .where(eq(usersTable.email, "o.soontjens@gmail.com"));
+
+        await db.execute(sql`UPDATE alerts SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`DELETE FROM scheduled_notifications WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`DELETE FROM coach_appointments WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`DELETE FROM coach_join_requests WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`UPDATE content_routines SET coach_id = ${newCoachId} WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`UPDATE exercises SET created_by = NULL WHERE created_by = ${oldCoachId}`);
+        await db.execute(sql`UPDATE guides SET coach_id = ${newCoachId} WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`DELETE FROM nutrition_pdfs WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`UPDATE performance_tests SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`UPDATE programs SET coach_id = ${newCoachId} WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`DELETE FROM challenges WHERE coach_id = ${oldCoachId}`);
+        await db.execute(sql`DELETE FROM messages WHERE sender_id = ${oldCoachId} OR recipient_id = ${oldCoachId}`);
+
+        await db.delete(usersTable).where(eq(usersTable.email, "coach@adapt.demo"));
+
+        await db.update(usersTable)
+          .set({ coachId: newCoachId })
+          .where(eq(usersTable.email, "tom@adapt.demo"));
+
+        logger.info("fixProdData: correction terminée");
       }
-      const newCoachId = lmj[0]!.id;
-
-      await db.update(usersTable).set({
-        role: "coach",
-        passwordHash: LMJCOACH_HASH,
-        coachId: null,
-        firstName: "Loïc Mehdi",
-        lastName: "Jaumotte",
-      }).where(eq(usersTable.id, newCoachId));
-
-      await db.update(usersTable)
-        .set({ coachId: newCoachId })
-        .where(eq(usersTable.coachId, oldCoachId));
-
-      await db.update(usersTable)
-        .set({ passwordHash: OWEN_HASH })
-        .where(eq(usersTable.email, "o.soontjens@gmail.com"));
-
-      await db.execute(sql`UPDATE alerts SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`DELETE FROM scheduled_notifications WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`DELETE FROM coach_appointments WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`DELETE FROM coach_join_requests WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`UPDATE content_routines SET coach_id = ${newCoachId} WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`UPDATE exercises SET created_by = NULL WHERE created_by = ${oldCoachId}`);
-      await db.execute(sql`UPDATE guides SET coach_id = ${newCoachId} WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`DELETE FROM nutrition_pdfs WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`UPDATE performance_tests SET coach_id = NULL WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`UPDATE programs SET coach_id = ${newCoachId} WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`DELETE FROM challenges WHERE coach_id = ${oldCoachId}`);
-      await db.execute(sql`DELETE FROM messages WHERE sender_id = ${oldCoachId} OR recipient_id = ${oldCoachId}`);
-
-      await db.delete(usersTable).where(eq(usersTable.email, "coach@adapt.demo"));
-
-      await db.update(usersTable)
-        .set({ isActive: false, coachId: null })
-        .where(sql`email = ANY(${TEST_EMAILS})`);
-
-      await db.update(usersTable)
-        .set({ coachId: newCoachId })
-        .where(eq(usersTable.email, "tom@adapt.demo"));
-
-      logger.info("fixProdData: correction terminée");
     }
-
-    await ensureCoaches();
-
   } catch (err) {
-    logger.error({ err }, "fixProdData: erreur");
+    logger.error({ err }, "fixProdData: erreur correction coach");
   }
+
+  try {
+    await deactivateTestAccounts();
+  } catch (err) {
+    logger.error({ err }, "fixProdData: erreur désactivation comptes test");
+  }
+
+  try {
+    await ensureCoaches();
+  } catch (err) {
+    logger.error({ err }, "fixProdData: erreur création coaches");
+  }
+}
+
+async function deactivateTestAccounts(): Promise<void> {
+  const active = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(inArray(usersTable.email, TEST_EMAILS));
+
+  if (active.length === 0) return;
+
+  await db.update(usersTable)
+    .set({ isActive: false, coachId: null })
+    .where(inArray(usersTable.email, TEST_EMAILS));
+
+  logger.info({ count: active.length }, "fixProdData: comptes test désactivés");
 }
 
 async function ensureCoaches(): Promise<void> {
