@@ -49,6 +49,7 @@ export default function ChatScreen() {
   const [videoUri, setVideoUri] = useState<string | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
   const [documentUploading, setDocumentUploading] = useState(false);
+  const [docUploadProgress, setDocUploadProgress] = useState(0);
 
   const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
   const [audioDurations, setAudioDurations] = useState<Record<string, string>>({});
@@ -301,32 +302,50 @@ export default function ChatScreen() {
       }
 
       setDocumentUploading(true);
+      setDocUploadProgress(0);
       try {
         const tokenVal = await tokenStore.getAccess();
         const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
           ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
           : "";
+        const mimeType = asset.mimeType ?? "application/octet-stream";
+        const fileSize = asset.size ?? 0;
         const uploadRes = await fetch(`${BASE_URL}/api/messages/upload-document`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${tokenVal}` },
+          headers: {
+            Authorization: `Bearer ${tokenVal}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ mimeType, fileSize, fileName: asset.name }),
         });
-        if (!uploadRes.ok) throw new Error("Upload URL failed");
+        if (!uploadRes.ok) {
+          const errBody = await uploadRes.json().catch(() => ({})) as { error?: { message?: string } };
+          Alert.alert("Erreur", errBody?.error?.message ?? "Format ou taille non supportés");
+          return;
+        }
         const { uploadUrl } = await uploadRes.json() as { uploadUrl: string };
 
         const fileRes = await fetch(asset.uri);
         const blob = await fileRes.blob();
-        await fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": asset.mimeType ?? "application/octet-stream" },
-          body: blob,
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) setDocUploadProgress(Math.round((e.loaded / e.total) * 100));
+          };
+          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("Upload PUT failed")));
+          xhr.onerror = () => reject(new Error("Upload XHR error"));
+          xhr.open("PUT", uploadUrl);
+          xhr.setRequestHeader("Content-Type", mimeType);
+          xhr.send(blob);
         });
 
         const rawUrl = (() => { const u = new URL(uploadUrl); return u.origin + u.pathname; })();
 
-        const fileSizeStr = asset.size
-          ? asset.size > 1024 * 1024
-            ? `${(asset.size / 1024 / 1024).toFixed(1)} Mo`
-            : `${Math.round(asset.size / 1024)} Ko`
+        const fileSizeStr = fileSize > 0
+          ? fileSize > 1024 * 1024
+            ? `${(fileSize / 1024 / 1024).toFixed(1)} Mo`
+            : `${Math.round(fileSize / 1024)} Ko`
           : undefined;
 
         await sendMutation.mutateAsync({
@@ -345,6 +364,7 @@ export default function ChatScreen() {
         Alert.alert("Erreur", "Impossible d'envoyer le document. Réessaie.");
       } finally {
         setDocumentUploading(false);
+        setDocUploadProgress(0);
       }
     } catch {
       Alert.alert("Erreur", "Impossible d'ouvrir le sélecteur de fichiers.");
@@ -612,8 +632,15 @@ export default function ChatScreen() {
         <View style={styles.recordingBanner}>
           <ActivityIndicator size="small" color={COLORS.cyan} />
           <Text style={[styles.recordingText, { fontFamily: FONTS.body }]}>
-            Envoi du document…
+            {docUploadProgress > 0 && docUploadProgress < 100
+              ? `Envoi du document… ${docUploadProgress}%`
+              : "Envoi du document…"}
           </Text>
+          {docUploadProgress > 0 && docUploadProgress < 100 && (
+            <View style={styles.docProgressBar}>
+              <View style={[styles.docProgressFill, { width: (docUploadProgress / 100) * 120 }]} />
+            </View>
+          )}
         </View>
       )}
 
@@ -784,6 +811,18 @@ const styles = StyleSheet.create({
   audioWave: { flex: 1, flexDirection: "row", alignItems: "center", gap: 2 },
   audioBar: { width: 3, borderRadius: 2 },
   audioDuration: { fontSize: 11, minWidth: 28 },
+  docProgressBar: {
+    height: 3,
+    backgroundColor: `${COLORS.cyan}30`,
+    borderRadius: 2,
+    width: 120,
+    overflow: "hidden",
+  },
+  docProgressFill: {
+    height: 3,
+    backgroundColor: COLORS.cyan,
+    borderRadius: 2,
+  },
   documentBubble: {
     flexDirection: "row",
     alignItems: "center",

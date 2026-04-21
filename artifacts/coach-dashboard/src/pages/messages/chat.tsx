@@ -69,6 +69,7 @@ export default function ChatView() {
   const { user } = useAuth();
   const [content, setContent] = useState("");
   const [documentUploading, setDocumentUploading] = useState(false);
+  const [docUploadProgress, setDocUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: client, isLoading: clientLoading } = useGetClientDetail(id);
@@ -115,19 +116,34 @@ export default function ChatView() {
     }
 
     setDocumentUploading(true);
+    setDocUploadProgress(0);
     try {
       const token = localStorage.getItem("adapt_coach_access");
       const uploadRes = await fetch("/api/messages/upload-document", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ mimeType: file.type, fileSize: file.size, fileName: file.name }),
       });
-      if (!uploadRes.ok) throw new Error("Erreur upload URL");
+      if (!uploadRes.ok) {
+        const errBody = await uploadRes.json().catch(() => ({})) as { error?: { message?: string } };
+        alert(errBody?.error?.message ?? "Format ou taille non supportés");
+        return;
+      }
       const { uploadUrl } = await uploadRes.json() as { uploadUrl: string };
 
-      await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) setDocUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("Upload PUT failed")));
+        xhr.onerror = () => reject(new Error("XHR error"));
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.send(file);
       });
 
       const rawUrl = (() => { const u = new URL(uploadUrl); return u.origin + u.pathname; })();
@@ -148,6 +164,7 @@ export default function ChatView() {
       alert("Impossible d'envoyer le document. Réessaie.");
     } finally {
       setDocumentUploading(false);
+      setDocUploadProgress(0);
       e.target.value = "";
     }
   };
@@ -217,9 +234,23 @@ export default function ChatView() {
 
       <div className="p-4 bg-card border-t border-border shrink-0 space-y-2">
         {documentUploading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span>Envoi du document en cours…</span>
+          <div className="flex flex-col gap-1 px-1">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+              <span>
+                {docUploadProgress > 0 && docUploadProgress < 100
+                  ? `Envoi du document… ${docUploadProgress}%`
+                  : "Envoi du document…"}
+              </span>
+            </div>
+            {docUploadProgress > 0 && docUploadProgress < 100 && (
+              <div className="h-1 bg-border rounded-full overflow-hidden mx-6">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-150"
+                  style={{ width: `${docUploadProgress}%` }}
+                />
+              </div>
+            )}
           </div>
         )}
         <form onSubmit={handleSend} className="flex gap-2">

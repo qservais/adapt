@@ -139,6 +139,14 @@ router.post("/messages", authenticate, async (req, res) => {
     let storedMediaUrl: string | null = null;
     if (mediaUrl) {
       storedMediaUrl = storage.normalizeObjectEntityPath(mediaUrl);
+      if (!storedMediaUrl) {
+        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: "URL média invalide" } });
+        return;
+      }
+      if (mediaType === "document" && !storedMediaUrl.startsWith("/objects/")) {
+        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: "Les documents doivent être hébergés sur le stockage objet" } });
+        return;
+      }
     }
 
     const defaultContent = mediaType === "audio"
@@ -250,7 +258,57 @@ router.post("/messages/upload-media", authenticate, async (req, res) => {
   }
 });
 
+const ALLOWED_DOC_MIMES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+]);
+
+const MAX_DOC_BYTES = 10 * 1024 * 1024; // 10 Mo
+
+const uploadDocSchema = z.object({
+  mimeType: z.string().min(1),
+  fileSize: z.number().int().positive(),
+  fileName: z.string().max(255),
+});
+
 router.post("/messages/upload-document", authenticate, async (req, res) => {
+  const parsed = uploadDocSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      error: { code: "VALIDATION_ERROR", message: "mimeType, fileSize et fileName sont requis" },
+    });
+    return;
+  }
+
+  const { mimeType, fileSize, fileName } = parsed.data;
+
+  if (!ALLOWED_DOC_MIMES.has(mimeType)) {
+    res.status(415).json({
+      error: {
+        code: "UNSUPPORTED_MEDIA_TYPE",
+        message: "Format non supporté. Formats acceptés : PDF, Word, Excel, images (JPG, PNG, HEIC).",
+      },
+    });
+    return;
+  }
+
+  if (fileSize > MAX_DOC_BYTES) {
+    res.status(413).json({
+      error: {
+        code: "FILE_TOO_LARGE",
+        message: "Le fichier dépasse la limite de 10 Mo.",
+      },
+    });
+    return;
+  }
+
   try {
     const uploadUrl = await storage.getObjectEntityUploadURL();
     res.json({ uploadUrl });
