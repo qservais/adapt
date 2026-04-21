@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { tokenStore } from "@/lib/auth";
@@ -30,28 +31,65 @@ function isAuthError(err: unknown): boolean {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasTokens, setHasTokens] = useState(false);
+  const retryRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadProfile = useCallback(async (): Promise<boolean> => {
+    try {
+      const profile = await getMe();
+      setUser(profile);
+      return true;
+    } catch (err) {
+      if (isAuthError(err)) {
+        await tokenStore.clear();
+        setHasTokens(false);
+        setUser(null);
+      }
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
       try {
         const token = await tokenStore.getAccess();
         if (token) {
-          const profile = await getMe();
-          setUser(profile);
-        }
-      } catch (err) {
-        if (isAuthError(err)) {
-          await tokenStore.clear();
+          setHasTokens(true);
+          await loadProfile();
         }
       } finally {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [loadProfile]);
+
+  useEffect(() => {
+    if (!hasTokens || user !== null) {
+      if (retryRef.current) {
+        clearInterval(retryRef.current);
+        retryRef.current = null;
+      }
+      return;
+    }
+    retryRef.current = setInterval(async () => {
+      const ok = await loadProfile();
+      if (ok && retryRef.current) {
+        clearInterval(retryRef.current);
+        retryRef.current = null;
+      }
+    }, 5000);
+    return () => {
+      if (retryRef.current) {
+        clearInterval(retryRef.current);
+        retryRef.current = null;
+      }
+    };
+  }, [hasTokens, user, loadProfile]);
 
   const login = useCallback(
     async (accessToken: string, refreshToken: string, userData: UserProfile) => {
       await tokenStore.setTokens(accessToken, refreshToken);
+      setHasTokens(true);
       setUser(userData);
     },
     []
@@ -59,14 +97,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await tokenStore.clear();
+    setHasTokens(false);
     setUser(null);
   }, []);
 
   const updateUser = useCallback((u: UserProfile) => setUser(u), []);
 
   const value = useMemo(
-    () => ({ user, isLoading, isAuthenticated: !!user, login, logout, updateUser }),
-    [user, isLoading, login, logout, updateUser]
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated: hasTokens,
+      login,
+      logout,
+      updateUser,
+    }),
+    [user, isLoading, hasTokens, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
