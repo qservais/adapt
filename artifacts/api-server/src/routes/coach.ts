@@ -13,6 +13,7 @@ type PrivacySettings = {
   shareSleep?: boolean;
   shareHeartRate?: boolean;
   shareBodyFat?: boolean;
+  profileVisibility?: "coach_only" | "private";
 };
 
 function parsePrivacy(raw: unknown): PrivacySettings {
@@ -20,14 +21,23 @@ function parsePrivacy(raw: unknown): PrivacySettings {
   return raw as PrivacySettings;
 }
 
+function isProfileVisible(privacy: PrivacySettings): boolean {
+  return privacy.profileVisibility !== "private";
+}
+
 function applyCheckinPrivacy<T extends { sleep: unknown }>(
   checkin: T,
   privacy: PrivacySettings
 ): T {
-  return {
-    ...checkin,
-    sleep: privacy.shareSleep !== false ? checkin.sleep : null,
-  };
+  const result: Record<string, unknown> = { ...checkin as object };
+  result["sleep"] = privacy.shareSleep !== false ? checkin.sleep : null;
+  if ("heartRate" in result) {
+    result["heartRate"] = privacy.shareHeartRate !== false ? result["heartRate"] : null;
+  }
+  if ("bodyFat" in result) {
+    result["bodyFat"] = privacy.shareBodyFat !== false ? result["bodyFat"] : null;
+  }
+  return result as T;
 }
 
 function resolveAvatarUrl(user: { id: string; avatarUrl: string | null }): string | null {
@@ -387,7 +397,9 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         .limit(1);
 
       const athletePrivacy = parsePrivacy(athlete.privacySettings);
-      const rawCheckinFields = todayCheckin ? {
+      const visible = isProfileVisible(athletePrivacy);
+
+      const rawCheckinFields = (visible && todayCheckin) ? {
         id: todayCheckin.id,
         date: todayCheckin.date,
         adaptScore: todayCheckin.adaptScore,
@@ -406,11 +418,12 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         lastName: athlete.lastName,
         email: athlete.email,
         avatarUrl: resolveAvatarUrl(athlete),
-        fitnessLevel: athlete.fitnessLevel,
-        primaryGoal: athlete.primaryGoal,
+        fitnessLevel: visible ? athlete.fitnessLevel : null,
+        primaryGoal: visible ? athlete.primaryGoal : null,
         todayCheckin: rawCheckinFields ? applyCheckinPrivacy(rawCheckinFields, athletePrivacy) : null,
         activeAlerts: activeAlerts.length,
-        lastSessionDate: lastSession?.createdAt?.toISOString() ?? null,
+        lastSessionDate: visible ? (lastSession?.createdAt?.toISOString() ?? null) : null,
+        profilePrivate: !visible,
       };
     }));
 
@@ -504,6 +517,25 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
     }
 
     const privacy = parsePrivacy(athlete.privacySettings);
+    const visible = isProfileVisible(privacy);
+
+    if (!visible) {
+      res.json({
+        id: athlete.id,
+        firstName: athlete.firstName,
+        lastName: athlete.lastName,
+        email: athlete.email,
+        avatarUrl: resolveAvatarUrl(athlete),
+        profilePrivate: true,
+        age: null, weightKg: null, heightCm: null,
+        fitnessLevel: null, primaryGoal: null, secondaryGoal: null,
+        cycleTracking: null, lastPeriodDate: null, avgCycleDays: null,
+        inviteCode: null, trainingContext: null,
+        todayCheckin: null, recentCheckins: [], recentSessions: [],
+        upcomingSessions: [], activeAlerts: [],
+      });
+      return;
+    }
 
     res.json({
       id: athlete.id,
@@ -511,6 +543,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       lastName: athlete.lastName,
       email: athlete.email,
       avatarUrl: resolveAvatarUrl(athlete),
+      profilePrivate: false,
       age: athlete.age,
       weightKg: privacy.shareWeight !== false ? athlete.weightKg : null,
       heightCm: athlete.heightCm,
@@ -629,6 +662,12 @@ router.get("/coach/clients/:clientId/checkins", authenticate, requireRole("coach
     }
 
     const privacy = parsePrivacy(athlete.privacySettings);
+
+    if (!isProfileVisible(privacy)) {
+      res.json([]);
+      return;
+    }
+
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
     const checkins = await db.select().from(checkinsTable)
       .where(and(eq(checkinsTable.athleteId, clientId), gte(checkinsTable.date, thirtyDaysAgo)))

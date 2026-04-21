@@ -380,15 +380,19 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
   };
 
   const handleToggleIntegration = async (provider: string, currentlyConnected: boolean) => {
+    if (!currentlyConnected) {
+      const app = HEALTH_APPS.find(a => a.key === provider);
+      Alert.alert(
+        "Bientôt disponible",
+        `La connexion à ${app?.label ?? provider} sera disponible dans une prochaine mise à jour d'ADAPT.`,
+        [{ text: "OK", style: "default" }]
+      );
+      return;
+    }
     setConnectingProvider(provider);
     try {
-      if (currentlyConnected) {
-        await customFetch(`/api/users/me/integrations/${provider}`, { method: "DELETE" });
-        setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: false, connectedAt: null } : i));
-      } else {
-        await customFetch(`/api/users/me/integrations/${provider}/connect`, { method: "POST", body: "{}" });
-        setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: true, connectedAt: new Date().toISOString() } : i));
-      }
+      await customFetch(`/api/users/me/integrations/${provider}`, { method: "DELETE" });
+      setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: false, connectedAt: null } : i));
     } catch {
     } finally {
       setConnectingProvider(null);
