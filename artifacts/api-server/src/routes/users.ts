@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, exercisesTable, sessionLogsTable, checkinsTable, exerciseLogsTable, programsTable, sessionsTable, userIntegrationsTable } from "@workspace/db";
+import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, prHistoryTable, exercisesTable, sessionLogsTable, checkinsTable, exerciseLogsTable, programsTable, sessionsTable, userIntegrationsTable } from "@workspace/db";
 import { eq, and, desc, gte, sql, count } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
@@ -307,6 +307,49 @@ router.get("/users/prs", authenticate, async (req, res) => {
     res.json({ personalRecords: result, total: result.length });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const { exerciseId } = req.params;
+
+    const [exercise] = await db.select({ name: exercisesTable.name })
+      .from(exercisesTable)
+      .where(eq(exercisesTable.id, exerciseId));
+
+    if (!exercise) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+    }
+
+    const history = await db.select({
+      id: prHistoryTable.id,
+      loadKg: prHistoryTable.loadKg,
+      reps: prHistoryTable.reps,
+      achievedAt: prHistoryTable.achievedAt,
+    })
+      .from(prHistoryTable)
+      .where(and(
+        eq(prHistoryTable.userId, userId),
+        eq(prHistoryTable.exerciseId, exerciseId)
+      ))
+      .orderBy(prHistoryTable.achievedAt);
+
+    const entries = history.map(h => ({
+      id: h.id,
+      loadKg: parseFloat(h.loadKg),
+      reps: h.reps,
+      achievedAt: h.achievedAt,
+    }));
+
+    return res.json({
+      exerciseId,
+      exerciseName: exercise.name,
+      history: entries,
+    });
+  } catch {
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 

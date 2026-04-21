@@ -291,6 +291,19 @@ export interface PersonalRecordsResponse {
   total: number;
 }
 
+export interface PRHistoryEntry {
+  id: string;
+  loadKg: number;
+  reps: number;
+  achievedAt: string;
+}
+
+export interface PRHistoryResponse {
+  exerciseId: string;
+  exerciseName: string;
+  history: PRHistoryEntry[];
+}
+
 export interface WeeklyRecap {
   weekStart: string;
   weekEnd: string;

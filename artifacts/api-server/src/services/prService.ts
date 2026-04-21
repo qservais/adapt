@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { personalRecordsTable, exercisesTable, exerciseLogsTable, sessionLogsTable } from "@workspace/db";
+import { personalRecordsTable, prHistoryTable, exercisesTable, exerciseLogsTable, sessionLogsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 
 export interface NewPR {
@@ -47,12 +47,22 @@ export async function detectNewPRs(
     const firstRep = exLog.repsPerSet?.[0] ?? 0;
 
     if (!currentPR) {
+      const achievedAt = new Date();
       await db.insert(personalRecordsTable).values({
         userId,
         exerciseId: exLog.exerciseId,
         loadKg: exLog.loadKgUsed.toString(),
         reps: firstRep,
         sessionLogId,
+        achievedAt,
+      });
+      await db.insert(prHistoryTable).values({
+        userId,
+        exerciseId: exLog.exerciseId,
+        loadKg: exLog.loadKgUsed.toString(),
+        reps: firstRep,
+        sessionLogId,
+        achievedAt,
       });
       const exerciseName = await getExerciseName(exLog.exerciseId);
       newPRs.push({
@@ -64,18 +74,27 @@ export async function detectNewPRs(
       });
     } else if (exLog.loadKgUsed > parseFloat(currentPR.loadKg)) {
       const previousLoad = parseFloat(currentPR.loadKg);
+      const achievedAt = new Date();
       await db.update(personalRecordsTable)
         .set({
           loadKg: exLog.loadKgUsed.toString(),
           reps: firstRep,
           previousLoadKg: previousLoad.toString(),
-          achievedAt: new Date(),
+          achievedAt,
           sessionLogId,
         })
         .where(and(
           eq(personalRecordsTable.userId, userId),
           eq(personalRecordsTable.exerciseId, exLog.exerciseId)
         ));
+      await db.insert(prHistoryTable).values({
+        userId,
+        exerciseId: exLog.exerciseId,
+        loadKg: exLog.loadKgUsed.toString(),
+        reps: firstRep,
+        sessionLogId,
+        achievedAt,
+      });
       const exerciseName = await getExerciseName(exLog.exerciseId);
       newPRs.push({
         exerciseId: exLog.exerciseId,

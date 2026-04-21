@@ -54,6 +54,7 @@ import type {
   NotificationsResponse,
   OverrideRequest,
   PersonalRecordsResponse,
+  PRHistoryResponse,
   ProgramDetail,
   ProgramSummary,
   RefreshRequest,
@@ -3566,6 +3567,49 @@ export function useGetPersonalRecords<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetPersonalRecordsQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getExercisePRHistory = async (exerciseId: string, options?: RequestInit): Promise<PRHistoryResponse> => {
+  return customFetch<PRHistoryResponse>(`/api/users/prs/${exerciseId}/history`, { ...options, method: "GET" });
+};
+
+export const getGetExercisePRHistoryQueryKey = (exerciseId: string) =>
+  [`/api/users/prs/${exerciseId}/history`] as const;
+
+export const getGetExercisePRHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExercisePRHistory>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  exerciseId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getExercisePRHistory>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetExercisePRHistoryQueryKey(exerciseId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getExercisePRHistory>>> = ({ signal }) =>
+    getExercisePRHistory(exerciseId, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: !!exerciseId, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getExercisePRHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetExercisePRHistory<
+  TData = Awaited<ReturnType<typeof getExercisePRHistory>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  exerciseId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getExercisePRHistory>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetExercisePRHistoryQueryOptions(exerciseId, options);
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
   return { ...query, queryKey: queryOptions.queryKey };
 }

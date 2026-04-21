@@ -42,6 +42,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useFormatWeight, useThemeColors, useT } from "@/context/PreferencesContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import ExtendedProfileSections from "@/components/profile/ExtendedProfileSections";
+import { PRHistoryModal } from "@/components/profile/PRHistoryModal";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
@@ -193,6 +194,7 @@ export default function ProfileScreen() {
       : Promise.resolve(null),
     enabled: !!expandedProgramId,
   });
+  const [selectedPrExercise, setSelectedPrExercise] = useState<{ id: string; name: string } | null>(null);
 
   const handleAvatarPress = () => {
     Alert.alert("Photo de profil", "Choisir une source", [
@@ -636,12 +638,14 @@ export default function ProfileScreen() {
                     })
                   : null;
                 return (
-                  <View
+                  <TouchableOpacity
                     key={`${pr.exerciseId}-${idx}`}
                     style={[
                       styles.prCard,
                       pr.isRecent && styles.prCardRecent,
                     ]}
+                    activeOpacity={0.75}
+                    onPress={() => setSelectedPrExercise({ id: pr.exerciseId, name: pr.exerciseName })}
                   >
                     <View style={styles.prCardTop}>
                       <View style={{ flex: 1, gap: 2 }}>
@@ -680,8 +684,11 @@ export default function ProfileScreen() {
                           Précédent : {pr.previousLoadKg} kg
                         </Text>
                       )}
+                      <View style={{ flex: 1, alignItems: "flex-end" }}>
+                        <Feather name="chevron-right" size={14} color={COLORS.textMuted} />
+                      </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -1300,6 +1307,12 @@ export default function ProfileScreen() {
           Se déconnecter
         </Text>
       </Pressable>
+
+      <PRHistoryModal
+        exerciseId={selectedPrExercise?.id ?? null}
+        exerciseName={selectedPrExercise?.name ?? ""}
+        onClose={() => setSelectedPrExercise(null)}
+      />
     </ScrollView>
   );
 }
