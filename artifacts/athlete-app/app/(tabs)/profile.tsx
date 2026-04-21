@@ -479,7 +479,7 @@ export default function ProfileScreen() {
     <ScrollView
       ref={scrollRef}
       style={[styles.flex, { backgroundColor: colors.bg }]}
-      contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40, paddingHorizontal: 20 }}
+      contentContainerStyle={{ paddingTop: topPad + (Platform.OS === "web" ? 16 : 52), paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>

@@ -106,7 +106,7 @@ export default function HomeScreen() {
     <ScrollView
       ref={scrollRef}
       style={[styles.flex, { backgroundColor: colors.bg }]}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad }]}
+      contentContainerStyle={[styles.content, { paddingTop: topPad + (Platform.OS === "web" ? 16 : 52), paddingBottom: bottomPad }]}
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}

@@ -30,7 +30,7 @@ export default function MessagesScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.bg }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16 }]}>
+      <View style={[styles.header, { paddingTop: topPad + (Platform.OS === "web" ? 16 : 52) }]}>
         <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>
           MESSAGES
         </Text>

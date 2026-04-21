@@ -247,12 +247,12 @@ export default function CheckinScreen() {
   }, [isEditMode]);
 
   useEffect(() => {
-    if (!draftHydrated) return;
+    if (!draftHydrated || isEditMode) return;
     AsyncStorage.setItem(
       CHECKIN_DRAFT_KEY,
       JSON.stringify({ stepIndex, values, hasPain, painNotes, cyclePhase })
     ).catch(() => {});
-  }, [draftHydrated, stepIndex, values, hasPain, painNotes, cyclePhase]);
+  }, [draftHydrated, isEditMode, stepIndex, values, hasPain, painNotes, cyclePhase]);
 
   const isLastStep = stepIndex === steps.length - 1;
   const currentStep = steps[stepIndex];
