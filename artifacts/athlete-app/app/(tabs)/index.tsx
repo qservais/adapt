@@ -23,6 +23,7 @@ import {
 } from "@workspace/api-client-react";
 import type { CheckinData, SessionDetail, Challenge } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
+import { useThemeColors } from "@/context/PreferencesContext";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
@@ -38,6 +39,8 @@ export default function HomeScreen() {
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
   const { user } = useAuth();
+
+  const colors = useThemeColors();
 
   const checkinQuery = useGetTodayCheckin();
   const sessionsQuery = useGetTodaySessions();
@@ -102,7 +105,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       ref={scrollRef}
-      style={[styles.flex, { backgroundColor: COLORS.bg }]}
+      style={[styles.flex, { backgroundColor: colors.bg }]}
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad }]}
       refreshControl={
         <RefreshControl

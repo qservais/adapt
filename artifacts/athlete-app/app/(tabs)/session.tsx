@@ -25,6 +25,7 @@ import {
 } from "@workspace/api-client-react";
 import type { FreeSessionStartResponse } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+import { useThemeColors } from "@/context/PreferencesContext";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -103,6 +104,8 @@ export default function SessionTab() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
+
+  const colors = useThemeColors();
 
   const [activeTab, setActiveTab] = useState<SubTab>("today");
   const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
@@ -288,7 +291,7 @@ export default function SessionTab() {
     <>
     <ScrollView
       ref={scrollRef}
-      style={[styles.flex, { backgroundColor: COLORS.bg }]}
+      style={[styles.flex, { backgroundColor: colors.bg }]}
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 24 }}
       showsVerticalScrollIndicator={false}
     >

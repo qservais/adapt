@@ -7,6 +7,7 @@ import { z } from "zod";
 import multer from "multer";
 import sharp from "sharp";
 import { objectStorageClient } from "../lib/objectStorage.js";
+import { encryptToken } from "../lib/tokenEncryption.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -474,14 +475,16 @@ router.post("/users/me/integrations/:provider/connect", authenticate, async (req
   }
   try {
     const userId = req.user!.userId;
+    const encryptedStubToken = encryptToken(`stub:${provider}:${userId}:${Date.now()}`);
     await db.insert(userIntegrationsTable).values({
       userId,
       provider,
       isConnected: true,
+      accessToken: encryptedStubToken,
       connectedAt: new Date(),
     }).onConflictDoUpdate({
       target: [userIntegrationsTable.userId, userIntegrationsTable.provider],
-      set: { isConnected: true, connectedAt: new Date(), updatedAt: new Date() },
+      set: { isConnected: true, accessToken: encryptedStubToken, connectedAt: new Date(), updatedAt: new Date() },
     });
     res.json({ provider, isConnected: true });
   } catch {
