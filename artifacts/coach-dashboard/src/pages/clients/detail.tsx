@@ -20,7 +20,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine, Cell
-} from "@/lib/recharts-compat";
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1069,9 +1069,11 @@ export default function ClientDetail() {
                                   type="monotone"
                                   dataKey="rpe"
                                   strokeWidth={2}
-                                  dot={(props: { cx: number; cy: number; payload: { rpe: number } }) => {
+                                  dot={(props: { cx?: number; cy?: number; payload?: { rpe?: number } }) => {
                                     const { cx, cy, payload } = props;
-                                    const color = payload.rpe > 8 ? "#ef4444" : payload.rpe > 6 ? "#f59e0b" : "#22c55e";
+                                    if (cx == null || cy == null) return <g />;
+                                    const rpe = payload?.rpe ?? 0;
+                                    const color = rpe > 8 ? "#ef4444" : rpe > 6 ? "#f59e0b" : "#22c55e";
                                     return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill={color} stroke="none" />;
                                   }}
                                   stroke="#f59e0b"

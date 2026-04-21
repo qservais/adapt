@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
+import type { TooltipPayloadEntry, DefaultLegendContentProps } from "recharts"
 
 import { cn } from "@/lib/utils"
 
@@ -100,25 +101,13 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip
 
-type RechartsTooltipPayloadItem = {
-  dataKey?: string | number
-  name?: string | number
-  value?: number | string | Array<number | string>
-  type?: string
-  color?: string
-  fill?: string
-  payload?: Record<string, unknown>
-  formatter?: (value: unknown, name: string | number, item: unknown, index: number, payload: unknown) => React.ReactNode
-  [key: string]: unknown
-}
-
 type ChartTooltipContentProps = React.ComponentProps<"div"> & {
   active?: boolean
-  payload?: RechartsTooltipPayloadItem[]
+  payload?: ReadonlyArray<TooltipPayloadEntry>
   label?: React.ReactNode
-  labelFormatter?: (label: React.ReactNode, payload: RechartsTooltipPayloadItem[]) => React.ReactNode
+  labelFormatter?: (label: React.ReactNode, payload: ReadonlyArray<TooltipPayloadEntry>) => React.ReactNode
   labelClassName?: string
-  formatter?: (value: unknown, name: string | number, item: unknown, index: number, payload: unknown) => React.ReactNode
+  formatter?: (value: TooltipPayloadEntry["value"], name: TooltipPayloadEntry["name"], item: TooltipPayloadEntry, index: number, payload: unknown) => React.ReactNode
   color?: string
   hideLabel?: boolean
   hideIndicator?: boolean
@@ -212,7 +201,7 @@ const ChartTooltipContent = React.forwardRef<
 
               return (
                 <div
-                  key={item.dataKey}
+                  key={key}
                   className={cn(
                     "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
                     indicator === "dot" && "items-center"
@@ -281,7 +270,7 @@ const ChartLegend = RechartsPrimitive.Legend
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+    Pick<DefaultLegendContentProps, "payload" | "verticalAlign"> & {
       hideIcon?: boolean
       nameKey?: string
     }
