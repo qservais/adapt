@@ -2,11 +2,14 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -75,6 +78,10 @@ export default function ExerciseDetailScreen() {
 
   const [isStarting, setIsStarting] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [showDoNowSheet, setShowDoNowSheet] = useState(false);
+  const [pendingSets, setPendingSets] = useState("3");
+  const [pendingReps, setPendingReps] = useState("10");
+  const [pendingLoad, setPendingLoad] = useState("");
 
   const { data: exercise, isLoading, error } = useQuery<ExerciseDetail>({
     queryKey: ["/api/athlete/exercises", params.id],
@@ -82,12 +89,36 @@ export default function ExerciseDetailScreen() {
     enabled: params.id != null,
   });
 
-  const handleDoNow = async () => {
+  const openDoNowSheet = () => {
+    if (!exercise) return;
+    const lastEntry = exercise.history[0];
+    setPendingSets(String(lastEntry?.setsCompleted ?? 3));
+    setPendingReps(lastEntry?.repsPerSet != null && lastEntry.repsPerSet.length > 0
+      ? String(lastEntry.repsPerSet[0])
+      : "10");
+    setPendingLoad(lastEntry?.loadKgUsed != null && lastEntry.loadKgUsed > 0
+      ? String(lastEntry.loadKgUsed)
+      : "");
+    setShowDoNowSheet(true);
+  };
+
+  const handleConfirmDoNow = async () => {
     if (isStarting || !exercise) return;
+    setShowDoNowSheet(false);
     setIsStarting(true);
     try {
+      const targetSets = parseInt(pendingSets, 10);
+      const targetReps = parseInt(pendingReps, 10);
+      const targetLoad = pendingLoad.trim().length > 0 ? parseFloat(pendingLoad) : undefined;
+
+      const body: Record<string, unknown> = {};
+      if (!isNaN(targetSets) && targetSets > 0) body.targetSets = targetSets;
+      if (!isNaN(targetReps) && targetReps > 0) body.targetReps = targetReps;
+      if (targetLoad !== undefined && !isNaN(targetLoad)) body.targetLoad = targetLoad;
+
       const data = await customFetch(`/api/athlete/exercises/${exercise.id}/do-now`, {
         method: "POST",
+        body: JSON.stringify(body),
       }) as FreeSessionStartResponse & { isSingleExercise?: boolean };
       setFreeSession({
         sessionLogId: data.sessionLogId,
@@ -288,7 +319,7 @@ export default function ExerciseDetailScreen() {
       {exercise != null && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
           <TouchableOpacity
-            onPress={handleDoNow}
+            onPress={openDoNowSheet}
             disabled={isStarting}
             style={[styles.doNowBtn, isStarting && { opacity: 0.7 }]}
             activeOpacity={0.85}
@@ -330,6 +361,146 @@ export default function ExerciseDetailScreen() {
             />
           )}
         </View>
+      </Modal>
+
+      <Modal
+        visible={showDoNowSheet}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowDoNowSheet(false)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setShowDoNowSheet(false)} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.sheetWrapper}
+        >
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.sheetHandle} />
+
+            <View style={styles.sheetHeader}>
+              <Feather name="sliders" size={16} color={COLORS.cyan} />
+              <Text style={[styles.sheetTitle, { fontFamily: FONTS.mono }]}>CONFIGURER L'EXERCICE</Text>
+            </View>
+
+            <Text style={[styles.sheetSubtitle, { fontFamily: FONTS.body }]}>
+              Ajuste les paramètres avant de commencer.
+            </Text>
+
+            <View style={styles.sheetFields}>
+              <View style={styles.sheetField}>
+                <Text style={[styles.sheetFieldLabel, { fontFamily: FONTS.mono }]}>SÉRIES</Text>
+                <View style={styles.sheetInputRow}>
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingSets(s => {
+                      const v = parseInt(s, 10);
+                      return isNaN(v) ? "3" : String(Math.max(1, v - 1));
+                    })}
+                  >
+                    <Feather name="minus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[styles.sheetInput, { fontFamily: FONTS.mono }]}
+                    value={pendingSets}
+                    onChangeText={setPendingSets}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingSets(s => {
+                      const v = parseInt(s, 10);
+                      return isNaN(v) ? "3" : String(Math.min(20, v + 1));
+                    })}
+                  >
+                    <Feather name="plus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.sheetField}>
+                <Text style={[styles.sheetFieldLabel, { fontFamily: FONTS.mono }]}>RÉPÉTITIONS</Text>
+                <View style={styles.sheetInputRow}>
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingReps(r => {
+                      const v = parseInt(r, 10);
+                      return isNaN(v) ? "10" : String(Math.max(1, v - 1));
+                    })}
+                  >
+                    <Feather name="minus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[styles.sheetInput, { fontFamily: FONTS.mono }]}
+                    value={pendingReps}
+                    onChangeText={setPendingReps}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    selectTextOnFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingReps(r => {
+                      const v = parseInt(r, 10);
+                      return isNaN(v) ? "10" : String(Math.min(100, v + 1));
+                    })}
+                  >
+                    <Feather name="plus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.sheetField}>
+                <Text style={[styles.sheetFieldLabel, { fontFamily: FONTS.mono }]}>CHARGE (KG)</Text>
+                <View style={styles.sheetInputRow}>
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingLoad(l => {
+                      const v = parseFloat(l);
+                      if (isNaN(v) || v <= 0) return "";
+                      const next = Math.max(0, v - 2.5);
+                      return next === 0 ? "" : String(next);
+                    })}
+                  >
+                    <Feather name="minus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[styles.sheetInput, { fontFamily: FONTS.mono }]}
+                    value={pendingLoad}
+                    onChangeText={setPendingLoad}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={COLORS.textMuted}
+                    maxLength={6}
+                    selectTextOnFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingLoad(l => {
+                      const v = parseFloat(l);
+                      const base = isNaN(v) ? 0 : v;
+                      return String(base + 2.5);
+                    })}
+                  >
+                    <Feather name="plus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.sheetConfirmBtn}
+              onPress={handleConfirmDoNow}
+              activeOpacity={0.85}
+            >
+              <Feather name="play" size={18} color={COLORS.bg} />
+              <Text style={[styles.sheetConfirmText, { fontFamily: FONTS.bodyBold }]}>
+                Lancer la séance
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -455,4 +626,98 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   webView: { flex: 1 },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  sheetWrapper: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  sheet: {
+    backgroundColor: COLORS.bgCard,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    gap: 16,
+    borderTopWidth: 1,
+    borderColor: COLORS.border,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sheetTitle: {
+    fontSize: 12,
+    color: COLORS.cyan,
+    letterSpacing: 2,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: -8,
+  },
+  sheetFields: {
+    gap: 14,
+  },
+  sheetField: {
+    gap: 6,
+  },
+  sheetFieldLabel: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+  },
+  sheetInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 0,
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  stepBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetInput: {
+    flex: 1,
+    fontSize: 18,
+    color: COLORS.white,
+    textAlign: "center",
+    paddingVertical: 12,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: COLORS.border,
+  },
+  sheetConfirmBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: COLORS.cyan,
+    borderRadius: 14,
+    paddingVertical: 16,
+    marginTop: 4,
+  },
+  sheetConfirmText: {
+    fontSize: 16,
+    color: COLORS.bg,
+  },
 });

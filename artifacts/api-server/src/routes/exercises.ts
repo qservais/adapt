@@ -350,10 +350,23 @@ router.get("/athlete/exercises/:exerciseId", authenticate, requireRole("athlete"
   }
 });
 
+const doNowBodySchema = z.object({
+  targetSets: z.number().int().min(1).max(20).optional(),
+  targetReps: z.union([z.number().int().min(1).max(100), z.string().min(1)]).optional(),
+  targetLoad: z.number().min(0).max(10000).optional(),
+});
+
 router.post("/athlete/exercises/:exerciseId/do-now", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const exerciseId = String(req.params["exerciseId"]);
     const athleteId = req.user!.userId;
+
+    const bodyParsed = doNowBodySchema.safeParse(req.body ?? {});
+    if (!bodyParsed.success) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: bodyParsed.error.message } });
+      return;
+    }
+    const bodyParams = bodyParsed.data;
     const today = getTodayLocalDate();
 
     const allowedIds = await getAthleteAllowedExerciseIds(athleteId);
@@ -443,10 +456,10 @@ router.post("/athlete/exercises/:exerciseId/do-now", authenticate, requireRole("
         description: exercise.description ?? null,
         demoUrl: exercise.demoUrl ?? null,
         orderIndex: 0,
-        sets: 3,
-        reps: "10",
-        nominalLoadKg: lastUsedLoad ?? null,
-        adaptedLoadKg: lastUsedLoad ?? null,
+        sets: bodyParams.targetSets ?? 3,
+        reps: bodyParams.targetReps != null ? String(bodyParams.targetReps) : "10",
+        nominalLoadKg: bodyParams.targetLoad ?? lastUsedLoad ?? null,
+        adaptedLoadKg: bodyParams.targetLoad ?? lastUsedLoad ?? null,
         restSeconds: 90,
         durationSeconds: null,
         coachCue: null,
