@@ -1063,6 +1063,133 @@ router.post("/routines/:routineId/start-free", authenticate, requireRole("athlet
   }
 });
 
+router.post("/sessions/free-custom", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    const today = getTodayLocalDate();
+
+    const bodySchema = z.object({
+      name: z.string().min(1).max(100).optional(),
+      exercises: z.array(z.object({
+        exerciseId: z.string().uuid(),
+        exerciseName: z.string().min(1).optional(),
+        sets: z.number().int().min(1).max(20),
+        reps: z.string().min(1).max(20),
+        loadKg: z.number().nonnegative().nullable().optional(),
+        restSeconds: z.number().int().min(0).max(600).optional(),
+      })).min(1).max(30),
+    });
+
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+      return;
+    }
+
+    const { name = "Séance personnalisée", exercises: exerciseList } = parsed.data;
+
+    const exerciseIds = exerciseList.map(e => e.exerciseId);
+
+    const dbExercises = exerciseIds.length > 0
+      ? await db.select({
+          id: exercisesTable.id,
+          name: exercisesTable.name,
+          category: exercisesTable.category,
+          muscleGroups: exercisesTable.muscleGroups,
+          equipment: exercisesTable.equipment,
+          description: exercisesTable.description,
+          demoUrl: exercisesTable.demoUrl,
+          demoGifUrl: exercisesTable.demoGifUrl,
+        }).from(exercisesTable).where(inArray(exercisesTable.id, exerciseIds))
+      : [];
+
+    const exerciseMap = new Map(dbExercises.map(e => [e.id, e]));
+
+    const unknownIds = exerciseIds.filter(id => !exerciseMap.has(id));
+    if (unknownIds.length > 0) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Exercices introuvables: ${unknownIds.join(", ")}` } });
+      return;
+    }
+
+    const [todayCheckin] = await db.select().from(checkinsTable)
+      .where(and(eq(checkinsTable.athleteId, athleteId), eq(checkinsTable.date, today)));
+
+    const painAlerts = todayCheckin ? await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(
+        eq(alertsTable.athleteId, athleteId),
+        eq(alertsTable.type, "pain"),
+        eq(alertsTable.isResolved, false)
+      )) : [];
+
+    const variantMode = todayCheckin
+      ? (painAlerts.length > 0 ? "recovery" : todayCheckin.sessionMode)
+      : "normal";
+
+    const [newLog] = await db.insert(sessionLogsTable).values({
+      athleteId,
+      sessionId: null,
+      variantMode,
+      checkinId: todayCheckin?.id ?? null,
+      isFreeSession: true,
+      freeSessionName: name,
+    }).returning();
+
+    const lastUsed = await getLastUsedLoads(athleteId, exerciseIds);
+
+    const athletePRs = await getAthleteCurrentPRs(athleteId);
+
+    const exercises = exerciseList.map((ex, i) => {
+      const dbEx = exerciseMap.get(ex.exerciseId)!;
+      return {
+        id: `custom-ex-${i}`,
+        exerciseId: ex.exerciseId,
+        exerciseName: dbEx.name,
+        category: dbEx.category ?? null,
+        imageUrl: dbEx.demoUrl ?? null,
+        gifUrl: dbEx.demoGifUrl ?? null,
+        muscleGroups: dbEx.muscleGroups ?? [],
+        equipment: dbEx.equipment ?? [],
+        description: dbEx.description ?? null,
+        demoUrl: dbEx.demoUrl ?? null,
+        orderIndex: i,
+        sets: ex.sets,
+        reps: ex.reps,
+        nominalLoadKg: ex.loadKg ?? null,
+        adaptedLoadKg: ex.loadKg ?? null,
+        restSeconds: ex.restSeconds ?? 60,
+        durationSeconds: null,
+        coachCue: null,
+        tempo: null,
+        lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
+        lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
+      };
+    });
+
+    res.status(201).json({
+      sessionLogId: newLog!.id,
+      sessionId: null,
+      name,
+      mode: variantMode,
+      isFreeSession: true,
+      isRoutine: false,
+      routineId: null,
+      adaptScore: todayCheckin?.adaptScore ?? 50,
+      completedAt: null,
+      durationMin: null,
+      coachNotes: null,
+      estimatedDurationMin: null,
+      overriddenByCoach: false,
+      exercises,
+      athletePRs,
+      sessionsToday: 1,
+      sessionsTodayCompleted: 0,
+      sessionIndex: 1,
+    });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 router.get("/athlete/preview-program", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const athleteId = req.user!.userId;

@@ -139,6 +139,25 @@ export default function LibraryScreen() {
         Routines de soutien à consulter ou démarrer librement.
       </Text>
 
+      <TouchableOpacity
+        onPress={() => router.push("/library/custom-session" as any)}
+        style={styles.createSessionBtn}
+        activeOpacity={0.8}
+      >
+        <View style={styles.createSessionIcon}>
+          <Feather name="plus" size={18} color={COLORS.cyan} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.createSessionTitle, { fontFamily: FONTS.bodyBold }]}>
+            Créer une séance libre
+          </Text>
+          <Text style={[styles.createSessionSubtitle, { fontFamily: FONTS.body }]}>
+            Choisis tes exercices, sets, reps et charge
+          </Text>
+        </View>
+        <Feather name="arrow-right" size={18} color={COLORS.cyan} />
+      </TouchableOpacity>
+
       {programSessions.length > 0 && (
         <View style={styles.programSection}>
           <Text style={[styles.sectionLabel, { fontFamily: FONTS.bodyBold }]}>
@@ -373,4 +392,26 @@ const styles = StyleSheet.create({
   programCardInfo: { flex: 1, gap: 3 },
   programCardName: { fontSize: 14, color: COLORS.white },
   programCardMeta: { fontSize: 12, color: COLORS.textMuted },
+  createSessionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: `${COLORS.cyan}40`,
+    padding: 16,
+  },
+  createSessionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: `${COLORS.cyan}15`,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}30`,
+  },
+  createSessionTitle: { fontSize: 14, color: COLORS.white },
+  createSessionSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
 });
