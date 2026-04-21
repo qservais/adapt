@@ -12,6 +12,7 @@ import { spawnSync } from "child_process";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { seedExercises } from "./seed-exercises.js";
+import { backfillPrHistory } from "./backfill-pr-history.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -112,6 +113,19 @@ async function main() {
     } else {
       console.log(`✅ Bibliothèque d'exercices déjà remplie (${globalExerciseCount} exercices globaux)`);
       await seedExercises();
+    }
+  }
+
+  // Step 5: Backfill pr_history from existing personal_records
+  if (!tableExists("pr_history")) {
+    console.log("⚠️  Table pr_history absente — backfill ignoré (migrations requises)");
+  } else {
+    console.log("🌱 Backfill pr_history depuis personal_records…");
+    const { inserted, skipped } = await backfillPrHistory();
+    if (inserted > 0) {
+      console.log(`✅ Backfill pr_history terminé (+${inserted} insérée(s), ${skipped} ignorée(s))`);
+    } else {
+      console.log(`✅ pr_history déjà à jour (${skipped} entrée(s) existante(s))`);
     }
   }
 
