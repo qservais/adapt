@@ -35,6 +35,7 @@ import {
   useGetAthleteCoachRequest,
   useCancelCoachRequest,
   COACH_REQUEST_QUERY_KEY,
+  useGetPersonalRecords,
 } from "@workspace/api-client-react";
 import { tokenStore } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
@@ -135,6 +136,8 @@ export default function ProfileScreen() {
   const [requestError, setRequestError] = useState("");
 
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"profil" | "records">("profil");
+  const prsQuery = useGetPersonalRecords();
 
   const handleAvatarPress = () => {
     Alert.alert("Photo de profil", "Choisir une source", [
@@ -510,7 +513,128 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {editing ? (
+      <View style={styles.tabBar}>
+        {(["profil", "records"] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
+            onPress={() => setActiveTab(tab)}
+            activeOpacity={0.75}
+          >
+            <Text style={[
+              styles.tabBtnText,
+              { fontFamily: FONTS.mono, color: activeTab === tab ? COLORS.cyan : COLORS.textSecondary },
+            ]}>
+              {tab === "profil" ? "PROFIL" : "RECORDS"}
+              {tab === "records" && (prsQuery.data?.total ?? 0) > 0 && (
+                <Text style={{ color: activeTab === tab ? COLORS.cyan : COLORS.textMuted }}>
+                  {" "}({prsQuery.data?.total})
+                </Text>
+              )}
+            </Text>
+            {activeTab === tab && <View style={styles.tabIndicator} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {activeTab === "records" && (
+        <View style={{ marginBottom: 24 }}>
+          {prsQuery.isLoading ? (
+            <View style={styles.prsLoadingBox}>
+              <ActivityIndicator color={COLORS.cyan} />
+            </View>
+          ) : prsQuery.isError ? (
+            <View style={styles.prsEmptyBox}>
+              <Feather name="alert-circle" size={36} color={COLORS.textMuted} />
+              <Text style={[styles.prsEmptyTitle, { fontFamily: FONTS.bodyBold }]}>
+                Impossible de charger les records
+              </Text>
+              <Text style={[styles.prsEmptyDesc, { fontFamily: FONTS.body }]}>
+                Vérifie ta connexion et réessaie.
+              </Text>
+            </View>
+          ) : (prsQuery.data?.personalRecords?.length ?? 0) === 0 ? (
+            <View style={styles.prsEmptyBox}>
+              <Feather name="award" size={36} color={COLORS.textMuted} />
+              <Text style={[styles.prsEmptyTitle, { fontFamily: FONTS.bodyBold }]}>
+                Aucun record encore
+              </Text>
+              <Text style={[styles.prsEmptyDesc, { fontFamily: FONTS.body }]}>
+                Tes records personnels apparaîtront ici après tes séances.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.prsContainer}>
+              <Text style={[styles.prsSectionLabel, { fontFamily: FONTS.mono }]}>
+                {prsQuery.data!.total} RECORD{prsQuery.data!.total > 1 ? "S" : ""} PERSONNEL{prsQuery.data!.total > 1 ? "S" : ""}
+              </Text>
+              {prsQuery.data!.personalRecords.map((pr, idx) => {
+                const gain =
+                  pr.previousLoadKg != null && pr.loadKg != null
+                    ? pr.loadKg - pr.previousLoadKg
+                    : null;
+                const dateStr = pr.achievedAt
+                  ? new Date(pr.achievedAt).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : null;
+                return (
+                  <View
+                    key={`${pr.exerciseId}-${idx}`}
+                    style={[
+                      styles.prCard,
+                      pr.isRecent && styles.prCardRecent,
+                    ]}
+                  >
+                    <View style={styles.prCardTop}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.prExName, { fontFamily: FONTS.bodyBold }]} numberOfLines={1}>
+                          {pr.exerciseName}
+                        </Text>
+                        {dateStr && (
+                          <Text style={[styles.prDate, { fontFamily: FONTS.body }]}>
+                            {dateStr}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.prLoadBox}>
+                        <Text style={[styles.prLoad, { fontFamily: FONTS.monoBold }]}>
+                          {pr.loadKg != null ? `${pr.loadKg} kg` : "—"}
+                          {pr.reps != null ? ` × ${pr.reps}` : ""}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.prCardBottom}>
+                      {pr.isRecent && (
+                        <View style={styles.prRecentBadge}>
+                          <Text style={[styles.prRecentText, { fontFamily: FONTS.mono }]}>NOUVEAU</Text>
+                        </View>
+                      )}
+                      {gain != null && gain > 0 && (
+                        <View style={styles.prGainRow}>
+                          <Feather name="trending-up" size={12} color={COLORS.cyan} />
+                          <Text style={[styles.prGainText, { fontFamily: FONTS.mono }]}>
+                            +{gain % 1 === 0 ? gain : gain.toFixed(1)} kg vs précédent
+                          </Text>
+                        </View>
+                      )}
+                      {pr.previousLoadKg != null && (
+                        <Text style={[styles.prPrev, { fontFamily: FONTS.body }]}>
+                          Précédent : {pr.previousLoadKg} kg
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      )}
+
+      {activeTab === "profil" && (editing ? (
         <GlowCard glowColor={COLORS.cyan} style={styles.editCard}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
             MODIFIER LE PROFIL
@@ -786,9 +910,9 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-      )}
+      ))}
 
-      {!hasCoach && (
+      {activeTab === "profil" && !hasCoach && (
         <GlowCard glowColor={COLORS.cyan} style={styles.coachSection}>
           <View style={styles.coachHeader}>
             <Feather name="users" size={18} color={COLORS.cyan} />
@@ -902,63 +1026,64 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      <ExtendedProfileSections />
+      {activeTab === "profil" && <ExtendedProfileSections />}
 
-      <View style={styles.quickLinks}>
-        <TouchableOpacity
-          onPress={() => router.push("/guides" as any)}
-          style={styles.quickLinkRow}
-          activeOpacity={0.7}
-        >
-          <View style={styles.quickLinkLeft}>
-            <Text style={styles.quickLinkIcon}>📖</Text>
-            <View>
-              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Guides ADAPT</Text>
-              <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
-                Entraînement, nutrition, RPE, tempo
-              </Text>
-            </View>
-          </View>
-          <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => router.push("/library" as any)}
-          style={styles.quickLinkRow}
-          activeOpacity={0.7}
-        >
-          <View style={styles.quickLinkLeft}>
-            <Text style={styles.quickLinkIcon}>🗂️</Text>
-            <View>
-              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Bibliothèque</Text>
-              <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
-                Échauffements, réathlétisation, relaxation
-              </Text>
-            </View>
-          </View>
-          <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => router.push("/badges")}
-          style={styles.quickLinkRow}
-          activeOpacity={0.7}
-        >
-          <View style={styles.quickLinkLeft}>
-            <Text style={styles.quickLinkIcon}>🏅</Text>
-            <View>
-              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Mes badges</Text>
-              {(badgesQuery.data?.unlockedCount ?? 0) > 0 && (
+      {activeTab === "profil" && (
+        <View style={styles.quickLinks}>
+          <TouchableOpacity
+            onPress={() => router.push("/guides" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>📖</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Guides ADAPT</Text>
                 <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
-                  {badgesQuery.data?.unlockedCount} / {badgesQuery.data?.total} débloqués
+                  Entraînement, nutrition, RPE, tempo
                 </Text>
-              )}
+              </View>
             </View>
-          </View>
-          <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
 
-      </View>
+          <TouchableOpacity
+            onPress={() => router.push("/library" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>🗂️</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Bibliothèque</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                  Échauffements, réathlétisation, relaxation
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/badges")}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>🏅</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Mes badges</Text>
+                {(badgesQuery.data?.unlockedCount ?? 0) > 0 && (
+                  <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                    {badgesQuery.data?.unlockedCount} / {badgesQuery.data?.total} débloqués
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
+      )}
 
 
       <Pressable onPress={handleLogout} style={styles.logoutBtn}>
@@ -1296,4 +1421,126 @@ const styles = StyleSheet.create({
   coachPickerName: { fontSize: 15, marginBottom: 2 },
   coachPickerRole: { fontSize: 9, color: COLORS.cyan, letterSpacing: 2 },
   emptyCoachBox: { alignItems: "center", padding: 32 },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 20,
+    overflow: "hidden",
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    position: "relative",
+  },
+  tabBtnActive: {
+    backgroundColor: COLORS.cyanDim,
+  },
+  tabBtnText: {
+    fontSize: 11,
+    letterSpacing: 2,
+  },
+  tabIndicator: {
+    position: "absolute",
+    bottom: 0,
+    alignSelf: "center",
+    width: "60%",
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: COLORS.cyan,
+  },
+  prsLoadingBox: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  prsEmptyBox: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 12,
+  },
+  prsEmptyTitle: {
+    fontSize: 17,
+    color: COLORS.textPrimary,
+  },
+  prsEmptyDesc: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  prsContainer: {
+    gap: 10,
+  },
+  prsSectionLabel: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  prCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    gap: 8,
+  },
+  prCardRecent: {
+    borderColor: COLORS.cyan,
+    backgroundColor: COLORS.cyanDim,
+  },
+  prCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  prExName: {
+    fontSize: 15,
+    color: COLORS.white,
+  },
+  prDate: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  prLoadBox: {
+    alignItems: "flex-end",
+  },
+  prLoad: {
+    fontSize: 18,
+    color: COLORS.cyan,
+  },
+  prCardBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  prRecentBadge: {
+    backgroundColor: COLORS.cyan,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  prRecentText: {
+    fontSize: 9,
+    color: COLORS.bg,
+    letterSpacing: 1,
+  },
+  prGainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  prGainText: {
+    fontSize: 11,
+    color: COLORS.cyan,
+  },
+  prPrev: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
 });
