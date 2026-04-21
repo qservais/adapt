@@ -5,3 +5,4 @@ export type { AuthTokenGetter } from "./custom-fetch";
 export * from "@workspace/constants";
 export * from "./join-requests";
 export * from "./session-list";
+export * from "./stats";

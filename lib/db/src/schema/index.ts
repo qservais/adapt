@@ -15,3 +15,4 @@ export * from "./challenges";
 export * from "./appointments";
 export * from "./coach_join_requests";
 export * from "./user_integrations";
+export * from "./body_metrics";

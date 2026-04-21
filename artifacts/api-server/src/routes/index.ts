@@ -15,6 +15,7 @@ import stepsRouter from "./steps.js";
 import challengesRouter from "./challenges.js";
 import scheduledNotificationsRouter from "./scheduled-notifications.js";
 import appointmentsRouter from "./appointments.js";
+import statsRouter from "./stats.js";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(stepsRouter);
 router.use(challengesRouter);
 router.use(scheduledNotificationsRouter);
 router.use(appointmentsRouter);
+router.use(statsRouter);
 
 export default router;

@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { NutritionTab } from "@/components/nutrition/NutritionTab";
+import { BodyTab } from "@/components/stats/BodyTab";
 import { StepsSection } from "@/components/steps/StepsSection";
 import { DraggableSectionList } from "@/components/ui/DraggableSectionList";
 import { router } from "expo-router";
@@ -19,22 +20,27 @@ import {
   useGetSessionHistory,
   useGetPersonalRecords,
   useGetAthleteTests,
+  useGetExerciseLoadHistory,
+  useGetWeeklyVolume,
+  useGetWeekComparison,
 } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useThemeColors, useFormatWeight } from "@/context/PreferencesContext";
 import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
+import type { ExerciseLoadHistory } from "@workspace/api-client-react";
 
 const { width } = Dimensions.get("window");
 const CHART_WIDTH = width - 80;
 const CHART_HEIGHT = 110;
 
 type Period = "7" | "14" | "30";
+type ActiveTab = "training" | "nutrition" | "body";
 
 const DEFAULT_SECTION_ORDER = [
-  "kpi", "tests", "steps", "trend", "calendar",
-  "averages", "weekly", "modes", "rpe", "prs",
+  "kpi", "weekComparison", "tests", "steps", "trend", "calendar",
+  "weeklyVolume", "exerciseLoad", "averages", "weekly", "modes", "rpe", "prs",
 ];
 
 interface CheckinItem {
@@ -107,7 +113,7 @@ function ScoreTrendChart({ data, color }: { data: number[]; color: string }) {
         ))}
         {points.map((p, i) => {
           if (i === 0) return null;
-          const prev = points[i - 1];
+          const prev = points[i - 1]!;
           const dx = p.x - prev.x;
           const dy = p.y - prev.y;
           const len = Math.sqrt(dx * dx + dy * dy);
@@ -173,13 +179,245 @@ function MonthCalendar({ checkins, year, month }: { checkins: CheckinItem[]; yea
   );
 }
 
+function WeeklyVolumeBarChart({ weeks }: { weeks: Array<{ weekStart: string; volume: number; sessions: number }> }) {
+  if (weeks.length === 0) return null;
+  const nonZero = weeks.filter(w => w.volume > 0);
+  if (nonZero.length === 0) {
+    return (
+      <View style={{ height: 80, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ fontFamily: FONTS.body, color: COLORS.textMuted, fontSize: 13 }}>Pas encore assez de données</Text>
+      </View>
+    );
+  }
+  const maxVol = Math.max(...weeks.map(w => w.volume), 1);
+  const BAR_H = 80;
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", height: BAR_H, gap: 4 }}>
+        {weeks.map((w, i) => {
+          const pct = w.volume / maxVol;
+          const barH = Math.max(pct * BAR_H, w.volume > 0 ? 4 : 0);
+          const isCurrentWeek = i === weeks.length - 1;
+          return (
+            <View key={w.weekStart} style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", height: BAR_H }}>
+              <View style={{ width: "80%", height: barH, backgroundColor: isCurrentWeek ? COLORS.green : `${COLORS.green}60`, borderRadius: 3, borderTopLeftRadius: 3, borderTopRightRadius: 3 }} />
+            </View>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: "row", gap: 4, marginTop: 6 }}>
+        {weeks.map((w, i) => {
+          const label = w.weekStart.slice(5).replace("-", "/");
+          const isCurrentWeek = i === weeks.length - 1;
+          return (
+            <View key={w.weekStart} style={{ flex: 1, alignItems: "center" }}>
+              <Text style={{ fontFamily: FONTS.mono, fontSize: 9, color: isCurrentWeek ? COLORS.green : COLORS.textMuted }} numberOfLines={1}>{label}</Text>
+            </View>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
+        <Text style={{ fontFamily: FONTS.body, fontSize: 11, color: COLORS.textMuted }}>
+          Total semaine actuelle : <Text style={{ fontFamily: FONTS.monoBold, color: COLORS.green }}>{(weeks[weeks.length - 1]?.volume ?? 0).toLocaleString()} kg·reps</Text>
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ExerciseLoadSection({ exercises }: { exercises: ExerciseLoadHistory[] }) {
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const formatWeight = useFormatWeight();
+
+  if (exercises.length === 0) {
+    return (
+      <View style={{ alignItems: "center", paddingVertical: 24 }}>
+        <Text style={{ fontFamily: FONTS.body, color: COLORS.textMuted, fontSize: 13, textAlign: "center" }}>
+          Aucune donnée de charge.{"\n"}Enregistre tes séances pour voir ta progression !
+        </Text>
+      </View>
+    );
+  }
+
+  const exercise = exercises[selectedIdx] ?? exercises[0]!;
+  const points = exercise.points;
+  const values = points.map(p => p.loadKg);
+
+  const trend = values.length >= 2
+    ? values[values.length - 1]! - values[0]!
+    : null;
+
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+  const stepX = values.length > 1 ? CHART_WIDTH / (values.length - 1) : 0;
+  const pts = values.map((v, i) => ({
+    x: i * stepX,
+    y: CHART_HEIGHT - ((v - minV) / range) * (CHART_HEIGHT - 16) - 8,
+  }));
+
+  return (
+    <View style={{ gap: 12 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
+        <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 4 }}>
+          {exercises.slice(0, 12).map((ex, i) => (
+            <TouchableOpacity
+              key={ex.exerciseId}
+              onPress={() => setSelectedIdx(i)}
+              style={[exStyles.chip, selectedIdx === i && exStyles.chipActive]}
+            >
+              <Text style={[exStyles.chipText, { fontFamily: FONTS.mono, color: selectedIdx === i ? COLORS.cyan : COLORS.textSecondary }]} numberOfLines={1}>
+                {ex.exerciseName}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+
+      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+        <Text style={{ fontFamily: FONTS.monoBold, fontSize: 28, color: COLORS.cyan }}>
+          {formatWeight(values[values.length - 1] ?? 0)}
+        </Text>
+        {trend != null && (
+          <Text style={{ fontFamily: FONTS.mono, fontSize: 13, color: trend >= 0 ? COLORS.green : COLORS.amber }}>
+            {trend >= 0 ? "↑ +" : "↓ "}{formatWeight(Math.abs(trend))}
+          </Text>
+        )}
+      </View>
+
+      {values.length >= 2 ? (
+        <View style={{ height: CHART_HEIGHT, backgroundColor: COLORS.bgElevated, borderRadius: 8, overflow: "hidden", position: "relative" }}>
+          {[0, 25, 50, 75, 100].map((pct) => (
+            <View key={pct} style={{ position: "absolute", left: 0, right: 0, top: CHART_HEIGHT * (1 - pct / 100) - 0.5, height: 1, backgroundColor: COLORS.border, opacity: 0.4 }} />
+          ))}
+          {pts.map((p, i) => {
+            if (i === 0) return null;
+            const prev = pts[i - 1]!;
+            const dx = p.x - prev.x;
+            const dy = p.y - prev.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const cx = (prev.x + p.x) / 2;
+            const cy = (prev.y + p.y) / 2;
+            const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+            return (
+              <View key={i} style={{ position: "absolute", left: cx - len / 2, top: cy - 1.5, width: len, height: 3, backgroundColor: COLORS.cyan, transform: [{ rotate: `${angle}deg` }], borderRadius: 2 }} />
+            );
+          })}
+          {pts.map((p, i) => (
+            <View key={i} style={{ position: "absolute", left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.cyan, borderWidth: 2, borderColor: COLORS.bg }} />
+          ))}
+        </View>
+      ) : (
+        <View style={{ height: 60, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ fontFamily: FONTS.body, color: COLORS.textMuted, fontSize: 13 }}>Une seule séance enregistrée pour cet exercice</Text>
+        </View>
+      )}
+
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <Text style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textMuted }}>{points[0]?.date.slice(5)}</Text>
+        <Text style={{ fontFamily: FONTS.mono, fontSize: 10, color: COLORS.textMuted }}>{points[points.length - 1]?.date.slice(5)}</Text>
+      </View>
+    </View>
+  );
+}
+
+const exStyles = StyleSheet.create({
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: COLORS.bgElevated, borderWidth: 1, borderColor: COLORS.border },
+  chipActive: { backgroundColor: COLORS.cyanDim, borderColor: COLORS.cyan },
+  chipText: { fontSize: 11, letterSpacing: 0.5, maxWidth: 130 },
+});
+
+function WeekComparisonSection({ thisWeek, lastWeek }: {
+  thisWeek: { sessions: number; avgRpe: number | null; totalDurationMin: number };
+  lastWeek: { sessions: number; avgRpe: number | null; totalDurationMin: number };
+}) {
+  function delta(current: number, previous: number) {
+    const d = current - previous;
+    if (d === 0) return null;
+    return { value: Math.abs(d), positive: d > 0 };
+  }
+
+  const sessionsDelta = delta(thisWeek.sessions, lastWeek.sessions);
+  const durationDelta = delta(thisWeek.totalDurationMin, lastWeek.totalDurationMin);
+
+  return (
+    <View style={wcStyles.grid}>
+      <View style={wcStyles.col}>
+        <Text style={[wcStyles.colLabel, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>CETTE SEMAINE</Text>
+        <View style={wcStyles.statItem}>
+          <Text style={[wcStyles.statVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>{thisWeek.sessions}</Text>
+          <Text style={[wcStyles.statLabel, { fontFamily: FONTS.body }]}>Séances</Text>
+        </View>
+        <View style={wcStyles.statItem}>
+          <Text style={[wcStyles.statVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+            {thisWeek.avgRpe != null ? thisWeek.avgRpe.toFixed(1) : "—"}
+          </Text>
+          <Text style={[wcStyles.statLabel, { fontFamily: FONTS.body }]}>RPE moy.</Text>
+        </View>
+        <View style={wcStyles.statItem}>
+          <Text style={[wcStyles.statVal, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
+            {thisWeek.totalDurationMin > 0 ? `${thisWeek.totalDurationMin}min` : "—"}
+          </Text>
+          <Text style={[wcStyles.statLabel, { fontFamily: FONTS.body }]}>Durée</Text>
+        </View>
+      </View>
+
+      <View style={wcStyles.divider} />
+
+      <View style={wcStyles.col}>
+        <Text style={[wcStyles.colLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>SEMAINE PRÉC.</Text>
+        <View style={wcStyles.statItem}>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
+            <Text style={[wcStyles.statVal, { fontFamily: FONTS.monoBold, color: COLORS.textSecondary }]}>{lastWeek.sessions}</Text>
+            {sessionsDelta && (
+              <Text style={{ fontFamily: FONTS.mono, fontSize: 11, color: sessionsDelta.positive ? COLORS.green : COLORS.amber }}>
+                {sessionsDelta.positive ? "+" : "-"}{sessionsDelta.value}
+              </Text>
+            )}
+          </View>
+          <Text style={[wcStyles.statLabel, { fontFamily: FONTS.body }]}>Séances</Text>
+        </View>
+        <View style={wcStyles.statItem}>
+          <Text style={[wcStyles.statVal, { fontFamily: FONTS.monoBold, color: COLORS.textSecondary }]}>
+            {lastWeek.avgRpe != null ? lastWeek.avgRpe.toFixed(1) : "—"}
+          </Text>
+          <Text style={[wcStyles.statLabel, { fontFamily: FONTS.body }]}>RPE moy.</Text>
+        </View>
+        <View style={wcStyles.statItem}>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
+            <Text style={[wcStyles.statVal, { fontFamily: FONTS.monoBold, color: COLORS.textSecondary }]}>
+              {lastWeek.totalDurationMin > 0 ? `${lastWeek.totalDurationMin}min` : "—"}
+            </Text>
+            {durationDelta && (
+              <Text style={{ fontFamily: FONTS.mono, fontSize: 11, color: durationDelta.positive ? COLORS.green : COLORS.amber }}>
+                {durationDelta.positive ? "+" : "-"}{durationDelta.value}min
+              </Text>
+            )}
+          </View>
+          <Text style={[wcStyles.statLabel, { fontFamily: FONTS.body }]}>Durée</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const wcStyles = StyleSheet.create({
+  grid: { flexDirection: "row" },
+  col: { flex: 1, gap: 12 },
+  divider: { width: 1, backgroundColor: COLORS.border, marginHorizontal: 16 },
+  colLabel: { fontSize: 9, letterSpacing: 2, marginBottom: 4 },
+  statItem: { gap: 2 },
+  statVal: { fontSize: 22 },
+  statLabel: { fontSize: 11, color: COLORS.textSecondary },
+});
+
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const formatWeight = useFormatWeight();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
-  const [activeTab, setActiveTab] = useState<"training" | "nutrition">("training");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("training");
   const [period, setPeriod] = useState<Period>("30");
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
@@ -219,6 +457,9 @@ export default function StatsScreen() {
   const sessionQuery = useGetSessionHistory();
   const prQuery = useGetPersonalRecords();
   const testsQuery = useGetAthleteTests();
+  const loadHistoryQuery = useGetExerciseLoadHistory(30);
+  const weeklyVolumeQuery = useGetWeeklyVolume(8);
+  const weekComparisonQuery = useGetWeekComparison();
 
   const days = parseInt(period);
   const cutoff = new Date();
@@ -251,6 +492,10 @@ export default function StatsScreen() {
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
+  const exerciseLoadData = loadHistoryQuery.data?.exercises ?? [];
+  const weeklyVolumeData = weeklyVolumeQuery.data?.weeks ?? [];
+  const weekComparisonData = weekComparisonQuery.data;
+
   const sectionContentMap: Record<string, React.ReactNode> = {
     kpi: (
       <View style={styles.kpiRow}>
@@ -268,6 +513,12 @@ export default function StatsScreen() {
         </GlowCard>
       </View>
     ),
+    weekComparison: weekComparisonData ? (
+      <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
+        <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>SEMAINE N VS N-1</Text>
+        <WeekComparisonSection thisWeek={weekComparisonData.thisWeek} lastWeek={weekComparisonData.lastWeek} />
+      </GlowCard>
+    ) : null,
     tests: (testsQuery.data?.length ?? 0) > 0 ? (
       <GlowCard glowColor={COLORS.violet} style={styles.testsCard}>
         <View style={styles.testsHeader}>
@@ -328,6 +579,18 @@ export default function StatsScreen() {
         </View>
       </GlowCard>
     ),
+    weeklyVolume: (
+      <GlowCard glowColor={COLORS.green} style={styles.chartCard}>
+        <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>VOLUME HEBDOMADAIRE</Text>
+        <WeeklyVolumeBarChart weeks={weeklyVolumeData} />
+      </GlowCard>
+    ),
+    exerciseLoad: exerciseLoadData.length > 0 ? (
+      <GlowCard glowColor={COLORS.cyan} style={styles.chartCard}>
+        <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>PROGRESSION DES CHARGES (30J)</Text>
+        <ExerciseLoadSection exercises={exerciseLoadData} />
+      </GlowCard>
+    ) : null,
     averages: (
       <GlowCard glowColor={COLORS.border} style={styles.averagesCard}>
         <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>MOYENNES QUOTIDIENNES</Text>
@@ -473,14 +736,19 @@ export default function StatsScreen() {
 
       <View style={styles.tabRow}>
         <TouchableOpacity onPress={() => setActiveTab("training")} style={[styles.tabBtn, activeTab === "training" && styles.tabBtnActive]}>
-          <Text style={[styles.tabBtnText, { fontFamily: FONTS.mono, color: activeTab === "training" ? COLORS.cyan : COLORS.textMuted }]}>ENTRAÎNEMENT</Text>
+          <Text style={[styles.tabBtnText, { fontFamily: FONTS.mono, color: activeTab === "training" ? COLORS.cyan : COLORS.textMuted }]}>ENTRAÎN.</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setActiveTab("nutrition")} style={[styles.tabBtn, activeTab === "nutrition" && styles.tabBtnActiveGreen]}>
           <Text style={[styles.tabBtnText, { fontFamily: FONTS.mono, color: activeTab === "nutrition" ? COLORS.green : COLORS.textMuted }]}>NUTRITION</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => setActiveTab("body")} style={[styles.tabBtn, activeTab === "body" && styles.tabBtnActiveViolet]}>
+          <Text style={[styles.tabBtnText, { fontFamily: FONTS.mono, color: activeTab === "body" ? COLORS.violet : COLORS.textMuted }]}>MON CORPS</Text>
+        </TouchableOpacity>
       </View>
 
       {activeTab === "nutrition" && <NutritionTab />}
+
+      {activeTab === "body" && <BodyTab />}
 
       {activeTab === "training" && (
         <>
@@ -560,7 +828,8 @@ const styles = StyleSheet.create({
   tabBtn: { flex: 1, paddingVertical: 10, alignItems: "center" },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: COLORS.cyan },
   tabBtnActiveGreen: { borderBottomWidth: 2, borderBottomColor: COLORS.green },
-  tabBtnText: { fontSize: 12, letterSpacing: 1.5 },
+  tabBtnActiveViolet: { borderBottomWidth: 2, borderBottomColor: COLORS.violet },
+  tabBtnText: { fontSize: 11, letterSpacing: 1 },
   sectionsWrapper: { paddingHorizontal: 20 },
   section: { marginBottom: 16 },
   sectionReorderItem: {
