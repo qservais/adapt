@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -136,6 +137,8 @@ const CYCLE_PHASES = [
 
 type CyclePhase = (typeof CYCLE_PHASES)[number]["key"] | null;
 
+const CHECKIN_DRAFT_KEY = "@adapt_checkin_draft";
+
 const WELCOME_ITEMS = [
   { key: "sleep", label: "Sommeil", icon: "sun" as const, color: COLORS.cyan },
   { key: "energy", label: "Énergie", icon: "zap" as const, color: COLORS.green },
@@ -190,6 +193,51 @@ export default function CheckinScreen() {
     (params.cyclePhase || null) as CyclePhase
   );
 
+  const draftRestoredRef = useRef(false);
+
+  useEffect(() => {
+    if (isEditMode) return;
+    AsyncStorage.getItem(CHECKIN_DRAFT_KEY)
+      .then((raw) => {
+        if (!raw || draftRestoredRef.current) return;
+        try {
+          const draft = JSON.parse(raw);
+          if (!draft?.stepIndex && draft?.stepIndex !== 0) return;
+          Alert.alert(
+            "Check-in en cours",
+            "Tu as commencé un check-in. Veux-tu reprendre là où tu t'es arrêté(e) ?",
+            [
+              {
+                text: "Recommencer",
+                style: "destructive",
+                onPress: () => AsyncStorage.removeItem(CHECKIN_DRAFT_KEY).catch(() => {}),
+              },
+              {
+                text: "Reprendre",
+                onPress: () => {
+                  draftRestoredRef.current = true;
+                  if (draft.stepIndex > 0) setStepIndex(draft.stepIndex);
+                  if (draft.values) setValues(draft.values);
+                  if (draft.hasPain != null) setHasPain(draft.hasPain);
+                  if (draft.painNotes != null) setPainNotes(draft.painNotes);
+                  if (draft.cyclePhase !== undefined) setCyclePhase(draft.cyclePhase);
+                },
+              },
+            ]
+          );
+        } catch {}
+      })
+      .catch(() => {});
+  }, [isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode) return;
+    AsyncStorage.setItem(
+      CHECKIN_DRAFT_KEY,
+      JSON.stringify({ stepIndex, values, hasPain, painNotes, cyclePhase })
+    ).catch(() => {});
+  }, [stepIndex, values, hasPain, painNotes, cyclePhase, isEditMode]);
+
   const isLastStep = stepIndex === steps.length - 1;
   const currentStep = steps[stepIndex];
   const currentColor = currentStep.kind === "slider" ? currentStep.color : COLORS.cyan;
@@ -206,6 +254,7 @@ export default function CheckinScreen() {
             cyclePhase: cyclePhase ?? undefined,
           },
         });
+        await AsyncStorage.removeItem(CHECKIN_DRAFT_KEY).catch(() => {});
         const badges = result.newBadges ?? [];
         router.replace({
           pathname: "/checkin/result",

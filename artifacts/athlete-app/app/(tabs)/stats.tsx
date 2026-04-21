@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Dimensions,
   Platform,
@@ -11,7 +11,6 @@ import {
 import { NutritionTab } from "@/components/nutrition/NutritionTab";
 import { BodyTab } from "@/components/stats/BodyTab";
 import { StepsSection } from "@/components/steps/StepsSection";
-import { DraggableSectionList } from "@/components/ui/DraggableSectionList";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -24,7 +23,6 @@ import {
   useGetWeeklyVolume,
   useGetWeekComparison,
 } from "@workspace/api-client-react";
-import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useThemeColors, useFormatWeight } from "@/context/PreferencesContext";
 import { useScrollToTop } from "@react-navigation/native";
@@ -423,36 +421,6 @@ export default function StatsScreen() {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
-  const [sectionOrder, setSectionOrder] = useState<string[]>(DEFAULT_SECTION_ORDER);
-  const [reorderMode, setReorderMode] = useState(false);
-  const saveOrderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    customFetch<{ order: string[] | null }>("/api/users/me/stats-order")
-      .then((res) => {
-        if (res.order && res.order.length > 0) {
-          const merged = [
-            ...res.order.filter((id) => DEFAULT_SECTION_ORDER.includes(id)),
-            ...DEFAULT_SECTION_ORDER.filter((id) => !res.order!.includes(id)),
-          ];
-          setSectionOrder(merged);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const saveOrder = useCallback((order: string[]) => {
-    if (saveOrderTimer.current) clearTimeout(saveOrderTimer.current);
-    saveOrderTimer.current = setTimeout(() => {
-      customFetch("/api/users/me/stats-order", { method: "PUT", body: JSON.stringify({ order }) }).catch(() => {});
-    }, 800);
-  }, []);
-
-  function resetOrder() {
-    setSectionOrder(DEFAULT_SECTION_ORDER);
-    saveOrder(DEFAULT_SECTION_ORDER);
-  }
-
   const checkinQuery = useGetCheckinHistory();
   const sessionQuery = useGetSessionHistory();
   const prQuery = useGetPersonalRecords();
@@ -604,7 +572,7 @@ export default function StatsScreen() {
       </GlowCard>
     ),
     weekly: (
-      <TouchableOpacity activeOpacity={0.85} onPress={() => !reorderMode && router.push("/weekly-recap")}>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push("/weekly-recap")}>
         <GlowCard glowColor={COLORS.amber} style={styles.weeklyCard}>
           <View style={styles.weeklyCardHeader}>
             <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>BILAN HEBDOMADAIRE</Text>
@@ -699,9 +667,8 @@ export default function StatsScreen() {
     ) : null,
   };
 
-  const visibleSections = sectionOrder
-    .filter((id) => sectionContentMap[id] != null)
-    .map((id) => ({ key: id, data: id }));
+  const visibleSections = DEFAULT_SECTION_ORDER
+    .filter((id) => sectionContentMap[id] != null);
 
   return (
     <ScrollView
@@ -709,27 +676,16 @@ export default function StatsScreen() {
       style={[styles.flex, { backgroundColor: colors.bg }]}
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40 }}
       showsVerticalScrollIndicator={false}
-      scrollEnabled={!reorderMode}
     >
       <View style={styles.headRow}>
         <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>STATS</Text>
-        {activeTab === "training" && !reorderMode && (
+        {activeTab === "training" && (
           <View style={styles.periodRow}>
             {(["7", "14", "30"] as Period[]).map((p) => (
               <TouchableOpacity key={p} onPress={() => setPeriod(p)} style={[styles.periodBtn, period === p && styles.periodActive]}>
                 <Text style={[styles.periodText, { fontFamily: FONTS.mono }, period === p && { color: COLORS.cyan }]}>{p}j</Text>
               </TouchableOpacity>
             ))}
-          </View>
-        )}
-        {activeTab === "training" && reorderMode && (
-          <View style={styles.reorderHeaderBtns}>
-            <TouchableOpacity onPress={resetOrder} style={styles.resetBtn}>
-              <Text style={[styles.resetText, { fontFamily: FONTS.mono }]}>Réinitialiser</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setReorderMode(false)} style={styles.doneBtn}>
-              <Text style={[styles.doneText, { fontFamily: FONTS.mono }]}>Terminé</Text>
-            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -752,63 +708,25 @@ export default function StatsScreen() {
 
       {activeTab === "training" && (
         <>
-          {reorderMode && (
-            <View style={[styles.section, styles.reorderBanner]}>
-              <Feather name="move" size={13} color={COLORS.amber} />
-              <Text style={[styles.reorderBannerText, { fontFamily: FONTS.mono }]}>
-                Glisser-déposer pour réorganiser
-              </Text>
-            </View>
-          )}
-
           <View style={styles.sectionsWrapper}>
-            <DraggableSectionList
-              items={visibleSections}
-              enabled={reorderMode}
-              itemGap={16}
-              onReorder={(newItems) => {
-                const newOrder = [...newItems.map((item) => item.key), ...DEFAULT_SECTION_ORDER.filter((id) => !visibleSections.map((s) => s.key).includes(id))];
-                setSectionOrder(newOrder);
-                saveOrder(newOrder);
-              }}
-              renderItem={(item) => {
-                const content = sectionContentMap[item.key];
-                if (!content) return null;
-                return (
-                  <TouchableOpacity
-                    activeOpacity={reorderMode ? 1 : 0.97}
-                    onLongPress={() => !reorderMode && setReorderMode(true)}
-                    delayLongPress={500}
-                    style={[reorderMode && styles.sectionReorderItem]}
-                  >
-                    {reorderMode && (
-                      <View style={styles.dragHandle}>
-                        <Feather name="menu" size={16} color={COLORS.textMuted} />
-                      </View>
-                    )}
-                    {content}
-                  </TouchableOpacity>
-                );
-              }}
-            />
+            {visibleSections.map((id) => {
+              const content = sectionContentMap[id];
+              if (!content) return null;
+              return (
+                <View key={id} style={styles.section}>
+                  {content}
+                </View>
+              );
+            })}
           </View>
 
-          {checkins.length === 0 && !reorderMode && (
+          {checkins.length === 0 && (
             <View style={styles.emptyWrap}>
               <Feather name="bar-chart-2" size={40} color={COLORS.textMuted} />
               <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
                 Aucune donnée pour cette période. Commence ton check-in quotidien !
               </Text>
             </View>
-          )}
-
-          {!reorderMode && (
-            <TouchableOpacity style={styles.reorderHint} onPress={() => setReorderMode(true)}>
-              <Feather name="move" size={12} color={COLORS.textMuted} />
-              <Text style={[styles.reorderHintText, { fontFamily: FONTS.mono }]}>
-                Appuyer longtemps pour réorganiser
-              </Text>
-            </TouchableOpacity>
           )}
         </>
       )}
@@ -832,23 +750,6 @@ const styles = StyleSheet.create({
   tabBtnText: { fontSize: 11, letterSpacing: 1 },
   sectionsWrapper: { paddingHorizontal: 20 },
   section: { marginBottom: 16 },
-  sectionReorderItem: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    backgroundColor: COLORS.bgCard,
-    overflow: "hidden",
-  },
-  dragHandle: { flexDirection: "row", justifyContent: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  reorderHeaderBtns: { flexDirection: "row", gap: 8 },
-  resetBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border },
-  resetText: { fontSize: 11, color: COLORS.textMuted },
-  doneBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: COLORS.cyanDim, borderWidth: 1, borderColor: COLORS.cyan },
-  doneText: { fontSize: 11, color: COLORS.cyan },
-  reorderBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F59E0B15", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, borderWidth: 1, borderColor: "#F59E0B30", marginBottom: 8, marginHorizontal: 20 },
-  reorderBannerText: { fontSize: 11, color: COLORS.amber, letterSpacing: 1 },
-  reorderHint: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, marginHorizontal: 20 },
-  reorderHintText: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
   kpiRow: { flexDirection: "row", gap: 10 },
   kpiCard: { flex: 1, alignItems: "center", padding: 16 },
   kpiVal: { fontSize: 32, marginBottom: 4 },

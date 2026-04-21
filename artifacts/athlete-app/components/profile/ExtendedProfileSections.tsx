@@ -1002,49 +1002,42 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
 
       {/* APPLICATIONS SANTÉ */}
       <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
-        <SectionHeader
-          title={t("health_apps", "APPLICATIONS SANTÉ").toUpperCase()}
-          icon="heart"
-          editing={false}
-          onToggleEdit={() => {}}
-        />
-        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 8, color: colors.textSecondary }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <SectionHeader
+            title={t("health_apps", "APPLICATIONS SANTÉ").toUpperCase()}
+            icon="heart"
+            editing={false}
+            onToggleEdit={() => {}}
+          />
+          <View style={cStyles.comingSoonBadge}>
+            <Text style={[cStyles.comingSoonText, { fontFamily: FONTS.mono }]}>BIENTÔT</Text>
+          </View>
+        </View>
+        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 4, color: colors.textSecondary }]}>
           {t("sync_health_data", "Synchronise tes données de santé avec ADAPT.")}
         </Text>
+        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 12, color: COLORS.textMuted, fontSize: 12 }]}>
+          {t("health_coming_soon", "Intégration disponible prochainement.")}
+        </Text>
         {HEALTH_APPS.map(app => {
-          const integrationStatus = integrations.find(i => i.provider === app.key);
-          const isConnected = integrationStatus?.isConnected ?? false;
-          const isLoading = connectingProvider === app.key;
           return (
-            <View key={app.key} style={cStyles.healthAppRow}>
+            <View key={app.key} style={[cStyles.healthAppRow, { opacity: 0.45 }]}>
               <View style={[cStyles.healthAppIcon, { backgroundColor: `${app.color}22` }]}>
                 <Text style={{ fontSize: 18 }}>{app.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[cStyles.healthAppName, { fontFamily: FONTS.bodyMedium }]}>{app.label}</Text>
-                {isConnected && integrationStatus?.connectedAt && (
-                  <Text style={{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body }}>
-                    Connecté le {new Date(integrationStatus.connectedAt).toLocaleDateString("fr-FR")}
-                  </Text>
-                )}
               </View>
-              <TouchableOpacity
+              <View
                 style={[
                   cStyles.integrationBtn,
-                  { backgroundColor: isConnected ? "transparent" : COLORS.violet, borderColor: isConnected ? COLORS.border : "transparent" },
+                  { backgroundColor: "transparent", borderColor: colors.border },
                 ]}
-                activeOpacity={0.75}
-                disabled={isLoading}
-                onPress={() => handleToggleIntegration(app.key, isConnected)}
               >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color={isConnected ? COLORS.textMuted : "#fff"} />
-                ) : (
-                  <Text style={[cStyles.integrationBtnText, { fontFamily: FONTS.bodyMedium, color: isConnected ? COLORS.textMuted : "#fff" }]}>
-                    {isConnected ? t("disconnect", "Déconnecter") : t("connect", "Connecter")}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                <Text style={[cStyles.integrationBtnText, { fontFamily: FONTS.bodyMedium, color: COLORS.textMuted }]}>
+                  {t("connect", "Connecter")}
+                </Text>
+              </View>
             </View>
           );
         })}

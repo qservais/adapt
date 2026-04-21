@@ -227,6 +227,17 @@ function StateNoPending({
           <Text style={[styles.lockedDesc, { fontFamily: FONTS.body }]}>
             Effectue ton check-in pour déverrouiller la séance du jour
           </Text>
+          <TouchableOpacity
+            onPress={() => router.push("/library")}
+            activeOpacity={0.7}
+            style={styles.libraryHint}
+          >
+            <Feather name="book-open" size={12} color={COLORS.cyan} />
+            <Text style={[styles.libraryHintText, { fontFamily: FONTS.bodyMedium }]}>
+              Ou lance un exercice libre depuis la Bibliothèque
+            </Text>
+            <Feather name="chevron-right" size={12} color={COLORS.cyan} />
+          </TouchableOpacity>
         </View>
       </GlowCard>
     </View>
@@ -553,7 +564,7 @@ function QuickLinksSection() {
           <Text style={[styles.quickLinkLabel, { fontFamily: FONTS.bodyMedium, color: COLORS.white }]}>
             Bibliothèque
           </Text>
-          <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>Exercices</Text>
+          <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>Lance un exercice</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickLinkCard, { borderColor: `${COLORS.violet}30`, backgroundColor: `${COLORS.violet}10` }]}
@@ -632,11 +643,13 @@ const styles = StyleSheet.create({
   lockedSession: {
     padding: 20,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 14,
   },
   lockedTitle: { fontSize: 15, color: COLORS.textSecondary, marginBottom: 2 },
-  lockedDesc: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18 },
+  lockedDesc: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18, marginBottom: 8 },
+  libraryHint: { flexDirection: "row", alignItems: "center", gap: 5 },
+  libraryHintText: { fontSize: 12, color: COLORS.cyan, flex: 1 },
   checkedContainer: { gap: 16 },
   weekCalendarCard: {
     backgroundColor: COLORS.bgCard,

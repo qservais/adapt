@@ -49,7 +49,7 @@ function useUnreadMessageCount() {
 
 function NativeTabLayout() {
   const insets = useSafeAreaInsets();
-  const bellTop = Math.max(insets.top - 28, 8);
+  const bellTop = insets.top + 4;
   return (
     <View style={{ flex: 1 }}>
       <NativeTabs>
@@ -118,7 +118,7 @@ function ClassicTabLayout() {
   const isWeb = Platform.OS === "web";
   const tabHeight = isWeb ? 84 : isIOS ? 88 : 64;
   const insets = useSafeAreaInsets();
-  const bellTop = Math.max(insets.top - 28, 8);
+  const bellTop = insets.top + 4;
   const unreadCount = useUnreadMessageCount();
 
   return (
