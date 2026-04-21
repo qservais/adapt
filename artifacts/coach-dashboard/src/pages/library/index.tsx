@@ -2,7 +2,7 @@ import { EQUIPMENT_CATALOG, EQUIPMENT_CATEGORIES, equipmentKeyFromLabel } from "
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Search, Plus, Pencil, Trash2, Loader2, Dumbbell, X, CheckCircle, ExternalLink
+  Search, Plus, Pencil, Trash2, Loader2, Dumbbell, X, CheckCircle, ExternalLink, CalendarPlus
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,34 @@ const emptyForm = (): ExerciseFormData => ({
   demoUrl: "",
 });
 
+interface AthleteOption {
+  id: string;
+  firstName: string;
+  lastName: string | null;
+}
+
+async function fetchAthletes(): Promise<AthleteOption[]> {
+  const token = localStorage.getItem("adapt_coach_access");
+  const res = await fetch("/api/coach/clients", { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error();
+  const data = await res.json();
+  return data.map((c: { id: string; firstName: string; lastName?: string | null }) => ({
+    id: c.id,
+    firstName: c.firstName,
+    lastName: c.lastName ?? null,
+  }));
+}
+
+async function addToCalendar(clientId: string, exerciseId: string, dateStr: string): Promise<void> {
+  const token = localStorage.getItem("adapt_coach_access");
+  const res = await fetch(`/api/coach/clients/${clientId}/quick-session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ exerciseId, dateStr }),
+  });
+  if (!res.ok) throw new Error("Erreur serveur");
+}
+
 export default function LibraryPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -104,8 +132,27 @@ export default function LibraryPage() {
   const [deleteTarget, setDeleteTarget] = useState<ExerciseItem | null>(null);
   const [customEquipmentInput, setCustomEquipmentInput] = useState("");
   const customEquipmentRef = useRef<HTMLInputElement>(null);
+  const [quickAddExercise, setQuickAddExercise] = useState<ExerciseItem | null>(null);
+  const [quickAddAthleteId, setQuickAddAthleteId] = useState("");
+  const [quickAddDate, setQuickAddDate] = useState(() => new Date().toISOString().slice(0, 10));
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const { data: athletes } = useQuery<AthleteOption[]>({
+    queryKey: ["/api/coach/clients-list"],
+    queryFn: fetchAthletes,
+    staleTime: 60000,
+  });
+
+  const quickAddMutation = useMutation({
+    mutationFn: ({ clientId, exerciseId, dateStr }: { clientId: string; exerciseId: string; dateStr: string }) =>
+      addToCalendar(clientId, exerciseId, dateStr),
+    onSuccess: () => {
+      toast({ title: "Séance ajoutée au calendrier" });
+      setQuickAddExercise(null);
+    },
+    onError: () => toast({ title: "Échec de l'ajout", variant: "destructive" }),
+  });
 
   const { data: exercises, isLoading } = useQuery<ExerciseItem[]>({
     queryKey: ["/api/exercises", search, categoryFilter, muscleGroupFilter],
@@ -343,28 +390,37 @@ export default function LibraryPage() {
                         </span>
                       )}
                     </div>
-                    {ex.createdBy !== null ? (
-                      <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openEdit(ex)}
-                          className="p-1 rounded hover:bg-white/10 transition-colors"
-                          title="Modifier"
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-white" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(ex)}
-                          className="p-1 rounded hover:bg-destructive/20 transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-[9px] font-mono text-muted-foreground/50 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity px-1">
-                        Global
-                      </span>
-                    )}
+                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => { setQuickAddExercise(ex); setQuickAddAthleteId(""); setQuickAddDate(new Date().toISOString().slice(0, 10)); }}
+                        className="p-1 rounded hover:bg-accent/20 transition-colors"
+                        title="Ajouter au calendrier d'un athlète"
+                      >
+                        <CalendarPlus className="w-3.5 h-3.5 text-accent" />
+                      </button>
+                      {ex.createdBy !== null ? (
+                        <>
+                          <button
+                            onClick={() => openEdit(ex)}
+                            className="p-1 rounded hover:bg-white/10 transition-colors"
+                            title="Modifier"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-white" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(ex)}
+                            className="p-1 rounded hover:bg-destructive/20 transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-[9px] font-mono text-muted-foreground/50 px-1 self-center">
+                          Global
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {mgs.length > 0 && (
@@ -581,6 +637,62 @@ export default function LibraryPage() {
             <Button onClick={handleSave} disabled={isSaving} className="bg-primary hover:bg-primary/90">
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {editExercise ? "Mettre à jour" : "Créer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick-add to athlete calendar */}
+      <Dialog open={!!quickAddExercise} onOpenChange={o => !o && setQuickAddExercise(null)}>
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-white flex items-center gap-2">
+              <CalendarPlus className="w-5 h-5 text-accent" /> Ajouter au calendrier
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Crée une séance « {quickAddExercise?.name} » dans le programme libre de l'athlète.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Athlète</Label>
+              <select
+                value={quickAddAthleteId}
+                onChange={e => setQuickAddAthleteId(e.target.value)}
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                <option value="">Sélectionner un athlète…</option>
+                {(athletes || []).map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.firstName} {a.lastName ?? ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Date de séance</Label>
+              <Input
+                type="date"
+                value={quickAddDate}
+                onChange={e => setQuickAddDate(e.target.value)}
+                className="bg-background border-border text-white"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuickAddExercise(null)} className="border-border">
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                if (!quickAddAthleteId || !quickAddDate || !quickAddExercise) return;
+                quickAddMutation.mutate({ clientId: quickAddAthleteId, exerciseId: quickAddExercise.id, dateStr: quickAddDate });
+              }}
+              disabled={!quickAddAthleteId || !quickAddDate || quickAddMutation.isPending}
+              className="bg-accent hover:bg-accent/90 text-white"
+            >
+              {quickAddMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Ajouter
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable, coachAppointmentsTable, coachJoinRequestsTable } from "@workspace/db";
+import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, performanceTestsTable, coachAppointmentsTable, coachJoinRequestsTable } from "@workspace/db";
 import { eq, and, desc, asc, gte, lt, inArray, isNotNull, sql } from "drizzle-orm";
 import { getTodayLocalDate } from "../lib/dateUtils.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
@@ -647,6 +647,7 @@ router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res)
       isRead: alertsTable.isRead,
       isResolved: alertsTable.isResolved,
       resolvedAt: alertsTable.resolvedAt,
+      resolutionNote: alertsTable.resolutionNote,
       createdAt: alertsTable.createdAt,
       athleteFirstName: usersTable.firstName,
       athleteLastName: usersTable.lastName,
@@ -666,6 +667,7 @@ router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res)
       isRead: a.isRead,
       isResolved: a.isResolved,
       resolvedAt: a.resolvedAt,
+      resolutionNote: a.resolutionNote,
       createdAt: a.createdAt,
     })));
   } catch (err) {
@@ -702,6 +704,134 @@ router.put("/coach/alerts/:alertId/resolve", authenticate, requireRole("coach"),
     }).where(eq(alertsTable.id, alertId));
 
     res.json({ success: true, message: "Alert resolved" });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const quickSessionSchema = z.object({
+  exerciseId: z.string().uuid(),
+  dateStr: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  sets: z.number().int().min(1).default(3),
+  reps: z.string().default("8-10"),
+  sessionName: z.string().optional(),
+});
+
+router.post("/coach/clients/:clientId/quick-session", authenticate, requireRole("coach"), async (req, res) => {
+  const clientId = String(req.params["clientId"]);
+  const parsed = quickSessionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  const { exerciseId, dateStr, sets, reps, sessionName } = parsed.data;
+
+  try {
+    const [athlete] = await db.select({ id: usersTable.id, firstName: usersTable.firstName })
+      .from(usersTable)
+      .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
+    if (!athlete) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlete not linked to you" } });
+      return;
+    }
+
+    const [exercise] = await db.select({ id: exercisesTable.id, name: exercisesTable.name })
+      .from(exercisesTable).where(eq(exercisesTable.id, exerciseId));
+    if (!exercise) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercise not found" } });
+      return;
+    }
+
+    let [libreProgram] = await db.select({ id: programsTable.id, durationWeeks: programsTable.durationWeeks, startDate: programsTable.startDate })
+      .from(programsTable)
+      .where(and(eq(programsTable.athleteId, clientId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.name, "__libre__")));
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(dateStr + "T00:00:00");
+
+    if (!libreProgram) {
+      const [created] = await db.insert(programsTable).values({
+        coachId: req.user!.userId,
+        athleteId: clientId,
+        name: "__libre__",
+        durationWeeks: 104,
+        startDate: dateStr,
+        isActive: true,
+      }).returning();
+      libreProgram = created;
+    }
+
+    const programStart = new Date((libreProgram.startDate ?? dateStr) + "T00:00:00");
+    const diffDays = Math.floor((targetDate.getTime() - programStart.getTime()) / 86400000);
+    const weekNumber = diffDays >= 0 ? Math.floor(diffDays / 7) + 1 : 1;
+    const dayNumber = (() => { const d = targetDate.getDay(); return d === 0 ? 7 : d; })();
+
+    if (weekNumber > libreProgram.durationWeeks) {
+      await db.update(programsTable).set({ durationWeeks: weekNumber + 10 }).where(eq(programsTable.id, libreProgram.id));
+    }
+
+    const name = sessionName || `${exercise.name} – ${dateStr}`;
+    const [session] = await db.insert(sessionsTable).values({
+      programId: libreProgram.id,
+      weekNumber,
+      dayNumber,
+      name,
+      type: "strength",
+      estimatedDurationMin: 30,
+    }).returning();
+
+    const MODES = ["normal", "performance", "adapt", "recovery"] as const;
+    const MODIFIERS: Record<string, number> = { normal: 1, performance: 1.05, adapt: 0.75, recovery: 0.3 };
+    for (const mode of MODES) {
+      const [variant] = await db.insert(sessionVariantsTable).values({
+        sessionId: session.id,
+        mode,
+        volumeModifier: String(MODIFIERS[mode]),
+        intensityModifier: String(MODIFIERS[mode]),
+      }).returning();
+
+      const [block] = await db.insert(sessionBlocksTable).values({
+        sessionId: session.id,
+        type: "strength",
+        orderIndex: 0,
+        name: "Principal",
+        estimatedDurationMin: 30,
+      }).returning();
+
+      await db.insert(sessionExercisesTable).values({
+        variantId: variant.id,
+        blockId: block.id,
+        exerciseId: exercise.id,
+        orderIndex: 0,
+        sets,
+        reps,
+        nominalLoadKg: "0",
+        restSeconds: 90,
+      });
+    }
+
+    res.status(201).json({ success: true, sessionId: session.id, weekNumber, dayNumber, programId: libreProgram.id });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.put("/coach/alerts/:alertId/reopen", authenticate, requireRole("coach"), async (req, res) => {
+  const alertId = String(req.params["alertId"]);
+  try {
+    const [alert] = await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(eq(alertsTable.id, alertId), eq(alertsTable.coachId, req.user!.userId)));
+    if (!alert) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Alert not found" } });
+      return;
+    }
+    await db.update(alertsTable).set({
+      isResolved: false,
+      resolutionNote: null,
+      resolvedAt: null,
+    }).where(eq(alertsTable.id, alertId));
+    res.json({ success: true, message: "Alert reopened" });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

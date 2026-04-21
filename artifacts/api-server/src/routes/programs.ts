@@ -31,6 +31,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       .innerJoin(usersTable, eq(programsTable.athleteId, usersTable.id))
       .where(eq(programsTable.coachId, req.user!.userId));
 
+    const todayStr = new Date().toISOString().slice(0, 10);
     res.json(programs.map(p => ({
       id: p.id,
       name: p.name,
@@ -39,6 +40,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       durationWeeks: p.durationWeeks,
       startDate: p.startDate,
       isActive: p.isActive,
+      startsInFuture: p.startDate ? p.startDate > todayStr : false,
       createdAt: p.createdAt,
     })));
   } catch (err) {

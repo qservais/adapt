@@ -21,6 +21,7 @@ import ChallengesPage from "./pages/challenges/index";
 import NotificationsPage from "./pages/notifications/index";
 import NotFound from "@/pages/not-found";
 import PrivacyPage from "./pages/privacy";
+import SettingsPage from "./pages/settings/index";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ function AppRouter() {
         <Route path="/alerts" component={AlertsFeed} />
         <Route path="/messages" component={MessagesList} />
         <Route path="/messages/:id" component={ChatView} />
+        <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

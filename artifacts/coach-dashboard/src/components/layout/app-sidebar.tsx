@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -90,6 +90,14 @@ export function AppSidebar() {
       badge: unreadMessagesCount > 0 ? unreadMessagesCount : null,
       exactMatch: false,
     },
+    {
+      title: "Paramètres",
+      subtitle: "Profil et préférences",
+      url: "/settings",
+      icon: Settings,
+      badge: null,
+      exactMatch: false,
+    },
   ];
 
   const isActive = (item: typeof items[0]) => {
@@ -139,8 +147,12 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-3 lg:p-4 border-t border-border">
         <div className="flex items-center gap-2.5 mb-3 px-1.5 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold font-display shrink-0">
-            {user?.firstName?.[0]}{user?.lastName?.[0] || ''}
+          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold font-display shrink-0 overflow-hidden">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <>{user?.firstName?.[0]}{user?.lastName?.[0] || ''}</>
+            )}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-semibold text-white truncate">{user?.firstName} {user?.lastName}</span>

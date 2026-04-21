@@ -8,6 +8,7 @@ interface AuthContextType {
   isCoach: boolean;
   logout: () => void;
   setAuth: (access: string, refresh: string) => void;
+  refetchUser: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: isUserLoading && tokenExists,
     isCoach,
     logout,
-    setAuth
+    setAuth,
+    refetchUser: () => { refetch(); },
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

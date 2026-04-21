@@ -241,6 +241,12 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
                 ACTIF
               </span>
             )}
+            {!prog.isActive && prog.startsInFuture && (
+              <span className="text-[10px] font-bold text-accent flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
+                À VENIR
+              </span>
+            )}
           </div>
         </div>
         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />

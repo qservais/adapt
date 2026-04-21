@@ -24,7 +24,7 @@ import {
   ChevronDown, ChevronUp, Clock, Flame, Zap, Activity,
   Shield, Wind, GripVertical, Link as LinkIcon,
   Heart, Timer, PersonStanding, Radius, Crosshair, Layers,
-  Gauge, BarChart2,
+  Gauge, BarChart2, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -437,6 +437,7 @@ interface ExerciseRowCardProps {
   onChange: (patch: Partial<ExerciseRow>) => void;
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
+  onDuplicate: () => void;
   canSuperset?: boolean;
   onLinkSuperset?: () => void;
   onUnlinkSuperset?: () => void;
@@ -510,7 +511,7 @@ function TempoInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove, canSuperset, onLinkSuperset, onUnlinkSuperset }: ExerciseRowCardProps) {
+function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove, onDuplicate, canSuperset, onLinkSuperset, onUnlinkSuperset }: ExerciseRowCardProps) {
   const isInSuperset = !!ex.supersetGroup;
   const label = ex.supersetLabel || "";
   const isSimple = blockType === "warm_up" || blockType === "cool_down" || blockType === "mobility";
@@ -544,6 +545,9 @@ function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove
               <LinkIcon className="w-3 h-3 text-[#A855F7]" />
             </button>
           ))}
+          <button type="button" onClick={onDuplicate} className="p-0.5 rounded hover:bg-primary/20 transition-colors" title="Dupliquer cet exercice">
+            <Copy className="w-3 h-3 text-primary/60" />
+          </button>
           <button type="button" onClick={() => onMove(-1)} disabled={idx === 0} className="p-0.5 rounded hover:bg-white/10 disabled:opacity-30">
             <ChevronUp className="w-3 h-3 text-muted-foreground" />
           </button>
@@ -769,6 +773,40 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
     updateBlock(bIdx, { exercises: next.map((e, i) => ({ ...e, orderIndex: i })) });
   };
 
+  const duplicateExercise = (bIdx: number, eIdx: number) => {
+    const block = blocks[bIdx];
+    const src = block.exercises[eIdx];
+    const copy: ExerciseRow = {
+      ...src,
+      supersetGroup: undefined,
+      supersetLabel: undefined,
+      orderIndex: eIdx + 1,
+    };
+    const next = [
+      ...block.exercises.slice(0, eIdx + 1),
+      copy,
+      ...block.exercises.slice(eIdx + 1),
+    ];
+    updateBlock(bIdx, { exercises: next.map((e, i) => ({ ...e, orderIndex: i })) });
+  };
+
+  const duplicateBlock = (bIdx: number) => {
+    const src = blocks[bIdx];
+    const copy: BlockDraft = {
+      ...src,
+      id: Math.random().toString(36).slice(2, 8),
+      orderIndex: bIdx + 1,
+      exercises: src.exercises.map(e => ({ ...e, supersetGroup: undefined, supersetLabel: undefined })),
+      collapsed: false,
+    };
+    const next = [
+      ...blocks.slice(0, bIdx + 1),
+      copy,
+      ...blocks.slice(bIdx + 1),
+    ];
+    onChange(next.map((b, i) => ({ ...b, orderIndex: i })));
+  };
+
   const linkSuperset = (bIdx: number, eIdx: number) => {
     const block = blocks[bIdx];
     const exercises = [...block.exercises];
@@ -857,6 +895,10 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                             {CONDITIONING_FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                           </select>
                         )}
+                        <button type="button" onClick={() => duplicateBlock(bIdx)}
+                          className="p-0.5 rounded hover:bg-primary/20 transition-colors" title="Dupliquer ce bloc">
+                          <Copy className="w-3 h-3 text-primary/60" />
+                        </button>
                         <button type="button" onClick={() => updateBlock(bIdx, { collapsed: isOpen })}
                           className="p-0.5 rounded hover:bg-white/10 transition-colors">
                           {isOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
@@ -872,7 +914,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                       <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
                         <div className="space-y-1.5">
                           {block.exercises.map((ex, eIdx) => {
-                            const supportsSuperset = block.type === "strength" || block.type === "power" || block.type === "plyometric" || block.type === "technique";
+                            const supportsSuperset = block.type === "strength" || block.type === "power" || block.type === "plyometric" || block.type === "technique" || block.type === "conditioning";
                             const canLink = supportsSuperset && eIdx < block.exercises.length - 1 && !block.exercises[eIdx + 1]?.supersetGroup;
                             return (
                               <ExerciseRowCard
@@ -884,6 +926,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                                 onChange={patch => updateExercise(bIdx, eIdx, patch)}
                                 onRemove={() => removeExercise(bIdx, eIdx)}
                                 onMove={dir => moveExercise(bIdx, eIdx, dir)}
+                                onDuplicate={() => duplicateExercise(bIdx, eIdx)}
                                 canSuperset={canLink}
                                 onLinkSuperset={() => linkSuperset(bIdx, eIdx)}
                                 onUnlinkSuperset={() => unlinkSuperset(bIdx, eIdx)}
