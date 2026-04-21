@@ -160,18 +160,76 @@ export function useFormatDistance() {
   return useContext(PreferencesContext).formatDistance;
 }
 
-const FR_LABELS: Record<string, string> = {
-  kg: "kg",
-  km: "km",
-  lbs: "lbs",
-  mi: "mi",
+const TRANSLATIONS: Record<Language, Record<string, string>> = {
+  fr: {
+    kg: "kg",
+    km: "km",
+    lbs: "lbs",
+    mi: "mi",
+    weight: "Poids",
+    height: "Taille",
+    primary_goal: "Objectif principal",
+    secondary_goal: "Objectif secondaire",
+    fitness_level: "Niveau de forme",
+    training_context: "Contexte d'entraînement",
+    available_days: "Jours disponibles",
+    training_location: "Lieu d'entraînement",
+    equipment: "Équipement",
+    session_duration: "Durée de séance",
+    injuries: "Blessures / restrictions",
+    preferences: "Préférences",
+    language_label: "Langue",
+    theme_label: "Thème",
+    units_label: "Unités",
+    health_apps: "Applications santé",
+    privacy: "Confidentialité",
+    notifications: "Notifications",
+    save: "Enregistrer",
+    cancel: "Annuler",
+    edit: "Modifier",
+    connect: "Connecter",
+    disconnect: "Déconnecter",
+    connected: "Connecté",
+    not_connected: "Non connecté",
+  },
+  en: {
+    kg: "kg",
+    km: "km",
+    lbs: "lbs",
+    mi: "mi",
+    weight: "Weight",
+    height: "Height",
+    primary_goal: "Primary goal",
+    secondary_goal: "Secondary goal",
+    fitness_level: "Fitness level",
+    training_context: "Training context",
+    available_days: "Available days",
+    training_location: "Training location",
+    equipment: "Equipment",
+    session_duration: "Session duration",
+    injuries: "Injuries / restrictions",
+    preferences: "Preferences",
+    language_label: "Language",
+    theme_label: "Theme",
+    units_label: "Units",
+    health_apps: "Health apps",
+    privacy: "Privacy",
+    notifications: "Notifications",
+    save: "Save",
+    cancel: "Cancel",
+    edit: "Edit",
+    connect: "Connect",
+    disconnect: "Disconnect",
+    connected: "Connected",
+    not_connected: "Not connected",
+  },
 };
 
 export function useT() {
   const { language } = usePreferences();
   return useCallback(
     (key: string, fallback?: string): string => {
-      const dict = language === "en" ? FR_LABELS : FR_LABELS;
+      const dict = TRANSLATIONS[language] ?? TRANSLATIONS.fr;
       return dict[key] ?? fallback ?? key;
     },
     [language]

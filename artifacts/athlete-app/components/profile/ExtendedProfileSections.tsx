@@ -92,6 +92,7 @@ const FITNESS_LEVELS = [
   { key: "beginner", label: "Débutant" },
   { key: "intermediate", label: "Intermédiaire" },
   { key: "advanced", label: "Avancé" },
+  { key: "expert", label: "Expert" },
 ];
 
 const SECONDARY_GOALS = [
@@ -108,10 +109,10 @@ const DURATION_OPTIONS = [30, 45, 60, 75, 90, 105, 120];
 
 const HEALTH_APPS = [
   { key: "apple_health", label: "Apple Santé", icon: "❤️", color: "#FF2D55" },
-  { key: "google_fit", label: "Google Fit", icon: "🏃", color: "#4285F4" },
   { key: "garmin", label: "Garmin Connect", icon: "⌚", color: "#009CDE" },
-  { key: "polar", label: "Polar Flow", icon: "💓", color: "#D52B1E" },
+  { key: "strava", label: "Strava", icon: "🏃", color: "#FC4C02" },
   { key: "whoop", label: "Whoop", icon: "💪", color: "#00D1CA" },
+  { key: "fitbit", label: "Fitbit", icon: "📊", color: "#00B0B9" },
 ];
 
 const NOTIF_TYPES = [
@@ -927,23 +928,23 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         })}
       </View>
 
-      {/* CONFIDENTIALITÉ */}
+      {/* DONNÉES PARTAGÉES AVEC LE COACH */}
       <View style={cStyles.section}>
         <SectionHeader
-          title="CONFIDENTIALITÉ"
-          icon="shield"
+          title="DONNÉES PARTAGÉES AVEC LE COACH"
+          icon="eye"
           editing={editingPrivacy}
           onToggleEdit={() => { if (editingPrivacy) { handleSavePrivacy(); } else { setEditingPrivacy(true); } }}
           saving={saving["privacy"]}
         />
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body }]}>
-          Choisis les données partagées avec ton coach.
+          Ces données sont transmises à ton coach sur toutes ses vues (liste, détail, historique de check-ins). Désactiver un interrupteur masque la donnée partout.
         </Text>
         {([
-          { key: "shareWeight" as const, label: "Partager mon poids", icon: "trending-down" as const },
-          { key: "shareSleep" as const, label: "Partager mon sommeil", icon: "moon" as const },
-          { key: "shareHeartRate" as const, label: "Partager ma fréquence cardiaque", icon: "heart" as const },
-          { key: "shareBodyFat" as const, label: "Partager ma masse grasse", icon: "percent" as const },
+          { key: "shareWeight" as const, label: "Poids corporel", icon: "trending-down" as const },
+          { key: "shareSleep" as const, label: "Qualité du sommeil", icon: "moon" as const },
+          { key: "shareHeartRate" as const, label: "Fréquence cardiaque", icon: "heart" as const },
+          { key: "shareBodyFat" as const, label: "Masse grasse (%)", icon: "percent" as const },
         ] as const).map(({ key, label, icon }, idx, arr) => (
           <View
             key={key}
@@ -969,6 +970,31 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             />
           </View>
         ))}
+      </View>
+
+      {/* PARAMÈTRES DE CONFIDENTIALITÉ */}
+      <View style={[cStyles.section, { marginBottom: 24 }]}>
+        <SectionHeader
+          title="PARAMÈTRES DE CONFIDENTIALITÉ"
+          icon="shield"
+          editing={false}
+          onToggleEdit={() => {}}
+        />
+        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body }]}>
+          Ces paramètres contrôlent la visibilité globale de ton profil et l'accès à tes données personnelles.
+        </Text>
+        <View style={[cStyles.privacyRow, { borderBottomWidth: 0 }]}>
+          <View style={cStyles.privacyLeft}>
+            <Feather name="lock" size={14} color={COLORS.textMuted} />
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Profil privé (coach uniquement)</Text>
+          </View>
+          <Switch
+            value={true}
+            disabled={true}
+            trackColor={{ false: COLORS.border, true: COLORS.cyanDim }}
+            thumbColor={COLORS.cyan}
+          />
+        </View>
       </View>
 
     </>

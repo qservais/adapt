@@ -22,7 +22,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { PreferencesProvider } from "@/context/PreferencesContext";
+import { PreferencesProvider, useResolvedTheme } from "@/context/PreferencesContext";
 import { setupApiClient } from "@/lib/api-setup";
 import { COLORS } from "@/constants/theme";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -79,6 +79,16 @@ function RootLayoutNav() {
   );
 }
 
+function ThemedGestureRoot({ children }: { children: React.ReactNode }) {
+  const resolvedTheme = useResolvedTheme();
+  const bgColor = resolvedTheme === "light" ? "#FFFFFF" : COLORS.bg;
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: bgColor }}>
+      {children}
+    </GestureHandlerRootView>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useBebasNeue({
     BebasNeue_400Regular,
@@ -102,15 +112,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.bg }}>
-            <KeyboardProvider>
-              <AuthProvider>
-                <PreferencesProvider>
+          <AuthProvider>
+            <PreferencesProvider>
+              <ThemedGestureRoot>
+                <KeyboardProvider>
                   <RootLayoutNav />
-                </PreferencesProvider>
-              </AuthProvider>
-            </KeyboardProvider>
-          </GestureHandlerRootView>
+                </KeyboardProvider>
+              </ThemedGestureRoot>
+            </PreferencesProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

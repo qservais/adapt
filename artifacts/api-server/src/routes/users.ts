@@ -86,7 +86,7 @@ const updateSchema = z.object({
   heightCm: z.number().int().min(50).max(300).optional(),
   trainingFrequency: z.number().int().min(1).max(14).optional(),
   injuries: z.string().optional(),
-  fitnessLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  fitnessLevel: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),
   primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
   cycleTracking: z.boolean().optional(),
   lastPeriodDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
@@ -355,7 +355,7 @@ function extendedProfile(user: typeof usersTable.$inferSelect) {
 
 const extendedProfileSchema = z.object({
   primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
-  fitnessLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  fitnessLevel: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),
   injuries: z.string().max(2000).optional(),
   secondaryGoal: z.string().max(200).nullable().optional(),
   sessionDurationMin: z.number().int().min(15).max(240).nullable().optional(),
@@ -378,7 +378,7 @@ const extendedProfileSchema = z.object({
   notificationPrefs: z.record(z.boolean()).optional(),
 });
 
-const INTEGRATION_PROVIDERS = ["apple_health", "google_fit", "garmin", "polar", "whoop"] as const;
+const INTEGRATION_PROVIDERS = ["apple_health", "garmin", "strava", "whoop", "fitbit"] as const;
 
 router.get("/users/me/profile", authenticate, async (req, res) => {
   try {
@@ -446,7 +446,7 @@ router.put("/users/me/profile", authenticate, async (req, res) => {
   }
 });
 
-const VALID_PROVIDERS = ["apple_health", "google_fit", "garmin", "polar", "whoop"] as const;
+const VALID_PROVIDERS = ["apple_health", "garmin", "strava", "whoop", "fitbit"] as const;
 
 router.post("/users/me/integrations/:provider/connect", authenticate, async (req, res) => {
   const provider = req.params["provider"] as string;
