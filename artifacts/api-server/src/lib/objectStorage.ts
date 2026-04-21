@@ -212,6 +212,15 @@ export class ObjectStorageService {
     );
     return signObjectURL({ bucketName, objectName, method: "GET", ttlSec });
   }
+
+  async getObjectEntityMetadata(objectPath: string): Promise<{ contentType: string | null; size: number }> {
+    const file = await this.getObjectEntityFile(objectPath);
+    const [metadata] = await file.getMetadata();
+    return {
+      contentType: (metadata.contentType as string) ?? null,
+      size: Number(metadata.size ?? 0),
+    };
+  }
 }
 
 function parseObjectPath(path: string): {

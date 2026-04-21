@@ -113,6 +113,20 @@ router.get("/messages/:userId", authenticate, async (req, res) => {
   }
 });
 
+const ALLOWED_DOC_MIMES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+]);
+
+const MAX_DOC_BYTES = 10 * 1024 * 1024; // 10 Mo
+
 const sendSchema = z.object({
   recipientId: z.string().uuid(),
   content: z.string().min(0).max(4000).default(""),
@@ -143,9 +157,25 @@ router.post("/messages", authenticate, async (req, res) => {
         res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: "URL média invalide" } });
         return;
       }
-      if (mediaType === "document" && !storedMediaUrl.startsWith("/objects/")) {
-        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: "Les documents doivent être hébergés sur le stockage objet" } });
+      if (!storedMediaUrl.startsWith("/objects/")) {
+        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: "Le média doit être hébergé sur le stockage objet" } });
         return;
+      }
+      if (mediaType === "document") {
+        try {
+          const meta = await storage.getObjectEntityMetadata(storedMediaUrl);
+          if (meta.size > MAX_DOC_BYTES) {
+            res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "Le fichier dépasse la limite de 10 Mo." } });
+            return;
+          }
+          if (meta.contentType && !ALLOWED_DOC_MIMES.has(meta.contentType.split(";")[0].trim())) {
+            res.status(415).json({ error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Format non supporté. Formats acceptés : PDF, Word, Excel, images (JPG, PNG, HEIC)." } });
+            return;
+          }
+        } catch {
+          res.status(400).json({ error: { code: "OBJECT_NOT_FOUND", message: "Impossible de vérifier le fichier sur le stockage objet" } });
+          return;
+        }
       }
     }
 
@@ -257,20 +287,6 @@ router.post("/messages/upload-media", authenticate, async (req, res) => {
     res.status(500).json({ error: "Impossible de générer l'URL d'upload" });
   }
 });
-
-const ALLOWED_DOC_MIMES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "image/jpeg",
-  "image/png",
-  "image/heic",
-  "image/heif",
-]);
-
-const MAX_DOC_BYTES = 10 * 1024 * 1024; // 10 Mo
 
 const uploadDocSchema = z.object({
   mimeType: z.string().min(1),
