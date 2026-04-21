@@ -60,6 +60,7 @@ import type {
   NotificationPreferences,
   NotificationsResponse,
   OverrideRequest,
+  PRHistoryResponse,
   PersonalRecordsResponse,
   ProgramDetail,
   ProgramSummary,
@@ -794,6 +795,98 @@ export function useGetPersonalRecords<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetPersonalRecordsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get PR history for a specific exercise
+ */
+export const getGetExercisePRHistoryUrl = (exerciseId: string) => {
+  return `/api/users/prs/${exerciseId}/history`;
+};
+
+export const getExercisePRHistory = async (
+  exerciseId: string,
+  options?: RequestInit,
+): Promise<PRHistoryResponse> => {
+  return customFetch<PRHistoryResponse>(
+    getGetExercisePRHistoryUrl(exerciseId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetExercisePRHistoryQueryKey = (exerciseId: string) => {
+  return [`/api/users/prs/${exerciseId}/history`] as const;
+};
+
+export const getGetExercisePRHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExercisePRHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  exerciseId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExercisePRHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetExercisePRHistoryQueryKey(exerciseId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getExercisePRHistory>>
+  > = ({ signal }) =>
+    getExercisePRHistory(exerciseId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!exerciseId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getExercisePRHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetExercisePRHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExercisePRHistory>>
+>;
+export type GetExercisePRHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get PR history for a specific exercise
+ */
+
+export function useGetExercisePRHistory<
+  TData = Awaited<ReturnType<typeof getExercisePRHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  exerciseId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExercisePRHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetExercisePRHistoryQueryOptions(exerciseId, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

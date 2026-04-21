@@ -216,6 +216,26 @@ export const GetPersonalRecordsResponse = zod.object({
 });
 
 /**
+ * @summary Get PR history for a specific exercise
+ */
+export const GetExercisePRHistoryParams = zod.object({
+  exerciseId: zod.coerce.string(),
+});
+
+export const GetExercisePRHistoryResponse = zod.object({
+  exerciseId: zod.string(),
+  exerciseName: zod.string(),
+  history: zod.array(
+    zod.object({
+      id: zod.string(),
+      loadKg: zod.number(),
+      reps: zod.number(),
+      achievedAt: zod.string(),
+    }),
+  ),
+});
+
+/**
  * @summary Get latest weekly recap
  */
 export const GetWeeklyRecapResponse = zod.object({

@@ -202,6 +202,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/PersonalRecordsResponse"
 
+  /users/prs/{exerciseId}/history:
+    get:
+      operationId: getExercisePRHistory
+      tags: [users]
+      summary: Get PR history for a specific exercise
+      parameters:
+        - name: exerciseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PR history for the exercise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PRHistoryResponse"
+
   /users/weekly-recap/latest:
     get:
       operationId: getWeeklyRecap
@@ -3425,6 +3444,39 @@ components:
           type: boolean
         performance:
           type: boolean
+
+    PRHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        loadKg:
+          type: number
+        reps:
+          type: integer
+        achievedAt:
+          type: string
+      required:
+        - id
+        - loadKg
+        - reps
+        - achievedAt
+
+    PRHistoryResponse:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+        exerciseName:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/PRHistoryEntry"
+      required:
+        - exerciseId
+        - exerciseName
+        - history
 
     Challenge:
       type: object

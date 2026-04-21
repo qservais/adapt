@@ -76,6 +76,8 @@ export * from "./overrideRequest";
 export * from "./overrideRequestMode";
 export * from "./personalRecord";
 export * from "./personalRecordsResponse";
+export * from "./pRHistoryEntry";
+export * from "./pRHistoryResponse";
 export * from "./programDetail";
 export * from "./programSummary";
 export * from "./refreshRequest";
