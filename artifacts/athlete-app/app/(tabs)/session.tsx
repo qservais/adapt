@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -111,6 +111,7 @@ export default function SessionTab() {
   const [repsInput, setRepsInput] = useState("");
   const [loggingExercise, setLoggingExercise] = useState(false);
   const [previewExpanded, setPreviewExpanded] = useState<string | null>(null);
+  const [startingProgram, setStartingProgram] = useState(false);
 
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
@@ -141,6 +142,29 @@ export default function SessionTab() {
   const exercises = session?.exercises ?? [];
   const grouped = groupByCategory(exercises);
   const exerciseIndexMap = new Map(exercises.map((ex, i) => [ex.id, i]));
+
+  // Fetch persisted exercise logs to hydrate checked state
+  const exerciseLogsQuery = useQuery<{ exerciseId: string }[]>({
+    queryKey: ["/api/sessions/exercise-logs", session?.sessionLogId],
+    queryFn: () => customFetch(`/api/sessions/${session!.sessionLogId}/exercise-logs`) as Promise<{ exerciseId: string }[]>,
+    enabled: !!session?.sessionLogId,
+  });
+
+  useEffect(() => {
+    if (exerciseLogsQuery.data && exerciseLogsQuery.data.length > 0) {
+      const loggedExerciseIds = new Set(exerciseLogsQuery.data.map(l => l.exerciseId));
+      setCheckedExercises(prev => {
+        // Map exerciseId → session exercise id for hydration
+        const next = new Set(prev);
+        for (const ex of exercises) {
+          if (loggedExerciseIds.has(ex.exerciseId)) {
+            next.add(ex.id);
+          }
+        }
+        return next;
+      });
+    }
+  }, [exerciseLogsQuery.data]);
 
   const completedLogs = historyQuery.data?.filter((l) => l.completedAt != null) ?? [];
 
@@ -207,11 +231,36 @@ export default function SessionTab() {
     });
   };
 
+  const handleStartProgram = (programId: string, programName: string) => {
+    Alert.alert(
+      "Démarrer ce programme",
+      `"${programName}" démarrera aujourd'hui. Les séances seront recalculées depuis maintenant. Continuer ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Démarrer",
+          style: "default",
+          onPress: async () => {
+            setStartingProgram(true);
+            try {
+              await customFetch(`/api/athlete/programs/${programId}/start-now`, { method: "POST" });
+              previewQuery.refetch();
+              upcomingQuery.refetch();
+              Alert.alert("C'est parti !", `${programName} démarre aujourd'hui.`);
+            } catch {
+              Alert.alert("Erreur", "Impossible de démarrer le programme. Réessaie.");
+            } finally {
+              setStartingProgram(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const upcomingSessions = upcomingQuery.data ?? [];
-  const todayStr = new Date().toISOString().split("T")[0]!;
-  const futureSessions = upcomingSessions.filter((s) => {
-    return s.scheduledDate >= todayStr || s.isCompleted;
-  });
+  // Show all sessions returned by API (past 3 days + next 7 days), sorted by date
+  const futureSessions = upcomingSessions;
 
   const SUB_TABS: { id: SubTab; label: string }[] = [
     { id: "today", label: "Aujourd'hui" },
@@ -479,6 +528,22 @@ export default function SessionTab() {
                       </Text>
                     </View>
                   </View>
+                  <TouchableOpacity
+                    onPress={() => handleStartProgram(previewQuery.data!.programId, previewQuery.data!.programName)}
+                    disabled={startingProgram}
+                    style={[styles.previewStartBtn, { opacity: startingProgram ? 0.6 : 1 }]}
+                    activeOpacity={0.8}
+                  >
+                    {startingProgram ? (
+                      <ActivityIndicator size="small" color={COLORS.bg} />
+                    ) : (
+                      <>
+                        <Feather name="play" size={14} color={COLORS.bg} />
+                        <Text style={[styles.previewStartBtnText, { fontFamily: FONTS.bodyMedium }]}>Démarrer maintenant</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
                   <View style={styles.previewSessions}>
                     {previewQuery.data.sessions.slice(0, 8).map((ps) => {
                       const isExp = previewExpanded === ps.sessionId;
@@ -927,6 +992,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
     paddingVertical: 3,
+  },
+  previewStartBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.cyan,
+  },
+  previewStartBtnText: {
+    fontSize: 14,
+    color: COLORS.bg,
   },
   previewMore: {
     fontSize: 11,

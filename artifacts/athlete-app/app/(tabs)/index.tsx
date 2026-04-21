@@ -541,7 +541,7 @@ function QuickLinksSection() {
       <View style={styles.quickLinksRow}>
         <TouchableOpacity
           style={[styles.quickLinkCard, { borderColor: `${COLORS.cyan}30`, backgroundColor: COLORS.cyanDim }]}
-          onPress={() => router.push("/library" as any)}
+          onPress={() => router.push("/library")}
           activeOpacity={0.8}
         >
           <View style={[styles.quickLinkIcon, { backgroundColor: `${COLORS.cyan}20` }]}>
@@ -554,7 +554,7 @@ function QuickLinksSection() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickLinkCard, { borderColor: `${COLORS.violet}30`, backgroundColor: `${COLORS.violet}10` }]}
-          onPress={() => router.push("/guides" as any)}
+          onPress={() => router.push("/guides")}
           activeOpacity={0.8}
         >
           <View style={[styles.quickLinkIcon, { backgroundColor: `${COLORS.violet}20` }]}>

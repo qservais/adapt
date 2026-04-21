@@ -1162,6 +1162,69 @@ router.get("/athlete/preview-program", authenticate, requireRole("athlete"), asy
   }
 });
 
+router.post("/athlete/programs/:programId/start-now", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    const programId = String(req.params["programId"]);
+
+    const [program] = await db.select({ id: programsTable.id, athleteId: programsTable.athleteId, previewEnabled: programsTable.previewEnabled, startDate: programsTable.startDate })
+      .from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.athleteId, athleteId)));
+
+    if (!program) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
+      return;
+    }
+
+    if (!program.previewEnabled) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Ce programme n'est pas en mode aperçu" } });
+      return;
+    }
+
+    const todayStr = getTodayLocalDate();
+    await db.update(programsTable)
+      .set({ startDate: todayStr, previewEnabled: false })
+      .where(eq(programsTable.id, programId));
+
+    res.json({ success: true, startDate: todayStr });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/sessions/:sessionLogId/exercise-logs", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const sessionLogId = String(req.params["sessionLogId"]);
+    const athleteId = req.user!.userId;
+
+    const [log] = await db.select({ id: sessionLogsTable.id, athleteId: sessionLogsTable.athleteId })
+      .from(sessionLogsTable)
+      .where(eq(sessionLogsTable.id, sessionLogId));
+
+    if (!log || log.athleteId !== athleteId) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Log introuvable" } });
+      return;
+    }
+
+    const logs = await db.select({
+      id: exerciseLogsTable.id,
+      exerciseId: exerciseLogsTable.exerciseId,
+      setsCompleted: exerciseLogsTable.setsCompleted,
+      repsPerSet: exerciseLogsTable.repsPerSet,
+      loadKgUsed: exerciseLogsTable.loadKgUsed,
+      notes: exerciseLogsTable.notes,
+      createdAt: exerciseLogsTable.createdAt,
+    }).from(exerciseLogsTable).where(eq(exerciseLogsTable.sessionLogId, sessionLogId));
+
+    res.json(logs.map(l => ({
+      ...l,
+      loadKgUsed: l.loadKgUsed != null ? parseFloat(String(l.loadKgUsed)) : null,
+    })));
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 router.post("/sessions/:sessionLogId/log-exercise", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const sessionLogId = String(req.params["sessionLogId"]);
