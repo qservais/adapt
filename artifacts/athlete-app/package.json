@@ -61,6 +61,7 @@
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/space-mono": "^0.4.2",
     "@react-native-community/datetimepicker": "^8.4.4",
+    "@react-native-community/slider": "^5.2.0",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@shopify/flash-list": "2.0.2",
     "expo-av": "^16.0.8",

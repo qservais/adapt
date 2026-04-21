@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Modal,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Slider from "@react-native-community/slider";
 import { Feather } from "@expo/vector-icons";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
@@ -106,7 +108,12 @@ const SECONDARY_GOALS = [
   { key: "sport", label: "Sport spécifique" },
 ];
 
-const DURATION_OPTIONS = [30, 45, 60, 75, 90, 105, 120];
+const EXERCISE_LIBRARY = [
+  { category: "Force", items: ["Squat", "Soulevé de terre", "Développé couché", "Tractions", "Dips", "Presse militaire", "Curl biceps", "Extension triceps", "Rowing barre", "Leg press"] },
+  { category: "Cardio", items: ["Course à pied", "Vélo", "Corde à sauter", "Rameur", "Natation", "Elliptique"] },
+  { category: "Polyvalent", items: ["Burpees", "Pompes", "Fentes", "Kettlebell swing", "Box jump", "Mountain climbers"] },
+  { category: "Core", items: ["Gainage", "Crunch", "Russian twist", "Planche latérale", "Superman", "Relevé de jambes"] },
+];
 
 const HEALTH_APPS = [
   { key: "apple_health", label: "Apple Santé", icon: "❤️", color: "#FF2D55" },
@@ -116,12 +123,12 @@ const HEALTH_APPS = [
   { key: "fitbit", label: "Fitbit", icon: "📊", color: "#00B0B9" },
 ];
 
-const NOTIF_TYPES = [
-  { key: "check_in_reminder", label: "Rappel check-in" },
-  { key: "session_reminder", label: "Rappel séance" },
-  { key: "coach_message", label: "Message coach" },
-  { key: "achievement", label: "Succès débloqué" },
-  { key: "weekly_recap", label: "Récapitulatif hebdo" },
+const NOTIF_TYPE_KEYS = [
+  { key: "check_in_reminder", tKey: "morning_notif", fallback: "Rappel check-in" },
+  { key: "session_reminder", tKey: "session_reminder", fallback: "Rappel séance" },
+  { key: "coach_message", tKey: "coach_messages", fallback: "Message coach" },
+  { key: "achievement", tKey: "achievement", fallback: "Succès débloqué" },
+  { key: "weekly_recap", tKey: "weekly_recap", fallback: "Récapitulatif hebdo" },
 ];
 
 const NOTIF_HOURS = [5, 6, 7, 8, 9, 10, 11, 12];
@@ -290,6 +297,10 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
   const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
+  const [libraryVisible, setLibraryVisible] = useState(false);
+  const [libraryTarget, setLibraryTarget] = useState<"avoided" | "favorite">("avoided");
+  const [librarySelected, setLibrarySelected] = useState<string[]>([]);
+
   const fetchProfile = useCallback(async () => {
     try {
       const data = await customFetch<ExtendedProfileData>("/api/users/me/profile");
@@ -447,7 +458,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           saving={saving["context"]}
         />
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Jours disponibles</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>{t("available_days", "Jours d'entraînement")}</Text>
         <View style={cStyles.daysRow}>
           {DAYS.map(d => (
             <TouchableOpacity
@@ -470,7 +481,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Lieu d'entraînement</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("training_location", "Lieu d'entraînement")}</Text>
         <View style={cStyles.chipRow}>
           {LOCATIONS.map(loc => (
             <TouchableOpacity
@@ -494,7 +505,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Équipement disponible</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("equipment", "Équipement disponible")}</Text>
         <View style={cStyles.chipRow}>
           {EQUIPMENT_OPTIONS.map(eq => (
             <ToggleChip
@@ -507,57 +518,51 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Durée de séance</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("session_duration", "Durée de séance")}</Text>
         {editingContext ? (
-          <View>
-            <Text style={[cStyles.subLabel, { fontFamily: FONTS.body }]}>Minimum</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cStyles.durationRow}>
-              {DURATION_OPTIONS.map(d => (
-                <TouchableOpacity
-                  key={d}
-                  onPress={() => setSessionDurationMin(d)}
-                  style={[cStyles.durationChip, sessionDurationMin === d && cStyles.durationChipActive]}
-                >
-                  <Text style={[
-                    cStyles.durationChipText,
-                    { fontFamily: FONTS.bodyMedium, color: sessionDurationMin === d ? COLORS.cyan : COLORS.textMuted },
-                  ]}>
-                    {d}min
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <Text style={[cStyles.subLabel, { fontFamily: FONTS.body, marginTop: 6 }]}>Maximum</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cStyles.durationRow}>
-              {DURATION_OPTIONS.map(d => (
-                <TouchableOpacity
-                  key={d}
-                  onPress={() => setSessionDurationMax(d)}
-                  style={[cStyles.durationChip, sessionDurationMax === d && cStyles.durationChipActive]}
-                >
-                  <Text style={[
-                    cStyles.durationChipText,
-                    { fontFamily: FONTS.bodyMedium, color: sessionDurationMax === d ? COLORS.cyan : COLORS.textMuted },
-                  ]}>
-                    {d}min
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+          <View style={{ gap: 4 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={[cStyles.subLabel, { fontFamily: FONTS.body }]}>{t("session_min", "Minimum")}</Text>
+              <Text style={[cStyles.subLabel, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan }]}>{sessionDurationMin ?? 30} min</Text>
+            </View>
+            <Slider
+              minimumValue={15}
+              maximumValue={180}
+              step={15}
+              value={sessionDurationMin ?? 30}
+              onValueChange={(v) => setSessionDurationMin(Math.round(v))}
+              minimumTrackTintColor={COLORS.cyan}
+              maximumTrackTintColor={COLORS.border}
+              thumbTintColor={COLORS.cyan}
+            />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+              <Text style={[cStyles.subLabel, { fontFamily: FONTS.body }]}>{t("session_max", "Maximum")}</Text>
+              <Text style={[cStyles.subLabel, { fontFamily: FONTS.bodyMedium, color: COLORS.violet }]}>{sessionDurationMax ?? 90} min</Text>
+            </View>
+            <Slider
+              minimumValue={15}
+              maximumValue={180}
+              step={15}
+              value={sessionDurationMax ?? 90}
+              onValueChange={(v) => setSessionDurationMax(Math.round(v))}
+              minimumTrackTintColor={COLORS.violet}
+              maximumTrackTintColor={COLORS.border}
+              thumbTintColor={COLORS.violet}
+            />
           </View>
         ) : (
           <Text style={[cStyles.valueText, { fontFamily: FONTS.bodyMedium }]}>
             {sessionDurationMin && sessionDurationMax
               ? `${sessionDurationMin} – ${sessionDurationMax} min`
               : sessionDurationMin
-              ? `À partir de ${sessionDurationMin} min`
+              ? `${t("session_min", "Min")} ${sessionDurationMin} min`
               : sessionDurationMax
-              ? `Jusqu'à ${sessionDurationMax} min`
-              : "Non renseigné"}
+              ? `${t("session_max", "Max")} ${sessionDurationMax} min`
+              : "—"}
           </Text>
         )}
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Blessures / Restrictions permanentes</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("injuries", "Blessures / Restrictions permanentes")}</Text>
         {editingContext ? (
           <TextInput
             value={injuries}
@@ -636,28 +641,42 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* EXERCICES */}
       <View style={cStyles.section}>
         <SectionHeader
-          title="EXERCICES"
+          title={t("exercises", "EXERCICES").toUpperCase()}
           icon="list"
           editing={editingExercises}
           onToggleEdit={() => { if (editingExercises) { handleSaveExercises(); } else { setEditingExercises(true); } }}
           saving={saving["exercises"]}
         />
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Exercices à éviter</Text>
+        {/* Exercices à éviter */}
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>{t("avoided_exercises", "Exercices à éviter")}</Text>
+        {editingExercises && (
+          <TouchableOpacity
+            style={[cStyles.libraryBtn]}
+            onPress={() => {
+              setLibraryTarget("avoided");
+              setLibrarySelected([...avoidedExercises]);
+              setLibraryVisible(true);
+            }}
+          >
+            <Feather name="book-open" size={13} color={COLORS.red} />
+            <Text style={[cStyles.libraryBtnText, { fontFamily: FONTS.bodyMedium, color: COLORS.red }]}>{t("from_library", "Depuis la bibliothèque")}</Text>
+          </TouchableOpacity>
+        )}
         {editingExercises ? (
           <View>
             <View style={cStyles.inputRow}>
               <TextInput
                 value={avoidedInput}
                 onChangeText={setAvoidedInput}
-                placeholder="Ajouter un exercice..."
+                placeholder={t("add_exercise", "Ajouter un exercice...")}
                 placeholderTextColor={COLORS.textMuted}
                 style={[cStyles.inlineInput, { fontFamily: FONTS.body }]}
                 onSubmitEditing={addAvoidedExercise}
                 returnKeyType="done"
               />
               <TouchableOpacity onPress={addAvoidedExercise} style={cStyles.addBtn}>
-                <Feather name="plus" size={16} color={COLORS.cyan} />
+                <Feather name="plus" size={16} color={COLORS.red} />
               </TouchableOpacity>
             </View>
             <View style={[cStyles.chipRow, { marginTop: 8 }]}>
@@ -681,19 +700,33 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                     <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.red }]}>{ex}</Text>
                   </View>
                 ))
-              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>Aucun</Text>
+              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>{t("none", "Aucun")}</Text>
             }
           </View>
         )}
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Exercices préférés</Text>
+        {/* Exercices préférés */}
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("favorite_exercises", "Exercices préférés")}</Text>
+        {editingExercises && (
+          <TouchableOpacity
+            style={[cStyles.libraryBtn]}
+            onPress={() => {
+              setLibraryTarget("favorite");
+              setLibrarySelected([...favoriteExercises]);
+              setLibraryVisible(true);
+            }}
+          >
+            <Feather name="book-open" size={13} color={COLORS.cyan} />
+            <Text style={[cStyles.libraryBtnText, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan }]}>{t("from_library", "Depuis la bibliothèque")}</Text>
+          </TouchableOpacity>
+        )}
         {editingExercises ? (
           <View>
             <View style={cStyles.inputRow}>
               <TextInput
                 value={favoriteInput}
                 onChangeText={setFavoriteInput}
-                placeholder="Ajouter un exercice..."
+                placeholder={t("add_exercise", "Ajouter un exercice...")}
                 placeholderTextColor={COLORS.textMuted}
                 style={[cStyles.inlineInput, { fontFamily: FONTS.body }]}
                 onSubmitEditing={addFavoriteExercise}
@@ -724,11 +757,74 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                     <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.cyan }]}>{ex}</Text>
                   </View>
                 ))
-              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>Aucun</Text>
+              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>{t("none", "Aucun")}</Text>
             }
           </View>
         )}
       </View>
+
+      {/* BIBLIOTHÈQUE D'EXERCICES MODAL */}
+      <Modal
+        visible={libraryVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLibraryVisible(false)}
+      >
+        <View style={cStyles.modalOverlay}>
+          <View style={[cStyles.modalBox, { maxHeight: "80%" }]}>
+            <Text style={[cStyles.modalTitle, { fontFamily: FONTS.monoBold, marginBottom: 4 }]}>
+              {t("select_exercises", "Sélectionner des exercices").toUpperCase()}
+            </Text>
+            <Text style={[cStyles.modalBody, { fontFamily: FONTS.body, marginBottom: 12, fontSize: 12 }]}>
+              {libraryTarget === "avoided"
+                ? t("avoided_exercises", "Exercices à éviter")
+                : t("favorite_exercises", "Exercices préférés")}
+            </Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {EXERCISE_LIBRARY.map(cat => (
+                <View key={cat.category} style={{ marginBottom: 12 }}>
+                  <Text style={[{ fontSize: 10, color: COLORS.textMuted, letterSpacing: 1.5, fontFamily: FONTS.monoBold, marginBottom: 6 }]}>
+                    {cat.category.toUpperCase()}
+                  </Text>
+                  <View style={cStyles.chipRow}>
+                    {cat.items.map(item => {
+                      const selected = librarySelected.includes(item);
+                      const color = libraryTarget === "avoided" ? COLORS.red : COLORS.cyan;
+                      return (
+                        <TouchableOpacity
+                          key={item}
+                          onPress={() => setLibrarySelected(prev => selected ? prev.filter(e => e !== item) : [...prev, item])}
+                          style={[
+                            cStyles.chip, cStyles.chipSmall,
+                            { borderColor: selected ? color : COLORS.border, backgroundColor: selected ? `${color}20` : "transparent" },
+                          ]}
+                        >
+                          <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: selected ? color : COLORS.textSecondary }]}>
+                            {item}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={[cStyles.modalBtn, { marginTop: 12 }]}
+              onPress={() => {
+                if (libraryTarget === "avoided") {
+                  setAvoidedExercises(librarySelected);
+                } else {
+                  setFavoriteExercises(librarySelected);
+                }
+                setLibraryVisible(false);
+              }}
+            >
+              <Text style={[cStyles.modalBtnText, { fontFamily: FONTS.bodyMedium }]}>{t("done", "Terminer")}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* PRÉFÉRENCES */}
       <View style={cStyles.section}>
@@ -865,7 +961,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <View style={[cStyles.privacyRow]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="bell-off" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Désactiver toutes les notifications</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("silent_mode", "Désactiver toutes les notifications")}</Text>
           </View>
           <Switch
             value={notificationPrefs["silent_mode"] === true}
@@ -882,12 +978,12 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         </View>
 
         <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 6 }]}>Types de notifications</Text>
-        {NOTIF_TYPES.map(({ key, label }, idx, arr) => (
+        {NOTIF_TYPE_KEYS.map(({ key, tKey, fallback }, idx, arr) => (
           <View
             key={key}
             style={[cStyles.privacyRow, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
           >
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{label}</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t(tKey, fallback)}</Text>
             <Switch
               value={notificationPrefs[key] !== false}
               onValueChange={v => {
@@ -913,7 +1009,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           onToggleEdit={() => {}}
         />
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 8 }]}>
-          Synchronise tes données de santé avec ADAPT.
+          {t("sync_health_data", "Synchronise tes données de santé avec ADAPT.")}
         </Text>
         {HEALTH_APPS.map(app => {
           const integrationStatus = integrations.find(i => i.provider === app.key);
@@ -967,11 +1063,11 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           Ces données sont transmises à ton coach sur toutes ses vues (liste, détail, historique de check-ins). Désactiver un interrupteur masque la donnée partout.
         </Text>
         {([
-          { key: "shareWeight" as const, label: "Poids corporel", icon: "trending-down" as const },
-          { key: "shareSleep" as const, label: "Qualité du sommeil", icon: "moon" as const },
-          { key: "shareHeartRate" as const, label: "Fréquence cardiaque", icon: "heart" as const },
-          { key: "shareBodyFat" as const, label: "Masse grasse (%)", icon: "percent" as const },
-        ] as const).map(({ key, label, icon }, idx, arr) => (
+          { key: "shareWeight" as const, tKey: "share_weight", label: "Poids corporel", icon: "trending-down" as const },
+          { key: "shareSleep" as const, tKey: "share_sleep", label: "Qualité du sommeil", icon: "moon" as const },
+          { key: "shareHeartRate" as const, tKey: "share_heart_rate", label: "Fréquence cardiaque", icon: "heart" as const },
+          { key: "shareBodyFat" as const, tKey: "share_body_fat", label: "Masse grasse (%)", icon: "percent" as const },
+        ] as const).map(({ key, tKey, label, icon }, idx, arr) => (
           <View
             key={key}
             style={[
@@ -981,7 +1077,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           >
             <View style={cStyles.privacyLeft}>
               <Feather name={icon} size={14} color={COLORS.textMuted} />
-              <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{label}</Text>
+              <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t(tKey, label)}</Text>
             </View>
             <Switch
               value={privacy[key] !== false}
@@ -1013,7 +1109,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <View style={cStyles.privacyRow}>
           <View style={cStyles.privacyLeft}>
             <Feather name="lock" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Profil coach uniquement</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("coach_only", "Profil visible par le coach uniquement")}</Text>
           </View>
           <Switch
             value={(privacy.profileVisibility ?? "coach_only") === "coach_only"}
@@ -1031,7 +1127,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <View style={[cStyles.privacyRow, { borderBottomWidth: 0 }]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="eye-off" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Profil entièrement privé</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("profile_private", "Profil entièrement privé")}</Text>
           </View>
           <Switch
             value={(privacy.profileVisibility ?? "coach_only") === "private"}
@@ -1297,4 +1393,18 @@ const cStyles = StyleSheet.create({
     borderColor: COLORS.cyan,
   },
   modalBtnText: { fontSize: 14, color: COLORS.cyan },
+  libraryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgInput,
+    alignSelf: "flex-start",
+    marginBottom: 6,
+  },
+  libraryBtnText: { fontSize: 12 },
 });
