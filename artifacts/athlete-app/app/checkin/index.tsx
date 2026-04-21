@@ -226,11 +226,18 @@ export default function CheckinScreen() {
         });
       } catch (err: unknown) {
         const anyErr = err as Record<string, unknown>;
-        const errData = anyErr?.data as Record<string, unknown> | null | undefined;
-        const code = typeof errData?.code === "string" ? errData.code : "";
+        const errBody = anyErr?.data as Record<string, unknown> | null | undefined;
+        const errObj = errBody?.error as Record<string, unknown> | null | undefined;
+        const code = typeof errObj?.code === "string" ? errObj.code : "";
+        const apiMsg = typeof errObj?.message === "string" ? errObj.message : "";
         const status = typeof anyErr?.status === "number" ? anyErr.status : 0;
-        if (code === "CHECKIN_CONFLICT") {
+        if (code === "CHECKIN_ALREADY_EXISTS" || code === "CHECKIN_CONFLICT") {
           router.replace("/checkin/result");
+          return;
+        }
+        if (code === "CHECKIN_WINDOW_CLOSED") {
+          const msg = apiMsg || "La fenêtre de check-in est fermée pour aujourd'hui.";
+          Alert.alert("Check-in fermé", msg, [{ text: "OK", onPress: () => router.back() }]);
           return;
         }
         if (status === 401) {
