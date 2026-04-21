@@ -60,7 +60,7 @@ export default function ChallengesPage() {
       return;
     }
     try {
-      await createMutation.mutateAsync({
+      await createMutation.mutateAsync({ data: {
         title: form.title!,
         description: form.description,
         metric: form.metric as CreateChallengeRequest["metric"],
@@ -69,7 +69,7 @@ export default function ChallengesPage() {
         startDate: form.startDate!,
         endDate: form.endDate!,
         athleteIds: form.athleteIds!,
-      });
+      }});
       toast({ title: "Challenge créé" });
       setShowCreate(false);
       setForm({ metric: "reps", athleteIds: [] });
@@ -81,7 +81,7 @@ export default function ChallengesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteMutation.mutateAsync(id);
+      await deleteMutation.mutateAsync({ id });
       toast({ title: "Challenge supprimé" });
       setDeleteId(null);
       refetch();

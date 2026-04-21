@@ -54,7 +54,7 @@ function athleteName(n: ScheduledNotification) {
 }
 
 export default function NotificationsPage() {
-  const { data: notifications, isLoading, refetch } = useGetScheduledNotifications(undefined, {
+  const { data: notifications, isLoading, refetch } = useGetScheduledNotifications({
     query: { queryKey: ["/api/coach/scheduled-notifications"] },
   });
   const { data: morningData, refetch: refetchMorning } = useGetMorningNotifHour({
