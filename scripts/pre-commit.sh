@@ -4,17 +4,23 @@ set -e
 # Force-rebuild lib dist files so the working tree is always up to date.
 pnpm run typecheck:libs:force
 
-# Check whether the rebuild produced any changes in lib/api-client-react/dist/
-# (shared logic also used by CI). Auto-stage changed files here so the
-# developer can re-run git commit immediately.
-CHANGES=$(git status --porcelain -- lib/api-client-react/dist/)
+# Check whether the rebuild produced any changes in any compiled lib dist dir.
+# Auto-stage changed files here so the developer can re-run git commit immediately.
+LIBS="lib/api-client-react lib/api-zod lib/db"
+FAILED=0
 
-if [ -n "$CHANGES" ]; then
-  git add lib/api-client-react/dist/
-  echo ""
-  echo "ERROR: lib/api-client-react/dist/ contained stale or missing generated files."
-  echo "       The fresh build has been staged for you."
-  echo "       Please re-run 'git commit' to commit the updated files."
-  echo ""
-  exit 1
-fi
+for LIB in $LIBS; do
+  CHANGES=$(git status --porcelain -- "$LIB/dist/")
+
+  if [ -n "$CHANGES" ]; then
+    git add "$LIB/dist/"
+    echo ""
+    echo "ERROR: $LIB/dist/ contained stale or missing generated files."
+    echo "       The fresh build has been staged for you."
+    echo "       Please re-run 'git commit' to commit the updated files."
+    echo ""
+    FAILED=1
+  fi
+done
+
+exit $FAILED
