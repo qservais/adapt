@@ -27,8 +27,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Cache lib dist
-        id: cache-lib-dist
+      - name: Cache lib/api-client-react dist
+        id: cache-api-client-react
         uses: actions/cache@v4
         with:
           path: |
@@ -36,8 +36,29 @@ jobs:
             lib/api-client-react/tsconfig.tsbuildinfo
           key: lib-api-client-react-${{ hashFiles('lib/api-client-react/src/**', 'lib/api-client-react/tsconfig.json', 'tsconfig.base.json', 'pnpm-lock.yaml') }}
 
+      - name: Cache lib/api-zod dist
+        id: cache-api-zod
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/api-zod/dist
+            lib/api-zod/tsconfig.tsbuildinfo
+          key: lib-api-zod-${{ hashFiles('lib/api-zod/src/**', 'lib/api-zod/tsconfig.json', 'tsconfig.base.json', 'pnpm-lock.yaml') }}
+
+      - name: Cache lib/db dist
+        id: cache-db
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/db/dist
+            lib/db/tsconfig.tsbuildinfo
+          key: lib-db-${{ hashFiles('lib/db/src/**', 'lib/db/tsconfig.json', 'tsconfig.base.json', 'pnpm-lock.yaml') }}
+
       - name: Rebuild lib dist files
-        if: steps.cache-lib-dist.outputs.cache-hit != 'true'
+        if: |
+          steps.cache-api-client-react.outputs.cache-hit != 'true' ||
+          steps.cache-api-zod.outputs.cache-hit != 'true' ||
+          steps.cache-db.outputs.cache-hit != 'true'
         run: pnpm run typecheck:libs:force
 
       - name: Fail if dist files are stale
