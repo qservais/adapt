@@ -309,7 +309,11 @@ export default function ChatScreen() {
           ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
           : "";
         const mimeType = asset.mimeType ?? "application/octet-stream";
-        const fileSize = asset.size ?? 0;
+
+        const fileRes = await fetch(asset.uri);
+        const blob = await fileRes.blob();
+        const fileSize = asset.size ?? blob.size;
+
         const uploadRes = await fetch(`${BASE_URL}/api/messages/upload-document`, {
           method: "POST",
           headers: {
@@ -324,9 +328,6 @@ export default function ChatScreen() {
           return;
         }
         const { uploadUrl } = await uploadRes.json() as { uploadUrl: string };
-
-        const fileRes = await fetch(asset.uri);
-        const blob = await fileRes.blob();
 
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -343,7 +344,7 @@ export default function ChatScreen() {
         const rawUrl = (() => { const u = new URL(uploadUrl); return u.origin + u.pathname; })();
 
         const fileSizeStr = fileSize > 0
-          ? fileSize > 1024 * 1024
+          ? fileSize >= 1024 * 1024
             ? `${(fileSize / 1024 / 1024).toFixed(1)} Mo`
             : `${Math.round(fileSize / 1024)} Ko`
           : undefined;

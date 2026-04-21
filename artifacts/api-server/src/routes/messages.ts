@@ -168,7 +168,8 @@ router.post("/messages", authenticate, async (req, res) => {
             res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "Le fichier dépasse la limite de 10 Mo." } });
             return;
           }
-          if (meta.contentType && !ALLOWED_DOC_MIMES.has(meta.contentType.split(";")[0].trim())) {
+          const rawContentType = (meta.contentType ?? "").split(";")[0].trim();
+          if (!rawContentType || !ALLOWED_DOC_MIMES.has(rawContentType)) {
             res.status(415).json({ error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Format non supporté. Formats acceptés : PDF, Word, Excel, images (JPG, PNG, HEIC)." } });
             return;
           }
