@@ -40,6 +40,24 @@ export const COLORS = {
   gradientEnd: "#A855F7",
 };
 
+export const DARK_COLORS = COLORS;
+
+export const LIGHT_COLORS = {
+  ...COLORS,
+  bg: "#F5F5F5",
+  bgCard: "#FFFFFF",
+  bgElevated: "#F0F0F0",
+  bgInput: "#EBEBEB",
+  border: "#DEDEDE",
+  borderLight: "#E8E8E8",
+  textPrimary: "#111111",
+  textSecondary: "#555555",
+  textMuted: "#999999",
+  textInverse: "#FFFFFF",
+};
+
+export type ThemeColors = typeof COLORS;
+
 export const MODE_CONFIG = {
   performance: {
     color: "#3B82F6",

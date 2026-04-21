@@ -8,6 +8,7 @@ import React, {
 import { useColorScheme } from "react-native";
 import { customFetch } from "@workspace/api-client-react";
 import { useAuth } from "./AuthContext";
+import { DARK_COLORS, LIGHT_COLORS } from "@/constants/theme";
 
 type Language = "fr" | "en";
 type Theme = "dark" | "light" | "system";
@@ -275,4 +276,9 @@ export function useUnitsLabel() {
     distance: units === "imperial" ? "mi" : "km",
     isImperial: units === "imperial",
   };
+}
+
+export function useThemeColors() {
+  const { resolvedTheme } = usePreferences();
+  return resolvedTheme === "light" ? LIGHT_COLORS : DARK_COLORS;
 }

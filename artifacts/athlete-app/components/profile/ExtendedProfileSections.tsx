@@ -17,7 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
-import { usePreferences, useT } from "@/context/PreferencesContext";
+import { usePreferences, useT, useThemeColors } from "@/context/PreferencesContext";
 
 type IntegrationStatus = {
   provider: string;
@@ -256,6 +256,7 @@ function ToggleChip({
 export default function ExtendedProfileSections({ onCompletionChange }: { onCompletionChange?: (pct: number) => void }) {
   const { setLanguage: ctxSetLanguage, setTheme: ctxSetTheme, setUnits: ctxSetUnits } = usePreferences();
   const t = useT();
+  const colors = useThemeColors();
 
   const [profile, setProfile] = useState<ExtendedProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -391,19 +392,15 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
   };
 
   const handleToggleIntegration = async (provider: string, currentlyConnected: boolean) => {
-    if (!currentlyConnected) {
-      const app = HEALTH_APPS.find(a => a.key === provider);
-      Alert.alert(
-        "Bientôt disponible",
-        `La connexion à ${app?.label ?? provider} sera disponible dans une prochaine mise à jour d'ADAPT.`,
-        [{ text: "OK", style: "default" }]
-      );
-      return;
-    }
     setConnectingProvider(provider);
     try {
-      await customFetch(`/api/users/me/integrations/${provider}`, { method: "DELETE" });
-      setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: false, connectedAt: null } : i));
+      if (currentlyConnected) {
+        await customFetch(`/api/users/me/integrations/${provider}`, { method: "DELETE" });
+        setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: false, connectedAt: null } : i));
+      } else {
+        await customFetch(`/api/users/me/integrations/${provider}/connect`, { method: "POST", body: "{}" });
+        setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: true, connectedAt: new Date().toISOString() } : i));
+      }
     } catch {
     } finally {
       setConnectingProvider(null);
@@ -449,7 +446,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {profile && <CompletionBar percent={profile.completionPercent} />}
 
       {/* CONTEXTE D'ENTRAÎNEMENT */}
-      <View style={cStyles.section}>
+      <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
           title="CONTEXTE D'ENTRAÎNEMENT"
           icon="activity"
@@ -581,7 +578,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       </View>
 
       {/* OBJECTIFS */}
-      <View style={cStyles.section}>
+      <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
           title="OBJECTIFS"
           icon="target"
@@ -639,7 +636,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       </View>
 
       {/* EXERCICES */}
-      <View style={cStyles.section}>
+      <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
           title={t("exercises", "EXERCICES").toUpperCase()}
           icon="list"
@@ -827,7 +824,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       </Modal>
 
       {/* PRÉFÉRENCES */}
-      <View style={cStyles.section}>
+      <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
           title={t("preferences", "PRÉFÉRENCES").toUpperCase()}
           icon="sliders"
@@ -926,7 +923,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       </View>
 
       {/* NOTIFICATIONS */}
-      <View style={cStyles.section}>
+      <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
           title={t("notifications", "NOTIFICATIONS").toUpperCase()}
           icon="bell"
@@ -1001,7 +998,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       </View>
 
       {/* APPLICATIONS SANTÉ */}
-      <View style={cStyles.section}>
+      <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
           title={t("health_apps", "APPLICATIONS SANTÉ").toUpperCase()}
           icon="heart"
@@ -1051,7 +1048,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       </View>
 
       {/* DONNÉES PARTAGÉES AVEC LE COACH */}
-      <View style={cStyles.section}>
+      <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
           title={t("privacy", "DONNÉES PARTAGÉES AVEC LE COACH").toUpperCase()}
           icon="eye"

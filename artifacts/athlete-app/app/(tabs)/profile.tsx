@@ -38,7 +38,7 @@ import {
 } from "@workspace/api-client-react";
 import { tokenStore } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { useFormatWeight, useUnitsLabel } from "@/context/PreferencesContext";
+import { useFormatWeight, useUnitsLabel, useThemeColors } from "@/context/PreferencesContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import ExtendedProfileSections from "@/components/profile/ExtendedProfileSections";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
@@ -112,6 +112,7 @@ export default function ProfileScreen() {
 
   const formatWeight = useFormatWeight();
   const { weight: weightLabel } = useUnitsLabel();
+  const colors = useThemeColors();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
@@ -417,7 +418,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       ref={scrollRef}
-      style={[styles.flex, { backgroundColor: COLORS.bg }]}
+      style={[styles.flex, { backgroundColor: colors.bg }]}
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
@@ -959,47 +960,6 @@ export default function ProfileScreen() {
 
       </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold }]}>Notifications in-app</Text>
-        {([
-          { key: "session", label: "Rappels de séance" },
-          { key: "checkin", label: "Rappels de check-in" },
-          { key: "messages", label: "Nouveaux messages" },
-          { key: "encouragements", label: "Encouragements du coach" },
-          { key: "performance", label: "Performances & alertes" },
-        ] as const).map(({ key, label }) => (
-          <View key={key} style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { fontFamily: FONTS.body }]}>{label}</Text>
-            <Switch
-              value={notifPrefs ? notifPrefs[key] : true}
-              onValueChange={(val) => updatePrefsMutation.mutate({ [key]: val })}
-              trackColor={{ false: COLORS.border, true: COLORS.cyan }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold }]}>Notifications push</Text>
-        {([
-          { key: "push_session", label: "Rappels de séance" },
-          { key: "push_checkin", label: "Rappels de check-in" },
-          { key: "push_messages", label: "Nouveaux messages" },
-          { key: "push_encouragements", label: "Encouragements du coach" },
-          { key: "push_performance", label: "Performances & alertes" },
-        ] as const).map(({ key, label }) => (
-          <View key={key} style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { fontFamily: FONTS.body }]}>{label}</Text>
-            <Switch
-              value={notifPrefs ? (notifPrefs as unknown as Record<string, boolean>)[key] !== false : true}
-              onValueChange={(val) => updatePrefsMutation.mutate({ [key]: val })}
-              trackColor={{ false: COLORS.border, true: COLORS.violet }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-        ))}
-      </View>
 
       <Pressable onPress={handleLogout} style={styles.logoutBtn}>
         <Feather name="log-out" size={18} color={COLORS.red} />
