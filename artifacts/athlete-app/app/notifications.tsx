@@ -157,7 +157,7 @@ export default function NotificationsScreen() {
 
   const { mutate: markOne } = useMarkNotificationRead({
     mutation: {
-      onSuccess: (_data, id) => {
+      onSuccess: (_data, { id }) => {
         setItems((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
         setUnreadCount((c) => Math.max(0, c - 1));
         qc.invalidateQueries({ queryKey: getGetNotificationsQueryKey() });
@@ -194,7 +194,7 @@ export default function NotificationsScreen() {
           renderItem={({ item }) => (
             <NotifRow
               item={item}
-              onRead={(id) => markOne(id)}
+              onRead={(id) => markOne({ id })}
               onNavigate={(path) => router.push(path)}
             />
           )}

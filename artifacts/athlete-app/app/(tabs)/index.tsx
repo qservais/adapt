@@ -16,7 +16,7 @@ import * as Haptics from "expo-haptics";
 import { resolveMediaUrl } from "@/lib/custom-fetch";
 import {
   useGetTodayCheckin,
-  useGetTodaySessions,
+  useGetTodaySessionAll as useGetTodaySessions,
   useGetCheckinHistory,
   useGetAthleteUpcomingSessions,
   useGetActiveChallenges,

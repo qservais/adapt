@@ -131,9 +131,7 @@ function PRLineChart({ entries }: { entries: PRHistoryEntry[] }) {
 }
 
 export function PRHistoryModal({ exerciseId, exerciseName, onClose }: PRHistoryModalProps) {
-  const historyQuery = useGetExercisePRHistory(exerciseId ?? "", {
-    query: { enabled: !!exerciseId },
-  });
+  const historyQuery = useGetExercisePRHistory(exerciseId ?? "");
 
   const entries = historyQuery.data?.history ?? [];
   const best = entries.length > 0 ? entries[entries.length - 1] : null;
@@ -156,7 +154,7 @@ export function PRHistoryModal({ exerciseId, exerciseName, onClose }: PRHistoryM
             <View style={{ flex: 1 }}>
               <Text style={[styles.label, { fontFamily: FONTS.mono }]}>PROGRESSION</Text>
               <Text style={[styles.title, { fontFamily: FONTS.bodyBold }]} numberOfLines={2}>
-                {historyQuery.data?.exerciseName ?? exerciseName}
+                {exerciseName}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={12}>

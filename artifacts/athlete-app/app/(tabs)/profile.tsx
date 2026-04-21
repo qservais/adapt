@@ -47,7 +47,7 @@ import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 
 interface AthleteProgram {
   id: string;
@@ -936,7 +936,7 @@ export default function ProfileScreen() {
                   display={Platform.OS === "ios" ? "spinner" : "default"}
                   maximumDate={new Date()}
                   minimumDate={new Date(new Date().getFullYear() - 1, 0, 1)}
-                  onChange={(_event, date) => {
+                  onChange={(_event: DateTimePickerEvent, date: Date | undefined) => {
                     setShowLastPeriodPicker(Platform.OS === "ios");
                     if (date) setLastPeriodDateValue(date);
                   }}
@@ -1041,7 +1041,7 @@ export default function ProfileScreen() {
               display={Platform.OS === "ios" ? "spinner" : "default"}
               maximumDate={new Date(new Date().getFullYear() - 5, 11, 31)}
               minimumDate={new Date(1920, 0, 1)}
-              onChange={(_event, date) => {
+              onChange={(_event: DateTimePickerEvent, date: Date | undefined) => {
                 setShowDatePicker(Platform.OS === "ios");
                 if (date) setBirthDateValue(date);
               }}

@@ -11,11 +11,10 @@ interface Props {
 
 export function NotificationBell({ top, right = 16 }: Props) {
   const router = useRouter();
-  const { data: notifData } = useGetNotifications({
+  const { data: notifData } = useGetNotifications(undefined, {
     query: {
       queryKey: getGetNotificationsQueryKey(),
       refetchInterval: 30000,
-      select: (d) => d,
     },
   });
   const { data: threads } = useGetMessageThreads({

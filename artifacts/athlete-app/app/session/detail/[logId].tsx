@@ -141,15 +141,15 @@ export default function SessionDetailScreen() {
           </GlowCard>
         )}
 
-        {log.exercises.length > 0 && (
+        {(log.exercises ?? []).length > 0 && (
           <GlowCard glowColor={COLORS.border} style={styles.exercisesCard}>
             <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-              EXERCICES ({log.exercises.length})
+              EXERCICES ({(log.exercises ?? []).length})
             </Text>
-            {log.exercises.map((ex, i) => (
+            {(log.exercises ?? []).map((ex, i) => (
               <View
                 key={ex.exerciseId ?? i}
-                style={[styles.exRow, i === log.exercises.length - 1 && styles.exRowLast]}
+                style={[styles.exRow, i === (log.exercises ?? []).length - 1 && styles.exRowLast]}
               >
                 <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
                   {String(i + 1).padStart(2, "0")}
