@@ -40,11 +40,31 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       durationWeeks: p.durationWeeks,
       startDate: p.startDate,
       isActive: p.isActive,
+      previewEnabled: p.previewEnabled ?? false,
       startsInFuture: p.startDate ? p.startDate > todayStr : false,
       createdAt: p.createdAt,
     })));
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.put("/programs/:id/preview", authenticate, requireRole("coach"), async (req, res) => {
+  const programId = String(req.params["id"]);
+  const { enabled } = req.body as { enabled?: boolean };
+  try {
+    const [prog] = await db.select({ id: programsTable.id }).from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
+    if (!prog) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
+      return;
+    }
+    await db.update(programsTable)
+      .set({ previewEnabled: enabled !== false, updatedAt: new Date() })
+      .where(eq(programsTable.id, programId));
+    res.json({ success: true, previewEnabled: enabled !== false });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 

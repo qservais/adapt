@@ -373,6 +373,7 @@ export interface ProgramSummary {
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
+  previewEnabled?: boolean;
   startsInFuture?: boolean;
   createdAt?: string;
 }

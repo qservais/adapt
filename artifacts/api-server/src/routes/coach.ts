@@ -757,7 +757,7 @@ router.post("/coach/clients/:clientId/quick-session", authenticate, requireRole(
         name: "__libre__",
         durationWeeks: 104,
         startDate: dateStr,
-        isActive: true,
+        isActive: false,
       }).returning();
       libreProgram = created;
     }
@@ -781,6 +781,14 @@ router.post("/coach/clients/:clientId/quick-session", authenticate, requireRole(
       estimatedDurationMin: 30,
     }).returning();
 
+    const [block] = await db.insert(sessionBlocksTable).values({
+      sessionId: session.id,
+      type: "strength",
+      orderIndex: 0,
+      name: "Principal",
+      estimatedDurationMin: 30,
+    }).returning();
+
     const MODES = ["normal", "performance", "adapt", "recovery"] as const;
     const MODIFIERS: Record<string, number> = { normal: 1, performance: 1.05, adapt: 0.75, recovery: 0.3 };
     for (const mode of MODES) {
@@ -789,14 +797,6 @@ router.post("/coach/clients/:clientId/quick-session", authenticate, requireRole(
         mode,
         volumeModifier: String(MODIFIERS[mode]),
         intensityModifier: String(MODIFIERS[mode]),
-      }).returning();
-
-      const [block] = await db.insert(sessionBlocksTable).values({
-        sessionId: session.id,
-        type: "strength",
-        orderIndex: 0,
-        name: "Principal",
-        estimatedDurationMin: 30,
       }).returning();
 
       await db.insert(sessionExercisesTable).values({

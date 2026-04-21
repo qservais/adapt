@@ -33,6 +33,8 @@ import {
   ChevronUp,
   UserPlus,
   CheckCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   Dialog,
@@ -216,7 +218,36 @@ function NewProgramDialog({
   );
 }
 
+async function toggleProgramPreview(programId: string, enabled: boolean) {
+  const token = localStorage.getItem("adapt_coach_access");
+  const res = await fetch(`/api/programs/${programId}/preview`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error("Erreur serveur");
+}
+
 function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [togglingPreview, setTogglingPreview] = useState(false);
+
+  const handlePreviewToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTogglingPreview(true);
+    try {
+      await toggleProgramPreview(prog.id, !prog.previewEnabled);
+      toast({ title: prog.previewEnabled ? "Aperçu désactivé" : "Programme envoyé en aperçu à l'athlète" });
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setTogglingPreview(false);
+    }
+  };
+
   return (
     <Link href={`/programs/${prog.id}`}>
       <div className="group flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer">
@@ -241,14 +272,39 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
                 ACTIF
               </span>
             )}
-            {!prog.isActive && prog.startsInFuture && (
+            {prog.startsInFuture && (
               <span className="text-[10px] font-bold text-accent flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
                 À VENIR
               </span>
             )}
+            {prog.startsInFuture && prog.previewEnabled && (
+              <span className="text-[10px] text-primary flex items-center gap-1">
+                <Eye className="w-2.5 h-2.5" />
+                APERÇU ACTIF
+              </span>
+            )}
           </div>
         </div>
+        {prog.startsInFuture && (
+          <button
+            onClick={handlePreviewToggle}
+            disabled={togglingPreview}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-colors shrink-0 ${
+              prog.previewEnabled
+                ? "border-primary/30 text-primary bg-primary/10 hover:bg-primary/20"
+                : "border-accent/30 text-accent bg-accent/10 hover:bg-accent/20"
+            }`}
+            title={prog.previewEnabled ? "Désactiver l'aperçu" : "Envoyer en aperçu à l'athlète"}
+          >
+            {togglingPreview
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : prog.previewEnabled
+                ? <><EyeOff className="w-3 h-3" /> Retirer</>
+                : <><Eye className="w-3 h-3" /> Aperçu</>
+            }
+          </button>
+        )}
         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
       </div>
     </Link>
