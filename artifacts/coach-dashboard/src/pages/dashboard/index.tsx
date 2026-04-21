@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
-} from "recharts";
+} from "@/lib/recharts-compat";
 import {
   useCreateCoachAppointment,
   useUpdateCoachAppointment,

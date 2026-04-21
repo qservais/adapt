@@ -20,7 +20,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine, Cell
-} from "recharts";
+} from "@/lib/recharts-compat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -982,7 +982,7 @@ export default function ClientDetail() {
                                   <YAxis tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
                                   <RechartsTooltip
                                     contentStyle={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
-                                    formatter={(v) => [`${v} séance${Number(v) > 1 ? "s" : ""}`, "Volume"]}
+                                    formatter={(v: number | string) => [`${v} séance${Number(v) > 1 ? "s" : ""}`, "Volume"]}
                                     labelStyle={{ color: "#94a3b8" }}
                                   />
                                   <Bar dataKey="count" radius={[3, 3, 0, 0]}>
@@ -1061,7 +1061,7 @@ export default function ClientDetail() {
                                 <YAxis tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 10]} ticks={[0, 5, 8, 10]} />
                                 <RechartsTooltip
                                   contentStyle={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
-                                  formatter={(v) => [`${v}/10`, "RPE"]}
+                                  formatter={(v: number | string) => [`${v}/10`, "RPE"]}
                                   labelStyle={{ color: "#94a3b8" }}
                                 />
                                 <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="4 2" opacity={0.5} />
@@ -1069,7 +1069,7 @@ export default function ClientDetail() {
                                   type="monotone"
                                   dataKey="rpe"
                                   strokeWidth={2}
-                                  dot={(props) => {
+                                  dot={(props: { cx: number; cy: number; payload: { rpe: number } }) => {
                                     const { cx, cy, payload } = props;
                                     const color = payload.rpe > 8 ? "#ef4444" : payload.rpe > 6 ? "#f59e0b" : "#22c55e";
                                     return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={4} fill={color} stroke="none" />;
