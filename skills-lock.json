@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "b7dc4bc5a5fe0aee778ed86e3a24cbf8c26377cf0c7e57c7b5cba63f6a23bb00"
     },
+    "async-python-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "e2c6c594828cbbf4f0c181eedcf2bd39a2a49b4f087942b295faf36cdc88c423"
+    },
     "audit-website": {
       "source": "squirrelscan/skills",
       "sourceType": "github",
@@ -36,10 +41,20 @@
       "sourceType": "github",
       "computedHash": "2e83eda2221e97166172a0798e9b0379e34080595e107e2fc0cf580e9b3bbf7b"
     },
+    "error-handling-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "824c53fa080765f05862d3ec0ef829aaff9f8d544f9de0039b8fcafa6bc1a899"
+    },
     "expo-deployment": {
       "source": "expo/skills",
       "sourceType": "github",
       "computedHash": "9ea9f16374765c1b16764a51bd43a64098921b33f48e94d9c5c1cce24b335c10"
+    },
+    "fastapi-templates": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "8fdfb9bad6aef892b4f16ef3b07ef5eea3b0497d37eeaeddb07244d657cc8711"
     },
     "find-skills": {
       "source": "vercel-labs/skills",
@@ -61,20 +76,40 @@
       "sourceType": "github",
       "computedHash": "ddec844d01d102687f89749e1d3a9f7a9019010dce1039a7d442189f39726ad4"
     },
+    "nestjs-best-practices": {
+      "source": "kadajett/agent-nestjs-skills",
+      "sourceType": "github",
+      "computedHash": "1b6f82e889d19d305e38e35594de08eca0242321f353cafa4cf5e61dd3aa1a73"
+    },
     "next-best-practices": {
       "source": "vercel-labs/next-skills",
       "sourceType": "github",
       "computedHash": "515ba75178bd44875812d9a560bdf14651f86709f89cf1d4f209638e879807f3"
+    },
+    "nextjs-app-router-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "d2f0a7065f7418fdb3ae88559f1f1426f40c26f2b5aebcd394797418d4bb3b04"
     },
     "pdf": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "cfbc539377088ca7e44a813b30c306327385bbd973cd7a721e1743f60837dd62"
     },
+    "postgresql-table-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "dcace78e5cef7d8dce8ffef7ebee146e6c83a438aa4cf80bf502730e870c02d4"
+    },
     "pptx": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "6b8b859d26f93aa059c9870d1ab76b44ab69e3d6757ce4a03cc94cb760888073"
+    },
+    "python-performance-optimization": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "1a7009e7e16fd08c201f4a527a44d4f0d9d1d892b15b92ab3492624b23be22b8"
     },
     "remotion-best-practices": {
       "source": "remotion-dev/skills",
@@ -90,6 +125,21 @@
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "b122f4d1e91aa1d83027e050b5b37c3156203ee85458d7b1360bc48167c9e02a"
+    },
+    "skill-judge": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "computedHash": "ff132ba281d460d3cf7814601e304f24e795a606a8e20e78f1bd103258bc735c"
+    },
+    "solidity-security": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "6e5da171c220c6e8b8abae8e31c77f532812d6739d597f6f4a043ca2b7044f1e"
+    },
+    "sql-optimization-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "53d0e34ed28c0cb9d9829d37e9fc9dd49bbfbbfce6f7c68f88a45c2cb34b9f60"
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",

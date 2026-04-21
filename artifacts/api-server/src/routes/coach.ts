@@ -806,7 +806,7 @@ router.post("/coach/clients/:clientId/quick-session", authenticate, requireRole(
         orderIndex: 0,
         sets,
         reps,
-        nominalLoadKg: "0",
+        loadKg: "0",
         restSeconds: 90,
       });
     }

@@ -23,6 +23,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       durationWeeks: programsTable.durationWeeks,
       startDate: programsTable.startDate,
       isActive: programsTable.isActive,
+      previewEnabled: programsTable.previewEnabled,
       createdAt: programsTable.createdAt,
       athleteFirstName: usersTable.firstName,
       athleteLastName: usersTable.lastName,
