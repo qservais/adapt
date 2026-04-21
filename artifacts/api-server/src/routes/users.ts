@@ -309,6 +309,112 @@ router.get("/users/prs", authenticate, async (req, res) => {
   }
 });
 
+function completionPercent(user: typeof usersTable.$inferSelect): number {
+  let score = 0;
+  const checks: [boolean, number][] = [
+    [!!user.firstName, 5],
+    [!!user.birthDate, 5],
+    [!!user.gender, 5],
+    [!!user.weightKg, 5],
+    [!!user.heightCm, 5],
+    [!!user.fitnessLevel, 10],
+    [!!user.primaryGoal, 10],
+    [!!user.avatarUrl, 10],
+    [!!((user.availableDays as string[] | null)?.length), 15],
+    [!!((user.trainingLocations as string[] | null)?.length), 10],
+    [!!((user.equipment as string[] | null)?.length), 10],
+    [!!user.sessionDurationMin, 5],
+    [!!user.secondaryGoal, 5],
+  ];
+  for (const [cond, weight] of checks) {
+    if (cond) score += weight;
+  }
+  return Math.min(100, score);
+}
+
+function extendedProfile(user: typeof usersTable.$inferSelect) {
+  return {
+    ...userProfile(user),
+    secondaryGoal: user.secondaryGoal ?? null,
+    sessionDurationMin: user.sessionDurationMin ?? null,
+    sessionDurationMax: user.sessionDurationMax ?? null,
+    availableDays: (user.availableDays as string[] | null) ?? [],
+    trainingLocations: (user.trainingLocations as string[] | null) ?? [],
+    equipment: (user.equipment as string[] | null) ?? [],
+    avoidedExercises: (user.avoidedExercises as string[] | null) ?? [],
+    favoriteExercises: (user.favoriteExercises as string[] | null) ?? [],
+    language: user.language ?? "fr",
+    theme: user.theme ?? "dark",
+    units: user.units ?? "metric",
+    privacySettings: (user.privacySettings as { shareWeight?: boolean; shareSleep?: boolean; shareHeartRate?: boolean; shareBodyFat?: boolean } | null) ?? {},
+    completionPercent: completionPercent(user),
+  };
+}
+
+const extendedProfileSchema = z.object({
+  secondaryGoal: z.string().max(200).nullable().optional(),
+  sessionDurationMin: z.number().int().min(15).max(240).nullable().optional(),
+  sessionDurationMax: z.number().int().min(15).max(240).nullable().optional(),
+  availableDays: z.array(z.string()).nullable().optional(),
+  trainingLocations: z.array(z.string()).nullable().optional(),
+  equipment: z.array(z.string()).nullable().optional(),
+  avoidedExercises: z.array(z.string()).nullable().optional(),
+  favoriteExercises: z.array(z.string()).nullable().optional(),
+  language: z.enum(["fr", "en"]).optional(),
+  theme: z.enum(["dark", "light", "system"]).optional(),
+  units: z.enum(["metric", "imperial"]).optional(),
+  privacySettings: z.object({
+    shareWeight: z.boolean().optional(),
+    shareSleep: z.boolean().optional(),
+    shareHeartRate: z.boolean().optional(),
+    shareBodyFat: z.boolean().optional(),
+  }).optional(),
+});
+
+router.get("/users/me/profile", authenticate, async (req, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
+    if (!user) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Utilisateur non trouvé" } });
+      return;
+    }
+    res.json(extendedProfile(user));
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.put("/users/me/profile", authenticate, async (req, res) => {
+  const parsed = extendedProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const data = parsed.data;
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (data.secondaryGoal !== undefined) updateData["secondaryGoal"] = data.secondaryGoal;
+    if (data.sessionDurationMin !== undefined) updateData["sessionDurationMin"] = data.sessionDurationMin;
+    if (data.sessionDurationMax !== undefined) updateData["sessionDurationMax"] = data.sessionDurationMax;
+    if (data.availableDays !== undefined) updateData["availableDays"] = data.availableDays;
+    if (data.trainingLocations !== undefined) updateData["trainingLocations"] = data.trainingLocations;
+    if (data.equipment !== undefined) updateData["equipment"] = data.equipment;
+    if (data.avoidedExercises !== undefined) updateData["avoidedExercises"] = data.avoidedExercises;
+    if (data.favoriteExercises !== undefined) updateData["favoriteExercises"] = data.favoriteExercises;
+    if (data.language !== undefined) updateData["language"] = data.language;
+    if (data.theme !== undefined) updateData["theme"] = data.theme;
+    if (data.units !== undefined) updateData["units"] = data.units;
+    if (data.privacySettings !== undefined) updateData["privacySettings"] = data.privacySettings;
+    const [user] = await db.update(usersTable)
+      .set(updateData as Partial<typeof usersTable.$inferInsert>)
+      .where(eq(usersTable.id, req.user!.userId))
+      .returning();
+    res.json(extendedProfile(user));
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 const statsOrderSchema = z.object({
   order: z.array(z.string()).min(1).max(20),
 });

@@ -479,6 +479,8 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       upcomingSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
     }
 
+    const privacy = (athlete.privacySettings as { shareWeight?: boolean; shareSleep?: boolean; shareHeartRate?: boolean; shareBodyFat?: boolean } | null) ?? {};
+
     res.json({
       id: athlete.id,
       firstName: athlete.firstName,
@@ -486,14 +488,24 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       email: athlete.email,
       avatarUrl: resolveAvatarUrl(athlete),
       age: athlete.age,
-      weightKg: athlete.weightKg,
+      weightKg: privacy.shareWeight !== false ? athlete.weightKg : null,
       heightCm: athlete.heightCm,
       fitnessLevel: athlete.fitnessLevel,
       primaryGoal: athlete.primaryGoal,
+      secondaryGoal: athlete.secondaryGoal ?? null,
       cycleTracking: athlete.cycleTracking,
       lastPeriodDate: athlete.lastPeriodDate,
       avgCycleDays: athlete.avgCycleDays,
       inviteCode: athlete.inviteCode,
+      trainingContext: {
+        availableDays: (athlete.availableDays as string[] | null) ?? [],
+        trainingLocations: (athlete.trainingLocations as string[] | null) ?? [],
+        equipment: (athlete.equipment as string[] | null) ?? [],
+        sessionDurationMin: athlete.sessionDurationMin ?? null,
+        sessionDurationMax: athlete.sessionDurationMax ?? null,
+        injuries: athlete.injuries ?? null,
+        units: athlete.units ?? "metric",
+      },
       todayCheckin: todayCheckin ?? null,
       recentCheckins,
       recentSessions,

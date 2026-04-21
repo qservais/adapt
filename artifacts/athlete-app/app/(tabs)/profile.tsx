@@ -39,6 +39,7 @@ import {
 import { tokenStore } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
+import ExtendedProfileSections from "@/components/profile/ExtendedProfileSections";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
@@ -896,6 +897,8 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
+      <ExtendedProfileSections />
+
       <View style={styles.quickLinks}>
         <TouchableOpacity
           onPress={() => router.push("/guides" as any)}
@@ -950,22 +953,6 @@ export default function ProfileScreen() {
           <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
         </TouchableOpacity>
 
-        <View style={[styles.quickLinkRow, styles.quickLinkDisabled]}>
-          <View style={styles.quickLinkLeft}>
-            <Text style={styles.quickLinkIcon}>❤️</Text>
-            <View>
-              <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: COLORS.textMuted }]}>
-                Apple Santé
-              </Text>
-              <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
-                Bientôt disponible
-              </Text>
-            </View>
-          </View>
-          <View style={styles.comingSoonBadge}>
-            <Text style={[styles.comingSoonText, { fontFamily: FONTS.mono }]}>BIENTÔT</Text>
-          </View>
-        </View>
       </View>
 
       <View style={styles.section}>

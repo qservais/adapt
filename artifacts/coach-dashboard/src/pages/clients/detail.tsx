@@ -1356,6 +1356,105 @@ export default function ClientDetail() {
                 />
               )}
             </div>
+
+            {/* SIDEBAR — Training context */}
+            <div className="space-y-4">
+              <Card className="bg-card border-border shadow-lg">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-display tracking-widest text-white flex items-center gap-2">
+                    <Dumbbell className="w-4 h-4 text-primary" />
+                    CONTEXTE D'ENTRAÎNEMENT
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  {client.fitnessLevel && (
+                    <div className="flex justify-between items-center py-1.5 border-b border-border/60">
+                      <span className="text-muted-foreground">Niveau</span>
+                      <span className="text-white font-medium capitalize">{LEVEL_LABELS[client.fitnessLevel] ?? client.fitnessLevel}</span>
+                    </div>
+                  )}
+                  {client.primaryGoal && (
+                    <div className="flex justify-between items-center py-1.5 border-b border-border/60">
+                      <span className="text-muted-foreground">Objectif principal</span>
+                      <span className="text-white font-medium">{GOAL_LABELS[client.primaryGoal] ?? client.primaryGoal}</span>
+                    </div>
+                  )}
+                  {(client as any).secondaryGoal && (
+                    <div className="flex justify-between items-center py-1.5 border-b border-border/60">
+                      <span className="text-muted-foreground">Objectif secondaire</span>
+                      <span className="text-white font-medium capitalize">{(client as any).secondaryGoal.replace(/_/g, " ")}</span>
+                    </div>
+                  )}
+                  {((client as any).trainingContext?.availableDays?.length > 0) && (
+                    <div className="py-1.5 border-b border-border/60">
+                      <div className="text-muted-foreground mb-1.5">Jours disponibles</div>
+                      <div className="flex flex-wrap gap-1">
+                        {(["lun","mar","mer","jeu","ven","sam","dim"] as const).map(d => {
+                          const isActive = (client as any).trainingContext.availableDays.includes(d);
+                          return (
+                            <span key={d} className={cn(
+                              "px-2 py-0.5 rounded text-[11px] font-mono uppercase",
+                              isActive ? "bg-primary/20 text-primary border border-primary/30" : "bg-white/5 text-muted-foreground border border-border/30"
+                            )}>{d}</span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {((client as any).trainingContext?.trainingLocations?.length > 0) && (
+                    <div className="py-1.5 border-b border-border/60">
+                      <div className="text-muted-foreground mb-1.5">Lieu</div>
+                      <div className="flex flex-wrap gap-1">
+                        {((client as any).trainingContext.trainingLocations as string[]).map((loc: string) => {
+                          const label = loc === "gym" ? "Salle" : loc === "home" ? "Maison" : loc === "outdoor" ? "Extérieur" : loc;
+                          return (
+                            <span key={loc} className="px-2 py-0.5 rounded text-[11px] font-medium bg-accent/10 text-accent border border-accent/20">{label}</span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {((client as any).trainingContext?.equipment?.length > 0) && (
+                    <div className="py-1.5 border-b border-border/60">
+                      <div className="text-muted-foreground mb-1.5">Équipement</div>
+                      <div className="flex flex-wrap gap-1">
+                        {((client as any).trainingContext.equipment as string[]).map((eq: string) => {
+                          const label = ({ barbell:"Barre", dumbbell:"Haltères", kettlebell:"Kettlebell", machine:"Machines", cable:"Poulie", bodyweight:"Poids du corps", bands:"Élastiques", trx:"TRX" } as Record<string,string>)[eq] ?? eq;
+                          return (
+                            <span key={eq} className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/5 text-muted-foreground border border-border/40">{label}</span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {((client as any).trainingContext?.sessionDurationMin || (client as any).trainingContext?.sessionDurationMax) && (
+                    <div className="flex justify-between items-center py-1.5 border-b border-border/60">
+                      <span className="text-muted-foreground">Durée séance</span>
+                      <span className="text-white font-medium">
+                        {(client as any).trainingContext.sessionDurationMin && (client as any).trainingContext.sessionDurationMax
+                          ? `${(client as any).trainingContext.sessionDurationMin}–${(client as any).trainingContext.sessionDurationMax} min`
+                          : (client as any).trainingContext.sessionDurationMin
+                          ? `≥ ${(client as any).trainingContext.sessionDurationMin} min`
+                          : `≤ ${(client as any).trainingContext.sessionDurationMax} min`}
+                      </span>
+                    </div>
+                  )}
+                  {(client as any).trainingContext?.injuries && (
+                    <div className="py-1.5">
+                      <div className="text-muted-foreground mb-1">Blessures / Restrictions</div>
+                      <p className="text-white/80 text-xs italic leading-relaxed">
+                        {(client as any).trainingContext.injuries}
+                      </p>
+                    </div>
+                  )}
+                  {!client.fitnessLevel && !client.primaryGoal && !((client as any).trainingContext?.availableDays?.length) && (
+                    <p className="text-muted-foreground text-xs italic text-center py-2">
+                      L'athlète n'a pas encore renseigné son contexte d'entraînement.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </>
       )}
