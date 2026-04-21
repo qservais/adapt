@@ -136,6 +136,8 @@ const NOTIF_HOURS = [5, 6, 7, 8, 9, 10, 11, 12];
 
 function CompletionBar({ percent }: { percent: number }) {
   const animWidth = useRef(new Animated.Value(0)).current;
+  const colors = useThemeColors();
+  const t = useT();
 
   useEffect(() => {
     Animated.timing(animWidth, {

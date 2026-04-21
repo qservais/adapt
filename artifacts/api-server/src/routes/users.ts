@@ -380,10 +380,10 @@ const extendedProfileSchema = z.object({
     shareBodyFat: z.boolean().optional(),
     shareContext: z.boolean().optional(),
     profileVisibility: z.enum(["coach_only", "private"]).optional(),
-  }).optional(),
+  }).strict().optional(),
   morningNotifHour: z.number().int().min(5).max(23).optional(),
   notificationPrefs: z.record(z.boolean()).optional(),
-}).refine(
+}).strict().refine(
   (d) => {
     if (d.sessionDurationMin != null && d.sessionDurationMax != null) {
       return d.sessionDurationMin <= d.sessionDurationMax;
