@@ -12,12 +12,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { WebView } from "react-native-webview";
+import { Svg, Polyline, Circle, Text as SvgText } from "react-native-svg";
 import { customFetch, equipmentLabelFromKey } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { setFreeSession } from "@/lib/freeSessionStore";
@@ -42,6 +44,7 @@ interface ExerciseDetail {
   demoUrl: string | null;
   demoGifUrl: string | null;
   level: string | null;
+  prKg: number | null;
   history: ExerciseHistoryEntry[];
 }
 
@@ -70,11 +73,123 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function formatDateShort(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
+function computeVolume(entry: ExerciseHistoryEntry): number | null {
+  if (entry.loadKgUsed == null || entry.loadKgUsed <= 0) return null;
+  if (entry.repsPerSet == null || entry.repsPerSet.length === 0) return null;
+  const totalReps = entry.repsPerSet.reduce((a, b) => a + b, 0);
+  if (totalReps === 0) return null;
+  return Math.round(entry.loadKgUsed * totalReps);
+}
+
+interface MiniLineChartProps {
+  data: { value: number; label: string }[];
+  color: string;
+  unit: string;
+  width: number;
+}
+
+function MiniLineChart({ data, color, unit, width }: MiniLineChartProps) {
+  const height = 90;
+  const padLeft = 8;
+  const padRight = 8;
+  const padTop = 12;
+  const padBottom = 28;
+
+  if (data.length < 2) {
+    return (
+      <View style={{ height, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textMuted }}>
+          Données insuffisantes
+        </Text>
+      </View>
+    );
+  }
+
+  const values = data.map(d => d.value);
+  const minVal = Math.min(...values);
+  const maxVal = Math.max(...values);
+  const range = maxVal - minVal || 1;
+
+  const chartW = width - padLeft - padRight;
+  const chartH = height - padTop - padBottom;
+
+  const points = data.map((d, i) => {
+    const x = padLeft + (i / (data.length - 1)) * chartW;
+    const y = padTop + chartH - ((d.value - minVal) / range) * chartH;
+    return { x, y, label: d.label, value: d.value };
+  });
+
+  const polylinePoints = points.map(p => `${p.x},${p.y}`).join(" ");
+
+  const lastPt = points[points.length - 1]!;
+  const firstPt = points[0]!;
+
+  return (
+    <Svg width={width} height={height}>
+      <Polyline
+        points={polylinePoints}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {points.map((p, i) => (
+        <Circle
+          key={i}
+          cx={p.x}
+          cy={p.y}
+          r={i === points.length - 1 ? 4 : 2.5}
+          fill={i === points.length - 1 ? color : COLORS.bgCard}
+          stroke={color}
+          strokeWidth="1.5"
+        />
+      ))}
+      <SvgText
+        x={firstPt.x}
+        y={height - 6}
+        fontSize="9"
+        fill={COLORS.textMuted}
+        textAnchor="middle"
+        fontFamily={FONTS.mono}
+      >
+        {firstPt.label}
+      </SvgText>
+      <SvgText
+        x={lastPt.x}
+        y={height - 6}
+        fontSize="9"
+        fill={COLORS.textMuted}
+        textAnchor="middle"
+        fontFamily={FONTS.mono}
+      >
+        {lastPt.label}
+      </SvgText>
+      <SvgText
+        x={lastPt.x}
+        y={lastPt.y - 8}
+        fontSize="10"
+        fill={color}
+        textAnchor="middle"
+        fontFamily={FONTS.mono}
+      >
+        {lastPt.value}{unit}
+      </SvgText>
+    </Svg>
+  );
+}
+
 export default function ExerciseDetailScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const params = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { width: screenWidth } = useWindowDimensions();
 
   const [isStarting, setIsStarting] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
@@ -151,6 +266,27 @@ export default function ExerciseDetailScreen() {
   const demoUri = exercise?.demoUrl || exercise?.demoGifUrl || null;
   const levelColor = exercise?.level ? (LEVEL_COLORS[exercise.level] ?? COLORS.cyan) : COLORS.cyan;
 
+  const chartWidth = screenWidth - 40 - 28;
+
+  const loadChartData = exercise?.history
+    ? [...exercise.history]
+        .reverse()
+        .filter(h => h.loadKgUsed != null && h.loadKgUsed > 0)
+        .map(h => ({ value: h.loadKgUsed!, label: formatDateShort(h.createdAt) }))
+    : [];
+
+  const volumeChartData = exercise?.history
+    ? [...exercise.history]
+        .reverse()
+        .reduce<{ value: number; label: string }[]>((acc, h) => {
+          const vol = computeVolume(h);
+          if (vol != null) acc.push({ value: vol, label: formatDateShort(h.createdAt) });
+          return acc;
+        }, [])
+    : [];
+
+  const showCharts = loadChartData.length >= 2 || volumeChartData.length >= 2;
+
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
       <ScrollView
@@ -211,6 +347,13 @@ export default function ExerciseDetailScreen() {
                     </Text>
                   </TouchableOpacity>
                 )}
+                {exercise.prKg != null && exercise.prKg > 0 && (
+                  <View style={[styles.metaBadge, { borderColor: `${COLORS.amber}50`, backgroundColor: `${COLORS.amber}15` }]}>
+                    <Text style={[styles.metaText, { fontFamily: FONTS.mono, color: COLORS.amber }]}>
+                      🏆 PR — {exercise.prKg} kg
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -258,6 +401,52 @@ export default function ExerciseDetailScreen() {
               </View>
             )}
 
+            {showCharts && (
+              <>
+                <View style={styles.divider} />
+
+                <View style={styles.historySectionHeader}>
+                  <Feather name="trending-up" size={14} color={COLORS.textMuted} />
+                  <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRESSION</Text>
+                </View>
+
+                <View style={styles.chartsRow}>
+                  {loadChartData.length >= 2 && (
+                    <View style={[styles.chartCard, { flex: volumeChartData.length >= 2 ? 1 : undefined, width: volumeChartData.length >= 2 ? undefined : chartWidth }]}>
+                      <View style={styles.chartCardHeader}>
+                        <Feather name="trending-up" size={11} color={COLORS.green} />
+                        <Text style={[styles.chartCardLabel, { fontFamily: FONTS.mono, color: COLORS.green }]}>
+                          CHARGE
+                        </Text>
+                      </View>
+                      <MiniLineChart
+                        data={loadChartData}
+                        color={COLORS.green}
+                        unit=" kg"
+                        width={volumeChartData.length >= 2 ? (chartWidth / 2 - 8) : chartWidth}
+                      />
+                    </View>
+                  )}
+                  {volumeChartData.length >= 2 && (
+                    <View style={[styles.chartCard, { flex: loadChartData.length >= 2 ? 1 : undefined, width: loadChartData.length >= 2 ? undefined : chartWidth }]}>
+                      <View style={styles.chartCardHeader}>
+                        <Feather name="activity" size={11} color={COLORS.violet} />
+                        <Text style={[styles.chartCardLabel, { fontFamily: FONTS.mono, color: COLORS.violet }]}>
+                          VOLUME
+                        </Text>
+                      </View>
+                      <MiniLineChart
+                        data={volumeChartData}
+                        color={COLORS.violet}
+                        unit=" kg"
+                        width={loadChartData.length >= 2 ? (chartWidth / 2 - 8) : chartWidth}
+                      />
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
+
             <View style={styles.divider} />
 
             <View style={styles.historySectionHeader}>
@@ -277,43 +466,54 @@ export default function ExerciseDetailScreen() {
               </View>
             ) : (
               <View style={styles.historyList}>
-                {exercise.history.map((entry, idx) => (
-                  <View key={entry.id} style={styles.historyCard}>
-                    <View style={styles.historyCardLeft}>
-                      <Text style={[styles.historyDate, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
-                        {formatDate(entry.createdAt)}
-                      </Text>
-                      <View style={styles.historyStats}>
-                        {entry.setsCompleted != null && (
-                          <View style={styles.historyStat}>
-                            <Feather name="repeat" size={11} color={COLORS.cyan} />
-                            <Text style={[styles.historyStatText, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
-                              {entry.setsCompleted} série{entry.setsCompleted > 1 ? "s" : ""}
-                            </Text>
-                          </View>
-                        )}
-                        {entry.loadKgUsed != null && entry.loadKgUsed > 0 && (
-                          <View style={styles.historyStat}>
-                            <Feather name="trending-up" size={11} color={COLORS.green} />
-                            <Text style={[styles.historyStatText, { fontFamily: FONTS.mono, color: COLORS.green }]}>
-                              {entry.loadKgUsed} kg
-                            </Text>
-                          </View>
+                {exercise.history.map((entry, idx) => {
+                  const vol = computeVolume(entry);
+                  return (
+                    <View key={entry.id} style={styles.historyCard}>
+                      <View style={styles.historyCardLeft}>
+                        <Text style={[styles.historyDate, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+                          {formatDate(entry.createdAt)}
+                        </Text>
+                        <View style={styles.historyStats}>
+                          {entry.setsCompleted != null && (
+                            <View style={styles.historyStat}>
+                              <Feather name="repeat" size={11} color={COLORS.cyan} />
+                              <Text style={[styles.historyStatText, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
+                                {entry.setsCompleted} série{entry.setsCompleted > 1 ? "s" : ""}
+                              </Text>
+                            </View>
+                          )}
+                          {entry.loadKgUsed != null && entry.loadKgUsed > 0 && (
+                            <View style={styles.historyStat}>
+                              <Feather name="trending-up" size={11} color={COLORS.green} />
+                              <Text style={[styles.historyStatText, { fontFamily: FONTS.mono, color: COLORS.green }]}>
+                                {entry.loadKgUsed} kg
+                              </Text>
+                            </View>
+                          )}
+                          {vol != null && (
+                            <View style={styles.historyStat}>
+                              <Feather name="activity" size={11} color={COLORS.violet} />
+                              <Text style={[styles.historyStatText, { fontFamily: FONTS.mono, color: COLORS.violet }]}>
+                                {vol} kg vol.
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        {entry.notes != null && entry.notes.length > 0 && (
+                          <Text style={[styles.historyNotes, { fontFamily: FONTS.body }]} numberOfLines={2}>
+                            {entry.notes}
+                          </Text>
                         )}
                       </View>
-                      {entry.notes != null && entry.notes.length > 0 && (
-                        <Text style={[styles.historyNotes, { fontFamily: FONTS.body }]} numberOfLines={2}>
-                          {entry.notes}
+                      <View style={[styles.historyIndex, idx === 0 && { backgroundColor: `${COLORS.cyan}20`, borderColor: `${COLORS.cyan}40` }]}>
+                        <Text style={[styles.historyIndexText, { fontFamily: FONTS.mono, color: idx === 0 ? COLORS.cyan : COLORS.textMuted }]}>
+                          {idx === 0 ? "★" : String(exercise.history.length - idx)}
                         </Text>
-                      )}
+                      </View>
                     </View>
-                    <View style={[styles.historyIndex, idx === 0 && { backgroundColor: `${COLORS.cyan}20`, borderColor: `${COLORS.cyan}40` }]}>
-                      <Text style={[styles.historyIndexText, { fontFamily: FONTS.mono, color: idx === 0 ? COLORS.cyan : COLORS.textMuted }]}>
-                        {idx === 0 ? "★" : String(exercise.history.length - idx)}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
           </>
@@ -593,6 +793,18 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border },
   historySectionHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
+  chartsRow: { flexDirection: "row", gap: 12 },
+  chartCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 12,
+    gap: 6,
+    overflow: "hidden",
+  },
+  chartCardHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  chartCardLabel: { fontSize: 10, letterSpacing: 1.5 },
   emptyHistory: { alignItems: "center", gap: 10, paddingVertical: 24 },
   emptyText: { fontSize: 14, color: COLORS.textMuted, textAlign: "center" },
   emptySubText: { fontSize: 13, color: COLORS.textMuted, textAlign: "center", lineHeight: 19, paddingHorizontal: 20 },

@@ -11,7 +11,7 @@ import {
   checkinsTable,
   alertsTable,
 } from "@workspace/db";
-import { eq, and, or, isNull, inArray, desc } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, desc, max } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 import { getTodayLocalDate } from "../lib/dateUtils.js";
@@ -336,14 +336,27 @@ router.get("/athlete/exercises/:exerciseId", authenticate, requireRole("athlete"
         eq(sessionLogsTable.athleteId, athleteId),
       ))
       .orderBy(desc(exerciseLogsTable.createdAt))
-      .limit(10);
+      .limit(20);
+
+    const parsedHistory = history.map(h => ({
+      ...h,
+      loadKgUsed: h.loadKgUsed != null ? parseFloat(String(h.loadKgUsed)) : null,
+    }));
+
+    const [prRow] = await db.select({ maxLoad: max(exerciseLogsTable.loadKgUsed) })
+      .from(exerciseLogsTable)
+      .innerJoin(sessionLogsTable, eq(exerciseLogsTable.sessionLogId, sessionLogsTable.id))
+      .where(and(
+        eq(exerciseLogsTable.exerciseId, exerciseId),
+        eq(sessionLogsTable.athleteId, athleteId),
+      ));
+
+    const prKg = prRow?.maxLoad != null ? parseFloat(String(prRow.maxLoad)) : null;
 
     res.json({
       ...exercise,
-      history: history.map(h => ({
-        ...h,
-        loadKgUsed: h.loadKgUsed != null ? parseFloat(String(h.loadKgUsed)) : null,
-      })),
+      prKg,
+      history: parsedHistory,
     });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
