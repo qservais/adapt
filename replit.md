@@ -30,6 +30,18 @@ Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/
 ## Completed Features (Tasks)
 - **Task #26**: Daily step counter (`daily_steps` DB table, `GET/POST /stats/steps`, `GET/PUT /users/me/stats-order`), `StepsSection` component with bar chart (7/14/30d) + manual entry modal. `DraggableSectionList` using `PanResponder` for drag-and-drop section reordering — long-press activates mode, drag handles visible per section, hover indicator shown, order persisted to DB. Migration: `lib/db/migrations/0020_task26_steps_stats_order.sql`.
 
+## Task #56: "Faire maintenant" — Launch Exercise from Library
+- **New athlete API endpoints** in `exercises.ts`:
+  - `GET /api/athlete/exercises` — returns exercises from athlete's active program (falls back to all public exercises)
+  - `GET /api/athlete/exercises/:exerciseId` — exercise detail with last 10 performance logs for the athlete
+  - `POST /api/athlete/exercises/:exerciseId/do-now` — creates a `isFreeSession` session log and returns FreeSessionData payload with defaults (3 sets × 10 reps, 90s rest, last used load)
+- **New screen** `app/library/exercise/[id].tsx` — Exercise detail page with: category, level, muscle groups, equipment, description, demo modal, performance history (HISTORIQUE), sticky "Faire maintenant" CTA
+- **Library index** (`app/library/index.tsx`) — Added "MES EXERCICES" section listing program exercises as tappable cards; paginated (first 5, expand all)
+- **freeSessionStore.ts** — Added `completedExercises: CompletedExerciseEntry[]` field and `addCompletedExercise()` helper
+- **free-exercise.tsx** — Calls `addCompletedExercise()` in `handleExerciseDone()` with final load and sets
+- **free-complete.tsx** — Sends `completedExercises` to `POST /sessions/:sessionLogId/complete` so exercise logs land in `exercise_logs` table
+- Reuses existing `free-exercise.tsx` + `free-complete.tsx` session flow for execution
+
 ## Completed Features (Tasks) cont.
 - **Task #38**: Timezone fix — `getLocalDayNumber()` and `dateDiffDays()` helpers added to `lib/dateUtils.ts` using `"T12:00:00Z"` suffix trick (avoids UTC midnight boundary issues for Europe/Brussels). `/sessions/today` rewrites to `getOrCreateTodaySessionLogs()` — creates a session log for EVERY session scheduled on the current day, returns the first uncompleted one. API response now includes `sessionsToday`, `sessionsTodayCompleted`, `sessionIndex`. Home screen shows "SÉANCE X/Y" badge when multiple sessions exist; done card handles multi-session messaging. `/sessions/missed` also fixed for local dates.
 - **Task #39**: `sharp` native addon fixed — added `pnpm.onlyBuiltDependencies: ["sharp"]` to root `package.json`; `pnpm install` now builds the sharp native addon successfully (verified `sharp@0.34.5` loads from api-server workspace).

@@ -1,9 +1,21 @@
 import { Router } from "express";
 import { db, EQUIPMENT_CATALOG } from "@workspace/db";
-import { exercisesTable, sessionExercisesTable } from "@workspace/db";
-import { eq, and, or, isNull } from "drizzle-orm";
+import {
+  exercisesTable,
+  sessionExercisesTable,
+  sessionVariantsTable,
+  sessionsTable,
+  programsTable,
+  exerciseLogsTable,
+  sessionLogsTable,
+  checkinsTable,
+  alertsTable,
+} from "@workspace/db";
+import { eq, and, or, isNull, inArray, desc } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
+import { getTodayLocalDate } from "../lib/dateUtils.js";
+import { getAthleteCurrentPRs } from "../services/prService.js";
 
 const router = Router();
 
@@ -166,6 +178,284 @@ router.delete("/exercises/:exerciseId", authenticate, requireRole("coach"), asyn
       and(eq(exercisesTable.id, exerciseId), eq(exercisesTable.createdBy, coachId))
     );
     res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/athlete/exercises", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+
+    const [activeProgram] = await db.select({ id: programsTable.id })
+      .from(programsTable)
+      .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)))
+      .limit(1);
+
+    let exercises: { id: string; name: string; category: string | null; muscleGroups: unknown; equipment: unknown; description: string | null; demoUrl: string | null; demoGifUrl: string | null; level: string | null }[] = [];
+
+    if (activeProgram) {
+      const programSessions = await db.select({ id: sessionsTable.id })
+        .from(sessionsTable)
+        .where(eq(sessionsTable.programId, activeProgram.id));
+
+      const sessionIds = programSessions.map(s => s.id);
+
+      if (sessionIds.length > 0) {
+        const variants = await db.select({ id: sessionVariantsTable.id })
+          .from(sessionVariantsTable)
+          .where(inArray(sessionVariantsTable.sessionId, sessionIds));
+
+        const variantIds = variants.map(v => v.id);
+
+        if (variantIds.length > 0) {
+          const sessionExs = await db.selectDistinct({ exerciseId: sessionExercisesTable.exerciseId })
+            .from(sessionExercisesTable)
+            .where(inArray(sessionExercisesTable.variantId, variantIds));
+
+          const exerciseIds = sessionExs.map(e => e.exerciseId);
+
+          if (exerciseIds.length > 0) {
+            exercises = await db.select({
+              id: exercisesTable.id,
+              name: exercisesTable.name,
+              category: exercisesTable.category,
+              muscleGroups: exercisesTable.muscleGroups,
+              equipment: exercisesTable.equipment,
+              description: exercisesTable.description,
+              demoUrl: exercisesTable.demoUrl,
+              demoGifUrl: exercisesTable.demoGifUrl,
+              level: exercisesTable.level,
+            }).from(exercisesTable)
+              .where(inArray(exercisesTable.id, exerciseIds));
+          }
+        }
+      }
+    }
+
+    if (exercises.length === 0) {
+      exercises = await db.select({
+        id: exercisesTable.id,
+        name: exercisesTable.name,
+        category: exercisesTable.category,
+        muscleGroups: exercisesTable.muscleGroups,
+        equipment: exercisesTable.equipment,
+        description: exercisesTable.description,
+        demoUrl: exercisesTable.demoUrl,
+        demoGifUrl: exercisesTable.demoGifUrl,
+        level: exercisesTable.level,
+      }).from(exercisesTable)
+        .where(isNull(exercisesTable.createdBy));
+    }
+
+    res.json(exercises);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+async function getAthleteAllowedExerciseIds(athleteId: string): Promise<Set<string>> {
+  const allowed = new Set<string>();
+
+  const publicExercises = await db.select({ id: exercisesTable.id })
+    .from(exercisesTable)
+    .where(isNull(exercisesTable.createdBy));
+  for (const e of publicExercises) allowed.add(e.id);
+
+  const [activeProgram] = await db.select({ id: programsTable.id })
+    .from(programsTable)
+    .where(and(eq(programsTable.athleteId, athleteId), eq(programsTable.isActive, true)))
+    .limit(1);
+
+  if (activeProgram) {
+    const programSessions = await db.select({ id: sessionsTable.id })
+      .from(sessionsTable)
+      .where(eq(sessionsTable.programId, activeProgram.id));
+
+    const sessionIds = programSessions.map(s => s.id);
+    if (sessionIds.length > 0) {
+      const variants = await db.select({ id: sessionVariantsTable.id })
+        .from(sessionVariantsTable)
+        .where(inArray(sessionVariantsTable.sessionId, sessionIds));
+
+      const variantIds = variants.map(v => v.id);
+      if (variantIds.length > 0) {
+        const sessionExs = await db.selectDistinct({ exerciseId: sessionExercisesTable.exerciseId })
+          .from(sessionExercisesTable)
+          .where(inArray(sessionExercisesTable.variantId, variantIds));
+
+        for (const e of sessionExs) allowed.add(e.exerciseId);
+      }
+    }
+  }
+
+  return allowed;
+}
+
+router.get("/athlete/exercises/:exerciseId", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const exerciseId = String(req.params["exerciseId"]);
+    const athleteId = req.user!.userId;
+
+    const allowedIds = await getAthleteAllowedExerciseIds(athleteId);
+    if (!allowedIds.has(exerciseId)) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Exercice non accessible" } });
+      return;
+    }
+
+    const [exercise] = await db.select({
+      id: exercisesTable.id,
+      name: exercisesTable.name,
+      category: exercisesTable.category,
+      muscleGroups: exercisesTable.muscleGroups,
+      equipment: exercisesTable.equipment,
+      description: exercisesTable.description,
+      demoUrl: exercisesTable.demoUrl,
+      demoGifUrl: exercisesTable.demoGifUrl,
+      level: exercisesTable.level,
+    }).from(exercisesTable).where(eq(exercisesTable.id, exerciseId));
+
+    if (!exercise) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+      return;
+    }
+
+    const history = await db.select({
+      id: exerciseLogsTable.id,
+      setsCompleted: exerciseLogsTable.setsCompleted,
+      repsPerSet: exerciseLogsTable.repsPerSet,
+      loadKgUsed: exerciseLogsTable.loadKgUsed,
+      notes: exerciseLogsTable.notes,
+      createdAt: exerciseLogsTable.createdAt,
+      sessionLogId: exerciseLogsTable.sessionLogId,
+    })
+      .from(exerciseLogsTable)
+      .innerJoin(sessionLogsTable, eq(exerciseLogsTable.sessionLogId, sessionLogsTable.id))
+      .where(and(
+        eq(exerciseLogsTable.exerciseId, exerciseId),
+        eq(sessionLogsTable.athleteId, athleteId),
+      ))
+      .orderBy(desc(exerciseLogsTable.createdAt))
+      .limit(10);
+
+    res.json({
+      ...exercise,
+      history: history.map(h => ({
+        ...h,
+        loadKgUsed: h.loadKgUsed != null ? parseFloat(String(h.loadKgUsed)) : null,
+      })),
+    });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.post("/athlete/exercises/:exerciseId/do-now", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const exerciseId = String(req.params["exerciseId"]);
+    const athleteId = req.user!.userId;
+    const today = getTodayLocalDate();
+
+    const allowedIds = await getAthleteAllowedExerciseIds(athleteId);
+    if (!allowedIds.has(exerciseId)) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Exercice non accessible" } });
+      return;
+    }
+
+    const [exercise] = await db.select({
+      id: exercisesTable.id,
+      name: exercisesTable.name,
+      category: exercisesTable.category,
+      muscleGroups: exercisesTable.muscleGroups,
+      equipment: exercisesTable.equipment,
+      description: exercisesTable.description,
+      demoUrl: exercisesTable.demoUrl,
+      demoGifUrl: exercisesTable.demoGifUrl,
+      level: exercisesTable.level,
+    }).from(exercisesTable).where(eq(exercisesTable.id, exerciseId));
+
+    if (!exercise) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+      return;
+    }
+
+    const [todayCheckin] = await db.select().from(checkinsTable)
+      .where(and(eq(checkinsTable.athleteId, athleteId), eq(checkinsTable.date, today)));
+
+    const painAlerts = todayCheckin ? await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(
+        eq(alertsTable.athleteId, athleteId),
+        eq(alertsTable.type, "pain"),
+        eq(alertsTable.isResolved, false)
+      )) : [];
+
+    const variantMode = todayCheckin
+      ? (painAlerts.length > 0 ? "recovery" : todayCheckin.sessionMode)
+      : "normal";
+
+    const lastLog = await db.select({
+      loadKgUsed: exerciseLogsTable.loadKgUsed,
+      setsCompleted: exerciseLogsTable.setsCompleted,
+      createdAt: exerciseLogsTable.createdAt,
+    })
+      .from(exerciseLogsTable)
+      .innerJoin(sessionLogsTable, eq(exerciseLogsTable.sessionLogId, sessionLogsTable.id))
+      .where(and(
+        eq(exerciseLogsTable.exerciseId, exerciseId),
+        eq(sessionLogsTable.athleteId, athleteId),
+      ))
+      .orderBy(desc(exerciseLogsTable.createdAt))
+      .limit(1);
+
+    const lastUsedLoad = lastLog[0]?.loadKgUsed ? parseFloat(String(lastLog[0].loadKgUsed)) : null;
+    const lastUsedDate = lastLog[0]?.createdAt ? new Date(lastLog[0].createdAt).toISOString().split("T")[0]! : null;
+
+    const [newLog] = await db.insert(sessionLogsTable).values({
+      athleteId,
+      sessionId: null,
+      variantMode,
+      checkinId: todayCheckin?.id ?? null,
+      isFreeSession: true,
+      freeSessionName: exercise.name,
+      startedAt: new Date(),
+    }).returning();
+
+    const athletePRs = await getAthleteCurrentPRs(athleteId);
+
+    res.status(201).json({
+      sessionLogId: newLog!.id,
+      name: exercise.name,
+      mode: variantMode,
+      isFreeSession: true,
+      isSingleExercise: true,
+      adaptScore: todayCheckin?.adaptScore ?? 50,
+      coachNotes: null,
+      estimatedDurationMin: null,
+      exercises: [{
+        id: `do-now-${exercise.id}`,
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        category: exercise.category ?? null,
+        imageUrl: exercise.demoUrl ?? null,
+        gifUrl: exercise.demoGifUrl ?? null,
+        muscleGroups: exercise.muscleGroups ?? [],
+        equipment: exercise.equipment ?? [],
+        description: exercise.description ?? null,
+        demoUrl: exercise.demoUrl ?? null,
+        orderIndex: 0,
+        sets: 3,
+        reps: "10",
+        nominalLoadKg: lastUsedLoad ?? null,
+        adaptedLoadKg: lastUsedLoad ?? null,
+        restSeconds: 90,
+        durationSeconds: null,
+        coachCue: null,
+        tempo: null,
+        lastUsedLoadKg: lastUsedLoad,
+        lastUsedDate: lastUsedDate,
+      }],
+      athletePRs,
+    });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

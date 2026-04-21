@@ -18,6 +18,31 @@ import type { LibrarySession, FreeSessionStartResponse } from "@workspace/api-cl
 import { COLORS, FONTS } from "@/constants/theme";
 import { setFreeSession } from "@/lib/freeSessionStore";
 
+interface AthleteExercise {
+  id: string;
+  name: string;
+  category: string | null;
+  muscleGroups: string[] | null;
+  equipment: string[] | null;
+  description: string | null;
+  demoUrl: string | null;
+  level: string | null;
+}
+
+const EXERCISE_CATEGORY_LABELS: Record<string, string> = {
+  compound: "Polyarticulaire",
+  isolation: "Isolation",
+  cardio: "Cardio",
+  mobility: "Mobilité",
+  core: "Gainage",
+  power: "Puissance",
+  plyometric: "Pliométrie",
+  force: "Force",
+  réathlétisation: "Réathlétisation",
+  pliométrie: "Pliométrie",
+  mobilité: "Mobilité",
+};
+
 interface Routine {
   id: string;
   title: string;
@@ -43,6 +68,7 @@ export default function LibraryScreen() {
   const [activeCategory, setActiveCategory] = useState<string>("warmup");
   const [startingRoutineId, setStartingRoutineId] = useState<string | null>(null);
   const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
+  const [showAllExercises, setShowAllExercises] = useState(false);
 
   const { data: routines, isLoading, error } = useQuery<Routine[]>({
     queryKey: ["/api/content-routines"],
@@ -53,6 +79,13 @@ export default function LibraryScreen() {
     queryKey: ["/api/athlete/library-sessions"],
     queryFn: () => customFetch("/api/athlete/library-sessions") as Promise<LibrarySession[]>,
   });
+
+  const { data: athleteExercises = [] } = useQuery<AthleteExercise[]>({
+    queryKey: ["/api/athlete/exercises"],
+    queryFn: () => customFetch("/api/athlete/exercises") as Promise<AthleteExercise[]>,
+  });
+
+  const visibleExercises = showAllExercises ? athleteExercises : athleteExercises.slice(0, 5);
 
   const filtered = (routines ?? []).filter(r => r.category === activeCategory);
   const activeCat = CATEGORIES.find(c => c.key === activeCategory);
@@ -136,7 +169,7 @@ export default function LibraryScreen() {
       </View>
 
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        Routines de soutien à consulter ou démarrer librement.
+        Exercices et routines à consulter ou démarrer librement.
       </Text>
 
       <TouchableOpacity
@@ -157,6 +190,55 @@ export default function LibraryScreen() {
         </View>
         <Feather name="arrow-right" size={18} color={COLORS.cyan} />
       </TouchableOpacity>
+
+      {athleteExercises.length > 0 && (
+        <View style={styles.exercisesSection}>
+          <View style={styles.sectionHeaderRow}>
+            <Feather name="zap" size={13} color={COLORS.cyan} />
+            <Text style={[styles.sectionLabel, { fontFamily: FONTS.bodyBold, color: COLORS.cyan }]}>
+              MES EXERCICES
+            </Text>
+          </View>
+          {visibleExercises.map((ex) => (
+            <TouchableOpacity
+              key={ex.id}
+              onPress={() => router.push(`/library/exercise/${ex.id}` as any)}
+              style={styles.exerciseCard}
+              activeOpacity={0.8}
+            >
+              <View style={styles.exerciseCardLeft}>
+                <Text style={[styles.exerciseCardName, { fontFamily: FONTS.bodyBold }]} numberOfLines={1}>
+                  {ex.name}
+                </Text>
+                <View style={styles.exerciseCardMeta}>
+                  {ex.category != null && (
+                    <Text style={[styles.exerciseCardCategory, { fontFamily: FONTS.mono }]}>
+                      {EXERCISE_CATEGORY_LABELS[ex.category] ?? ex.category}
+                    </Text>
+                  )}
+                  {(ex.muscleGroups ?? []).slice(0, 2).map(mg => (
+                    <View key={mg} style={styles.exerciseCardTag}>
+                      <Text style={[styles.exerciseCardTagText, { fontFamily: FONTS.mono }]}>{mg}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          ))}
+          {athleteExercises.length > 5 && (
+            <TouchableOpacity
+              onPress={() => setShowAllExercises(v => !v)}
+              style={styles.showMoreBtn}
+            >
+              <Feather name={showAllExercises ? "chevron-up" : "chevron-down"} size={14} color={COLORS.cyan} />
+              <Text style={[styles.showMoreText, { fontFamily: FONTS.body, color: COLORS.cyan }]}>
+                {showAllExercises ? "Voir moins" : `Voir les ${athleteExercises.length - 5} autres`}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {programSessions.length > 0 && (
         <View style={styles.programSection}>
@@ -376,6 +458,40 @@ const styles = StyleSheet.create({
   startBtnText: { fontSize: 13, color: COLORS.bg },
   emptyBox: { paddingVertical: 32, alignItems: "center" },
   emptyText: { fontSize: 14, color: COLORS.textMuted, textAlign: "center" },
+  exercisesSection: { gap: 8 },
+  sectionHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 },
+  exerciseCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  exerciseCardLeft: { flex: 1, gap: 4 },
+  exerciseCardName: { fontSize: 14, color: COLORS.white },
+  exerciseCardMeta: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  exerciseCardCategory: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.5 },
+  exerciseCardTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}30`,
+    backgroundColor: `${COLORS.cyan}10`,
+  },
+  exerciseCardTagText: { fontSize: 10, color: COLORS.textMuted },
+  showMoreBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 10,
+  },
+  showMoreText: { fontSize: 13 },
   programSection: { gap: 10 },
   sectionLabel: { fontSize: 11, color: COLORS.violet, letterSpacing: 1.5, marginBottom: 2 },
   programCard: {

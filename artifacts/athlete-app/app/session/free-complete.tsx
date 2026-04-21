@@ -88,9 +88,14 @@ export default function FreeSessionCompleteScreen() {
     statsOpacity.value = withDelay(500, withTiming(1, { duration: 500 }));
 
     if (session.sessionLogId) {
+      const completedExercises = (session.completedExercises ?? []).map(e => ({
+        exerciseId: e.exerciseId,
+        setsCompleted: e.setsCompleted,
+        loadKgUsed: e.loadKgUsed ?? undefined,
+      }));
       customFetch(`/api/sessions/${session.sessionLogId}/complete`, {
         method: "POST",
-        body: JSON.stringify({ exercises: [] }),
+        body: JSON.stringify({ exercises: completedExercises }),
         headers: { "Content-Type": "application/json" },
       }).catch(() => {});
     }

@@ -27,7 +27,7 @@ import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme"
 import { CircularTimer, type CircularTimerRef } from "@/components/ui/CircularTimer";
 import { Stepper } from "@/components/ui/Stepper";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { getFreeSession, clearFreeSession } from "@/lib/freeSessionStore";
+import { getFreeSession, clearFreeSession, addCompletedExercise } from "@/lib/freeSessionStore";
 
 const ENCOURAGEMENT = [
   "Super série ! Reprends ton souffle.",
@@ -246,6 +246,16 @@ export default function FreeExerciseScreen() {
     timerRef.current?.reset();
     workTimerRef.current?.reset();
     resetTimerState();
+
+    if (exercise) {
+      const finalLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? exercise.lastUsedLoadKg ?? null;
+      addCompletedExercise({
+        exerciseId: exercise.exerciseId,
+        setsCompleted: exercise.sets,
+        loadKgUsed: finalLoad && finalLoad > 0 ? finalLoad : null,
+      });
+    }
+
     if (isLast) {
       router.replace("/session/free-complete");
     } else {

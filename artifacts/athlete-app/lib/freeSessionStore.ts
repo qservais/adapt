@@ -1,8 +1,15 @@
+export interface CompletedExerciseEntry {
+  exerciseId: string;
+  setsCompleted: number;
+  loadKgUsed: number | null;
+}
+
 interface FreeSessionData {
   sessionLogId: string;
   name: string;
   mode: string;
   isFreeSession: boolean;
+  isSingleExercise?: boolean;
   isRoutine?: boolean;
   routineId?: string | null;
   adaptScore: number;
@@ -32,6 +39,7 @@ interface FreeSessionData {
     lastUsedDate: string | null;
   }>;
   athletePRs?: Record<string, number>;
+  completedExercises?: CompletedExerciseEntry[];
 }
 
 let _current: FreeSessionData | null = null;
@@ -42,6 +50,18 @@ export function setFreeSession(data: FreeSessionData): void {
 
 export function getFreeSession(): FreeSessionData | null {
   return _current;
+}
+
+export function addCompletedExercise(entry: CompletedExerciseEntry): void {
+  if (!_current) return;
+  const existing = _current.completedExercises ?? [];
+  const idx = existing.findIndex(e => e.exerciseId === entry.exerciseId);
+  if (idx >= 0) {
+    existing[idx] = entry;
+    _current.completedExercises = [...existing];
+  } else {
+    _current.completedExercises = [...existing, entry];
+  }
 }
 
 export function clearFreeSession(): void {
