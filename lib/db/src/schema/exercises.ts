@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, jsonb, timestamp, integer, decimal, text } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, jsonb, timestamp, integer, decimal, text, primaryKey } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { usersTable } from "./users";
 import { sessionVariantsTable, sessionBlocksTable } from "./programs";
@@ -36,9 +36,19 @@ export const sessionExercisesTable = pgTable("session_exercises", {
   supersetLabel: varchar("superset_label", { length: 5 }),
 });
 
+export const athleteExercisePreferencesTable = pgTable("athlete_exercise_preferences", {
+  athleteId: uuid("athlete_id").references(() => usersTable.id).notNull(),
+  exerciseId: uuid("exercise_id").references(() => exercisesTable.id).notNull(),
+  preferredSets: integer("preferred_sets"),
+  preferredReps: varchar("preferred_reps", { length: 20 }),
+  preferredLoadKg: decimal("preferred_load_kg", { precision: 6, scale: 2 }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.athleteId, t.exerciseId] })]);
+
 export const insertExerciseSchema = createInsertSchema(exercisesTable).omit({ id: true, createdAt: true });
 export const insertSessionExerciseSchema = createInsertSchema(sessionExercisesTable).omit({ id: true });
 
 export type InsertExercise = z.infer<typeof insertExerciseSchema>;
 export type Exercise = typeof exercisesTable.$inferSelect;
 export type SessionExercise = typeof sessionExercisesTable.$inferSelect;
+export type AthleteExercisePreference = typeof athleteExercisePreferencesTable.$inferSelect;

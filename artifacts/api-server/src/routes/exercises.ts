@@ -10,8 +10,9 @@ import {
   sessionLogsTable,
   checkinsTable,
   alertsTable,
+  athleteExercisePreferencesTable,
 } from "@workspace/db";
-import { eq, and, or, isNull, inArray, desc, max } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, desc, sql, max } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 import { getTodayLocalDate } from "../lib/dateUtils.js";
@@ -353,10 +354,29 @@ router.get("/athlete/exercises/:exerciseId", authenticate, requireRole("athlete"
 
     const prKg = prRow?.maxLoad != null ? parseFloat(String(prRow.maxLoad)) : null;
 
+    const [prefs] = await db.select({
+      preferredSets: athleteExercisePreferencesTable.preferredSets,
+      preferredReps: athleteExercisePreferencesTable.preferredReps,
+      preferredLoadKg: athleteExercisePreferencesTable.preferredLoadKg,
+    })
+      .from(athleteExercisePreferencesTable)
+      .where(and(
+        eq(athleteExercisePreferencesTable.athleteId, athleteId),
+        eq(athleteExercisePreferencesTable.exerciseId, exerciseId),
+      ))
+      .limit(1);
+
     res.json({
       ...exercise,
       prKg,
       history: parsedHistory,
+      preferences: prefs
+        ? {
+            sets: prefs.preferredSets,
+            reps: prefs.preferredReps,
+            loadKg: prefs.preferredLoadKg != null ? parseFloat(String(prefs.preferredLoadKg)) : null,
+          }
+        : null,
     });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });

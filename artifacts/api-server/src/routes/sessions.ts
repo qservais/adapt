@@ -4,9 +4,9 @@ import {
   checkinsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable,
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
   performanceTestsTable, coachAppointmentsTable, contentRoutinesTable,
-  sessionBlocksTable,
+  sessionBlocksTable, athleteExercisePreferencesTable,
 } from "@workspace/db";
-import { eq, and, desc, asc, gte, inArray, isNotNull, ne } from "drizzle-orm";
+import { eq, and, desc, asc, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { calculateAdaptedLoad } from "../services/adapt-engine.js";
 import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
@@ -479,6 +479,25 @@ router.post("/sessions/:sessionId/complete", authenticate, requireRole("athlete"
         setsCompleted: ex.setsCompleted ?? null,
         repsPerSet: ex.repsPerSet ?? null,
         loadKgUsed: ex.loadKgUsed != null ? ex.loadKgUsed.toString() : null,
+      });
+      const prefReps = ex.repsPerSet != null && ex.repsPerSet.length > 0
+        ? String(ex.repsPerSet[0])
+        : null;
+      await db.insert(athleteExercisePreferencesTable).values({
+        athleteId: req.user!.userId,
+        exerciseId: ex.exerciseId,
+        preferredSets: ex.setsCompleted ?? null,
+        preferredReps: prefReps,
+        preferredLoadKg: ex.loadKgUsed != null ? ex.loadKgUsed.toString() : null,
+        updatedAt: new Date(),
+      }).onConflictDoUpdate({
+        target: [athleteExercisePreferencesTable.athleteId, athleteExercisePreferencesTable.exerciseId],
+        set: {
+          preferredSets: ex.setsCompleted ?? null,
+          preferredReps: prefReps,
+          preferredLoadKg: ex.loadKgUsed != null ? ex.loadKgUsed.toString() : null,
+          updatedAt: sql`now()`,
+        },
       });
     }
 
@@ -1542,6 +1561,26 @@ router.post("/sessions/:sessionLogId/log-exercise", authenticate, requireRole("a
       repsPerSet: repsPerSet ?? null,
       loadKgUsed: loadKgUsed != null ? String(loadKgUsed) : null,
       notes: notes ?? null,
+    });
+
+    const prefReps = repsPerSet != null && repsPerSet.length > 0
+      ? String(repsPerSet[0])
+      : null;
+    await db.insert(athleteExercisePreferencesTable).values({
+      athleteId,
+      exerciseId,
+      preferredSets: setsCompleted ?? null,
+      preferredReps: prefReps,
+      preferredLoadKg: loadKgUsed != null ? String(loadKgUsed) : null,
+      updatedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: [athleteExercisePreferencesTable.athleteId, athleteExercisePreferencesTable.exerciseId],
+      set: {
+        preferredSets: setsCompleted ?? null,
+        preferredReps: prefReps,
+        preferredLoadKg: loadKgUsed != null ? String(loadKgUsed) : null,
+        updatedAt: sql`now()`,
+      },
     });
 
     res.status(201).json({ success: true });

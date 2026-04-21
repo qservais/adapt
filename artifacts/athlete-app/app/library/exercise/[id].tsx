@@ -34,6 +34,12 @@ interface ExerciseHistoryEntry {
   createdAt: string;
 }
 
+interface ExercisePreferences {
+  sets: number | null;
+  reps: string | null;
+  loadKg: number | null;
+}
+
 interface ExerciseDetail {
   id: string;
   name: string;
@@ -46,6 +52,7 @@ interface ExerciseDetail {
   level: string | null;
   prKg: number | null;
   history: ExerciseHistoryEntry[];
+  preferences: ExercisePreferences | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -207,14 +214,21 @@ export default function ExerciseDetailScreen() {
 
   const openDoNowSheet = () => {
     if (!exercise) return;
+    const prefs = exercise.preferences;
     const lastEntry = exercise.history[0];
-    setPendingSets(String(lastEntry?.setsCompleted ?? 3));
-    setPendingReps(lastEntry?.repsPerSet != null && lastEntry.repsPerSet.length > 0
-      ? String(lastEntry.repsPerSet[0])
-      : "10");
-    setPendingLoad(lastEntry?.loadKgUsed != null && lastEntry.loadKgUsed > 0
-      ? String(lastEntry.loadKgUsed)
-      : "");
+    if (prefs != null) {
+      setPendingSets(prefs.sets != null ? String(prefs.sets) : "3");
+      setPendingReps(prefs.reps != null && prefs.reps.length > 0 ? prefs.reps : "10");
+      setPendingLoad(prefs.loadKg != null && prefs.loadKg > 0 ? String(prefs.loadKg) : "");
+    } else {
+      setPendingSets(String(lastEntry?.setsCompleted ?? 3));
+      setPendingReps(lastEntry?.repsPerSet != null && lastEntry.repsPerSet.length > 0
+        ? String(lastEntry.repsPerSet[0])
+        : "10");
+      setPendingLoad(lastEntry?.loadKgUsed != null && lastEntry.loadKgUsed > 0
+        ? String(lastEntry.loadKgUsed)
+        : "");
+    }
     setPendingRest("90");
     setShowDoNowSheet(true);
   };
