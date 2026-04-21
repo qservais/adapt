@@ -794,7 +794,9 @@ export const GetMessageThreadsResponseItem = zod.object({
   userId: zod.string(),
   userFirstName: zod.string(),
   userLastName: zod.string().nullish(),
+  userAvatarUrl: zod.string().nullish(),
   lastMessage: zod.string().nullish(),
+  lastMediaType: zod.string().nullish(),
   lastMessageAt: zod.string().nullish(),
   unreadCount: zod.number(),
 });
@@ -807,7 +809,11 @@ export const GetMessageThreadsResponse = zod.array(
  */
 export const SendMessageBody = zod.object({
   recipientId: zod.string(),
-  content: zod.string(),
+  content: zod.string().optional(),
+  mediaType: zod.enum(["audio", "video", "document"]).optional(),
+  mediaUrl: zod.string().optional(),
+  fileName: zod.string().optional(),
+  fileSize: zod.string().optional(),
 });
 
 /**
@@ -822,6 +828,10 @@ export const GetThreadMessagesResponseItem = zod.object({
   senderId: zod.string(),
   recipientId: zod.string(),
   content: zod.string(),
+  mediaType: zod.enum(["audio", "video", "document"]).nullish(),
+  mediaUrl: zod.string().nullish(),
+  fileName: zod.string().nullish(),
+  fileSize: zod.string().nullish(),
   isRead: zod.boolean(),
   createdAt: zod.string(),
 });
@@ -839,4 +849,17 @@ export const MarkMessagesReadParams = zod.object({
 export const MarkMessagesReadResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
+});
+
+/**
+ * @summary Request a presigned URL to upload a document attachment
+ */
+export const UploadMessageDocumentBody = zod.object({
+  mimeType: zod.string(),
+  fileSize: zod.number(),
+  fileName: zod.string(),
+});
+
+export const UploadMessageDocumentResponse = zod.object({
+  uploadUrl: zod.string(),
 });

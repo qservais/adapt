@@ -5,11 +5,12 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SendMessageRequestMediaType } from "./sendMessageRequestMediaType";
 
 export interface SendMessageRequest {
   recipientId: string;
   content?: string;
-  mediaType?: "audio" | "video" | "document";
+  mediaType?: SendMessageRequestMediaType;
   mediaUrl?: string;
   fileName?: string;
   fileSize?: string;

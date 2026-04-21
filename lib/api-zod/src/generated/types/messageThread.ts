@@ -10,7 +10,9 @@ export interface MessageThread {
   userId: string;
   userFirstName: string;
   userLastName?: string | null;
+  userAvatarUrl?: string | null;
   lastMessage?: string | null;
+  lastMediaType?: string | null;
   lastMessageAt?: string | null;
   unreadCount: number;
 }

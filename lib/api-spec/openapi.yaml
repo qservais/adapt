@@ -838,6 +838,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /messages/upload-document:
+    post:
+      operationId: uploadMessageDocument
+      tags: [messages]
+      summary: Request a presigned URL to upload a document attachment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadDocumentRequest"
+      responses:
+        "200":
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadDocumentResponse"
+        "413":
+          description: File too large
+        "415":
+          description: Unsupported media type
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1633,7 +1656,13 @@ components:
         userLastName:
           type: string
           nullable: true
+        userAvatarUrl:
+          type: string
+          nullable: true
         lastMessage:
+          type: string
+          nullable: true
+        lastMediaType:
           type: string
           nullable: true
         lastMessageAt:
@@ -1657,6 +1686,19 @@ components:
           type: string
         content:
           type: string
+        mediaType:
+          type: string
+          enum: [audio, video, document]
+          nullable: true
+        mediaUrl:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        fileSize:
+          type: string
+          nullable: true
         isRead:
           type: boolean
         createdAt:
@@ -1676,6 +1718,36 @@ components:
           type: string
         content:
           type: string
+        mediaType:
+          type: string
+          enum: [audio, video, document]
+        mediaUrl:
+          type: string
+        fileName:
+          type: string
+        fileSize:
+          type: string
       required:
         - recipientId
-        - content
+
+    UploadDocumentRequest:
+      type: object
+      properties:
+        mimeType:
+          type: string
+        fileSize:
+          type: integer
+        fileName:
+          type: string
+      required:
+        - mimeType
+        - fileSize
+        - fileName
+
+    UploadDocumentResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+      required:
+        - uploadUrl

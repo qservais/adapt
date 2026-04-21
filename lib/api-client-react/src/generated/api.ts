@@ -60,6 +60,8 @@ import type {
   RegisterRequest,
   ResolveAlertRequest,
   SendMessageRequest,
+  UploadDocumentRequest,
+  UploadDocumentResponse,
   UploadMediaRequest,
   UploadMediaResponse,
   SessionDetail,
@@ -4059,6 +4061,46 @@ export const useUploadMessageMedia = <
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
   return useMutation({
     mutationFn: ({ data }) => uploadMessageMedia(data, requestOptions),
+    ...mutationOptions,
+  });
+};
+
+export const getUploadMessageDocumentUrl = () => {
+  return `/api/messages/upload-document`;
+};
+
+export const uploadMessageDocument = async (
+  uploadDocumentRequest: UploadDocumentRequest,
+  options?: RequestInit,
+): Promise<UploadDocumentResponse> => {
+  return customFetch<UploadDocumentResponse>(getUploadMessageDocumentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(uploadDocumentRequest),
+  });
+};
+
+export const useUploadMessageDocument = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadMessageDocument>>,
+    TError,
+    { data: BodyType<UploadDocumentRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof uploadMessageDocument>>,
+  TError,
+  { data: BodyType<UploadDocumentRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return useMutation({
+    mutationFn: ({ data }) => uploadMessageDocument(data, requestOptions),
     ...mutationOptions,
   });
 };

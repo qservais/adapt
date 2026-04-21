@@ -5,13 +5,14 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MessageDataMediaType } from "./messageDataMediaType";
 
 export interface MessageData {
   id: string;
   senderId: string;
   recipientId: string;
   content: string;
-  mediaType?: "audio" | "video" | "document" | null;
+  mediaType?: MessageDataMediaType;
   mediaUrl?: string | null;
   fileName?: string | null;
   fileSize?: string | null;
