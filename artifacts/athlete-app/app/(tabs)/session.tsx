@@ -2,16 +2,20 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import {
   useGetTodaySession,
   useGetSessionHistory,
@@ -25,6 +29,38 @@ import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { setFreeSession } from "@/lib/freeSessionStore";
+
+interface PreviewProgram {
+  programId: string;
+  programName: string;
+  startDate: string;
+  durationWeeks: number;
+  previewEnabled: boolean;
+  sessions: {
+    sessionId: string;
+    name: string;
+    type: string;
+    weekNumber: number;
+    dayNumber: number;
+    scheduledDate: string;
+    estimatedDurationMin: number | null;
+    coachNotes: string | null;
+    blocks: { id: string; type: string; name: string | null; orderIndex: number }[];
+    exercises: {
+      id: string;
+      name: string;
+      sets: number;
+      reps: string | null;
+      loadKg: number | null;
+      restSeconds: number | null;
+      durationSeconds: number | null;
+      blockId: string | null;
+      orderIndex: number;
+      demoUrl: string | null;
+      gifUrl: string | null;
+    }[];
+  }[];
+}
 
 type SubTab = "today" | "upcoming" | "history";
 
@@ -69,11 +105,21 @@ export default function SessionTab() {
 
   const [activeTab, setActiveTab] = useState<SubTab>("today");
   const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
+  const [checkedExercises, setCheckedExercises] = useState<Set<string>>(new Set());
+  const [quickLogModal, setQuickLogModal] = useState<{ exerciseId: string; sessionExId: string; name: string } | null>(null);
+  const [loadInput, setLoadInput] = useState("");
+  const [repsInput, setRepsInput] = useState("");
+  const [loggingExercise, setLoggingExercise] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState<string | null>(null);
 
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
   const historyQuery = useGetSessionHistory();
   const upcomingQuery = useGetAthleteUpcomingSessions();
+  const previewQuery = useQuery<PreviewProgram | null>({
+    queryKey: ["/api/athlete/preview-program"],
+    queryFn: () => customFetch("/api/athlete/preview-program") as Promise<PreviewProgram | null>,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -81,6 +127,7 @@ export default function SessionTab() {
       sessionQuery.refetch();
       upcomingQuery.refetch();
       historyQuery.refetch();
+      previewQuery.refetch();
     }, [])
   );
 
@@ -121,10 +168,49 @@ export default function SessionTab() {
     }
   };
 
+  const handleOpenQuickLog = (sessionExId: string, exerciseId: string, name: string) => {
+    setQuickLogModal({ sessionExId, exerciseId, name });
+    setLoadInput("");
+    setRepsInput("");
+  };
+
+  const handleQuickLog = async () => {
+    if (!quickLogModal || !session?.sessionLogId || loggingExercise) return;
+    setLoggingExercise(true);
+    try {
+      const load = parseFloat(loadInput);
+      const reps = parseInt(repsInput);
+      await customFetch(`/api/sessions/${session.sessionLogId}/log-exercise`, {
+        method: "POST",
+        body: JSON.stringify({
+          exerciseId: quickLogModal.exerciseId,
+          setsCompleted: 1,
+          repsPerSet: !isNaN(reps) ? [reps] : undefined,
+          loadKgUsed: !isNaN(load) && load > 0 ? load : undefined,
+        }),
+      });
+      setCheckedExercises(prev => new Set([...prev, quickLogModal.sessionExId]));
+      setQuickLogModal(null);
+    } catch {
+      Alert.alert("Erreur", "Impossible d'enregistrer l'exercice.");
+    } finally {
+      setLoggingExercise(false);
+    }
+  };
+
+  const handleCheckExercise = (sessionExId: string) => {
+    setCheckedExercises(prev => {
+      const next = new Set(prev);
+      if (next.has(sessionExId)) next.delete(sessionExId);
+      else next.add(sessionExId);
+      return next;
+    });
+  };
+
   const upcomingSessions = upcomingQuery.data ?? [];
   const todayStr = new Date().toISOString().split("T")[0]!;
   const futureSessions = upcomingSessions.filter((s) => {
-    return s.scheduledDate > todayStr && !s.isCompleted;
+    return s.scheduledDate >= todayStr || s.isCompleted;
   });
 
   const SUB_TABS: { id: SubTab; label: string }[] = [
@@ -134,6 +220,7 @@ export default function SessionTab() {
   ];
 
   return (
+    <>
     <ScrollView
       ref={scrollRef}
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
@@ -215,13 +302,14 @@ export default function SessionTab() {
                       </Text>
                       {exs.map((ex, i) => {
                         const globalIndex = exerciseIndexMap.get(ex.id) ?? 0;
+                        const isDone = checkedExercises.has(ex.id);
                         return (
                           <View key={ex.id} style={[styles.exRow, i === exs.length - 1 && styles.exRowLast]}>
                             <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
                               {String(globalIndex + 1).padStart(2, "0")}
                             </Text>
                             <View style={{ flex: 1 }}>
-                              <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
+                              <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium, textDecorationLine: isDone ? "line-through" : "none", opacity: isDone ? 0.5 : 1 }]}>
                                 {ex.exerciseName}
                               </Text>
                               <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
@@ -234,6 +322,19 @@ export default function SessionTab() {
                                   : "Enchaîner"}
                               </Text>
                             </View>
+                            <TouchableOpacity
+                              onPress={() => {
+                                if (isDone) {
+                                  handleCheckExercise(ex.id);
+                                } else {
+                                  handleOpenQuickLog(ex.id, ex.exerciseId, ex.exerciseName);
+                                }
+                              }}
+                              style={[styles.exCheckBtn, isDone && { backgroundColor: `${COLORS.green}20`, borderColor: `${COLORS.green}50` }]}
+                              activeOpacity={0.7}
+                            >
+                              <Feather name={isDone ? "check" : "plus"} size={13} color={isDone ? COLORS.green : COLORS.textMuted} />
+                            </TouchableOpacity>
                           </View>
                         );
                       })}
@@ -276,8 +377,8 @@ export default function SessionTab() {
       )}
 
       {activeTab === "upcoming" && (
-        <View style={styles.section}>
-          {futureSessions.length === 0 ? (
+        <View style={[styles.section, { gap: 16 }]}>
+          {futureSessions.length === 0 && !previewQuery.data ? (
             <View style={styles.emptyState}>
               <Feather name="calendar" size={36} color={COLORS.textMuted} />
               <Text style={[styles.emptyTitle, { fontFamily: FONTS.bodyBold }]}>
@@ -288,65 +389,144 @@ export default function SessionTab() {
               </Text>
             </View>
           ) : (
-            <GlowCard glowColor={COLORS.border}>
-              {futureSessions.map((s, i) => {
-                const d = new Date(s.scheduledDate + "T12:00:00");
-                const dayLabel = d.toLocaleDateString("fr-FR", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "short",
-                });
-                const typeLabel = SESSION_TYPE_FR[s.sessionType] ?? s.sessionType;
-                return (
-                  <View
-                    key={s.sessionId}
-                    style={[
-                      styles.upcomingRow,
-                      i === futureSessions.length - 1 && styles.upcomingRowLast,
-                    ]}
-                  >
-                    <View style={styles.upcomingDayCol}>
-                      <Text style={[styles.upcomingDay, { fontFamily: FONTS.mono }]}>
-                        {dayLabel}
-                      </Text>
+            <>
+              {futureSessions.length > 0 && (
+                <GlowCard glowColor={COLORS.border}>
+                  {futureSessions.map((s, i) => {
+                    const d = new Date(s.scheduledDate + "T12:00:00");
+                    const dayLabel = d.toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "short",
+                    });
+                    const typeLabel = SESSION_TYPE_FR[s.sessionType] ?? s.sessionType;
+                    return (
+                      <View
+                        key={s.sessionId}
+                        style={[
+                          styles.upcomingRow,
+                          i === futureSessions.length - 1 && styles.upcomingRowLast,
+                          s.isCompleted && { opacity: 0.7 },
+                        ]}
+                      >
+                        <View style={styles.upcomingDayCol}>
+                          <Text style={[styles.upcomingDay, { fontFamily: FONTS.mono }]}>
+                            {dayLabel}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[styles.upcomingName, { fontFamily: FONTS.bodyMedium }]}
+                            numberOfLines={1}
+                          >
+                            {s.sessionName}
+                          </Text>
+                          {s.isCompleted && s.completedActualDate ? (
+                            <Text style={[styles.upcomingDoneLabel, { fontFamily: FONTS.mono }]}>
+                              {`Faite le ${new Date(s.completedActualDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`}
+                            </Text>
+                          ) : (
+                            <Text style={[styles.upcomingType, { fontFamily: FONTS.mono }]}>
+                              {typeLabel}
+                            </Text>
+                          )}
+                        </View>
+                        {s.estimatedDurationMin != null && !s.isCompleted && (
+                          <Text style={[styles.upcomingDuration, { fontFamily: FONTS.mono }]}>
+                            {s.estimatedDurationMin} min
+                          </Text>
+                        )}
+                        {s.isCompleted ? (
+                          <View style={styles.upcomingDoneIcon}>
+                            <Feather name="check-circle" size={18} color={COLORS.green} />
+                          </View>
+                        ) : !s.isAppointment ? (
+                          <TouchableOpacity
+                            onPress={() => handleStartFreeSession(s.sessionId, s.sessionName)}
+                            disabled={!!startingSessionId}
+                            style={[
+                              styles.upcomingStartBtn,
+                              { opacity: startingSessionId ? 0.5 : 1 },
+                            ]}
+                            activeOpacity={0.8}
+                          >
+                            {startingSessionId === s.sessionId ? (
+                              <ActivityIndicator size="small" color={COLORS.bg} />
+                            ) : (
+                              <Feather name="play" size={13} color={COLORS.bg} />
+                            )}
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </GlowCard>
+              )}
+
+              {previewQuery.data && (
+                <View style={[styles.previewCard, { borderColor: `${COLORS.cyan}30` }]}>
+                  <View style={styles.previewHeader}>
+                    <View style={styles.previewBadge}>
+                      <Feather name="eye" size={11} color={COLORS.cyan} />
+                      <Text style={[styles.previewBadgeText, { fontFamily: FONTS.mono }]}>APERÇU</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text
-                        style={[styles.upcomingName, { fontFamily: FONTS.bodyMedium }]}
-                        numberOfLines={1}
-                      >
-                        {s.sessionName}
+                      <Text style={[styles.previewName, { fontFamily: FONTS.title, color: COLORS.cyan }]} numberOfLines={1}>
+                        {previewQuery.data.programName}
                       </Text>
-                      <Text style={[styles.upcomingType, { fontFamily: FONTS.mono }]}>
-                        {typeLabel}
+                      <Text style={[styles.previewMeta, { fontFamily: FONTS.mono }]}>
+                        {`Démarre le ${new Date(previewQuery.data.startDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })} · ${previewQuery.data.durationWeeks} sem.`}
                       </Text>
                     </View>
-                    {s.estimatedDurationMin != null && (
-                      <Text style={[styles.upcomingDuration, { fontFamily: FONTS.mono }]}>
-                        {s.estimatedDurationMin} min
+                  </View>
+                  <View style={styles.previewSessions}>
+                    {previewQuery.data.sessions.slice(0, 8).map((ps) => {
+                      const isExp = previewExpanded === ps.sessionId;
+                      return (
+                        <View key={ps.sessionId} style={{ gap: 0 }}>
+                          <TouchableOpacity
+                            onPress={() => setPreviewExpanded(isExp ? null : ps.sessionId)}
+                            style={styles.previewSessionRow}
+                            activeOpacity={0.8}
+                          >
+                            <View style={styles.previewSessionLeft}>
+                              <Text style={[styles.previewWeekLabel, { fontFamily: FONTS.mono }]}>
+                                {`S${ps.weekNumber}·J${ps.dayNumber}`}
+                              </Text>
+                              <View style={{ flex: 1 }}>
+                                <Text style={[styles.previewSessionName, { fontFamily: FONTS.bodyMedium }]} numberOfLines={1}>
+                                  {ps.name}
+                                </Text>
+                                {ps.estimatedDurationMin != null && (
+                                  <Text style={[styles.previewSessionMeta, { fontFamily: FONTS.mono }]}>
+                                    {ps.estimatedDurationMin} min · {ps.exercises.length} exos
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
+                            <Feather name={isExp ? "chevron-up" : "chevron-down"} size={14} color={COLORS.textMuted} />
+                          </TouchableOpacity>
+                          {isExp && (
+                            <View style={styles.previewExList}>
+                              {ps.exercises.map((ex, ei) => (
+                                <Text key={ex.id} style={[styles.previewExItem, { fontFamily: FONTS.body }]}>
+                                  {`${String(ei + 1).padStart(2, "0")}  ${ex.name}  ${ex.sets}×${ex.reps ?? "-"}`}
+                                </Text>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                    {previewQuery.data.sessions.length > 8 && (
+                      <Text style={[styles.previewMore, { fontFamily: FONTS.mono }]}>
+                        {`+ ${previewQuery.data.sessions.length - 8} séances supplémentaires`}
                       </Text>
                     )}
-                    {!s.isAppointment && (
-                      <TouchableOpacity
-                        onPress={() => handleStartFreeSession(s.sessionId, s.sessionName)}
-                        disabled={!!startingSessionId}
-                        style={[
-                          styles.upcomingStartBtn,
-                          { opacity: startingSessionId ? 0.5 : 1 },
-                        ]}
-                        activeOpacity={0.8}
-                      >
-                        {startingSessionId === s.sessionId ? (
-                          <ActivityIndicator size="small" color={COLORS.bg} />
-                        ) : (
-                          <Feather name="play" size={13} color={COLORS.bg} />
-                        )}
-                      </TouchableOpacity>
-                    )}
                   </View>
-                );
-              })}
-            </GlowCard>
+                </View>
+              )}
+            </>
           )}
         </View>
       )}
@@ -427,6 +607,64 @@ export default function SessionTab() {
         </View>
       )}
     </ScrollView>
+
+    {/* Quick Log Modal */}
+    <Modal visible={quickLogModal != null} transparent animationType="fade" onRequestClose={() => setQuickLogModal(null)}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalOverlay}>
+        <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setQuickLogModal(null)} />
+        <View style={styles.modalCard}>
+          <Text style={[styles.modalTitle, { fontFamily: FONTS.title }]} numberOfLines={2}>
+            {quickLogModal?.name}
+          </Text>
+          <Text style={[styles.modalSubtitle, { fontFamily: FONTS.mono }]}>ENREGISTREMENT RAPIDE</Text>
+          <View style={styles.modalInputRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.modalLabel, { fontFamily: FONTS.mono }]}>CHARGE (KG)</Text>
+              <TextInput
+                style={[styles.modalInput, { fontFamily: FONTS.bodyMedium }]}
+                value={loadInput}
+                onChangeText={setLoadInput}
+                keyboardType="decimal-pad"
+                placeholder="0.0"
+                placeholderTextColor={COLORS.textMuted}
+                selectTextOnFocus
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.modalLabel, { fontFamily: FONTS.mono }]}>REPS</Text>
+              <TextInput
+                style={[styles.modalInput, { fontFamily: FONTS.bodyMedium }]}
+                value={repsInput}
+                onChangeText={setRepsInput}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={COLORS.textMuted}
+                selectTextOnFocus
+              />
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={handleQuickLog}
+            disabled={loggingExercise}
+            style={[styles.modalConfirmBtn, { opacity: loggingExercise ? 0.6 : 1 }]}
+            activeOpacity={0.8}
+          >
+            {loggingExercise ? (
+              <ActivityIndicator size="small" color={COLORS.bg} />
+            ) : (
+              <>
+                <Feather name="check" size={16} color={COLORS.bg} />
+                <Text style={[styles.modalConfirmText, { fontFamily: FONTS.bodyMedium }]}>Valider</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setQuickLogModal(null)} style={styles.modalCancelBtn}>
+            <Text style={[styles.modalCancelText, { fontFamily: FONTS.body }]}>Annuler</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  </>
   );
 }
 
@@ -586,4 +824,181 @@ const styles = StyleSheet.create({
   historyRight: { alignItems: "flex-end", gap: 2 },
   rpe: { fontSize: 12, color: COLORS.amber },
   duration: { fontSize: 11, color: COLORS.textMuted },
+  exCheckBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: `${COLORS.white}05`,
+    marginLeft: 8,
+  },
+  upcomingDoneLabel: {
+    fontSize: 10,
+    color: COLORS.green,
+    letterSpacing: 0.5,
+  },
+  upcomingDoneIcon: {
+    marginLeft: 8,
+    justifyContent: "center",
+  },
+  previewCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+    backgroundColor: COLORS.bgCard,
+  },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  previewBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: `${COLORS.cyan}15`,
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}30`,
+  },
+  previewBadgeText: {
+    fontSize: 9,
+    color: COLORS.cyan,
+    letterSpacing: 1.5,
+  },
+  previewName: {
+    fontSize: 15,
+    color: COLORS.cyan,
+  },
+  previewMeta: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  previewSessions: {
+    paddingVertical: 8,
+  },
+  previewSessionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: `${COLORS.border}50`,
+  },
+  previewSessionLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  previewWeekLabel: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+    width: 36,
+  },
+  previewSessionName: {
+    fontSize: 13,
+    color: COLORS.white,
+  },
+  previewSessionMeta: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  previewExList: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    backgroundColor: `${COLORS.white}03`,
+    gap: 4,
+  },
+  previewExItem: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    paddingVertical: 3,
+  },
+  previewMore: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    paddingVertical: 12,
+    letterSpacing: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  modalCard: {
+    backgroundColor: COLORS.bgCard,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    padding: 24,
+    gap: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    color: COLORS.white,
+  },
+  modalSubtitle: {
+    fontSize: 9,
+    color: COLORS.cyan,
+    letterSpacing: 2,
+    marginTop: -8,
+  },
+  modalInputRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalLabel: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: `${COLORS.white}08`,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 20,
+    color: COLORS.white,
+    textAlign: "center",
+  },
+  modalConfirmBtn: {
+    backgroundColor: COLORS.cyan,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    color: COLORS.bg,
+  },
+  modalCancelBtn: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  modalCancelText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
 });

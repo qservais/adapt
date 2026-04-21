@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -442,7 +443,7 @@ export default function ExerciseScreen() {
               <Text style={[styles.descriptionLabel, { fontFamily: FONTS.mono, color: cfg.color }]}>
                 INSTRUCTIONS
               </Text>
-              {exercise.demoUrl != null && exercise.demoUrl.length > 0 && (
+              {((exercise.gifUrl != null && exercise.gifUrl.length > 0) || (exercise.demoUrl != null && exercise.demoUrl.length > 0)) && (
                 <TouchableOpacity
                   onPress={() => setShowDemoModal(true)}
                   style={[styles.demoBtn, { borderColor: `${cfg.color}50` }]}
@@ -640,7 +641,13 @@ export default function ExerciseScreen() {
               <Feather name="x" size={20} color={COLORS.white} />
             </TouchableOpacity>
           </View>
-          {exercise.demoUrl != null && (
+          {exercise.gifUrl != null && exercise.gifUrl.length > 0 ? (
+            <Image
+              source={{ uri: exercise.gifUrl }}
+              style={styles.webView}
+              resizeMode="contain"
+            />
+          ) : exercise.demoUrl != null && exercise.demoUrl.length > 0 ? (
             <WebView
               source={{ uri: exercise.demoUrl }}
               style={styles.webView}
@@ -653,6 +660,11 @@ export default function ExerciseScreen() {
                 </View>
               )}
             />
+          ) : (
+            <View style={[styles.webViewLoader, { flex: 1 }]}>
+              <Feather name="video-off" size={36} color={COLORS.textMuted} />
+              <Text style={{ color: COLORS.textMuted, marginTop: 8, fontFamily: FONTS.body }}>Pas de démonstration disponible</Text>
+            </View>
           )}
         </View>
       </Modal>

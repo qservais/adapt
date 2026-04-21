@@ -4,6 +4,7 @@ import {
   checkinsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable,
   exercisesTable, programsTable, sessionLogsTable, exerciseLogsTable, alertsTable,
   performanceTestsTable, coachAppointmentsTable, contentRoutinesTable,
+  sessionBlocksTable,
 } from "@workspace/db";
 import { eq, and, desc, asc, gte, inArray, isNotNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
@@ -676,6 +677,8 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
     const today = new Date(`${todayStr}T00:00:00Z`);
     const in7Days = new Date(today);
     in7Days.setDate(today.getDate() + 7);
+    const minus3Days = new Date(today);
+    minus3Days.setDate(today.getDate() - 3);
 
     const plannedSessions = await db.select().from(sessionsTable)
       .where(eq(sessionsTable.programId, activeProgram.id));
@@ -684,9 +687,14 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
       .from(sessionLogsTable)
       .where(and(eq(sessionLogsTable.athleteId, athleteId), isNotNull(sessionLogsTable.completedAt)));
 
-    const completedSessionIds = new Set(
-      allLogs.filter((l) => l.sessionId).map((l) => l.sessionId)
-    );
+    const completedMap = new Map<string, string>();
+    for (const log of allLogs) {
+      if (log.sessionId && log.completedAt) {
+        const existing = completedMap.get(log.sessionId);
+        const logDate = new Date(log.completedAt).toISOString().split("T")[0]!;
+        if (!existing || logDate > existing) completedMap.set(log.sessionId, logDate);
+      }
+    }
 
     const result = [];
     for (const session of plannedSessions) {
@@ -694,7 +702,10 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
       sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
       sessionDate.setHours(0, 0, 0, 0);
 
-      if (sessionDate >= today && sessionDate <= in7Days && sessionDate <= programEnd) {
+      const isCompleted = completedMap.has(session.id);
+      const completedActualDate = completedMap.get(session.id) ?? null;
+
+      if (sessionDate >= minus3Days && sessionDate <= in7Days && sessionDate <= programEnd) {
         result.push({
           sessionId: session.id,
           sessionName: session.name,
@@ -704,7 +715,8 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           dayNumber: session.dayNumber,
           scheduledDate: localDateFromTimestamp(sessionDate),
           estimatedDurationMin: session.estimatedDurationMin,
-          isCompleted: completedSessionIds.has(session.id),
+          isCompleted,
+          completedActualDate,
           scheduledTime: session.scheduledTime ?? null,
           visioLink: session.visioLink ?? null,
           isAppointment: false,
@@ -734,6 +746,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           scheduledDate: apptScheduledDate,
           estimatedDurationMin: appt.durationMin,
           isCompleted: false,
+          completedActualDate: null,
           isAppointment: true,
         });
       }
@@ -1043,6 +1056,153 @@ router.post("/routines/:routineId/start-free", authenticate, requireRole("athlet
       sessionIndex: 1,
     });
   } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/athlete/preview-program", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const athleteId = req.user!.userId;
+    const todayStr = getTodayLocalDate();
+
+    const [program] = await db.select().from(programsTable)
+      .where(and(
+        eq(programsTable.athleteId, athleteId),
+        eq(programsTable.previewEnabled, true),
+        eq(programsTable.isActive, true),
+      ))
+      .orderBy(asc(programsTable.startDate))
+      .limit(1);
+
+    if (!program?.startDate || program.startDate <= todayStr) {
+      res.json(null);
+      return;
+    }
+
+    const programSessions = await db.select().from(sessionsTable)
+      .where(eq(sessionsTable.programId, program.id))
+      .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
+
+    const programStart = new Date(program.startDate);
+
+    const sessionsWithExercises = await Promise.all(programSessions.slice(0, 20).map(async (session) => {
+      const [variant] = await db.select().from(sessionVariantsTable)
+        .where(and(
+          eq(sessionVariantsTable.sessionId, session.id),
+          eq(sessionVariantsTable.mode, "normal")
+        ))
+        .limit(1);
+
+      const blocks = await db.select().from(sessionBlocksTable)
+        .where(eq(sessionBlocksTable.sessionId, session.id))
+        .orderBy(sessionBlocksTable.orderIndex);
+
+      let exercises: { id: string; name: string; sets: number; reps: string | null; loadKg: number | null; restSeconds: number | null; durationSeconds: number | null; blockId: string | null; orderIndex: number; demoUrl: string | null; gifUrl: string | null }[] = [];
+
+      if (variant) {
+        const exs = await db.select({
+          id: sessionExercisesTable.id,
+          exerciseName: exercisesTable.name,
+          sets: sessionExercisesTable.sets,
+          reps: sessionExercisesTable.reps,
+          loadKg: sessionExercisesTable.loadKg,
+          restSeconds: sessionExercisesTable.restSeconds,
+          durationSeconds: sessionExercisesTable.durationSeconds,
+          blockId: sessionExercisesTable.blockId,
+          orderIndex: sessionExercisesTable.orderIndex,
+          demoUrl: exercisesTable.demoUrl,
+          demoGifUrl: exercisesTable.demoGifUrl,
+        }).from(sessionExercisesTable)
+          .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
+          .where(eq(sessionExercisesTable.variantId, variant.id))
+          .orderBy(sessionExercisesTable.orderIndex);
+
+        exercises = exs.map(e => ({
+          id: e.id,
+          name: e.exerciseName,
+          sets: e.sets,
+          reps: e.reps ?? null,
+          loadKg: e.loadKg ? parseFloat(e.loadKg) : null,
+          restSeconds: e.restSeconds ?? null,
+          durationSeconds: e.durationSeconds ?? null,
+          blockId: e.blockId ?? null,
+          orderIndex: e.orderIndex,
+          demoUrl: e.demoUrl ?? null,
+          gifUrl: e.demoGifUrl ?? null,
+        }));
+      }
+
+      const sessionDate = new Date(programStart);
+      sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
+
+      return {
+        sessionId: session.id,
+        name: session.name,
+        type: session.type,
+        weekNumber: session.weekNumber,
+        dayNumber: session.dayNumber,
+        scheduledDate: localDateFromTimestamp(sessionDate),
+        estimatedDurationMin: session.estimatedDurationMin,
+        coachNotes: session.coachNotes ?? null,
+        blocks: blocks.map(b => ({ id: b.id, type: b.type, name: b.name ?? null, orderIndex: b.orderIndex })),
+        exercises,
+      };
+    }));
+
+    res.json({
+      programId: program.id,
+      programName: program.name,
+      startDate: program.startDate,
+      durationWeeks: program.durationWeeks,
+      previewEnabled: program.previewEnabled ?? false,
+      sessions: sessionsWithExercises,
+    });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.post("/sessions/:sessionLogId/log-exercise", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const sessionLogId = String(req.params["sessionLogId"]);
+    const athleteId = req.user!.userId;
+
+    const schema = z.object({
+      exerciseId: z.string().uuid(),
+      setsCompleted: z.number().int().min(1).optional(),
+      repsPerSet: z.array(z.number()).optional(),
+      loadKgUsed: z.number().min(0).optional(),
+      notes: z.string().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Données invalides" } });
+      return;
+    }
+
+    const [log] = await db.select({ id: sessionLogsTable.id, athleteId: sessionLogsTable.athleteId })
+      .from(sessionLogsTable)
+      .where(eq(sessionLogsTable.id, sessionLogId));
+
+    if (!log || log.athleteId !== athleteId) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Log introuvable" } });
+      return;
+    }
+
+    const { exerciseId, setsCompleted, repsPerSet, loadKgUsed, notes } = parsed.data;
+
+    await db.insert(exerciseLogsTable).values({
+      sessionLogId,
+      exerciseId,
+      setsCompleted: setsCompleted ?? null,
+      repsPerSet: repsPerSet ? JSON.stringify(repsPerSet) : null,
+      loadKgUsed: loadKgUsed != null ? String(loadKgUsed) : null,
+      notes: notes ?? null,
+    });
+
+    res.status(201).json({ success: true });
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });

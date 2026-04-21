@@ -162,6 +162,9 @@ export default function HomeScreen() {
       {!isLoading && (
         <StreakSection streak={streak} onBadges={() => router.push("/badges")} />
       )}
+      {!isLoading && (
+        <QuickLinksSection />
+      )}
     </ScrollView>
   );
 }
@@ -531,6 +534,42 @@ function StreakSection({ streak, onBadges }: { streak: number; onBadges: () => v
   );
 }
 
+function QuickLinksSection() {
+  return (
+    <View style={styles.quickLinksSection}>
+      <Text style={[styles.quickLinksTitle, { fontFamily: FONTS.mono }]}>ACCÈS RAPIDE</Text>
+      <View style={styles.quickLinksRow}>
+        <TouchableOpacity
+          style={[styles.quickLinkCard, { borderColor: `${COLORS.cyan}30`, backgroundColor: COLORS.cyanDim }]}
+          onPress={() => router.push("/library" as any)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.quickLinkIcon, { backgroundColor: `${COLORS.cyan}20` }]}>
+            <Feather name="book-open" size={20} color={COLORS.cyan} />
+          </View>
+          <Text style={[styles.quickLinkLabel, { fontFamily: FONTS.bodyMedium, color: COLORS.white }]}>
+            Bibliothèque
+          </Text>
+          <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>Exercices</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.quickLinkCard, { borderColor: `${COLORS.violet}30`, backgroundColor: `${COLORS.violet}10` }]}
+          onPress={() => router.push("/guides" as any)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.quickLinkIcon, { backgroundColor: `${COLORS.violet}20` }]}>
+            <Feather name="compass" size={20} color={COLORS.violet} />
+          </View>
+          <Text style={[styles.quickLinkLabel, { fontFamily: FONTS.bodyMedium, color: COLORS.white }]}>
+            Guides
+          </Text>
+          <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>Du coach</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingHorizontal: 20, gap: 0 },
@@ -745,6 +784,42 @@ const styles = StyleSheet.create({
   },
   badgesText: {
     fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  quickLinksSection: {
+    marginTop: 20,
+    gap: 12,
+  },
+  quickLinksTitle: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 2,
+  },
+  quickLinksRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  quickLinkCard: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  quickLinkIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  quickLinkLabel: {
+    fontSize: 14,
+  },
+  quickLinkSub: {
+    fontSize: 11,
     color: COLORS.textMuted,
   },
 });

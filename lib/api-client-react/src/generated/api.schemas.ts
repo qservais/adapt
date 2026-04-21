@@ -540,6 +540,7 @@ export interface UpcomingSession {
   estimatedDurationMin?: number | null;
   isCompleted: boolean;
   isAppointment?: boolean;
+  completedActualDate?: string | null;
 }
 
 export interface CoachUpdateAthleteRequest {
