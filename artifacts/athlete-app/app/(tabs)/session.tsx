@@ -25,7 +25,7 @@ import {
 } from "@workspace/api-client-react";
 import type { FreeSessionStartResponse } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
-import { useThemeColors } from "@/context/PreferencesContext";
+import { useThemeColors, useFormatWeight } from "@/context/PreferencesContext";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -106,6 +106,7 @@ export default function SessionTab() {
   useScrollToTop(scrollRef);
 
   const colors = useThemeColors();
+  const formatWeight = useFormatWeight();
 
   const [activeTab, setActiveTab] = useState<SubTab>("today");
   const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
@@ -382,7 +383,7 @@ export default function SessionTab() {
                               </Text>
                               <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
                                 {ex.sets}×{ex.reps}
-                                {ex.adaptedLoadKg != null ? ` @ ${ex.adaptedLoadKg} kg` : ""}
+                                {ex.adaptedLoadKg != null ? ` @ ${formatWeight(ex.adaptedLoadKg)}` : ""}
                               </Text>
                               <Text style={[styles.exRest, { fontFamily: FONTS.mono }]}>
                                 {(ex.restSeconds ?? 0) > 0
@@ -629,7 +630,7 @@ export default function SessionTab() {
                                   )}
                                   {group.exercises.map((ex, ei) => (
                                     <Text key={ex.id} style={[styles.previewExItem, { fontFamily: FONTS.body }]}>
-                                      {`${String(ei + 1).padStart(2, "0")}  ${ex.name}  ${ex.sets}×${ex.reps ?? "-"}${ex.loadKg ? ` @ ${ex.loadKg}kg` : ""}`}
+                                      {`${String(ei + 1).padStart(2, "0")}  ${ex.name}  ${ex.sets}×${ex.reps ?? "-"}${ex.loadKg ? ` @ ${formatWeight(ex.loadKg)}` : ""}`}
                                     </Text>
                                   ))}
                                 </View>

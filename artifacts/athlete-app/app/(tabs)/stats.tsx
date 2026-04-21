@@ -22,7 +22,7 @@ import {
 } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
-import { useThemeColors } from "@/context/PreferencesContext";
+import { useThemeColors, useFormatWeight } from "@/context/PreferencesContext";
 import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 
@@ -176,6 +176,7 @@ function MonthCalendar({ checkins, year, month }: { checkins: CheckinItem[]; yea
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const formatWeight = useFormatWeight();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
   const [activeTab, setActiveTab] = useState<"training" | "nutrition">("training");
@@ -422,7 +423,7 @@ export default function StatsScreen() {
                   <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
                 </View>
               )}
-              <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>{pr.loadKg} kg</Text>
+              <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>{formatWeight(pr.loadKg)}</Text>
             </View>
           </View>
         ))}

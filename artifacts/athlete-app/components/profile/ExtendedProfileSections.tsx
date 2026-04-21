@@ -151,7 +151,7 @@ function CompletionBar({ percent }: { percent: number }) {
     COLORS.amber;
 
   return (
-    <View style={cStyles.completionWrap}>
+    <View style={[cStyles.completionWrap, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
       <View style={cStyles.completionRow}>
         <Text style={[cStyles.completionLabel, { fontFamily: FONTS.mono }]}>
           PROFIL COMPLÉTÉ
@@ -177,8 +177,8 @@ function CompletionBar({ percent }: { percent: number }) {
       {percent < 80 && (
         <Text style={[cStyles.completionHint, { fontFamily: FONTS.body }]}>
           {percent < 40
-            ? "Complète ton profil pour personnaliser ton entraînement"
-            : "Quelques informations manquent encore"}
+            ? t("completion_hint_low", "Complète ton profil pour personnaliser ton entraînement")
+            : t("completion_hint_mid", "Quelques informations manquent encore")}
         </Text>
       )}
     </View>
@@ -573,7 +573,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           />
         ) : (
           <Text style={[cStyles.valueText, { fontFamily: FONTS.body, fontStyle: injuries ? "normal" : "italic", color: injuries ? COLORS.textPrimary : COLORS.textMuted }]}>
-            {injuries || "Aucune restriction renseignée"}
+            {injuries || t("no_injury", "Aucune restriction renseignée")}
           </Text>
         )}
       </View>
@@ -769,7 +769,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         onRequestClose={() => setLibraryVisible(false)}
       >
         <View style={cStyles.modalOverlay}>
-          <View style={[cStyles.modalBox, { maxHeight: "80%" }]}>
+          <View style={[cStyles.modalBox, { maxHeight: "80%", backgroundColor: colors.bgCard, borderColor: colors.border }]}>
             <Text style={[cStyles.modalTitle, { fontFamily: FONTS.monoBold, marginBottom: 4 }]}>
               {t("select_exercises", "Sélectionner des exercices").toUpperCase()}
             </Text>
@@ -834,7 +834,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           saving={saving["prefs"]}
         />
 
-        <View style={cStyles.prefItem}>
+        <View style={[cStyles.prefItem, { borderBottomColor: colors.border }]}>
           <View style={cStyles.prefLeft}>
             <Feather name="maximize" size={14} color={COLORS.textMuted} />
             <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium }]}>Unités</Text>
@@ -858,12 +858,12 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             </View>
           ) : (
             <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>
-              {units === "imperial" ? "Lbs / Mi" : "Kg / Km"}
+              {units === "imperial" ? t("units_imperial", "Lbs / Mi") : t("units_metric", "Kg / Km")}
             </Text>
           )}
         </View>
 
-        <View style={cStyles.prefItem}>
+        <View style={[cStyles.prefItem, { borderBottomColor: colors.border }]}>
           <View style={cStyles.prefLeft}>
             <Feather name="globe" size={14} color={COLORS.textMuted} />
             <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium }]}>Langue</Text>
@@ -887,7 +887,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             </View>
           ) : (
             <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>
-              {language === "en" ? "English" : "Français"}
+              {language === "en" ? t("lang_en", "English") : t("lang_fr", "Français")}
             </Text>
           )}
         </View>
@@ -917,7 +917,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             </View>
           ) : (
             <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>
-              {theme === "light" ? "Clair" : theme === "system" ? "Automatique" : "Sombre"}
+              {theme === "light" ? t("theme_light", "Clair") : theme === "system" ? t("theme_system", "Automatique") : t("theme_dark", "Sombre")}
             </Text>
           )}
         </View>
@@ -956,7 +956,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         )}
 
         <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Mode silencieux</Text>
-        <View style={[cStyles.privacyRow]}>
+        <View style={[cStyles.privacyRow, { borderBottomColor: colors.border }]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="bell-off" size={14} color={COLORS.textMuted} />
             <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("silent_mode", "Désactiver toutes les notifications")}</Text>
@@ -979,7 +979,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         {NOTIF_TYPE_KEYS.map(({ key, tKey, fallback }, idx, arr) => (
           <View
             key={key}
-            style={[cStyles.privacyRow, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
+            style={[cStyles.privacyRow, { borderBottomColor: colors.border }, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
           >
             <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t(tKey, fallback)}</Text>
             <Switch
@@ -1039,7 +1039,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                   <ActivityIndicator size="small" color={isConnected ? COLORS.textMuted : "#fff"} />
                 ) : (
                   <Text style={[cStyles.integrationBtnText, { fontFamily: FONTS.bodyMedium, color: isConnected ? COLORS.textMuted : "#fff" }]}>
-                    {isConnected ? "Déconnecter" : "Connecter"}
+                    {isConnected ? t("disconnect", "Déconnecter") : t("connect", "Connecter")}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -1071,6 +1071,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             key={key}
             style={[
               cStyles.privacyRow,
+              { borderBottomColor: colors.border },
               idx === arr.length - 1 && { borderBottomWidth: 0 },
             ]}
           >
@@ -1105,7 +1106,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body }]}>
           Ces paramètres contrôlent la visibilité globale de ton profil. Cumulatifs avec les données partagées ci-dessus.
         </Text>
-        <View style={cStyles.privacyRow}>
+        <View style={[cStyles.privacyRow, { borderBottomColor: colors.border }]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="lock" size={14} color={COLORS.textMuted} />
             <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("coach_only", "Profil visible par le coach uniquement")}</Text>
@@ -1123,7 +1124,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             thumbColor={(privacy.profileVisibility ?? "coach_only") === "coach_only" ? COLORS.cyan : COLORS.textMuted}
           />
         </View>
-        <View style={[cStyles.privacyRow, { borderBottomWidth: 0 }]}>
+        <View style={[cStyles.privacyRow, { borderBottomWidth: 0, borderBottomColor: colors.border }]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="eye-off" size={14} color={COLORS.textMuted} />
             <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("profile_private", "Profil entièrement privé")}</Text>
