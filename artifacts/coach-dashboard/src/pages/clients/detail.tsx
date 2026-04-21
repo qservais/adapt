@@ -1383,19 +1383,19 @@ export default function ClientDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                  {client.fitnessLevel && (
+                  {extClient?.trainingContext !== null && client.fitnessLevel && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
                       <span className="text-muted-foreground">Niveau</span>
                       <span className="text-white font-medium capitalize">{LEVEL_LABELS[client.fitnessLevel] ?? client.fitnessLevel}</span>
                     </div>
                   )}
-                  {client.primaryGoal && (
+                  {extClient?.trainingContext !== null && client.primaryGoal && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
                       <span className="text-muted-foreground">Objectif principal</span>
                       <span className="text-white font-medium">{GOAL_LABELS[client.primaryGoal] ?? client.primaryGoal}</span>
                     </div>
                   )}
-                  {extClient?.secondaryGoal && (
+                  {extClient?.trainingContext !== null && extClient?.secondaryGoal && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
                       <span className="text-muted-foreground">Objectif secondaire</span>
                       <span className="text-white font-medium capitalize">{extClient.secondaryGoal.replace(/_/g, " ")}</span>
