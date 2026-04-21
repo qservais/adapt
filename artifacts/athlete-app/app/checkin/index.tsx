@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Alert,
@@ -193,16 +193,22 @@ export default function CheckinScreen() {
     (params.cyclePhase || null) as CyclePhase
   );
 
-  const draftRestoredRef = useRef(false);
+  const [draftHydrated, setDraftHydrated] = useState(isEditMode);
 
   useEffect(() => {
     if (isEditMode) return;
     AsyncStorage.getItem(CHECKIN_DRAFT_KEY)
       .then((raw) => {
-        if (!raw || draftRestoredRef.current) return;
+        if (!raw) {
+          setDraftHydrated(true);
+          return;
+        }
         try {
           const draft = JSON.parse(raw);
-          if (!draft?.stepIndex && draft?.stepIndex !== 0) return;
+          if (draft?.stepIndex == null) {
+            setDraftHydrated(true);
+            return;
+          }
           Alert.alert(
             "Check-in en cours",
             "Tu as commencé un check-in. Veux-tu reprendre là où tu t'es arrêté(e) ?",
@@ -210,33 +216,43 @@ export default function CheckinScreen() {
               {
                 text: "Recommencer",
                 style: "destructive",
-                onPress: () => AsyncStorage.removeItem(CHECKIN_DRAFT_KEY).catch(() => {}),
+                onPress: () => {
+                  AsyncStorage.removeItem(CHECKIN_DRAFT_KEY).catch(() => {});
+                  setStepIndex(0);
+                  setValues({ sleep: 3, energy: 3, stress: 3, soreness: 3, motivation: 3 });
+                  setHasPain(false);
+                  setPainNotes("");
+                  setCyclePhase(null);
+                  setDraftHydrated(true);
+                },
               },
               {
                 text: "Reprendre",
                 onPress: () => {
-                  draftRestoredRef.current = true;
                   if (draft.stepIndex > 0) setStepIndex(draft.stepIndex);
                   if (draft.values) setValues(draft.values);
                   if (draft.hasPain != null) setHasPain(draft.hasPain);
                   if (draft.painNotes != null) setPainNotes(draft.painNotes);
                   if (draft.cyclePhase !== undefined) setCyclePhase(draft.cyclePhase);
+                  setDraftHydrated(true);
                 },
               },
             ]
           );
-        } catch {}
+        } catch {
+          setDraftHydrated(true);
+        }
       })
-      .catch(() => {});
+      .catch(() => setDraftHydrated(true));
   }, [isEditMode]);
 
   useEffect(() => {
-    if (isEditMode) return;
+    if (!draftHydrated) return;
     AsyncStorage.setItem(
       CHECKIN_DRAFT_KEY,
       JSON.stringify({ stepIndex, values, hasPain, painNotes, cyclePhase })
     ).catch(() => {});
-  }, [stepIndex, values, hasPain, painNotes, cyclePhase, isEditMode]);
+  }, [draftHydrated, stepIndex, values, hasPain, painNotes, cyclePhase]);
 
   const isLastStep = stepIndex === steps.length - 1;
   const currentStep = steps[stepIndex];
