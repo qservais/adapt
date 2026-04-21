@@ -1268,7 +1268,7 @@ router.post("/sessions/:sessionLogId/log-exercise", authenticate, requireRole("a
       sessionLogId,
       exerciseId,
       setsCompleted: setsCompleted ?? null,
-      repsPerSet: repsPerSet ? JSON.stringify(repsPerSet) : null,
+      repsPerSet: repsPerSet ?? null,
       loadKgUsed: loadKgUsed != null ? String(loadKgUsed) : null,
       notes: notes ?? null,
     });
