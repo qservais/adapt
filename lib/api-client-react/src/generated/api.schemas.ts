@@ -176,22 +176,25 @@ export interface SessionExerciseItem {
   id: string;
   exerciseId: string;
   exerciseName: string;
-  category?: string | null;
-  imageUrl?: string | null;
-  gifUrl?: string | null;
-  muscleGroups?: unknown;
+  category: string | null;
+  imageUrl: string | null;
+  gifUrl: string | null;
+  muscleGroups: unknown;
+  equipment: unknown;
+  description: string | null;
+  demoUrl: string | null;
   orderIndex: number;
   sets: number;
-  reps?: string | null;
-  nominalLoadKg?: number | null;
-  adaptedLoadKg?: number | null;
-  restSeconds?: number | null;
-  durationSeconds?: number | null;
-  coachCue?: string | null;
-  lastUsedLoadKg?: number | null;
-  lastUsedDate?: string | null;
+  reps: string | null;
+  nominalLoadKg: number | null;
+  adaptedLoadKg: number | null;
+  restSeconds: number | null;
+  durationSeconds: number | null;
+  coachCue: string | null;
+  lastUsedLoadKg: number | null;
+  lastUsedDate: string | null;
   blockId?: string | null;
-  tempo?: string | null;
+  tempo: string | null;
   supersetGroup?: string | null;
   supersetLabel?: string | null;
 }
@@ -213,6 +216,8 @@ export interface SessionDetail {
   mode: string;
   sessionType?: string | null;
   sessionLocation?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   exercises: SessionExerciseItem[];
@@ -221,6 +226,11 @@ export interface SessionDetail {
   athletePRs?: Record<string, number>;
   completedAt?: string | null;
   durationMin?: number | null;
+  rpe?: number | null;
+  sessionsToday?: number;
+  sessionsTodayCompleted?: number;
+  sessionIndex?: number;
+  isFreeSession?: boolean;
 }
 
 export interface CompleteSessionNewPR {
@@ -319,6 +329,8 @@ export interface SessionLogSummary {
   athleteNotes?: string | null;
   durationMin?: number | null;
   createdAt?: string;
+  isFreeSession?: boolean;
+  freeSessionName?: string | null;
   exercises: SessionExerciseLog[];
 }
 
@@ -362,6 +374,9 @@ export interface ProgramSummary {
   startDate?: string | null;
   isActive: boolean;
   createdAt?: string;
+  previewEnabled?: boolean;
+  previewAllowStart?: boolean;
+  startsInFuture?: boolean;
 }
 
 export interface VariantWithExercises {
@@ -380,6 +395,8 @@ export interface SessionWithVariants {
   name: string;
   type: string;
   sessionType?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   variants: VariantWithExercises[];
@@ -473,6 +490,8 @@ export interface CreateSessionRequest {
   name: string;
   type: CreateSessionRequestType;
   sessionType?: "online" | "presentiel";
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number;
   coachNotes?: string;
   variants?: CreateSessionRequestVariantsItem[];
@@ -515,6 +534,11 @@ export interface UpcomingSession {
   scheduledDate: string;
   estimatedDurationMin?: number | null;
   isCompleted: boolean;
+  completedActualDate?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
+  isPreview?: boolean;
+  isAppointment?: boolean;
 }
 
 export interface CoachUpdateAthleteRequest {

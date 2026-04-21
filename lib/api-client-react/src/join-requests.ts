@@ -1,6 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "./custom-fetch";
-import type { CoachSummary, CoachJoinRequest, CoachJoinRequestItem } from "./generated/api.schemas";
+
+export interface CoachSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string | null;
+}
+
+export interface CoachJoinRequest {
+  id: string;
+  coachId: string;
+  status: string;
+  createdAt: string;
+  coachFirstName: string;
+  coachLastName: string;
+}
+
+export interface CoachJoinRequestItem {
+  id: string;
+  status: string;
+  createdAt: string;
+  athleteId: string;
+  athleteFirstName: string;
+  athleteLastName: string;
+  athleteEmail: string;
+  athleteAvatarUrl: string | null;
+  athleteFitnessLevel: string | null;
+  athletePrimaryGoal: string | null;
+}
 
 export const COACHES_QUERY_KEY = ["/api/coaches"] as const;
 export const COACH_REQUEST_QUERY_KEY = ["/api/athlete/coach-request"] as const;
