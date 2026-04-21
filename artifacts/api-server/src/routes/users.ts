@@ -8,6 +8,11 @@ import multer from "multer";
 import sharp from "sharp";
 import { objectStorageClient } from "../lib/objectStorage.js";
 import { encryptToken } from "../lib/tokenEncryption.js";
+import {
+  GetPersonalRecordsResponse,
+  GetExercisePRHistoryParams,
+  GetExercisePRHistoryResponse,
+} from "@workspace/api-zod";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -294,33 +299,43 @@ router.get("/users/prs", authenticate, async (req, res) => {
       .where(eq(personalRecordsTable.userId, userId))
       .orderBy(desc(personalRecordsTable.achievedAt));
 
-    const result = prs.map(pr => ({
-      exerciseId: pr.exerciseId,
-      exerciseName: pr.exerciseName,
-      loadKg: parseFloat(pr.loadKg),
-      reps: pr.reps,
-      previousLoadKg: pr.previousLoadKg ? parseFloat(pr.previousLoadKg) : null,
-      achievedAt: pr.achievedAt,
-      isRecent: pr.achievedAt ? pr.achievedAt > sevenDaysAgo : false,
-    }));
+    const payload = GetPersonalRecordsResponse.parse({
+      personalRecords: prs.map(pr => ({
+        exerciseId: pr.exerciseId,
+        exerciseName: pr.exerciseName,
+        loadKg: parseFloat(pr.loadKg),
+        reps: pr.reps,
+        previousLoadKg: pr.previousLoadKg ? parseFloat(pr.previousLoadKg) : null,
+        achievedAt: pr.achievedAt?.toISOString(),
+        isRecent: pr.achievedAt ? pr.achievedAt > sevenDaysAgo : false,
+      })),
+      total: prs.length,
+    });
 
-    res.json({ personalRecords: result, total: result.length });
+    res.json(payload);
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 
 router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
+  const paramsResult = GetExercisePRHistoryParams.safeParse(req.params);
+  if (!paramsResult.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: paramsResult.error.message } });
+    return;
+  }
+
   try {
     const userId = req.user!.userId;
-    const { exerciseId } = req.params;
+    const { exerciseId } = paramsResult.data;
 
     const [exercise] = await db.select({ name: exercisesTable.name })
       .from(exercisesTable)
       .where(eq(exercisesTable.id, exerciseId));
 
     if (!exercise) {
-      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+      return;
     }
 
     const history = await db.select({
@@ -336,20 +351,20 @@ router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
       ))
       .orderBy(prHistoryTable.achievedAt);
 
-    const entries = history.map(h => ({
-      id: h.id,
-      loadKg: parseFloat(h.loadKg),
-      reps: h.reps,
-      achievedAt: h.achievedAt,
-    }));
-
-    return res.json({
+    const payload = GetExercisePRHistoryResponse.parse({
       exerciseId,
       exerciseName: exercise.name,
-      history: entries,
+      history: history.map(h => ({
+        id: h.id,
+        loadKg: parseFloat(h.loadKg),
+        reps: h.reps,
+        achievedAt: h.achievedAt.toISOString(),
+      })),
     });
+
+    res.json(payload);
   } catch {
-    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
 });
 
