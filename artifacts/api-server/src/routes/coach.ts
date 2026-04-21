@@ -233,6 +233,8 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
     const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
     const monthEndStr = `${year}-${monthM}-${String(lastDay).padStart(2, "0")}`;
     const todayStr = getTodayLocalDate();
+    const monthStartDate = new Date(Date.UTC(year, month - 1, 1));
+    const monthEndDate = new Date(Date.UTC(year, month, 1));
 
     const activePrograms = await db.select().from(programsTable)
       .where(eq(programsTable.isActive, true));
@@ -308,8 +310,8 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
       .where(
         and(
           eq(coachAppointmentsTable.coachId, coachId),
-          gte(coachAppointmentsTable.startAt, monthStart),
-          lt(coachAppointmentsTable.startAt, new Date(year, month, 1))
+          gte(coachAppointmentsTable.startAt, monthStartDate),
+          lt(coachAppointmentsTable.startAt, monthEndDate)
         )
       );
 

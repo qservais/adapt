@@ -58,8 +58,12 @@ export default function ChallengeDetailScreen() {
       await updateMutation.mutateAsync({ id, data: { progress: newValue } });
       setInputValue("");
       await challengeQuery.refetch();
-    } catch {
-      Alert.alert("Erreur", "Impossible de mettre à jour la progression.");
+    } catch (err) {
+      const errObj = err as Record<string, unknown> | null;
+      const msg =
+        (errObj && typeof errObj["error"] === "string" ? errObj["error"] : null) ??
+        "Impossible de mettre à jour la progression.";
+      Alert.alert("Erreur", msg);
     } finally {
       setIsUpdating(false);
     }

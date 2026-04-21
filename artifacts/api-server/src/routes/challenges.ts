@@ -9,6 +9,7 @@ import { eq, and, lte, gte, desc, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 import { sendPushNotification } from "../services/push-notification.service.js";
+import { getTodayLocalDate } from "../lib/dateUtils.js";
 
 const router = Router();
 
@@ -287,7 +288,12 @@ router.put("/challenges/:id/progress", authenticate, async (req, res) => {
   }
 
   const [assignment] = await db
-    .select({ id: challengeAssignmentsTable.id, target: challengesTable.target })
+    .select({
+      id: challengeAssignmentsTable.id,
+      target: challengesTable.target,
+      startDate: challengesTable.startDate,
+      endDate: challengesTable.endDate,
+    })
     .from(challengeAssignmentsTable)
     .leftJoin(challengesTable, eq(challengeAssignmentsTable.challengeId, challengesTable.id))
     .where(
@@ -299,6 +305,16 @@ router.put("/challenges/:id/progress", authenticate, async (req, res) => {
 
   if (!assignment) {
     res.status(404).json({ error: "Challenge introuvable" });
+    return;
+  }
+
+  const today = getTodayLocalDate();
+  if (assignment.startDate && today < assignment.startDate) {
+    res.status(403).json({ error: "Ce défi n'a pas encore commencé." });
+    return;
+  }
+  if (assignment.endDate && today > assignment.endDate) {
+    res.status(403).json({ error: "Ce défi est terminé, la progression ne peut plus être modifiée." });
     return;
   }
 
