@@ -80,3 +80,38 @@ export function useCancelCoachRequest() {
     },
   });
 }
+
+export function useGetCoachJoinRequests() {
+  return useQuery<CoachJoinRequestItem[]>({
+    queryKey: COACH_JOIN_REQUESTS_QUERY_KEY,
+    queryFn: ({ signal }) =>
+      customFetch("/api/coach/join-requests", { signal }) as Promise<CoachJoinRequestItem[]>,
+  });
+}
+
+export function useApproveJoinRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (requestId: string) =>
+      customFetch(`/api/coach/join-requests/${requestId}/approve`, {
+        method: "POST",
+      }) as Promise<void>,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: COACH_JOIN_REQUESTS_QUERY_KEY });
+      qc.invalidateQueries({ queryKey: ["/api/coach/clients"] });
+    },
+  });
+}
+
+export function useRejectJoinRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (requestId: string) =>
+      customFetch(`/api/coach/join-requests/${requestId}/reject`, {
+        method: "POST",
+      }) as Promise<void>,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: COACH_JOIN_REQUESTS_QUERY_KEY });
+    },
+  });
+}
