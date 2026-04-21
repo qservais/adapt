@@ -1,0 +1,54 @@
+Notes adapt 5 
+
+Pouvoir copier coller les exercices sur la création de séance 
+Ex je fais un circuit avec 3 exercices . Pouvoir les mettre 3 fois 
+
+Possibilité de mettre superset en conditioning 
+
+Alertes :Voir les problèmes qu on a résolu dans le passé 
+
+Possibilité de copier coller les séances dans la même semaine 
+
+Les blocs créé ne s enregistrent pas 
+
+Quand je supprime un athlète il reste dans la zone programme d entraînement 
+
+Le coach peut mettre sa photo 
+
+Échec résolution d alertes 
+
+Je ne peux pas envoyer une séance d un programme déjà enregistré a l’instant t . 
+Ex je viens de créer un programme de 6 semaines . Il va commencer en principe lundi la on est vendredi . La personne ne peut pas le voir et ne pas avoir accès  
+
+Pouvoir mettre dans le calendrier de l athlète des entraînements de la bibliothèque 
+
+Tableau de bord : séance à venir il y a des incohérences avec les séances qui sont vraiment programmé . Ex Robert a une séance programmé lundi 10 elle est marqué au samedi 8 sur séance à venir 
+
+
+Client 
+
+Frustration: par ex on est samedi , le programme commence lundi . Il n a pas accès à un visuel sur ce qu il va avoir .. rigidité 
+
+Qu iIls peuvent faire les exercices de la bibliothèque avec le ressenti à la fin 
+
+Mettre la bibliothèque, lui guides  à l accueil 
+
+Être plus dans l aspect configuration sur le profile 
+
+Dans les conversations, que le client puisse envoyer un doc 
+
+Les notifications ne partent pas en haut à droite et sur les messages 
+
+Avoir notification quand les challenges s envoient 
+
+Si le client note 5 km sur un challenge de 21 par ex , il ne peut plus revenir en arrière . Or il devrait pouvoir encore modifier si erreur 
+
+Avoir accès au calendrier et ouvrir les séances : ex la séance en ligne est planifiée le mardi mais finalement le client veut s entraîner lundi il doit pouvoir le faire 
+
+Bug: les clients sont déconnecté de façon aléatoire 
+
+Que les clients voient les sessions avec les blocs , puisse cliquer juste sur l ex pour avoir le détail . Ils peuvent cocher si ils ont fait l exercice sans avoir lancé la session
+
+Qu ils puissent avoir un visuel sur l exercice *
+
+Mettre un chrono sur les exercices qui demandent du temps
