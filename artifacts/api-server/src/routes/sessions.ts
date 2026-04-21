@@ -1192,7 +1192,7 @@ router.post("/athlete/programs/:programId/start-now", authenticate, requireRole(
 
     const todayStr = getTodayLocalDate();
     await db.update(programsTable)
-      .set({ startDate: todayStr, previewEnabled: false })
+      .set({ startDate: todayStr, previewEnabled: false, previewAllowStart: false })
       .where(eq(programsTable.id, programId));
 
     res.json({ success: true, startDate: todayStr });
