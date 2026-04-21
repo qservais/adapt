@@ -19,7 +19,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useGetMe,
   useUpdateMe,
@@ -47,6 +47,48 @@ import { GlowCard } from "@/components/ui/GlowCard";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
 import DateTimePicker from "@react-native-community/datetimepicker";
+
+interface AthleteProgram {
+  id: string;
+  name: string;
+  durationWeeks: number;
+  startDate: string | null;
+  isActive: boolean;
+  previewEnabled: boolean;
+  previewAllowStart: boolean;
+  startsInFuture: boolean;
+  createdAt?: string;
+}
+
+interface ProgramDetail {
+  programId: string;
+  programName: string;
+  startDate: string | null;
+  durationWeeks: number;
+  isActive: boolean;
+  startsInFuture: boolean;
+  previewEnabled: boolean;
+  previewAllowStart: boolean;
+  sessions: {
+    sessionId: string;
+    name: string;
+    type: string;
+    weekNumber: number;
+    dayNumber: number;
+    scheduledDate: string;
+    estimatedDurationMin: number | null;
+    coachNotes: string | null;
+    exercises: {
+      id: string;
+      name: string;
+      sets: number;
+      reps: string | null;
+      loadKg: number | null;
+      restSeconds: number | null;
+      durationSeconds: number | null;
+    }[];
+  }[];
+}
 
 const GOAL_LABELS: Record<string, string> = {
   strength: "Force",
@@ -136,8 +178,21 @@ export default function ProfileScreen() {
   const [requestError, setRequestError] = useState("");
 
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profil" | "records">("profil");
+  const [activeTab, setActiveTab] = useState<"profil" | "records" | "programmes">("profil");
   const prsQuery = useGetPersonalRecords();
+  const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const programsQuery = useQuery<AthleteProgram[]>({
+    queryKey: ["/api/athlete/programs"],
+    queryFn: () => customFetch("/api/athlete/programs") as Promise<AthleteProgram[]>,
+  });
+  const programDetailQuery = useQuery<ProgramDetail | null>({
+    queryKey: ["/api/athlete/programs", expandedProgramId, "preview"],
+    queryFn: () => expandedProgramId
+      ? customFetch(`/api/athlete/programs/${expandedProgramId}/preview`) as Promise<ProgramDetail>
+      : Promise.resolve(null),
+    enabled: !!expandedProgramId,
+  });
 
   const handleAvatarPress = () => {
     Alert.alert("Photo de profil", "Choisir une source", [
@@ -514,7 +569,7 @@ export default function ProfileScreen() {
       )}
 
       <View style={styles.tabBar}>
-        {(["profil", "records"] as const).map((tab) => (
+        {(["profil", "records", "programmes"] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
@@ -525,7 +580,7 @@ export default function ProfileScreen() {
               styles.tabBtnText,
               { fontFamily: FONTS.mono, color: activeTab === tab ? COLORS.cyan : COLORS.textSecondary },
             ]}>
-              {tab === "profil" ? "PROFIL" : "RECORDS"}
+              {tab === "profil" ? "PROFIL" : tab === "records" ? "RECORDS" : "PROGR."}
               {tab === "records" && (prsQuery.data?.total ?? 0) > 0 && (
                 <Text style={{ color: activeTab === tab ? COLORS.cyan : COLORS.textMuted }}>
                   {" "}({prsQuery.data?.total})
@@ -626,6 +681,159 @@ export default function ProfileScreen() {
                         </Text>
                       )}
                     </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      )}
+
+      {activeTab === "programmes" && (
+        <View style={{ marginBottom: 24 }}>
+          {programsQuery.isLoading ? (
+            <View style={styles.prsLoadingBox}>
+              <ActivityIndicator color={COLORS.cyan} />
+            </View>
+          ) : programsQuery.isError ? (
+            <View style={styles.prsEmptyBox}>
+              <Feather name="alert-circle" size={36} color={COLORS.textMuted} />
+              <Text style={[styles.prsEmptyTitle, { fontFamily: FONTS.bodyBold }]}>
+                Impossible de charger les programmes
+              </Text>
+              <Text style={[styles.prsEmptyDesc, { fontFamily: FONTS.body }]}>
+                Vérifie ta connexion et réessaie.
+              </Text>
+            </View>
+          ) : (programsQuery.data?.length ?? 0) === 0 ? (
+            <View style={styles.prsEmptyBox}>
+              <Feather name="layers" size={36} color={COLORS.textMuted} />
+              <Text style={[styles.prsEmptyTitle, { fontFamily: FONTS.bodyBold }]}>
+                Aucun programme
+              </Text>
+              <Text style={[styles.prsEmptyDesc, { fontFamily: FONTS.body }]}>
+                Tes programmes apparaîtront ici une fois que ton coach t'en aura assigné un.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.progContainer}>
+              {programsQuery.data!.map((prog) => {
+                const isExpanded = expandedProgramId === prog.id;
+                const detail = isExpanded ? programDetailQuery.data : null;
+                const isLoadingDetail = isExpanded && programDetailQuery.isFetching;
+                const statusLabel = prog.isActive ? "EN COURS" : prog.startsInFuture ? "À VENIR" : "PASSÉ";
+                const statusColor = prog.isActive ? COLORS.green : prog.startsInFuture ? COLORS.cyan : COLORS.textMuted;
+                const statusBg = prog.isActive ? `${COLORS.green}18` : prog.startsInFuture ? COLORS.cyanDim : `${COLORS.textMuted}18`;
+                const borderColor = prog.isActive ? `${COLORS.green}40` : prog.startsInFuture ? `${COLORS.cyan}40` : COLORS.border;
+                return (
+                  <View key={prog.id} style={[styles.progCard, { borderColor }]}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (isExpanded) {
+                          setExpandedProgramId(null);
+                          setExpandedSessionId(null);
+                        } else {
+                          setExpandedProgramId(prog.id);
+                          setExpandedSessionId(null);
+                        }
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.progHeader}>
+                        <View style={[styles.progStatusBadge, { backgroundColor: statusBg, borderColor: `${statusColor}50` }]}>
+                          <Text style={[styles.progStatusText, { fontFamily: FONTS.mono, color: statusColor }]}>
+                            {statusLabel}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1, gap: 3 }}>
+                          <Text style={[styles.progName, { fontFamily: FONTS.bodyBold }]} numberOfLines={1}>
+                            {prog.name}
+                          </Text>
+                          <Text style={[styles.progMeta, { fontFamily: FONTS.mono }]}>
+                            {prog.durationWeeks} semaine{prog.durationWeeks > 1 ? "s" : ""}
+                            {prog.startDate
+                              ? ` · ${prog.startsInFuture ? "Démarre le" : "Depuis le"} ${new Date(prog.startDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`
+                              : ""}
+                          </Text>
+                        </View>
+                        <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={16} color={COLORS.textMuted} />
+                      </View>
+                    </TouchableOpacity>
+
+                    {isExpanded && (
+                      <View style={styles.progDetail}>
+                        {isLoadingDetail ? (
+                          <View style={{ alignItems: "center", paddingVertical: 20 }}>
+                            <ActivityIndicator size="small" color={COLORS.cyan} />
+                          </View>
+                        ) : detail && detail.sessions.length > 0 ? (
+                          <View style={{ gap: 8 }}>
+                            <Text style={[styles.progSessLabel, { fontFamily: FONTS.mono }]}>
+                              {detail.sessions.length} SÉANCE{detail.sessions.length > 1 ? "S" : ""}
+                            </Text>
+                            {detail.sessions.map((sess) => {
+                              const sessExpanded = expandedSessionId === sess.sessionId;
+                              return (
+                                <View key={sess.sessionId} style={styles.sessCard}>
+                                  <TouchableOpacity
+                                    onPress={() => setExpandedSessionId(sessExpanded ? null : sess.sessionId)}
+                                    activeOpacity={0.8}
+                                  >
+                                    <View style={styles.sessHeader}>
+                                      <View style={styles.sessWeekBadge}>
+                                        <Text style={[styles.sessWeekText, { fontFamily: FONTS.mono }]}>
+                                          S{sess.weekNumber}J{sess.dayNumber}
+                                        </Text>
+                                      </View>
+                                      <View style={{ flex: 1, gap: 2 }}>
+                                        <Text style={[styles.sessName, { fontFamily: FONTS.bodyMedium }]} numberOfLines={1}>
+                                          {sess.name}
+                                        </Text>
+                                        <Text style={[styles.sessMeta, { fontFamily: FONTS.mono }]}>
+                                          {sess.exercises.length} exercice{sess.exercises.length !== 1 ? "s" : ""}
+                                          {sess.estimatedDurationMin != null ? ` · ${sess.estimatedDurationMin} min` : ""}
+                                        </Text>
+                                      </View>
+                                      <Feather name={sessExpanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.textMuted} />
+                                    </View>
+                                  </TouchableOpacity>
+                                  {sessExpanded && sess.exercises.length > 0 && (
+                                    <View style={styles.exList}>
+                                      {sess.exercises.map((ex, i) => (
+                                        <View key={ex.id} style={[styles.exRow, i < sess.exercises.length - 1 && styles.exRowBorder]}>
+                                          <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                                            {String(i + 1).padStart(2, "0")}
+                                          </Text>
+                                          <View style={{ flex: 1 }}>
+                                            <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
+                                              {ex.name}
+                                            </Text>
+                                            <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                                              {ex.sets}×{ex.reps ?? "—"}
+                                              {ex.loadKg != null ? ` @ ${ex.loadKg} kg` : ""}
+                                              {ex.restSeconds != null && ex.restSeconds > 0 ? ` · ${ex.restSeconds}s repos` : ""}
+                                            </Text>
+                                          </View>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  )}
+                                  {sessExpanded && sess.exercises.length === 0 && (
+                                    <Text style={[styles.exEmpty, { fontFamily: FONTS.body }]}>
+                                      Aucun exercice configuré.
+                                    </Text>
+                                  )}
+                                </View>
+                              );
+                            })}
+                          </View>
+                        ) : detail && detail.sessions.length === 0 ? (
+                          <Text style={[styles.exEmpty, { fontFamily: FONTS.body }]}>
+                            Aucune séance dans ce programme.
+                          </Text>
+                        ) : null}
+                      </View>
+                    )}
                   </View>
                 );
               })}
@@ -1542,5 +1750,126 @@ const styles = StyleSheet.create({
   prPrev: {
     fontSize: 12,
     color: COLORS.textMuted,
+  },
+  progContainer: {
+    gap: 10,
+  },
+  progCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 0,
+  },
+  progHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  progStatusBadge: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  progStatusText: {
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  progName: {
+    fontSize: 15,
+    color: COLORS.white,
+  },
+  progMeta: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  progDetail: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  progSessLabel: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    letterSpacing: 2,
+    marginBottom: 2,
+  },
+  sessCard: {
+    backgroundColor: COLORS.bgElevated,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 12,
+    gap: 0,
+  },
+  sessHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sessWeekBadge: {
+    backgroundColor: COLORS.cyanDim,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}40`,
+  },
+  sessWeekText: {
+    fontSize: 9,
+    color: COLORS.cyan,
+    letterSpacing: 0.5,
+  },
+  sessName: {
+    fontSize: 13,
+    color: COLORS.white,
+  },
+  sessMeta: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  exList: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    gap: 0,
+  },
+  exRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 7,
+  },
+  exRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  exNum: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 1,
+    width: 20,
+  },
+  exName: {
+    fontSize: 13,
+    color: COLORS.white,
+  },
+  exDetail: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  exEmpty: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
 });
