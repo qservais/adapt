@@ -354,6 +354,7 @@ const doNowBodySchema = z.object({
   targetSets: z.number().int().min(1).max(20).optional(),
   targetReps: z.union([z.number().int().min(1).max(100), z.string().min(1)]).optional(),
   targetLoad: z.number().min(0).max(10000).optional(),
+  targetRestSeconds: z.number().int().min(15).max(600).optional(),
 });
 
 router.post("/athlete/exercises/:exerciseId/do-now", authenticate, requireRole("athlete"), async (req, res) => {
@@ -460,7 +461,7 @@ router.post("/athlete/exercises/:exerciseId/do-now", authenticate, requireRole("
         reps: bodyParams.targetReps != null ? String(bodyParams.targetReps) : "10",
         nominalLoadKg: bodyParams.targetLoad ?? lastUsedLoad ?? null,
         adaptedLoadKg: bodyParams.targetLoad ?? lastUsedLoad ?? null,
-        restSeconds: 90,
+        restSeconds: bodyParams.targetRestSeconds ?? 90,
         durationSeconds: null,
         coachCue: null,
         tempo: null,

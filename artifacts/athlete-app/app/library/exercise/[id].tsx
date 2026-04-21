@@ -82,6 +82,7 @@ export default function ExerciseDetailScreen() {
   const [pendingSets, setPendingSets] = useState("3");
   const [pendingReps, setPendingReps] = useState("10");
   const [pendingLoad, setPendingLoad] = useState("");
+  const [pendingRest, setPendingRest] = useState("90");
 
   const { data: exercise, isLoading, error } = useQuery<ExerciseDetail>({
     queryKey: ["/api/athlete/exercises", params.id],
@@ -99,6 +100,7 @@ export default function ExerciseDetailScreen() {
     setPendingLoad(lastEntry?.loadKgUsed != null && lastEntry.loadKgUsed > 0
       ? String(lastEntry.loadKgUsed)
       : "");
+    setPendingRest("90");
     setShowDoNowSheet(true);
   };
 
@@ -110,11 +112,13 @@ export default function ExerciseDetailScreen() {
       const targetSets = parseInt(pendingSets, 10);
       const targetReps = parseInt(pendingReps, 10);
       const targetLoad = pendingLoad.trim().length > 0 ? parseFloat(pendingLoad) : undefined;
+      const targetRestSeconds = parseInt(pendingRest, 10);
 
       const body: Record<string, unknown> = {};
       if (!isNaN(targetSets) && targetSets > 0) body.targetSets = targetSets;
       if (!isNaN(targetReps) && targetReps > 0) body.targetReps = targetReps;
       if (targetLoad !== undefined && !isNaN(targetLoad)) body.targetLoad = targetLoad;
+      if (!isNaN(targetRestSeconds) && targetRestSeconds >= 15) body.targetRestSeconds = Math.min(600, targetRestSeconds);
 
       const data = await customFetch(`/api/athlete/exercises/${exercise.id}/do-now`, {
         method: "POST",
@@ -481,6 +485,38 @@ export default function ExerciseDetailScreen() {
                       const v = parseFloat(l);
                       const base = isNaN(v) ? 0 : v;
                       return String(base + 2.5);
+                    })}
+                  >
+                    <Feather name="plus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.sheetField}>
+                <Text style={[styles.sheetFieldLabel, { fontFamily: FONTS.mono }]}>REPOS (S)</Text>
+                <View style={styles.sheetInputRow}>
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingRest(r => {
+                      const v = parseInt(r, 10);
+                      return isNaN(v) ? "90" : String(Math.max(15, v - 15));
+                    })}
+                  >
+                    <Feather name="minus" size={16} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[styles.sheetInput, { fontFamily: FONTS.mono }]}
+                    value={pendingRest}
+                    onChangeText={setPendingRest}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    selectTextOnFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.stepBtn}
+                    onPress={() => setPendingRest(r => {
+                      const v = parseInt(r, 10);
+                      return isNaN(v) ? "90" : String(Math.min(600, v + 15));
                     })}
                   >
                     <Feather name="plus" size={16} color={COLORS.textSecondary} />
