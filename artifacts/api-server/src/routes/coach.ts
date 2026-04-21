@@ -13,6 +13,7 @@ type PrivacySettings = {
   shareSleep?: boolean;
   shareHeartRate?: boolean;
   shareBodyFat?: boolean;
+  shareContext?: boolean;
   profileVisibility?: "coach_only" | "private";
 };
 
@@ -554,7 +555,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       lastPeriodDate: athlete.lastPeriodDate,
       avgCycleDays: athlete.avgCycleDays,
       inviteCode: athlete.inviteCode,
-      trainingContext: {
+      trainingContext: privacy.shareContext !== false ? {
         availableDays: (athlete.availableDays as string[] | null) ?? [],
         trainingLocations: (athlete.trainingLocations as string[] | null) ?? [],
         equipment: (athlete.equipment as string[] | null) ?? [],
@@ -562,7 +563,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
         sessionDurationMax: athlete.sessionDurationMax ?? null,
         injuries: athlete.injuries ?? null,
         units: athlete.units ?? "metric",
-      },
+      } : null,
       todayCheckin: todayCheckin ? applyCheckinPrivacy(todayCheckin, privacy) : null,
       recentCheckins: recentCheckins.map(c => applyCheckinPrivacy(c, privacy)),
       recentSessions,

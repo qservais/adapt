@@ -109,7 +109,7 @@ interface TrainingContext {
 
 interface ExtendedClientDetail {
   secondaryGoal: string | null;
-  trainingContext: TrainingContext;
+  trainingContext: TrainingContext | null;
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -1406,7 +1406,7 @@ export default function ClientDetail() {
                       <div className="text-muted-foreground mb-1.5">Jours disponibles</div>
                       <div className="flex flex-wrap gap-1">
                         {(["lun","mar","mer","jeu","ven","sam","dim"] as const).map(d => {
-                          const isActive = extClient!.trainingContext.availableDays.includes(d);
+                          const isActive = extClient?.trainingContext?.availableDays.includes(d) ?? false;
                           return (
                             <span key={d} className={cn(
                               "px-2 py-0.5 rounded text-[11px] font-mono uppercase",
@@ -1421,7 +1421,7 @@ export default function ClientDetail() {
                     <div className="py-1.5 border-b border-border/60">
                       <div className="text-muted-foreground mb-1.5">Lieu</div>
                       <div className="flex flex-wrap gap-1">
-                        {extClient!.trainingContext.trainingLocations.map((loc) => {
+                        {(extClient?.trainingContext?.trainingLocations ?? []).map((loc) => {
                           const label = loc === "gym" ? "Salle" : loc === "home" ? "Maison" : loc === "outdoor" ? "Extérieur" : loc;
                           return (
                             <span key={loc} className="px-2 py-0.5 rounded text-[11px] font-medium bg-accent/10 text-accent border border-accent/20">{label}</span>
@@ -1434,7 +1434,7 @@ export default function ClientDetail() {
                     <div className="py-1.5 border-b border-border/60">
                       <div className="text-muted-foreground mb-1.5">Équipement</div>
                       <div className="flex flex-wrap gap-1">
-                        {extClient!.trainingContext.equipment.map((eq) => {
+                        {(extClient?.trainingContext?.equipment ?? []).map((eq) => {
                           const label = ({ barbell:"Barre", dumbbell:"Haltères", kettlebell:"Kettlebell", machine:"Machines", cable:"Poulie", bodyweight:"Poids du corps", bands:"Élastiques", trx:"TRX" } as Record<string,string>)[eq] ?? eq;
                           return (
                             <span key={eq} className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/5 text-muted-foreground border border-border/40">{label}</span>
@@ -1447,11 +1447,11 @@ export default function ClientDetail() {
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
                       <span className="text-muted-foreground">Durée séance</span>
                       <span className="text-white font-medium">
-                        {extClient!.trainingContext.sessionDurationMin && extClient!.trainingContext.sessionDurationMax
-                          ? `${extClient!.trainingContext.sessionDurationMin}–${extClient!.trainingContext.sessionDurationMax} min`
-                          : extClient!.trainingContext.sessionDurationMin
-                          ? `≥ ${extClient!.trainingContext.sessionDurationMin} min`
-                          : `≤ ${extClient!.trainingContext.sessionDurationMax} min`}
+                        {extClient?.trainingContext?.sessionDurationMin && extClient?.trainingContext?.sessionDurationMax
+                          ? `${extClient.trainingContext.sessionDurationMin}–${extClient.trainingContext.sessionDurationMax} min`
+                          : extClient?.trainingContext?.sessionDurationMin
+                          ? `≥ ${extClient.trainingContext.sessionDurationMin} min`
+                          : `≤ ${extClient?.trainingContext?.sessionDurationMax} min`}
                       </span>
                     </div>
                   )}

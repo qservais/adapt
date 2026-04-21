@@ -49,6 +49,7 @@ type ExtendedProfileData = {
     shareSleep?: boolean;
     shareHeartRate?: boolean;
     shareBodyFat?: boolean;
+    shareContext?: boolean;
     profileVisibility?: "coach_only" | "private";
   };
   integrations: IntegrationStatus[];
@@ -1064,6 +1065,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           { key: "shareSleep" as const, tKey: "share_sleep", label: "Qualité du sommeil", icon: "moon" as const },
           { key: "shareHeartRate" as const, tKey: "share_heart_rate", label: "Fréquence cardiaque", icon: "heart" as const },
           { key: "shareBodyFat" as const, tKey: "share_body_fat", label: "Masse grasse (%)", icon: "percent" as const },
+          { key: "shareContext" as const, tKey: "share_context", label: "Contexte d'entraînement", icon: "layers" as const },
         ] as const).map(({ key, tKey, label, icon }, idx, arr) => (
           <View
             key={key}

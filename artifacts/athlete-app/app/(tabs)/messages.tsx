@@ -14,10 +14,12 @@ import { Feather } from "@expo/vector-icons";
 import { useGetMessageThreads } from "@workspace/api-client-react";
 import type { MessageThread } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useThemeColors } from "@/context/PreferencesContext";
 import { useScrollToTop } from "@react-navigation/native";
 
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const scrollRef = useRef<FlashListRef<MessageThread>>(null);
   useScrollToTop(scrollRef);
   const threadsQuery = useGetMessageThreads();
@@ -27,7 +29,7 @@ export default function MessagesScreen() {
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   return (
-    <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
+    <View style={[styles.flex, { backgroundColor: colors.bg }]}>
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>
           MESSAGES

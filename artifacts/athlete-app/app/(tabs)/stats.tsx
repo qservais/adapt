@@ -22,6 +22,7 @@ import {
 } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+import { useThemeColors } from "@/context/PreferencesContext";
 import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 
@@ -174,6 +175,7 @@ function MonthCalendar({ checkins, year, month }: { checkins: CheckinItem[]; yea
 
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   useScrollToTop(scrollRef);
   const [activeTab, setActiveTab] = useState<"training" | "nutrition">("training");
@@ -440,7 +442,7 @@ export default function StatsScreen() {
   return (
     <ScrollView
       ref={scrollRef}
-      style={[styles.flex, { backgroundColor: COLORS.bg }]}
+      style={[styles.flex, { backgroundColor: colors.bg }]}
       contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40 }}
       showsVerticalScrollIndicator={false}
       scrollEnabled={!reorderMode}

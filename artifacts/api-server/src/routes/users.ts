@@ -354,6 +354,10 @@ function extendedProfile(user: typeof usersTable.$inferSelect) {
   };
 }
 
+const VALID_DAYS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"] as const;
+const VALID_LOCATIONS = ["gym", "home", "outdoor"] as const;
+const VALID_EQUIPMENT = ["barbell", "dumbbell", "kettlebell", "machine", "cable", "bodyweight", "bands", "trx"] as const;
+
 const extendedProfileSchema = z.object({
   primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
   fitnessLevel: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),
@@ -361,11 +365,11 @@ const extendedProfileSchema = z.object({
   secondaryGoal: z.string().max(200).nullable().optional(),
   sessionDurationMin: z.number().int().min(15).max(240).nullable().optional(),
   sessionDurationMax: z.number().int().min(15).max(240).nullable().optional(),
-  availableDays: z.array(z.string()).nullable().optional(),
-  trainingLocations: z.array(z.string()).nullable().optional(),
-  equipment: z.array(z.string()).nullable().optional(),
-  avoidedExercises: z.array(z.string()).nullable().optional(),
-  favoriteExercises: z.array(z.string()).nullable().optional(),
+  availableDays: z.array(z.enum(VALID_DAYS)).max(7).nullable().optional(),
+  trainingLocations: z.array(z.enum(VALID_LOCATIONS)).max(3).nullable().optional(),
+  equipment: z.array(z.enum(VALID_EQUIPMENT)).max(8).nullable().optional(),
+  avoidedExercises: z.array(z.string().max(100)).max(50).nullable().optional(),
+  favoriteExercises: z.array(z.string().max(100)).max(50).nullable().optional(),
   language: z.enum(["fr", "en"]).optional(),
   theme: z.enum(["dark", "light", "system"]).optional(),
   units: z.enum(["metric", "imperial"]).optional(),
@@ -374,11 +378,20 @@ const extendedProfileSchema = z.object({
     shareSleep: z.boolean().optional(),
     shareHeartRate: z.boolean().optional(),
     shareBodyFat: z.boolean().optional(),
+    shareContext: z.boolean().optional(),
     profileVisibility: z.enum(["coach_only", "private"]).optional(),
   }).optional(),
   morningNotifHour: z.number().int().min(5).max(23).optional(),
   notificationPrefs: z.record(z.boolean()).optional(),
-});
+}).refine(
+  (d) => {
+    if (d.sessionDurationMin != null && d.sessionDurationMax != null) {
+      return d.sessionDurationMin <= d.sessionDurationMax;
+    }
+    return true;
+  },
+  { message: "sessionDurationMin doit être inférieur ou égal à sessionDurationMax", path: ["sessionDurationMin"] },
+);
 
 const INTEGRATION_PROVIDERS = ["apple_health", "garmin", "strava", "whoop", "fitbit"] as const;
 
