@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
-import { usePreferences } from "@/context/PreferencesContext";
+import { usePreferences, useT } from "@/context/PreferencesContext";
 
 type IntegrationStatus = {
   provider: string;
@@ -47,6 +47,7 @@ type ExtendedProfileData = {
     shareSleep?: boolean;
     shareHeartRate?: boolean;
     shareBodyFat?: boolean;
+    profileVisibility?: "coach_only" | "private";
   };
   integrations: IntegrationStatus[];
 };
@@ -247,6 +248,7 @@ function ToggleChip({
 
 export default function ExtendedProfileSections({ onCompletionChange }: { onCompletionChange?: (pct: number) => void }) {
   const { setLanguage: ctxSetLanguage, setTheme: ctxSetTheme, setUnits: ctxSetUnits } = usePreferences();
+  const t = useT();
 
   const [profile, setProfile] = useState<ExtendedProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -727,7 +729,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* PRÉFÉRENCES */}
       <View style={cStyles.section}>
         <SectionHeader
-          title="PRÉFÉRENCES"
+          title={t("preferences", "PRÉFÉRENCES").toUpperCase()}
           icon="sliders"
           editing={editingPrefs}
           onToggleEdit={() => { if (editingPrefs) { handleSavePrefs(); } else { setEditingPrefs(true); } }}
@@ -826,7 +828,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* NOTIFICATIONS */}
       <View style={cStyles.section}>
         <SectionHeader
-          title="NOTIFICATIONS"
+          title={t("notifications", "NOTIFICATIONS").toUpperCase()}
           icon="bell"
           editing={editingNotifs}
           onToggleEdit={() => { if (editingNotifs) { handleSaveNotifs(); } else { setEditingNotifs(true); } }}
@@ -855,7 +857,27 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           <Text style={[cStyles.valueText, { fontFamily: FONTS.bodyMedium }]}>{morningNotifHour}h00</Text>
         )}
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Types de notifications</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Mode silencieux</Text>
+        <View style={[cStyles.privacyRow]}>
+          <View style={cStyles.privacyLeft}>
+            <Feather name="bell-off" size={14} color={COLORS.textMuted} />
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Désactiver toutes les notifications</Text>
+          </View>
+          <Switch
+            value={notificationPrefs["silent_mode"] === true}
+            onValueChange={v => {
+              const next = { ...notificationPrefs, silent_mode: v };
+              setNotificationPrefs(next);
+              if (!editingNotifs) {
+                saveSection("notifs_inline", { notificationPrefs: next }).catch(() => {});
+              }
+            }}
+            trackColor={{ false: COLORS.border, true: "#EF4444" }}
+            thumbColor={notificationPrefs["silent_mode"] === true ? "#EF4444" : COLORS.textMuted}
+          />
+        </View>
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 6 }]}>Types de notifications</Text>
         {NOTIF_TYPES.map(({ key, label }, idx, arr) => (
           <View
             key={key}
@@ -881,7 +903,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* APPLICATIONS SANTÉ */}
       <View style={cStyles.section}>
         <SectionHeader
-          title="APPLICATIONS SANTÉ"
+          title={t("health_apps", "APPLICATIONS SANTÉ").toUpperCase()}
           icon="heart"
           editing={false}
           onToggleEdit={() => {}}
@@ -931,7 +953,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* DONNÉES PARTAGÉES AVEC LE COACH */}
       <View style={cStyles.section}>
         <SectionHeader
-          title="DONNÉES PARTAGÉES AVEC LE COACH"
+          title={t("privacy", "DONNÉES PARTAGÉES AVEC LE COACH").toUpperCase()}
           icon="eye"
           editing={editingPrivacy}
           onToggleEdit={() => { if (editingPrivacy) { handleSavePrivacy(); } else { setEditingPrivacy(true); } }}
@@ -977,22 +999,47 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <SectionHeader
           title="PARAMÈTRES DE CONFIDENTIALITÉ"
           icon="shield"
-          editing={false}
-          onToggleEdit={() => {}}
+          editing={editingPrivacy}
+          onToggleEdit={() => { if (editingPrivacy) { handleSavePrivacy(); } else { setEditingPrivacy(true); } }}
+          saving={saving["privacy"]}
         />
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body }]}>
-          Ces paramètres contrôlent la visibilité globale de ton profil et l'accès à tes données personnelles.
+          Ces paramètres contrôlent la visibilité globale de ton profil. Cumulatifs avec les données partagées ci-dessus.
         </Text>
-        <View style={[cStyles.privacyRow, { borderBottomWidth: 0 }]}>
+        <View style={cStyles.privacyRow}>
           <View style={cStyles.privacyLeft}>
             <Feather name="lock" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Profil privé (coach uniquement)</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Profil coach uniquement</Text>
           </View>
           <Switch
-            value={true}
-            disabled={true}
+            value={(privacy.profileVisibility ?? "coach_only") === "coach_only"}
+            onValueChange={v => {
+              const next = { ...privacy, profileVisibility: (v ? "coach_only" : "private") as "coach_only" | "private" };
+              setPrivacy(next);
+              if (!editingPrivacy) {
+                saveSection("privacy_inline", { privacySettings: next });
+              }
+            }}
             trackColor={{ false: COLORS.border, true: COLORS.cyanDim }}
-            thumbColor={COLORS.cyan}
+            thumbColor={(privacy.profileVisibility ?? "coach_only") === "coach_only" ? COLORS.cyan : COLORS.textMuted}
+          />
+        </View>
+        <View style={[cStyles.privacyRow, { borderBottomWidth: 0 }]}>
+          <View style={cStyles.privacyLeft}>
+            <Feather name="eye-off" size={14} color={COLORS.textMuted} />
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>Profil entièrement privé</Text>
+          </View>
+          <Switch
+            value={(privacy.profileVisibility ?? "coach_only") === "private"}
+            onValueChange={v => {
+              const next = { ...privacy, profileVisibility: (v ? "private" : "coach_only") as "coach_only" | "private" };
+              setPrivacy(next);
+              if (!editingPrivacy) {
+                saveSection("privacy_inline", { privacySettings: next });
+              }
+            }}
+            trackColor={{ false: COLORS.border, true: "#EF4444" }}
+            thumbColor={(privacy.profileVisibility ?? "coach_only") === "private" ? "#EF4444" : COLORS.textMuted}
           />
         </View>
       </View>

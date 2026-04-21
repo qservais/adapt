@@ -373,6 +373,7 @@ const extendedProfileSchema = z.object({
     shareSleep: z.boolean().optional(),
     shareHeartRate: z.boolean().optional(),
     shareBodyFat: z.boolean().optional(),
+    profileVisibility: z.enum(["coach_only", "private"]).optional(),
   }).optional(),
   morningNotifHour: z.number().int().min(5).max(23).optional(),
   notificationPrefs: z.record(z.boolean()).optional(),
@@ -436,11 +437,28 @@ router.put("/users/me/profile", authenticate, async (req, res) => {
     if (data.privacySettings !== undefined) updateData["privacySettings"] = data.privacySettings;
     if (data.morningNotifHour !== undefined) updateData["morningNotifHour"] = data.morningNotifHour;
     if (data.notificationPrefs !== undefined) updateData["notificationPrefs"] = data.notificationPrefs;
+    const userId = req.user!.userId;
     const [user] = await db.update(usersTable)
       .set(updateData as Partial<typeof usersTable.$inferInsert>)
-      .where(eq(usersTable.id, req.user!.userId))
+      .where(eq(usersTable.id, userId))
       .returning();
-    res.json(extendedProfile(user));
+
+    const existingIntegrations = await db.select({
+      provider: userIntegrationsTable.provider,
+      isConnected: userIntegrationsTable.isConnected,
+      connectedAt: userIntegrationsTable.connectedAt,
+      lastSyncAt: userIntegrationsTable.lastSyncAt,
+    }).from(userIntegrationsTable).where(eq(userIntegrationsTable.userId, userId));
+
+    const integrationMap = new Map(existingIntegrations.map(i => [i.provider, i]));
+    const integrations = INTEGRATION_PROVIDERS.map(provider => ({
+      provider,
+      isConnected: integrationMap.get(provider)?.isConnected ?? false,
+      connectedAt: integrationMap.get(provider)?.connectedAt ?? null,
+      lastSyncAt: integrationMap.get(provider)?.lastSyncAt ?? null,
+    }));
+
+    res.json({ ...extendedProfile(user), integrations });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
