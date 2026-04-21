@@ -38,7 +38,7 @@ import {
 } from "@workspace/api-client-react";
 import { tokenStore } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { useFormatWeight, useUnitsLabel, useThemeColors } from "@/context/PreferencesContext";
+import { useFormatWeight, useThemeColors, useT } from "@/context/PreferencesContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import ExtendedProfileSections from "@/components/profile/ExtendedProfileSections";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
@@ -111,8 +111,8 @@ export default function ProfileScreen() {
   const cancelRequestMutation = useCancelCoachRequest();
 
   const formatWeight = useFormatWeight();
-  const { weight: weightLabel } = useUnitsLabel();
   const colors = useThemeColors();
+  const t = useT();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
@@ -491,7 +491,7 @@ export default function ProfileScreen() {
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
               {formatWeight(profile.weightKg != null ? parseFloat(String(profile.weightKg)) : null)}
             </Text>
-            <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>{weightLabel}</Text>
+            <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>{t("weight", "Poids")}</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>

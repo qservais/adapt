@@ -451,14 +451,14 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* CONTEXTE D'ENTRAÎNEMENT */}
       <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
-          title="CONTEXTE D'ENTRAÎNEMENT"
+          title={t("training_context", "CONTEXTE D'ENTRAÎNEMENT").toUpperCase()}
           icon="activity"
           editing={editingContext}
           onToggleEdit={() => { if (editingContext) { handleSaveContext(); } else { setEditingContext(true); } }}
           saving={saving["context"]}
         />
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>{t("available_days", "Jours d'entraînement")}</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("available_days", "Jours d'entraînement")}</Text>
         <View style={cStyles.daysRow}>
           {DAYS.map(d => (
             <TouchableOpacity
@@ -481,7 +481,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("training_location", "Lieu d'entraînement")}</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("training_location", "Lieu d'entraînement")}</Text>
         <View style={cStyles.chipRow}>
           {LOCATIONS.map(loc => (
             <TouchableOpacity
@@ -505,7 +505,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("equipment", "Équipement disponible")}</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("equipment", "Équipement disponible")}</Text>
         <View style={cStyles.chipRow}>
           {EQUIPMENT_OPTIONS.map(eq => (
             <ToggleChip
@@ -518,7 +518,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("session_duration", "Durée de séance")}</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("session_duration", "Durée de séance")}</Text>
         {editingContext ? (
           <View style={{ gap: 4 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -551,7 +551,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             />
           </View>
         ) : (
-          <Text style={[cStyles.valueText, { fontFamily: FONTS.bodyMedium }]}>
+          <Text style={[cStyles.valueText, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
             {sessionDurationMin && sessionDurationMax
               ? `${sessionDurationMin} – ${sessionDurationMax} min`
               : sessionDurationMin
@@ -562,7 +562,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           </Text>
         )}
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("injuries", "Blessures / Restrictions permanentes")}</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("injuries", "Blessures / Restrictions permanentes")}</Text>
         {editingContext ? (
           <TextInput
             value={injuries}
@@ -574,7 +574,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             style={[cStyles.textArea, { fontFamily: FONTS.body }]}
           />
         ) : (
-          <Text style={[cStyles.valueText, { fontFamily: FONTS.body, fontStyle: injuries ? "normal" : "italic", color: injuries ? COLORS.textPrimary : COLORS.textMuted }]}>
+          <Text style={[cStyles.valueText, { fontFamily: FONTS.body, fontStyle: injuries ? "normal" : "italic", color: injuries ? colors.textPrimary : colors.textMuted }]}>
             {injuries || t("no_injury", "Aucune restriction renseignée")}
           </Text>
         )}
@@ -583,14 +583,14 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* OBJECTIFS */}
       <View style={[cStyles.section, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <SectionHeader
-          title="OBJECTIFS"
+          title={t("goals", "OBJECTIFS").toUpperCase()}
           icon="target"
           editing={editingGoals}
           onToggleEdit={() => { if (editingGoals) { handleSaveGoals(); } else { setEditingGoals(true); } }}
           saving={saving["goals"]}
         />
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Objectif principal</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("primary_goal", "Objectif principal")}</Text>
         <View style={cStyles.chipRow}>
           {PRIMARY_GOALS.map(g => (
             <ToggleChip
@@ -604,7 +604,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Niveau</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("fitness_level", "Niveau de forme")}</Text>
         <View style={cStyles.chipRow}>
           {FITNESS_LEVELS.map(l => (
             <ToggleChip
@@ -618,7 +618,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Objectif secondaire</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("secondary_goal", "Objectif secondaire")}</Text>
         <View style={cStyles.chipRow}>
           {SECONDARY_GOALS.map(g => (
             <ToggleChip
@@ -649,7 +649,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         />
 
         {/* Exercices à éviter */}
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>{t("avoided_exercises", "Exercices à éviter")}</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("avoided_exercises", "Exercices à éviter")}</Text>
         {editingExercises && (
           <TouchableOpacity
             style={[cStyles.libraryBtn]}
@@ -706,7 +706,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         )}
 
         {/* Exercices préférés */}
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>{t("favorite_exercises", "Exercices préférés")}</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("favorite_exercises", "Exercices préférés")}</Text>
         {editingExercises && (
           <TouchableOpacity
             style={[cStyles.libraryBtn]}
@@ -839,7 +839,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <View style={[cStyles.prefItem, { borderBottomColor: colors.border }]}>
           <View style={cStyles.prefLeft}>
             <Feather name="maximize" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium }]}>Unités</Text>
+            <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>{t("units_label", "Unités")}</Text>
           </View>
           {editingPrefs ? (
             <View style={cStyles.segRow}>
@@ -859,7 +859,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               ))}
             </View>
           ) : (
-            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>
+            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
               {units === "imperial" ? t("units_imperial", "Lbs / Mi") : t("units_metric", "Kg / Km")}
             </Text>
           )}
@@ -868,7 +868,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <View style={[cStyles.prefItem, { borderBottomColor: colors.border }]}>
           <View style={cStyles.prefLeft}>
             <Feather name="globe" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium }]}>Langue</Text>
+            <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>{t("lang_label", "Langue")}</Text>
           </View>
           {editingPrefs ? (
             <View style={cStyles.segRow}>
@@ -888,7 +888,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               ))}
             </View>
           ) : (
-            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>
+            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
               {language === "en" ? t("lang_en", "English") : t("lang_fr", "Français")}
             </Text>
           )}
@@ -897,7 +897,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <View style={[cStyles.prefItem, { borderBottomWidth: 0 }]}>
           <View style={cStyles.prefLeft}>
             <Feather name="moon" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium }]}>Thème</Text>
+            <Text style={[cStyles.prefItemLabel, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>{t("theme_label", "Thème")}</Text>
           </View>
           {editingPrefs ? (
             <View style={cStyles.segRow}>
@@ -918,7 +918,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               ))}
             </View>
           ) : (
-            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>
+            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
               {theme === "light" ? t("theme_light", "Clair") : theme === "system" ? t("theme_system", "Automatique") : t("theme_dark", "Sombre")}
             </Text>
           )}
@@ -935,7 +935,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           saving={saving["notifs"]}
         />
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Heure de rappel matin</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("morning_notif_hour", "Heure de rappel matin")}</Text>
         {editingNotifs ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cStyles.durationRow}>
             {NOTIF_HOURS.map(h => (
@@ -954,14 +954,14 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             ))}
           </ScrollView>
         ) : (
-          <Text style={[cStyles.valueText, { fontFamily: FONTS.bodyMedium }]}>{morningNotifHour}h00</Text>
+          <Text style={[cStyles.valueText, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>{morningNotifHour}h00</Text>
         )}
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Mode silencieux</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("silent_mode_label", "Mode silencieux")}</Text>
         <View style={[cStyles.privacyRow, { borderBottomColor: colors.border }]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="bell-off" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("silent_mode", "Désactiver toutes les notifications")}</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body, color: colors.textPrimary }]}>{t("silent_mode", "Désactiver toutes les notifications")}</Text>
           </View>
           <Switch
             value={notificationPrefs["silent_mode"] === true}
@@ -977,13 +977,13 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           />
         </View>
 
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 6 }]}>Types de notifications</Text>
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 6, color: colors.textMuted }]}>{t("notif_types_label", "Types de notifications")}</Text>
         {NOTIF_TYPE_KEYS.map(({ key, tKey, fallback }, idx, arr) => (
           <View
             key={key}
             style={[cStyles.privacyRow, { borderBottomColor: colors.border }, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
           >
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t(tKey, fallback)}</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body, color: colors.textPrimary }]}>{t(tKey, fallback)}</Text>
             <Switch
               value={notificationPrefs[key] !== false}
               onValueChange={v => {
@@ -1008,7 +1008,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           editing={false}
           onToggleEdit={() => {}}
         />
-        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 8 }]}>
+        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 8, color: colors.textSecondary }]}>
           {t("sync_health_data", "Synchronise tes données de santé avec ADAPT.")}
         </Text>
         {HEALTH_APPS.map(app => {
@@ -1059,8 +1059,8 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           onToggleEdit={() => { if (editingPrivacy) { handleSavePrivacy(); } else { setEditingPrivacy(true); } }}
           saving={saving["privacy"]}
         />
-        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body }]}>
-          Ces données sont transmises à ton coach sur toutes ses vues (liste, détail, historique de check-ins). Désactiver un interrupteur masque la donnée partout.
+        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
+          {t("privacy_data_desc", "Ces données sont transmises à ton coach sur toutes ses vues. Désactiver un interrupteur masque la donnée partout.")}
         </Text>
         {([
           { key: "shareWeight" as const, tKey: "share_weight", label: "Poids corporel", icon: "trending-down" as const },
@@ -1079,7 +1079,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           >
             <View style={cStyles.privacyLeft}>
               <Feather name={icon} size={14} color={COLORS.textMuted} />
-              <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t(tKey, label)}</Text>
+              <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body, color: colors.textPrimary }]}>{t(tKey, label)}</Text>
             </View>
             <Switch
               value={privacy[key] !== false}
@@ -1099,19 +1099,19 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       {/* PARAMÈTRES DE CONFIDENTIALITÉ */}
       <View style={[cStyles.section, { marginBottom: 24 }]}>
         <SectionHeader
-          title="PARAMÈTRES DE CONFIDENTIALITÉ"
+          title={t("privacy_settings", "PARAMÈTRES DE CONFIDENTIALITÉ").toUpperCase()}
           icon="shield"
           editing={editingPrivacy}
           onToggleEdit={() => { if (editingPrivacy) { handleSavePrivacy(); } else { setEditingPrivacy(true); } }}
           saving={saving["privacy"]}
         />
-        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body }]}>
-          Ces paramètres contrôlent la visibilité globale de ton profil. Cumulatifs avec les données partagées ci-dessus.
+        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
+          {t("privacy_visibility_desc", "Ces paramètres contrôlent la visibilité globale de ton profil. Cumulatifs avec les données partagées ci-dessus.")}
         </Text>
         <View style={[cStyles.privacyRow, { borderBottomColor: colors.border }]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="lock" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("coach_only", "Profil visible par le coach uniquement")}</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body, color: colors.textPrimary }]}>{t("coach_only", "Profil visible par le coach uniquement")}</Text>
           </View>
           <Switch
             value={(privacy.profileVisibility ?? "coach_only") === "coach_only"}
@@ -1129,7 +1129,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <View style={[cStyles.privacyRow, { borderBottomWidth: 0, borderBottomColor: colors.border }]}>
           <View style={cStyles.privacyLeft}>
             <Feather name="eye-off" size={14} color={COLORS.textMuted} />
-            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{t("profile_private", "Profil entièrement privé")}</Text>
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body, color: colors.textPrimary }]}>{t("profile_private", "Profil entièrement privé")}</Text>
           </View>
           <Switch
             value={(privacy.profileVisibility ?? "coach_only") === "private"}
