@@ -674,6 +674,8 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
     programEnd.setDate(programStart.getDate() + activeProgram.durationWeeks * 7);
 
     const todayStr = getTodayLocalDate();
+    const isProgramInPreview = (activeProgram.previewEnabled ?? false) && activeProgram.startDate > todayStr;
+
     const today = new Date(`${todayStr}T00:00:00Z`);
     const in7Days = new Date(today);
     in7Days.setDate(today.getDate() + 7);
@@ -720,6 +722,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           scheduledTime: session.scheduledTime ?? null,
           visioLink: session.visioLink ?? null,
           isAppointment: false,
+          isPreview: isProgramInPreview,
         });
       }
     }
@@ -1085,7 +1088,7 @@ router.get("/athlete/preview-program", authenticate, requireRole("athlete"), asy
 
     const programStart = new Date(program.startDate);
 
-    const sessionsWithExercises = await Promise.all(programSessions.slice(0, 20).map(async (session) => {
+    const sessionsWithExercises = await Promise.all(programSessions.map(async (session) => {
       const [variant] = await db.select().from(sessionVariantsTable)
         .where(and(
           eq(sessionVariantsTable.sessionId, session.id),
@@ -1155,6 +1158,7 @@ router.get("/athlete/preview-program", authenticate, requireRole("athlete"), asy
       startDate: program.startDate,
       durationWeeks: program.durationWeeks,
       previewEnabled: program.previewEnabled ?? false,
+      previewAllowStart: program.previewAllowStart ?? false,
       sessions: sessionsWithExercises,
     });
   } catch {

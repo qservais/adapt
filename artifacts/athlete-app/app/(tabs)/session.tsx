@@ -36,6 +36,7 @@ interface PreviewProgram {
   startDate: string;
   durationWeeks: number;
   previewEnabled: boolean;
+  previewAllowStart: boolean;
   sessions: {
     sessionId: string;
     name: string;
@@ -472,7 +473,13 @@ export default function SessionTab() {
                           </Text>
                           {s.isCompleted && s.completedActualDate ? (
                             <Text style={[styles.upcomingDoneLabel, { fontFamily: FONTS.mono }]}>
-                              {`Faite le ${new Date(s.completedActualDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`}
+                              {s.completedActualDate !== s.scheduledDate
+                                ? `Faite le ${new Date(s.completedActualDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} au lieu du ${new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`
+                                : `Faite le ${new Date(s.completedActualDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`}
+                            </Text>
+                          ) : s.isPreview ? (
+                            <Text style={[styles.upcomingType, { fontFamily: FONTS.mono, color: `${COLORS.cyan}80` }]}>
+                              {`Aperçu · ${typeLabel}`}
                             </Text>
                           ) : (
                             <Text style={[styles.upcomingType, { fontFamily: FONTS.mono }]}>
@@ -488,6 +495,10 @@ export default function SessionTab() {
                         {s.isCompleted ? (
                           <View style={styles.upcomingDoneIcon}>
                             <Feather name="check-circle" size={18} color={COLORS.green} />
+                          </View>
+                        ) : s.isPreview ? (
+                          <View style={[styles.upcomingDoneIcon, { opacity: 0.5 }]}>
+                            <Feather name="lock" size={16} color={COLORS.cyan} />
                           </View>
                         ) : !s.isAppointment ? (
                           <TouchableOpacity
@@ -528,25 +539,43 @@ export default function SessionTab() {
                       </Text>
                     </View>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => handleStartProgram(previewQuery.data!.programId, previewQuery.data!.programName)}
-                    disabled={startingProgram}
-                    style={[styles.previewStartBtn, { opacity: startingProgram ? 0.6 : 1 }]}
-                    activeOpacity={0.8}
-                  >
-                    {startingProgram ? (
-                      <ActivityIndicator size="small" color={COLORS.bg} />
-                    ) : (
-                      <>
-                        <Feather name="play" size={14} color={COLORS.bg} />
-                        <Text style={[styles.previewStartBtnText, { fontFamily: FONTS.bodyMedium }]}>Démarrer maintenant</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                  {previewQuery.data.previewAllowStart && (
+                    <TouchableOpacity
+                      onPress={() => handleStartProgram(previewQuery.data!.programId, previewQuery.data!.programName)}
+                      disabled={startingProgram}
+                      style={[styles.previewStartBtn, { opacity: startingProgram ? 0.6 : 1 }]}
+                      activeOpacity={0.8}
+                    >
+                      {startingProgram ? (
+                        <ActivityIndicator size="small" color={COLORS.bg} />
+                      ) : (
+                        <>
+                          <Feather name="play" size={14} color={COLORS.bg} />
+                          <Text style={[styles.previewStartBtnText, { fontFamily: FONTS.bodyMedium }]}>Démarrer maintenant</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
 
                   <View style={styles.previewSessions}>
-                    {previewQuery.data.sessions.slice(0, 8).map((ps) => {
+                    {previewQuery.data.sessions.map((ps) => {
                       const isExp = previewExpanded === ps.sessionId;
+                      // Group exercises by block
+                      const blockMap = new Map<string | null, typeof ps.exercises>();
+                      for (const ex of ps.exercises) {
+                        const key = ex.blockId ?? null;
+                        if (!blockMap.has(key)) blockMap.set(key, []);
+                        blockMap.get(key)!.push(ex);
+                      }
+                      const sortedBlocks = [...ps.blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+                      const orderedGroups: { blockId: string | null; blockName: string | null; exercises: typeof ps.exercises }[] = [];
+                      for (const b of sortedBlocks) {
+                        const exs = blockMap.get(b.id) ?? [];
+                        if (exs.length > 0) orderedGroups.push({ blockId: b.id, blockName: b.name, exercises: exs });
+                      }
+                      const noBlockExs = blockMap.get(null) ?? [];
+                      if (noBlockExs.length > 0) orderedGroups.push({ blockId: null, blockName: null, exercises: noBlockExs });
+
                       return (
                         <View key={ps.sessionId} style={{ gap: 0 }}>
                           <TouchableOpacity
@@ -573,21 +602,25 @@ export default function SessionTab() {
                           </TouchableOpacity>
                           {isExp && (
                             <View style={styles.previewExList}>
-                              {ps.exercises.map((ex, ei) => (
-                                <Text key={ex.id} style={[styles.previewExItem, { fontFamily: FONTS.body }]}>
-                                  {`${String(ei + 1).padStart(2, "0")}  ${ex.name}  ${ex.sets}×${ex.reps ?? "-"}`}
-                                </Text>
+                              {orderedGroups.map((group, gi) => (
+                                <View key={group.blockId ?? `noblock-${gi}`}>
+                                  {group.blockName != null && (
+                                    <Text style={[styles.previewBlockHeader, { fontFamily: FONTS.mono }]}>
+                                      {group.blockName.toUpperCase()}
+                                    </Text>
+                                  )}
+                                  {group.exercises.map((ex, ei) => (
+                                    <Text key={ex.id} style={[styles.previewExItem, { fontFamily: FONTS.body }]}>
+                                      {`${String(ei + 1).padStart(2, "0")}  ${ex.name}  ${ex.sets}×${ex.reps ?? "-"}${ex.loadKg ? ` @ ${ex.loadKg}kg` : ""}`}
+                                    </Text>
+                                  ))}
+                                </View>
                               ))}
                             </View>
                           )}
                         </View>
                       );
                     })}
-                    {previewQuery.data.sessions.length > 8 && (
-                      <Text style={[styles.previewMore, { fontFamily: FONTS.mono }]}>
-                        {`+ ${previewQuery.data.sessions.length - 8} séances supplémentaires`}
-                      </Text>
-                    )}
                   </View>
                 </View>
               )}
@@ -987,6 +1020,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     backgroundColor: `${COLORS.white}03`,
     gap: 4,
+  },
+  previewBlockHeader: {
+    fontSize: 9,
+    color: COLORS.cyan,
+    letterSpacing: 1.5,
+    marginTop: 8,
+    marginBottom: 2,
+    paddingLeft: 4,
   },
   previewExItem: {
     fontSize: 11,

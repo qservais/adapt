@@ -374,6 +374,7 @@ export interface ProgramSummary {
   startDate?: string | null;
   isActive: boolean;
   previewEnabled?: boolean;
+  previewAllowStart?: boolean;
   startsInFuture?: boolean;
   createdAt?: string;
 }
@@ -541,6 +542,7 @@ export interface UpcomingSession {
   isCompleted: boolean;
   isAppointment?: boolean;
   completedActualDate?: string | null;
+  isPreview?: boolean;
 }
 
 export interface CoachUpdateAthleteRequest {

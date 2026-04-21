@@ -17,6 +17,7 @@ export const programsTable = pgTable("programs", {
   startDate: date("start_date"),
   isActive: boolean("is_active").default(true),
   previewEnabled: boolean("preview_enabled").default(false),
+  previewAllowStart: boolean("preview_allow_start").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

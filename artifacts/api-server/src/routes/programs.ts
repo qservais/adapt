@@ -24,6 +24,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       startDate: programsTable.startDate,
       isActive: programsTable.isActive,
       previewEnabled: programsTable.previewEnabled,
+      previewAllowStart: programsTable.previewAllowStart,
       createdAt: programsTable.createdAt,
       athleteFirstName: usersTable.firstName,
       athleteLastName: usersTable.lastName,
@@ -42,6 +43,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       startDate: p.startDate,
       isActive: p.isActive,
       previewEnabled: p.previewEnabled ?? false,
+      previewAllowStart: p.previewAllowStart ?? false,
       startsInFuture: p.startDate ? p.startDate > todayStr : false,
       createdAt: p.createdAt,
     })));
@@ -52,7 +54,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
 
 router.put("/programs/:id/preview", authenticate, requireRole("coach"), async (req, res) => {
   const programId = String(req.params["id"]);
-  const { enabled } = req.body as { enabled?: boolean };
+  const { enabled, allowStart } = req.body as { enabled?: boolean; allowStart?: boolean };
   try {
     const [prog] = await db.select({ id: programsTable.id }).from(programsTable)
       .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
@@ -60,10 +62,15 @@ router.put("/programs/:id/preview", authenticate, requireRole("coach"), async (r
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
       return;
     }
+    const isEnabled = enabled !== false;
     await db.update(programsTable)
-      .set({ previewEnabled: enabled !== false, updatedAt: new Date() })
+      .set({
+        previewEnabled: isEnabled,
+        previewAllowStart: isEnabled ? (allowStart === true) : false,
+        updatedAt: new Date()
+      })
       .where(eq(programsTable.id, programId));
-    res.json({ success: true, previewEnabled: enabled !== false });
+    res.json({ success: true, previewEnabled: isEnabled, previewAllowStart: isEnabled ? (allowStart === true) : false });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }

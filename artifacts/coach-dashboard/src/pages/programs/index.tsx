@@ -35,6 +35,7 @@ import {
   CheckCircle,
   Eye,
   EyeOff,
+  PlayCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -218,12 +219,12 @@ function NewProgramDialog({
   );
 }
 
-async function toggleProgramPreview(programId: string, enabled: boolean) {
+async function toggleProgramPreview(programId: string, enabled: boolean, allowStart?: boolean) {
   const token = localStorage.getItem("adapt_coach_access");
   const res = await fetch(`/api/programs/${programId}/preview`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ enabled }),
+    body: JSON.stringify({ enabled, allowStart }),
   });
   if (!res.ok) throw new Error("Erreur serveur");
 }
@@ -232,19 +233,37 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [togglingPreview, setTogglingPreview] = useState(false);
+  const [togglingAllowStart, setTogglingAllowStart] = useState(false);
 
   const handlePreviewToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setTogglingPreview(true);
     try {
-      await toggleProgramPreview(prog.id, !prog.previewEnabled);
+      const newEnabled = !prog.previewEnabled;
+      await toggleProgramPreview(prog.id, newEnabled, newEnabled ? (prog.previewAllowStart ?? false) : false);
       toast({ title: prog.previewEnabled ? "Aperçu désactivé" : "Programme envoyé en aperçu à l'athlète" });
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     } catch {
       toast({ title: "Erreur", variant: "destructive" });
     } finally {
       setTogglingPreview(false);
+    }
+  };
+
+  const handleAllowStartToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTogglingAllowStart(true);
+    try {
+      const newAllowStart = !(prog.previewAllowStart ?? false);
+      await toggleProgramPreview(prog.id, true, newAllowStart);
+      toast({ title: newAllowStart ? "L'athlète peut maintenant démarrer le programme" : "Démarrage anticipé désactivé" });
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setTogglingAllowStart(false);
     }
   };
 
@@ -287,23 +306,44 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
           </div>
         </div>
         {prog.startsInFuture && (
-          <button
-            onClick={handlePreviewToggle}
-            disabled={togglingPreview}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-colors shrink-0 ${
-              prog.previewEnabled
-                ? "border-primary/30 text-primary bg-primary/10 hover:bg-primary/20"
-                : "border-accent/30 text-accent bg-accent/10 hover:bg-accent/20"
-            }`}
-            title={prog.previewEnabled ? "Désactiver l'aperçu" : "Envoyer en aperçu à l'athlète"}
-          >
-            {togglingPreview
-              ? <Loader2 className="w-3 h-3 animate-spin" />
-              : prog.previewEnabled
-                ? <><EyeOff className="w-3 h-3" /> Retirer</>
-                : <><Eye className="w-3 h-3" /> Aperçu</>
-            }
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {prog.startsInFuture && prog.previewEnabled && (
+              <button
+                onClick={handleAllowStartToggle}
+                disabled={togglingAllowStart}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-colors ${
+                  prog.previewAllowStart
+                    ? "border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/20"
+                    : "border-muted/30 text-muted-foreground bg-muted/10 hover:bg-muted/20"
+                }`}
+                title={prog.previewAllowStart ? "Retirer la permission de démarrer" : "Autoriser l'athlète à démarrer maintenant"}
+              >
+                {togglingAllowStart
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : prog.previewAllowStart
+                    ? <><PlayCircle className="w-3 h-3" /> Démarrage OK</>
+                    : <><PlayCircle className="w-3 h-3" /> Autoriser</>
+                }
+              </button>
+            )}
+            <button
+              onClick={handlePreviewToggle}
+              disabled={togglingPreview}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-colors ${
+                prog.previewEnabled
+                  ? "border-primary/30 text-primary bg-primary/10 hover:bg-primary/20"
+                  : "border-accent/30 text-accent bg-accent/10 hover:bg-accent/20"
+              }`}
+              title={prog.previewEnabled ? "Désactiver l'aperçu" : "Envoyer en aperçu à l'athlète"}
+            >
+              {togglingPreview
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : prog.previewEnabled
+                  ? <><EyeOff className="w-3 h-3" /> Retirer</>
+                  : <><Eye className="w-3 h-3" /> Aperçu</>
+              }
+            </button>
+          </div>
         )}
         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
       </div>
