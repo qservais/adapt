@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, exercisesTable, sessionLogsTable, checkinsTable, exerciseLogsTable, programsTable, sessionsTable } from "@workspace/db";
+import { usersTable, badgesTable, userBadgesTable, personalRecordsTable, exercisesTable, sessionLogsTable, checkinsTable, exerciseLogsTable, programsTable, sessionsTable, userIntegrationsTable } from "@workspace/db";
 import { eq, and, desc, gte, sql, count } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
@@ -378,14 +378,33 @@ const extendedProfileSchema = z.object({
   notificationPrefs: z.record(z.boolean()).optional(),
 });
 
+const INTEGRATION_PROVIDERS = ["apple_health", "google_fit", "garmin", "polar", "whoop"] as const;
+
 router.get("/users/me/profile", authenticate, async (req, res) => {
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
+    const userId = req.user!.userId;
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!user) {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Utilisateur non trouvé" } });
       return;
     }
-    res.json(extendedProfile(user));
+
+    const existingIntegrations = await db.select({
+      provider: userIntegrationsTable.provider,
+      isConnected: userIntegrationsTable.isConnected,
+      connectedAt: userIntegrationsTable.connectedAt,
+      lastSyncAt: userIntegrationsTable.lastSyncAt,
+    }).from(userIntegrationsTable).where(eq(userIntegrationsTable.userId, userId));
+
+    const integrationMap = new Map(existingIntegrations.map(i => [i.provider, i]));
+    const integrations = INTEGRATION_PROVIDERS.map(provider => ({
+      provider,
+      isConnected: integrationMap.get(provider)?.isConnected ?? false,
+      connectedAt: integrationMap.get(provider)?.connectedAt ?? null,
+      lastSyncAt: integrationMap.get(provider)?.lastSyncAt ?? null,
+    }));
+
+    res.json({ ...extendedProfile(user), integrations });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }
@@ -422,6 +441,48 @@ router.put("/users/me/profile", authenticate, async (req, res) => {
       .where(eq(usersTable.id, req.user!.userId))
       .returning();
     res.json(extendedProfile(user));
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+const VALID_PROVIDERS = ["apple_health", "google_fit", "garmin", "polar", "whoop"] as const;
+
+router.post("/users/me/integrations/:provider/connect", authenticate, async (req, res) => {
+  const provider = req.params["provider"] as string;
+  if (!(VALID_PROVIDERS as readonly string[]).includes(provider)) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Fournisseur non reconnu" } });
+    return;
+  }
+  try {
+    const userId = req.user!.userId;
+    await db.insert(userIntegrationsTable).values({
+      userId,
+      provider,
+      isConnected: true,
+      connectedAt: new Date(),
+    }).onConflictDoUpdate({
+      target: [userIntegrationsTable.userId, userIntegrationsTable.provider],
+      set: { isConnected: true, connectedAt: new Date(), updatedAt: new Date() },
+    });
+    res.json({ provider, isConnected: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+router.delete("/users/me/integrations/:provider", authenticate, async (req, res) => {
+  const provider = req.params["provider"] as string;
+  if (!(VALID_PROVIDERS as readonly string[]).includes(provider)) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Fournisseur non reconnu" } });
+    return;
+  }
+  try {
+    const userId = req.user!.userId;
+    await db.update(userIntegrationsTable)
+      .set({ isConnected: false, accessToken: null, refreshToken: null, updatedAt: new Date() })
+      .where(and(eq(userIntegrationsTable.userId, userId), eq(userIntegrationsTable.provider, provider)));
+    res.json({ provider, isConnected: false });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
   }

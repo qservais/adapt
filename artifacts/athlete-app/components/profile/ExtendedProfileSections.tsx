@@ -3,8 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -18,6 +16,13 @@ import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
 import { usePreferences } from "@/context/PreferencesContext";
+
+type IntegrationStatus = {
+  provider: string;
+  isConnected: boolean;
+  connectedAt: string | null;
+  lastSyncAt: string | null;
+};
 
 type ExtendedProfileData = {
   completionPercent: number;
@@ -43,6 +48,7 @@ type ExtendedProfileData = {
     shareHeartRate?: boolean;
     shareBodyFat?: boolean;
   };
+  integrations: IntegrationStatus[];
 };
 
 const DAYS = [
@@ -102,10 +108,10 @@ const DURATION_OPTIONS = [30, 45, 60, 75, 90, 105, 120];
 
 const HEALTH_APPS = [
   { key: "apple_health", label: "Apple Santé", icon: "❤️", color: "#FF2D55" },
+  { key: "google_fit", label: "Google Fit", icon: "🏃", color: "#4285F4" },
   { key: "garmin", label: "Garmin Connect", icon: "⌚", color: "#009CDE" },
-  { key: "strava", label: "Strava", icon: "🏃", color: "#FC4C02" },
+  { key: "polar", label: "Polar Flow", icon: "💓", color: "#D52B1E" },
   { key: "whoop", label: "Whoop", icon: "💪", color: "#00D1CA" },
-  { key: "fitbit", label: "Fitbit", icon: "📊", color: "#00B0B9" },
 ];
 
 const NOTIF_TYPES = [
@@ -278,8 +284,8 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
 
   const [privacy, setPrivacy] = useState<ExtendedProfileData["privacySettings"]>({});
 
-  const [healthModalVisible, setHealthModalVisible] = useState(false);
-  const [selectedHealthApp, setSelectedHealthApp] = useState<string>("");
+  const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -302,6 +308,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       setMorningNotifHour(data.morningNotifHour ?? 7);
       setNotificationPrefs(data.notificationPrefs ?? {});
       setPrivacy(data.privacySettings ?? {});
+      setIntegrations(data.integrations ?? []);
       onCompletionChange?.(data.completionPercent);
     } catch {
     } finally {
@@ -367,6 +374,22 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
   const handleSaveExercises = async () => {
     await saveSection("exercises", { avoidedExercises, favoriteExercises });
     setEditingExercises(false);
+  };
+
+  const handleToggleIntegration = async (provider: string, currentlyConnected: boolean) => {
+    setConnectingProvider(provider);
+    try {
+      if (currentlyConnected) {
+        await customFetch(`/api/users/me/integrations/${provider}`, { method: "DELETE" });
+        setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: false, connectedAt: null } : i));
+      } else {
+        await customFetch(`/api/users/me/integrations/${provider}/connect`, { method: "POST", body: "{}" });
+        setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, isConnected: true, connectedAt: new Date().toISOString() } : i));
+      }
+    } catch {
+    } finally {
+      setConnectingProvider(null);
+    }
   };
 
   const addAvoidedExercise = () => {
@@ -862,25 +885,46 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           editing={false}
           onToggleEdit={() => {}}
         />
-        {HEALTH_APPS.map(app => (
-          <TouchableOpacity
-            key={app.key}
-            style={cStyles.healthAppRow}
-            activeOpacity={0.75}
-            onPress={() => {
-              setSelectedHealthApp(app.label);
-              setHealthModalVisible(true);
-            }}
-          >
-            <View style={[cStyles.healthAppIcon, { backgroundColor: `${app.color}22` }]}>
-              <Text style={{ fontSize: 18 }}>{app.icon}</Text>
+        <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 8 }]}>
+          Synchronise tes données de santé avec ADAPT.
+        </Text>
+        {HEALTH_APPS.map(app => {
+          const integrationStatus = integrations.find(i => i.provider === app.key);
+          const isConnected = integrationStatus?.isConnected ?? false;
+          const isLoading = connectingProvider === app.key;
+          return (
+            <View key={app.key} style={cStyles.healthAppRow}>
+              <View style={[cStyles.healthAppIcon, { backgroundColor: `${app.color}22` }]}>
+                <Text style={{ fontSize: 18 }}>{app.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[cStyles.healthAppName, { fontFamily: FONTS.bodyMedium }]}>{app.label}</Text>
+                {isConnected && integrationStatus?.connectedAt && (
+                  <Text style={{ fontSize: 11, color: COLORS.textMuted, fontFamily: FONTS.body }}>
+                    Connecté le {new Date(integrationStatus.connectedAt).toLocaleDateString("fr-FR")}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                style={[
+                  cStyles.integrationBtn,
+                  { backgroundColor: isConnected ? "transparent" : COLORS.violet, borderColor: isConnected ? COLORS.border : "transparent" },
+                ]}
+                activeOpacity={0.75}
+                disabled={isLoading}
+                onPress={() => handleToggleIntegration(app.key, isConnected)}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={isConnected ? COLORS.textMuted : "#fff"} />
+                ) : (
+                  <Text style={[cStyles.integrationBtnText, { fontFamily: FONTS.bodyMedium, color: isConnected ? COLORS.textMuted : "#fff" }]}>
+                    {isConnected ? "Déconnecter" : "Connecter"}
+                  </Text>
+                )}
+              </TouchableOpacity>
             </View>
-            <Text style={[cStyles.healthAppName, { fontFamily: FONTS.bodyMedium }]}>{app.label}</Text>
-            <View style={cStyles.comingSoonBadge}>
-              <Text style={[cStyles.comingSoonText, { fontFamily: FONTS.mono }]}>BIENTÔT</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+          );
+        })}
       </View>
 
       {/* CONFIDENTIALITÉ */}
@@ -927,29 +971,6 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         ))}
       </View>
 
-      <Modal
-        visible={healthModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setHealthModalVisible(false)}
-      >
-        <Pressable style={cStyles.modalOverlay} onPress={() => setHealthModalVisible(false)}>
-          <View style={cStyles.modalBox}>
-            <Text style={{ fontSize: 40, marginBottom: 12 }}>🔮</Text>
-            <Text style={[cStyles.modalTitle, { fontFamily: FONTS.mono }]}>BIENTÔT DISPONIBLE</Text>
-            <Text style={[cStyles.modalBody, { fontFamily: FONTS.body }]}>
-              La connexion avec {selectedHealthApp} sera disponible dans une prochaine mise à jour d'ADAPT.
-            </Text>
-            <TouchableOpacity
-              onPress={() => setHealthModalVisible(false)}
-              style={cStyles.modalBtn}
-              activeOpacity={0.8}
-            >
-              <Text style={[cStyles.modalBtnText, { fontFamily: FONTS.bodyMedium }]}>Compris</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
     </>
   );
 }
@@ -1148,6 +1169,16 @@ const cStyles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   comingSoonText: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 1 },
+  integrationBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 90,
+  },
+  integrationBtnText: { fontSize: 12, letterSpacing: 0.3 },
   privacyDesc: { fontSize: 12, color: COLORS.textMuted, lineHeight: 17, marginBottom: 4 },
   privacyRow: {
     flexDirection: "row",

@@ -8,6 +8,28 @@ import { z } from "zod";
 
 const router = Router();
 
+type PrivacySettings = {
+  shareWeight?: boolean;
+  shareSleep?: boolean;
+  shareHeartRate?: boolean;
+  shareBodyFat?: boolean;
+};
+
+function parsePrivacy(raw: unknown): PrivacySettings {
+  if (!raw || typeof raw !== "object") return {};
+  return raw as PrivacySettings;
+}
+
+function applyCheckinPrivacy<T extends { sleep: unknown }>(
+  checkin: T,
+  privacy: PrivacySettings
+): T {
+  return {
+    ...checkin,
+    sleep: privacy.shareSleep !== false ? checkin.sleep : null,
+  };
+}
+
 function resolveAvatarUrl(user: { id: string; avatarUrl: string | null }): string | null {
   if (!user.avatarUrl) return null;
   if (user.avatarUrl.startsWith("http")) return user.avatarUrl;
@@ -364,6 +386,20 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         .orderBy(desc(sessionLogsTable.createdAt))
         .limit(1);
 
+      const athletePrivacy = parsePrivacy(athlete.privacySettings);
+      const rawCheckinFields = todayCheckin ? {
+        id: todayCheckin.id,
+        date: todayCheckin.date,
+        adaptScore: todayCheckin.adaptScore,
+        sessionMode: todayCheckin.sessionMode,
+        hasPain: todayCheckin.hasPain,
+        sleep: todayCheckin.sleep,
+        energy: todayCheckin.energy,
+        stress: todayCheckin.stress,
+        soreness: todayCheckin.soreness,
+        motivation: todayCheckin.motivation,
+        createdAt: todayCheckin.createdAt,
+      } : null;
       return {
         id: athlete.id,
         firstName: athlete.firstName,
@@ -372,19 +408,7 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         avatarUrl: resolveAvatarUrl(athlete),
         fitnessLevel: athlete.fitnessLevel,
         primaryGoal: athlete.primaryGoal,
-        todayCheckin: todayCheckin ? {
-          id: todayCheckin.id,
-          date: todayCheckin.date,
-          adaptScore: todayCheckin.adaptScore,
-          sessionMode: todayCheckin.sessionMode,
-          hasPain: todayCheckin.hasPain,
-          sleep: todayCheckin.sleep,
-          energy: todayCheckin.energy,
-          stress: todayCheckin.stress,
-          soreness: todayCheckin.soreness,
-          motivation: todayCheckin.motivation,
-          createdAt: todayCheckin.createdAt,
-        } : null,
+        todayCheckin: rawCheckinFields ? applyCheckinPrivacy(rawCheckinFields, athletePrivacy) : null,
         activeAlerts: activeAlerts.length,
         lastSessionDate: lastSession?.createdAt?.toISOString() ?? null,
       };
@@ -479,12 +503,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       upcomingSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
     }
 
-    const privacy = (athlete.privacySettings as { shareWeight?: boolean; shareSleep?: boolean; shareHeartRate?: boolean; shareBodyFat?: boolean } | null) ?? {};
-
-    const filterCheckin = (c: typeof recentCheckins[0]) => ({
-      ...c,
-      sleep: privacy.shareSleep !== false ? c.sleep : null,
-    });
+    const privacy = parsePrivacy(athlete.privacySettings);
 
     res.json({
       id: athlete.id,
@@ -511,8 +530,8 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
         injuries: athlete.injuries ?? null,
         units: athlete.units ?? "metric",
       },
-      todayCheckin: todayCheckin ? filterCheckin(todayCheckin) : null,
-      recentCheckins: recentCheckins.map(filterCheckin),
+      todayCheckin: todayCheckin ? applyCheckinPrivacy(todayCheckin, privacy) : null,
+      recentCheckins: recentCheckins.map(c => applyCheckinPrivacy(c, privacy)),
       recentSessions,
       upcomingSessions,
       activeAlerts: activeAlerts.map(a => ({
@@ -601,7 +620,7 @@ router.get("/coach/clients/:clientId/checkins", authenticate, requireRole("coach
   try {
     const clientId = String(req.params["clientId"]);
 
-    const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
+    const [athlete] = await db.select({ id: usersTable.id, privacySettings: usersTable.privacySettings }).from(usersTable)
       .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
 
     if (!athlete) {
@@ -609,12 +628,13 @@ router.get("/coach/clients/:clientId/checkins", authenticate, requireRole("coach
       return;
     }
 
+    const privacy = parsePrivacy(athlete.privacySettings);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
     const checkins = await db.select().from(checkinsTable)
       .where(and(eq(checkinsTable.athleteId, clientId), gte(checkinsTable.date, thirtyDaysAgo)))
       .orderBy(desc(checkinsTable.date));
 
-    res.json(checkins);
+    res.json(checkins.map(c => applyCheckinPrivacy(c, privacy)));
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
