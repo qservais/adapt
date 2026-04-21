@@ -97,6 +97,21 @@ interface SessionDetail {
   exercises: SessionDetailExercise[];
 }
 
+interface TrainingContext {
+  availableDays: string[];
+  trainingLocations: string[];
+  equipment: string[];
+  sessionDurationMin: number | null;
+  sessionDurationMax: number | null;
+  injuries: string | null;
+  units: string;
+}
+
+interface ExtendedClientDetail {
+  secondaryGoal: string | null;
+  trainingContext: TrainingContext;
+}
+
 const LEVEL_LABELS: Record<string, string> = {
   beginner: "Débutant",
   intermediate: "Intermédiaire",
@@ -129,6 +144,7 @@ export default function ClientDetail() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { data: client, isLoading, refetch } = useGetClientDetail(id, { query: { queryKey: [`/api/coach/clients/${id}`], refetchInterval: 30000 }});
+  const extClient = client as (typeof client & ExtendedClientDetail) | undefined;
   const { data: allPrograms } = useGetPrograms({ query: { queryKey: ["/api/programs"] } });
 
   const [activeTab, setActiveTab] = useState<Tab>("apercu");
@@ -1379,18 +1395,18 @@ export default function ClientDetail() {
                       <span className="text-white font-medium">{GOAL_LABELS[client.primaryGoal] ?? client.primaryGoal}</span>
                     </div>
                   )}
-                  {(client as any).secondaryGoal && (
+                  {extClient?.secondaryGoal && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
                       <span className="text-muted-foreground">Objectif secondaire</span>
-                      <span className="text-white font-medium capitalize">{(client as any).secondaryGoal.replace(/_/g, " ")}</span>
+                      <span className="text-white font-medium capitalize">{extClient.secondaryGoal.replace(/_/g, " ")}</span>
                     </div>
                   )}
-                  {((client as any).trainingContext?.availableDays?.length > 0) && (
+                  {(extClient?.trainingContext?.availableDays?.length ?? 0) > 0 && (
                     <div className="py-1.5 border-b border-border/60">
                       <div className="text-muted-foreground mb-1.5">Jours disponibles</div>
                       <div className="flex flex-wrap gap-1">
                         {(["lun","mar","mer","jeu","ven","sam","dim"] as const).map(d => {
-                          const isActive = (client as any).trainingContext.availableDays.includes(d);
+                          const isActive = extClient!.trainingContext.availableDays.includes(d);
                           return (
                             <span key={d} className={cn(
                               "px-2 py-0.5 rounded text-[11px] font-mono uppercase",
@@ -1401,11 +1417,11 @@ export default function ClientDetail() {
                       </div>
                     </div>
                   )}
-                  {((client as any).trainingContext?.trainingLocations?.length > 0) && (
+                  {(extClient?.trainingContext?.trainingLocations?.length ?? 0) > 0 && (
                     <div className="py-1.5 border-b border-border/60">
                       <div className="text-muted-foreground mb-1.5">Lieu</div>
                       <div className="flex flex-wrap gap-1">
-                        {((client as any).trainingContext.trainingLocations as string[]).map((loc: string) => {
+                        {extClient!.trainingContext.trainingLocations.map((loc) => {
                           const label = loc === "gym" ? "Salle" : loc === "home" ? "Maison" : loc === "outdoor" ? "Extérieur" : loc;
                           return (
                             <span key={loc} className="px-2 py-0.5 rounded text-[11px] font-medium bg-accent/10 text-accent border border-accent/20">{label}</span>
@@ -1414,11 +1430,11 @@ export default function ClientDetail() {
                       </div>
                     </div>
                   )}
-                  {((client as any).trainingContext?.equipment?.length > 0) && (
+                  {(extClient?.trainingContext?.equipment?.length ?? 0) > 0 && (
                     <div className="py-1.5 border-b border-border/60">
                       <div className="text-muted-foreground mb-1.5">Équipement</div>
                       <div className="flex flex-wrap gap-1">
-                        {((client as any).trainingContext.equipment as string[]).map((eq: string) => {
+                        {extClient!.trainingContext.equipment.map((eq) => {
                           const label = ({ barbell:"Barre", dumbbell:"Haltères", kettlebell:"Kettlebell", machine:"Machines", cable:"Poulie", bodyweight:"Poids du corps", bands:"Élastiques", trx:"TRX" } as Record<string,string>)[eq] ?? eq;
                           return (
                             <span key={eq} className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/5 text-muted-foreground border border-border/40">{label}</span>
@@ -1427,27 +1443,27 @@ export default function ClientDetail() {
                       </div>
                     </div>
                   )}
-                  {((client as any).trainingContext?.sessionDurationMin || (client as any).trainingContext?.sessionDurationMax) && (
+                  {(extClient?.trainingContext?.sessionDurationMin || extClient?.trainingContext?.sessionDurationMax) && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
                       <span className="text-muted-foreground">Durée séance</span>
                       <span className="text-white font-medium">
-                        {(client as any).trainingContext.sessionDurationMin && (client as any).trainingContext.sessionDurationMax
-                          ? `${(client as any).trainingContext.sessionDurationMin}–${(client as any).trainingContext.sessionDurationMax} min`
-                          : (client as any).trainingContext.sessionDurationMin
-                          ? `≥ ${(client as any).trainingContext.sessionDurationMin} min`
-                          : `≤ ${(client as any).trainingContext.sessionDurationMax} min`}
+                        {extClient!.trainingContext.sessionDurationMin && extClient!.trainingContext.sessionDurationMax
+                          ? `${extClient!.trainingContext.sessionDurationMin}–${extClient!.trainingContext.sessionDurationMax} min`
+                          : extClient!.trainingContext.sessionDurationMin
+                          ? `≥ ${extClient!.trainingContext.sessionDurationMin} min`
+                          : `≤ ${extClient!.trainingContext.sessionDurationMax} min`}
                       </span>
                     </div>
                   )}
-                  {(client as any).trainingContext?.injuries && (
+                  {extClient?.trainingContext?.injuries && (
                     <div className="py-1.5">
                       <div className="text-muted-foreground mb-1">Blessures / Restrictions</div>
                       <p className="text-white/80 text-xs italic leading-relaxed">
-                        {(client as any).trainingContext.injuries}
+                        {extClient.trainingContext.injuries}
                       </p>
                     </div>
                   )}
-                  {!client.fitnessLevel && !client.primaryGoal && !((client as any).trainingContext?.availableDays?.length) && (
+                  {!client?.fitnessLevel && !client?.primaryGoal && !(extClient?.trainingContext?.availableDays?.length) && (
                     <p className="text-muted-foreground text-xs italic text-center py-2">
                       L'athlète n'a pas encore renseigné son contexte d'entraînement.
                     </p>

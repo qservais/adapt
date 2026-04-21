@@ -347,11 +347,16 @@ function extendedProfile(user: typeof usersTable.$inferSelect) {
     theme: user.theme ?? "dark",
     units: user.units ?? "metric",
     privacySettings: (user.privacySettings as { shareWeight?: boolean; shareSleep?: boolean; shareHeartRate?: boolean; shareBodyFat?: boolean } | null) ?? {},
+    morningNotifHour: user.morningNotifHour ?? 7,
+    notificationPrefs: (user.notificationPrefs as Record<string, boolean> | null) ?? {},
     completionPercent: completionPercent(user),
   };
 }
 
 const extendedProfileSchema = z.object({
+  primaryGoal: z.enum(["strength", "muscle", "fat_loss", "performance", "health", "aesthetic", "fitness"]).optional(),
+  fitnessLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
+  injuries: z.string().max(2000).optional(),
   secondaryGoal: z.string().max(200).nullable().optional(),
   sessionDurationMin: z.number().int().min(15).max(240).nullable().optional(),
   sessionDurationMax: z.number().int().min(15).max(240).nullable().optional(),
@@ -369,6 +374,8 @@ const extendedProfileSchema = z.object({
     shareHeartRate: z.boolean().optional(),
     shareBodyFat: z.boolean().optional(),
   }).optional(),
+  morningNotifHour: z.number().int().min(5).max(23).optional(),
+  notificationPrefs: z.record(z.boolean()).optional(),
 });
 
 router.get("/users/me/profile", authenticate, async (req, res) => {
@@ -393,6 +400,9 @@ router.put("/users/me/profile", authenticate, async (req, res) => {
   try {
     const data = parsed.data;
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (data.primaryGoal !== undefined) updateData["primaryGoal"] = data.primaryGoal;
+    if (data.fitnessLevel !== undefined) updateData["fitnessLevel"] = data.fitnessLevel;
+    if (data.injuries !== undefined) updateData["injuries"] = data.injuries;
     if (data.secondaryGoal !== undefined) updateData["secondaryGoal"] = data.secondaryGoal;
     if (data.sessionDurationMin !== undefined) updateData["sessionDurationMin"] = data.sessionDurationMin;
     if (data.sessionDurationMax !== undefined) updateData["sessionDurationMax"] = data.sessionDurationMax;
@@ -405,6 +415,8 @@ router.put("/users/me/profile", authenticate, async (req, res) => {
     if (data.theme !== undefined) updateData["theme"] = data.theme;
     if (data.units !== undefined) updateData["units"] = data.units;
     if (data.privacySettings !== undefined) updateData["privacySettings"] = data.privacySettings;
+    if (data.morningNotifHour !== undefined) updateData["morningNotifHour"] = data.morningNotifHour;
+    if (data.notificationPrefs !== undefined) updateData["notificationPrefs"] = data.notificationPrefs;
     const [user] = await db.update(usersTable)
       .set(updateData as Partial<typeof usersTable.$inferInsert>)
       .where(eq(usersTable.id, req.user!.userId))

@@ -481,6 +481,11 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
 
     const privacy = (athlete.privacySettings as { shareWeight?: boolean; shareSleep?: boolean; shareHeartRate?: boolean; shareBodyFat?: boolean } | null) ?? {};
 
+    const filterCheckin = (c: typeof recentCheckins[0]) => ({
+      ...c,
+      sleep: privacy.shareSleep !== false ? c.sleep : null,
+    });
+
     res.json({
       id: athlete.id,
       firstName: athlete.firstName,
@@ -506,8 +511,8 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
         injuries: athlete.injuries ?? null,
         units: athlete.units ?? "metric",
       },
-      todayCheckin: todayCheckin ?? null,
-      recentCheckins,
+      todayCheckin: todayCheckin ? filterCheckin(todayCheckin) : null,
+      recentCheckins: recentCheckins.map(filterCheckin),
       recentSessions,
       upcomingSessions,
       activeAlerts: activeAlerts.map(a => ({

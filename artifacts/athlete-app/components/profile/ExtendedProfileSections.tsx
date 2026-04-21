@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,18 +17,26 @@ import { Feather } from "@expo/vector-icons";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
+import { usePreferences } from "@/context/PreferencesContext";
 
 type ExtendedProfileData = {
   completionPercent: number;
+  primaryGoal: string | null;
+  fitnessLevel: string | null;
+  injuries: string | null;
   secondaryGoal: string | null;
   sessionDurationMin: number | null;
   sessionDurationMax: number | null;
   availableDays: string[];
   trainingLocations: string[];
   equipment: string[];
+  avoidedExercises: string[];
+  favoriteExercises: string[];
   language: string;
   theme: string;
   units: string;
+  morningNotifHour: number;
+  notificationPrefs: Record<string, boolean>;
   privacySettings: {
     shareWeight?: boolean;
     shareSleep?: boolean;
@@ -63,6 +72,22 @@ const EQUIPMENT_OPTIONS = [
   { key: "trx", label: "TRX" },
 ];
 
+const PRIMARY_GOALS = [
+  { key: "strength", label: "Force" },
+  { key: "muscle", label: "Prise de masse" },
+  { key: "fat_loss", label: "Perte de poids" },
+  { key: "performance", label: "Performance" },
+  { key: "health", label: "Santé" },
+  { key: "aesthetic", label: "Esthétique" },
+  { key: "fitness", label: "Forme générale" },
+];
+
+const FITNESS_LEVELS = [
+  { key: "beginner", label: "Débutant" },
+  { key: "intermediate", label: "Intermédiaire" },
+  { key: "advanced", label: "Avancé" },
+];
+
 const SECONDARY_GOALS = [
   { key: "mobility", label: "Mobilité" },
   { key: "endurance", label: "Endurance" },
@@ -82,6 +107,16 @@ const HEALTH_APPS = [
   { key: "whoop", label: "Whoop", icon: "💪", color: "#00D1CA" },
   { key: "fitbit", label: "Fitbit", icon: "📊", color: "#00B0B9" },
 ];
+
+const NOTIF_TYPES = [
+  { key: "check_in_reminder", label: "Rappel check-in" },
+  { key: "session_reminder", label: "Rappel séance" },
+  { key: "coach_message", label: "Message coach" },
+  { key: "achievement", label: "Succès débloqué" },
+  { key: "weekly_recap", label: "Récapitulatif hebdo" },
+];
+
+const NOTIF_HOURS = [5, 6, 7, 8, 9, 10, 11, 12];
 
 function CompletionBar({ percent }: { percent: number }) {
   const animWidth = useRef(new Animated.Value(0)).current;
@@ -204,6 +239,8 @@ function ToggleChip({
 }
 
 export default function ExtendedProfileSections({ onCompletionChange }: { onCompletionChange?: (pct: number) => void }) {
+  const { setLanguage: ctxSetLanguage, setTheme: ctxSetTheme, setUnits: ctxSetUnits } = usePreferences();
+
   const [profile, setProfile] = useState<ExtendedProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -211,6 +248,8 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
   const [editingGoals, setEditingGoals] = useState(false);
   const [editingPrefs, setEditingPrefs] = useState(false);
   const [editingPrivacy, setEditingPrivacy] = useState(false);
+  const [editingNotifs, setEditingNotifs] = useState(false);
+  const [editingExercises, setEditingExercises] = useState(false);
 
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
@@ -219,12 +258,23 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
   const [equipment, setEquipment] = useState<string[]>([]);
   const [sessionDurationMin, setSessionDurationMin] = useState<number | null>(null);
   const [sessionDurationMax, setSessionDurationMax] = useState<number | null>(null);
+  const [injuries, setInjuries] = useState<string>("");
 
+  const [primaryGoal, setPrimaryGoal] = useState<string | null>(null);
+  const [fitnessLevel, setFitnessLevel] = useState<string | null>(null);
   const [secondaryGoal, setSecondaryGoal] = useState<string | null>(null);
+
+  const [avoidedExercises, setAvoidedExercises] = useState<string[]>([]);
+  const [favoriteExercises, setFavoriteExercises] = useState<string[]>([]);
+  const [avoidedInput, setAvoidedInput] = useState<string>("");
+  const [favoriteInput, setFavoriteInput] = useState<string>("");
 
   const [units, setUnits] = useState<string>("metric");
   const [language, setLanguage] = useState<string>("fr");
   const [theme, setTheme] = useState<string>("dark");
+
+  const [morningNotifHour, setMorningNotifHour] = useState<number>(7);
+  const [notificationPrefs, setNotificationPrefs] = useState<Record<string, boolean>>({});
 
   const [privacy, setPrivacy] = useState<ExtendedProfileData["privacySettings"]>({});
 
@@ -240,10 +290,17 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       setEquipment(data.equipment ?? []);
       setSessionDurationMin(data.sessionDurationMin);
       setSessionDurationMax(data.sessionDurationMax);
+      setInjuries(data.injuries ?? "");
+      setPrimaryGoal(data.primaryGoal ?? null);
+      setFitnessLevel(data.fitnessLevel ?? null);
       setSecondaryGoal(data.secondaryGoal);
+      setAvoidedExercises(data.avoidedExercises ?? []);
+      setFavoriteExercises(data.favoriteExercises ?? []);
       setUnits(data.units ?? "metric");
       setLanguage(data.language ?? "fr");
       setTheme(data.theme ?? "dark");
+      setMorningNotifHour(data.morningNotifHour ?? 7);
+      setNotificationPrefs(data.notificationPrefs ?? {});
       setPrivacy(data.privacySettings ?? {});
       onCompletionChange?.(data.completionPercent);
     } catch {
@@ -256,7 +313,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
     fetchProfile();
   }, [fetchProfile]));
 
-  const saveSection = async (section: string, body: Partial<ExtendedProfileData>) => {
+  const saveSection = async (section: string, body: Record<string, unknown>) => {
     setSaving(s => ({ ...s, [section]: true }));
     try {
       const data = await customFetch<ExtendedProfileData>("/api/users/me/profile", {
@@ -279,17 +336,21 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       equipment,
       sessionDurationMin,
       sessionDurationMax,
+      injuries,
     });
     setEditingContext(false);
   };
 
   const handleSaveGoals = async () => {
-    await saveSection("goals", { secondaryGoal });
+    await saveSection("goals", { primaryGoal, fitnessLevel, secondaryGoal });
     setEditingGoals(false);
   };
 
   const handleSavePrefs = async () => {
     await saveSection("prefs", { units, language, theme });
+    ctxSetUnits(units as "metric" | "imperial");
+    ctxSetLanguage(language as "fr" | "en");
+    ctxSetTheme(theme as "dark" | "light" | "system");
     setEditingPrefs(false);
   };
 
@@ -298,22 +359,40 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
     setEditingPrivacy(false);
   };
 
+  const handleSaveNotifs = async () => {
+    await saveSection("notifs", { morningNotifHour, notificationPrefs });
+    setEditingNotifs(false);
+  };
+
+  const handleSaveExercises = async () => {
+    await saveSection("exercises", { avoidedExercises, favoriteExercises });
+    setEditingExercises(false);
+  };
+
+  const addAvoidedExercise = () => {
+    const trimmed = avoidedInput.trim();
+    if (trimmed && !avoidedExercises.includes(trimmed)) {
+      setAvoidedExercises(prev => [...prev, trimmed]);
+    }
+    setAvoidedInput("");
+  };
+
+  const addFavoriteExercise = () => {
+    const trimmed = favoriteInput.trim();
+    if (trimmed && !favoriteExercises.includes(trimmed)) {
+      setFavoriteExercises(prev => [...prev, trimmed]);
+    }
+    setFavoriteInput("");
+  };
+
   const toggleDay = (key: string) => {
-    setAvailableDays(prev =>
-      prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]
-    );
+    setAvailableDays(prev => prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]);
   };
-
   const toggleLocation = (key: string) => {
-    setTrainingLocations(prev =>
-      prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]
-    );
+    setTrainingLocations(prev => prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]);
   };
-
   const toggleEquipment = (key: string) => {
-    setEquipment(prev =>
-      prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]
-    );
+    setEquipment(prev => prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]);
   };
 
   if (loading) {
@@ -328,18 +407,13 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
     <>
       {profile && <CompletionBar percent={profile.completionPercent} />}
 
+      {/* CONTEXTE D'ENTRAÎNEMENT */}
       <View style={cStyles.section}>
         <SectionHeader
           title="CONTEXTE D'ENTRAÎNEMENT"
           icon="activity"
           editing={editingContext}
-          onToggleEdit={() => {
-            if (editingContext) {
-              handleSaveContext();
-            } else {
-              setEditingContext(true);
-            }
-          }}
+          onToggleEdit={() => { if (editingContext) { handleSaveContext(); } else { setEditingContext(true); } }}
           saving={saving["context"]}
         />
 
@@ -452,57 +526,187 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               : "Non renseigné"}
           </Text>
         )}
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Blessures / Restrictions permanentes</Text>
+        {editingContext ? (
+          <TextInput
+            value={injuries}
+            onChangeText={setInjuries}
+            placeholder="Ex: douleur genou gauche, épaule fragile..."
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            numberOfLines={3}
+            style={[cStyles.textArea, { fontFamily: FONTS.body }]}
+          />
+        ) : (
+          <Text style={[cStyles.valueText, { fontFamily: FONTS.body, fontStyle: injuries ? "normal" : "italic", color: injuries ? COLORS.textPrimary : COLORS.textMuted }]}>
+            {injuries || "Aucune restriction renseignée"}
+          </Text>
+        )}
       </View>
 
+      {/* OBJECTIFS */}
       <View style={cStyles.section}>
         <SectionHeader
           title="OBJECTIFS"
           icon="target"
           editing={editingGoals}
-          onToggleEdit={() => {
-            if (editingGoals) {
-              handleSaveGoals();
-            } else {
-              setEditingGoals(true);
-            }
-          }}
+          onToggleEdit={() => { if (editingGoals) { handleSaveGoals(); } else { setEditingGoals(true); } }}
           saving={saving["goals"]}
         />
-        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Objectif secondaire</Text>
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Objectif principal</Text>
+        <View style={cStyles.chipRow}>
+          {PRIMARY_GOALS.map(g => (
+            <ToggleChip
+              key={g.key}
+              label={g.label}
+              selected={primaryGoal === g.key}
+              onPress={() => { if (!editingGoals) return; setPrimaryGoal(prev => prev === g.key ? null : g.key); }}
+              color={COLORS.cyan}
+              small
+            />
+          ))}
+        </View>
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Niveau</Text>
+        <View style={cStyles.chipRow}>
+          {FITNESS_LEVELS.map(l => (
+            <ToggleChip
+              key={l.key}
+              label={l.label}
+              selected={fitnessLevel === l.key}
+              onPress={() => { if (!editingGoals) return; setFitnessLevel(prev => prev === l.key ? null : l.key); }}
+              color={COLORS.amber}
+              small
+            />
+          ))}
+        </View>
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Objectif secondaire</Text>
         <View style={cStyles.chipRow}>
           {SECONDARY_GOALS.map(g => (
             <ToggleChip
               key={g.key}
               label={g.label}
               selected={secondaryGoal === g.key}
-              onPress={() => {
-                if (!editingGoals) return;
-                setSecondaryGoal(prev => prev === g.key ? null : g.key);
-              }}
+              onPress={() => { if (!editingGoals) return; setSecondaryGoal(prev => prev === g.key ? null : g.key); }}
               color={COLORS.violet}
               small
             />
           ))}
         </View>
-        {!editingGoals && !secondaryGoal && (
+        {!editingGoals && !primaryGoal && !secondaryGoal && !fitnessLevel && (
           <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>
             Appuie sur l'icône crayon pour modifier
           </Text>
         )}
       </View>
 
+      {/* EXERCICES */}
+      <View style={cStyles.section}>
+        <SectionHeader
+          title="EXERCICES"
+          icon="list"
+          editing={editingExercises}
+          onToggleEdit={() => { if (editingExercises) { handleSaveExercises(); } else { setEditingExercises(true); } }}
+          saving={saving["exercises"]}
+        />
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Exercices à éviter</Text>
+        {editingExercises ? (
+          <View>
+            <View style={cStyles.inputRow}>
+              <TextInput
+                value={avoidedInput}
+                onChangeText={setAvoidedInput}
+                placeholder="Ajouter un exercice..."
+                placeholderTextColor={COLORS.textMuted}
+                style={[cStyles.inlineInput, { fontFamily: FONTS.body }]}
+                onSubmitEditing={addAvoidedExercise}
+                returnKeyType="done"
+              />
+              <TouchableOpacity onPress={addAvoidedExercise} style={cStyles.addBtn}>
+                <Feather name="plus" size={16} color={COLORS.cyan} />
+              </TouchableOpacity>
+            </View>
+            <View style={[cStyles.chipRow, { marginTop: 8 }]}>
+              {avoidedExercises.map(ex => (
+                <TouchableOpacity
+                  key={ex}
+                  onPress={() => setAvoidedExercises(prev => prev.filter(e => e !== ex))}
+                  style={[cStyles.chip, cStyles.chipSmall, { borderColor: COLORS.red, backgroundColor: `${COLORS.red}15`, flexDirection: "row", alignItems: "center", gap: 4 }]}
+                >
+                  <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.red }]}>{ex}</Text>
+                  <Feather name="x" size={10} color={COLORS.red} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View style={cStyles.chipRow}>
+            {avoidedExercises.length > 0
+              ? avoidedExercises.map(ex => (
+                  <View key={ex} style={[cStyles.chip, cStyles.chipSmall, { borderColor: COLORS.red, backgroundColor: `${COLORS.red}10` }]}>
+                    <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.red }]}>{ex}</Text>
+                  </View>
+                ))
+              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>Aucun</Text>
+            }
+          </View>
+        )}
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Exercices préférés</Text>
+        {editingExercises ? (
+          <View>
+            <View style={cStyles.inputRow}>
+              <TextInput
+                value={favoriteInput}
+                onChangeText={setFavoriteInput}
+                placeholder="Ajouter un exercice..."
+                placeholderTextColor={COLORS.textMuted}
+                style={[cStyles.inlineInput, { fontFamily: FONTS.body }]}
+                onSubmitEditing={addFavoriteExercise}
+                returnKeyType="done"
+              />
+              <TouchableOpacity onPress={addFavoriteExercise} style={cStyles.addBtn}>
+                <Feather name="plus" size={16} color={COLORS.cyan} />
+              </TouchableOpacity>
+            </View>
+            <View style={[cStyles.chipRow, { marginTop: 8 }]}>
+              {favoriteExercises.map(ex => (
+                <TouchableOpacity
+                  key={ex}
+                  onPress={() => setFavoriteExercises(prev => prev.filter(e => e !== ex))}
+                  style={[cStyles.chip, cStyles.chipSmall, { borderColor: COLORS.cyan, backgroundColor: COLORS.cyanDim, flexDirection: "row", alignItems: "center", gap: 4 }]}
+                >
+                  <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.cyan }]}>{ex}</Text>
+                  <Feather name="x" size={10} color={COLORS.cyan} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View style={cStyles.chipRow}>
+            {favoriteExercises.length > 0
+              ? favoriteExercises.map(ex => (
+                  <View key={ex} style={[cStyles.chip, cStyles.chipSmall, { borderColor: COLORS.cyan, backgroundColor: COLORS.cyanDim }]}>
+                    <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.cyan }]}>{ex}</Text>
+                  </View>
+                ))
+              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>Aucun</Text>
+            }
+          </View>
+        )}
+      </View>
+
+      {/* PRÉFÉRENCES */}
       <View style={cStyles.section}>
         <SectionHeader
           title="PRÉFÉRENCES"
           icon="sliders"
           editing={editingPrefs}
-          onToggleEdit={() => {
-            if (editingPrefs) {
-              handleSavePrefs();
-            } else {
-              setEditingPrefs(true);
-            }
-          }}
+          onToggleEdit={() => { if (editingPrefs) { handleSavePrefs(); } else { setEditingPrefs(true); } }}
           saving={saving["prefs"]}
         />
 
@@ -571,24 +775,86 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           </View>
           {editingPrefs ? (
             <View style={cStyles.segRow}>
-              <View style={[cStyles.segBtn, cStyles.segBtnActive, { opacity: 1 }]}>
-                <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: COLORS.cyan }]}>Sombre</Text>
-              </View>
-              <View style={[cStyles.segBtn, { opacity: 0.5 }]}>
-                <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>Clair</Text>
-              </View>
+              {([
+                { key: "dark", label: "Sombre" },
+                { key: "light", label: "Clair" },
+                { key: "system", label: "Auto" },
+              ] as const).map(t => (
+                <TouchableOpacity
+                  key={t.key}
+                  onPress={() => setTheme(t.key)}
+                  style={[cStyles.segBtn, theme === t.key && cStyles.segBtnActive]}
+                >
+                  <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: theme === t.key ? COLORS.cyan : COLORS.textSecondary }]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           ) : (
-            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>Sombre</Text>
+            <Text style={[cStyles.prefItemValue, { fontFamily: FONTS.body }]}>
+              {theme === "light" ? "Clair" : theme === "system" ? "Automatique" : "Sombre"}
+            </Text>
           )}
         </View>
-        {editingPrefs && (
-          <Text style={[cStyles.comingSoon, { fontFamily: FONTS.body }]}>
-            ✦ Mode clair et automatique bientôt disponibles
-          </Text>
-        )}
       </View>
 
+      {/* NOTIFICATIONS */}
+      <View style={cStyles.section}>
+        <SectionHeader
+          title="NOTIFICATIONS"
+          icon="bell"
+          editing={editingNotifs}
+          onToggleEdit={() => { if (editingNotifs) { handleSaveNotifs(); } else { setEditingNotifs(true); } }}
+          saving={saving["notifs"]}
+        />
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body }]}>Heure de rappel matin</Text>
+        {editingNotifs ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={cStyles.durationRow}>
+            {NOTIF_HOURS.map(h => (
+              <TouchableOpacity
+                key={h}
+                onPress={() => setMorningNotifHour(h)}
+                style={[cStyles.durationChip, morningNotifHour === h && cStyles.durationChipActive]}
+              >
+                <Text style={[
+                  cStyles.durationChipText,
+                  { fontFamily: FONTS.bodyMedium, color: morningNotifHour === h ? COLORS.cyan : COLORS.textMuted },
+                ]}>
+                  {h}h00
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={[cStyles.valueText, { fontFamily: FONTS.bodyMedium }]}>{morningNotifHour}h00</Text>
+        )}
+
+        <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10 }]}>Types de notifications</Text>
+        {NOTIF_TYPES.map(({ key, label }, idx, arr) => (
+          <View
+            key={key}
+            style={[cStyles.privacyRow, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
+          >
+            <Text style={[cStyles.privacyLabel, { fontFamily: FONTS.body }]}>{label}</Text>
+            <Switch
+              value={notificationPrefs[key] !== false}
+              onValueChange={v => {
+                const next = { ...notificationPrefs, [key]: v };
+                setNotificationPrefs(next);
+                if (!editingNotifs) {
+                  saveSection("notifs_inline", { notificationPrefs: next }).catch(() => {});
+                }
+              }}
+              trackColor={{ false: COLORS.border, true: COLORS.cyanDim }}
+              thumbColor={notificationPrefs[key] !== false ? COLORS.cyan : COLORS.textMuted}
+            />
+          </View>
+        ))}
+      </View>
+
+      {/* APPLICATIONS SANTÉ */}
       <View style={cStyles.section}>
         <SectionHeader
           title="APPLICATIONS SANTÉ"
@@ -617,18 +883,13 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         ))}
       </View>
 
+      {/* CONFIDENTIALITÉ */}
       <View style={cStyles.section}>
         <SectionHeader
           title="CONFIDENTIALITÉ"
           icon="shield"
           editing={editingPrivacy}
-          onToggleEdit={() => {
-            if (editingPrivacy) {
-              handleSavePrivacy();
-            } else {
-              setEditingPrivacy(true);
-            }
-          }}
+          onToggleEdit={() => { if (editingPrivacy) { handleSavePrivacy(); } else { setEditingPrivacy(true); } }}
           saving={saving["privacy"]}
         />
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body }]}>
@@ -656,7 +917,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               onValueChange={v => {
                 setPrivacy(p => ({ ...p, [key]: v }));
                 if (!editingPrivacy) {
-                  saveSection("privacy", { privacySettings: { ...privacy, [key]: v } });
+                  saveSection("privacy_inline", { privacySettings: { ...privacy, [key]: v } });
                 }
               }}
               trackColor={{ false: COLORS.border, true: COLORS.cyanDim }}
@@ -800,6 +1061,43 @@ const cStyles = StyleSheet.create({
     backgroundColor: COLORS.cyanDim,
   },
   durationChipText: { fontSize: 13 },
+  textArea: {
+    backgroundColor: COLORS.bgInput,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 12,
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    minHeight: 72,
+    textAlignVertical: "top",
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  inlineInput: {
+    flex: 1,
+    backgroundColor: COLORS.bgInput,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 13,
+    color: COLORS.textPrimary,
+  },
+  addBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: COLORS.cyanDim,
+    borderWidth: 1,
+    borderColor: COLORS.cyan,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   prefItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -813,8 +1111,8 @@ const cStyles = StyleSheet.create({
   prefItemValue: { fontSize: 13, color: COLORS.textSecondary },
   segRow: { flexDirection: "row", gap: 6 },
   segBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -824,8 +1122,7 @@ const cStyles = StyleSheet.create({
     borderColor: COLORS.cyan,
     backgroundColor: COLORS.cyanDim,
   },
-  segBtnText: { fontSize: 12 },
-  comingSoon: { fontSize: 11, color: COLORS.amber, marginTop: 4 },
+  segBtnText: { fontSize: 11 },
   healthAppRow: {
     flexDirection: "row",
     alignItems: "center",

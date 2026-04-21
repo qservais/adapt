@@ -1,0 +1,12 @@
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "secondary_goal" text;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "session_duration_min" integer;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "session_duration_max" integer;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "available_days" jsonb;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "training_locations" jsonb;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "equipment" jsonb;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "avoided_exercises" jsonb;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "favorite_exercises" jsonb;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "language" varchar(10) DEFAULT 'fr';
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "theme" varchar(20) DEFAULT 'dark';
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "units" varchar(10) DEFAULT 'metric';
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "privacy_settings" jsonb;
