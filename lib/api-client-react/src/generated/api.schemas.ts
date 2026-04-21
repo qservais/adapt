@@ -654,8 +654,10 @@ export interface MessageData {
   senderId: string;
   recipientId: string;
   content: string;
-  mediaType?: "audio" | "video" | null;
+  mediaType?: "audio" | "video" | "document" | null;
   mediaUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: string | null;
   isRead: boolean;
   createdAt: string;
 }
@@ -663,8 +665,10 @@ export interface MessageData {
 export interface SendMessageRequest {
   recipientId: string;
   content?: string;
-  mediaType?: "audio" | "video";
+  mediaType?: "audio" | "video" | "document";
   mediaUrl?: string;
+  fileName?: string;
+  fileSize?: string;
 }
 
 export interface UploadMediaRequest {

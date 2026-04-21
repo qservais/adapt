@@ -100,6 +100,8 @@ router.get("/messages/:userId", authenticate, async (req, res) => {
         content: msg.content,
         mediaType: msg.mediaType ?? null,
         mediaUrl: resolvedMediaUrl,
+        fileName: msg.fileName ?? null,
+        fileSize: msg.fileSize ?? null,
         isRead: msg.isRead,
         createdAt: msg.createdAt,
       };
@@ -114,8 +116,10 @@ router.get("/messages/:userId", authenticate, async (req, res) => {
 const sendSchema = z.object({
   recipientId: z.string().uuid(),
   content: z.string().min(0).max(4000).default(""),
-  mediaType: z.enum(["audio", "video"]).optional(),
+  mediaType: z.enum(["audio", "video", "document"]).optional(),
   mediaUrl: z.string().optional(),
+  fileName: z.string().max(255).optional(),
+  fileSize: z.string().max(50).optional(),
 });
 
 router.post("/messages", authenticate, async (req, res) => {
@@ -125,7 +129,7 @@ router.post("/messages", authenticate, async (req, res) => {
     return;
   }
 
-  const { recipientId, content, mediaType, mediaUrl } = parsed.data;
+  const { recipientId, content, mediaType, mediaUrl, fileName, fileSize } = parsed.data;
   if (!content && !mediaUrl) {
     res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Contenu ou média requis" } });
     return;
@@ -137,12 +141,22 @@ router.post("/messages", authenticate, async (req, res) => {
       storedMediaUrl = storage.normalizeObjectEntityPath(mediaUrl);
     }
 
+    const defaultContent = mediaType === "audio"
+      ? "🎤 Message vocal"
+      : mediaType === "video"
+        ? "🎬 Vidéo"
+        : mediaType === "document"
+          ? `📎 ${fileName ?? "Document"}`
+          : "";
+
     const [message] = await db.insert(messagesTable).values({
       senderId: req.user!.userId,
       recipientId,
-      content: content || (mediaType === "audio" ? "🎤 Message vocal" : "🎬 Vidéo"),
+      content: content || defaultContent,
       mediaType: mediaType ?? null,
       mediaUrl: storedMediaUrl,
+      fileName: fileName ?? null,
+      fileSize: fileSize ?? null,
     }).returning();
 
     const [sender] = await db
@@ -161,7 +175,13 @@ router.post("/messages", authenticate, async (req, res) => {
       const pushEnabled = prefs ? prefs["push_messages"] !== false : true;
 
       const notifTitle = `Message de ${sender.firstName}`;
-      const notifBody = mediaType === "audio" ? "🎤 Message vocal" : mediaType === "video" ? "🎬 Vidéo" : content.slice(0, 100);
+      const notifBody = mediaType === "audio"
+        ? "🎤 Message vocal"
+        : mediaType === "video"
+          ? "🎬 Vidéo"
+          : mediaType === "document"
+            ? `📎 ${fileName ?? "Document"}`
+            : content.slice(0, 100);
       const notifLink = `/messages/${req.user!.userId}`;
 
       if (inAppEnabled) {
@@ -227,6 +247,15 @@ router.post("/messages/upload-media", authenticate, async (req, res) => {
     res.json({ uploadUrl });
   } catch (err) {
     res.status(500).json({ error: "Impossible de générer l'URL d'upload" });
+  }
+});
+
+router.post("/messages/upload-document", authenticate, async (req, res) => {
+  try {
+    const uploadUrl = await storage.getObjectEntityUploadURL();
+    res.json({ uploadUrl });
+  } catch (err) {
+    res.status(500).json({ error: "Impossible de générer l'URL d'upload document" });
   }
 });
 

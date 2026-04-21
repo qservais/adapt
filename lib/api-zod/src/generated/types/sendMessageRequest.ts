@@ -8,5 +8,9 @@
 
 export interface SendMessageRequest {
   recipientId: string;
-  content: string;
+  content?: string;
+  mediaType?: "audio" | "video" | "document";
+  mediaUrl?: string;
+  fileName?: string;
+  fileSize?: string;
 }

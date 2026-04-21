@@ -16,6 +16,8 @@ import {
 import { Image } from "expo-image";
 import { Video, ResizeMode, Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import * as Linking from "expo-linking";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -27,6 +29,7 @@ import {
 } from "@workspace/api-client-react";
 import type { MessageData } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
+import { tokenStore } from "@/lib/auth";
 import { COLORS, FONTS } from "@/constants/theme";
 
 type RecordingState = "idle" | "recording" | "uploading";
@@ -45,6 +48,7 @@ export default function ChatScreen() {
 
   const [videoUri, setVideoUri] = useState<string | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
+  const [documentUploading, setDocumentUploading] = useState(false);
 
   const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
   const [audioDurations, setAudioDurations] = useState<Record<string, string>>({});
@@ -271,6 +275,82 @@ export default function ChatScreen() {
     );
   };
 
+  const handleDocumentAttach = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "image/jpeg",
+          "image/png",
+          "image/heic",
+        ],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (asset.size && asset.size > MAX_SIZE) {
+        Alert.alert("Fichier trop lourd", "La taille maximale est de 10 Mo.");
+        return;
+      }
+
+      setDocumentUploading(true);
+      try {
+        const tokenVal = await tokenStore.getAccess();
+        const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
+          ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+          : "";
+        const uploadRes = await fetch(`${BASE_URL}/api/messages/upload-document`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${tokenVal}` },
+        });
+        if (!uploadRes.ok) throw new Error("Upload URL failed");
+        const { uploadUrl } = await uploadRes.json() as { uploadUrl: string };
+
+        const fileRes = await fetch(asset.uri);
+        const blob = await fileRes.blob();
+        await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": asset.mimeType ?? "application/octet-stream" },
+          body: blob,
+        });
+
+        const rawUrl = (() => { const u = new URL(uploadUrl); return u.origin + u.pathname; })();
+
+        const fileSizeStr = asset.size
+          ? asset.size > 1024 * 1024
+            ? `${(asset.size / 1024 / 1024).toFixed(1)} Mo`
+            : `${Math.round(asset.size / 1024)} Ko`
+          : undefined;
+
+        await sendMutation.mutateAsync({
+          data: {
+            recipientId: userIdStr,
+            content: "",
+            mediaType: "document",
+            mediaUrl: rawUrl,
+            fileName: asset.name,
+            fileSize: fileSizeStr,
+          },
+        });
+        messagesQuery.refetch();
+        setTimeout(() => scrollToBottom(true), 150);
+      } catch {
+        Alert.alert("Erreur", "Impossible d'envoyer le document. Réessaie.");
+      } finally {
+        setDocumentUploading(false);
+      }
+    } catch {
+      Alert.alert("Erreur", "Impossible d'ouvrir le sélecteur de fichiers.");
+    }
+  };
+
   const handlePlayAudio = async (url: string, msgId: string) => {
     try {
       if (audioPlaying === msgId) {
@@ -347,7 +427,45 @@ export default function ChatScreen() {
         )}
         <View style={[styles.messageBubbleWrap, isMe ? styles.myMessageWrap : styles.theirMessageWrap]}>
           <View style={[styles.messageBubble, isMe ? styles.myBubble : styles.theirBubble]}>
-            {item.mediaType === "audio" && item.mediaUrl ? (
+            {item.mediaType === "document" && item.mediaUrl ? (
+              <TouchableOpacity
+                style={styles.documentBubble}
+                onPress={() => {
+                  if (item.mediaUrl) Linking.openURL(item.mediaUrl);
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.documentIcon, { backgroundColor: isMe ? `${COLORS.bg}30` : `${COLORS.cyan}20` }]}>
+                  <Feather
+                    name={
+                      item.fileName?.endsWith(".pdf")
+                        ? "file-text"
+                        : item.fileName?.match(/\.(xls|xlsx)$/)
+                          ? "grid"
+                          : item.fileName?.match(/\.(doc|docx)$/)
+                            ? "file-text"
+                            : "paperclip"
+                    }
+                    size={20}
+                    color={isMe ? COLORS.bg : COLORS.cyan}
+                  />
+                </View>
+                <View style={styles.documentInfo}>
+                  <Text
+                    style={[styles.documentName, { color: isMe ? COLORS.bg : COLORS.textPrimary, fontFamily: FONTS.bodyMedium }]}
+                    numberOfLines={2}
+                  >
+                    {item.fileName ?? "Document"}
+                  </Text>
+                  {item.fileSize && (
+                    <Text style={[styles.documentSize, { color: isMe ? `${COLORS.bg}80` : COLORS.textMuted, fontFamily: FONTS.mono }]}>
+                      {item.fileSize}
+                    </Text>
+                  )}
+                </View>
+                <Feather name="download" size={14} color={isMe ? `${COLORS.bg}80` : COLORS.textMuted} />
+              </TouchableOpacity>
+            ) : item.mediaType === "audio" && item.mediaUrl ? (
               <TouchableOpacity
                 style={styles.audioPlayer}
                 onPress={() => handlePlayAudio(item.mediaUrl!, item.id)}
@@ -490,13 +608,29 @@ export default function ChatScreen() {
         </View>
       )}
 
+      {documentUploading && (
+        <View style={styles.recordingBanner}>
+          <ActivityIndicator size="small" color={COLORS.cyan} />
+          <Text style={[styles.recordingText, { fontFamily: FONTS.body }]}>
+            Envoi du document…
+          </Text>
+        </View>
+      )}
+
       <View style={[styles.inputBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 }]}>
         <TouchableOpacity
           onPress={handleVideoAttach}
-          disabled={recordingState !== "idle" || videoUploading}
-          style={[styles.mediaBtn, { opacity: recordingState !== "idle" || videoUploading ? 0.3 : 1 }]}
+          disabled={recordingState !== "idle" || videoUploading || documentUploading}
+          style={[styles.mediaBtn, { opacity: recordingState !== "idle" || videoUploading || documentUploading ? 0.3 : 1 }]}
         >
           <Feather name="video" size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleDocumentAttach}
+          disabled={recordingState !== "idle" || videoUploading || documentUploading}
+          style={[styles.mediaBtn, { opacity: recordingState !== "idle" || videoUploading || documentUploading ? 0.3 : 1 }]}
+        >
+          <Feather name="paperclip" size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
 
         <TextInput
@@ -510,7 +644,7 @@ export default function ChatScreen() {
           onSubmitEditing={handleSend}
           blurOnSubmit={false}
           onFocus={() => setTimeout(() => scrollToBottom(true), 300)}
-          editable={recordingState === "idle" && !videoUploading}
+          editable={recordingState === "idle" && !videoUploading && !documentUploading}
         />
 
         {text.trim() ? (
@@ -650,6 +784,25 @@ const styles = StyleSheet.create({
   audioWave: { flex: 1, flexDirection: "row", alignItems: "center", gap: 2 },
   audioBar: { width: 3, borderRadius: 2 },
   audioDuration: { fontSize: 11, minWidth: 28 },
+  documentBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    minWidth: 180,
+    maxWidth: 240,
+    paddingVertical: 2,
+  },
+  documentIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  documentInfo: { flex: 1, gap: 2 },
+  documentName: { fontSize: 13, lineHeight: 17 },
+  documentSize: { fontSize: 10 },
   videoThumbWrap: {
     width: 200,
     height: 130,
