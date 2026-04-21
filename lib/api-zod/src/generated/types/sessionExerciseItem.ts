@@ -10,11 +10,25 @@ export interface SessionExerciseItem {
   id: string;
   exerciseId: string;
   exerciseName: string;
+  category?: string | null;
+  imageUrl?: string | null;
+  gifUrl?: string | null;
+  muscleGroups?: unknown | null;
+  equipment?: unknown | null;
+  description?: string | null;
+  demoUrl?: string | null;
   orderIndex: number;
   sets: number;
   reps?: string | null;
   nominalLoadKg?: number | null;
   adaptedLoadKg?: number | null;
   restSeconds?: number | null;
+  durationSeconds?: number | null;
   coachCue?: string | null;
+  lastUsedLoadKg?: number | null;
+  lastUsedDate?: string | null;
+  blockId?: string | null;
+  tempo?: string | null;
+  supersetGroup?: string | null;
+  supersetLabel?: string | null;
 }

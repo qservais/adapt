@@ -7,13 +7,3 @@ export interface FreeSessionStartResponse extends SessionDetail {
   sessionsTodayCompleted: number;
   sessionIndex: number;
 }
-
-export interface LibrarySession {
-  sessionId: string;
-  sessionName: string;
-  sessionType: string;
-  sessionLocation: string;
-  weekNumber: number;
-  dayNumber: number;
-  estimatedDurationMin?: number | null;
-}

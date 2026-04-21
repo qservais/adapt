@@ -9,10 +9,10 @@ export interface HealthStatus {
   status: string;
 }
 
-export type ErrorResponseError = {
+export interface ErrorResponseError {
   code: string;
   message: string;
-};
+}
 
 export interface ErrorResponse {
   error: ErrorResponseError;
@@ -154,17 +154,17 @@ export interface CheckinData {
   createdAt?: string;
 }
 
-export type CheckinResponseSessionPreview = {
-  name?: string;
-  estimatedDurationMin?: number | null;
-  exerciseCount?: number;
-} | null;
-
 export interface NewBadgeItem {
   code: string;
   name: string;
   icon: string;
 }
+
+export type CheckinResponseSessionPreview = {
+  name?: string;
+  estimatedDurationMin?: number | null;
+  exerciseCount?: number;
+} | null;
 
 export interface CheckinResponse {
   checkin: CheckinData;
@@ -176,25 +176,25 @@ export interface SessionExerciseItem {
   id: string;
   exerciseId: string;
   exerciseName: string;
-  category: string | null;
-  imageUrl: string | null;
-  gifUrl: string | null;
-  muscleGroups: unknown;
-  equipment: unknown;
-  description: string | null;
-  demoUrl: string | null;
+  category?: string | null;
+  imageUrl?: string | null;
+  gifUrl?: string | null;
+  muscleGroups?: unknown | null;
+  equipment?: unknown | null;
+  description?: string | null;
+  demoUrl?: string | null;
   orderIndex: number;
   sets: number;
-  reps: string | null;
-  nominalLoadKg: number | null;
-  adaptedLoadKg: number | null;
-  restSeconds: number | null;
-  durationSeconds: number | null;
-  coachCue: string | null;
-  lastUsedLoadKg: number | null;
-  lastUsedDate: string | null;
+  reps?: string | null;
+  nominalLoadKg?: number | null;
+  adaptedLoadKg?: number | null;
+  restSeconds?: number | null;
+  durationSeconds?: number | null;
+  coachCue?: string | null;
+  lastUsedLoadKg?: number | null;
+  lastUsedDate?: string | null;
   blockId?: string | null;
-  tempo: string | null;
+  tempo?: string | null;
   supersetGroup?: string | null;
   supersetLabel?: string | null;
 }
@@ -203,11 +203,13 @@ export interface SessionBlockItem {
   id: string;
   type: string;
   orderIndex: number;
-  name: string | null;
+  name?: string | null;
   notes?: string | null;
   estimatedDurationMin?: number | null;
   conditioningFormat?: string | null;
 }
+
+export type SessionDetailAthletePRs = { [key: string]: number };
 
 export interface SessionDetail {
   sessionLogId: string;
@@ -221,9 +223,10 @@ export interface SessionDetail {
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   exercises: SessionExerciseItem[];
+  blocks?: SessionBlockItem[];
   adaptScore: number;
   overriddenByCoach?: boolean;
-  athletePRs?: Record<string, number>;
+  athletePRs?: SessionDetailAthletePRs;
   completedAt?: string | null;
   durationMin?: number | null;
   rpe?: number | null;
@@ -240,7 +243,7 @@ export interface CompleteSessionNewPR {
   previousLoadKg?: number | null;
 }
 
-export interface CompleteSessionResponse {
+export interface CompleteSessionResult {
   success: boolean;
   message?: string;
   newPRs: CompleteSessionNewPR[];
@@ -291,19 +294,6 @@ export interface PersonalRecordsResponse {
   total: number;
 }
 
-export interface PRHistoryEntry {
-  id: string;
-  loadKg: number;
-  reps: number;
-  achievedAt: string;
-}
-
-export interface PRHistoryResponse {
-  exerciseId: string;
-  exerciseName: string;
-  history: PRHistoryEntry[];
-}
-
 export interface WeeklyRecap {
   weekStart: string;
   weekEnd: string;
@@ -344,8 +334,24 @@ export interface SessionLogSummary {
   createdAt?: string;
   isFreeSession?: boolean;
   freeSessionName?: string | null;
-  exercises: SessionExerciseLog[];
+  exercises?: SessionExerciseLog[];
 }
+
+export interface LogExerciseRequest {
+  exerciseId: string;
+  setsCompleted?: number;
+  repsPerSet?: number[];
+  loadKgUsed?: number;
+}
+
+export type CompleteSessionRequestPerceivedDifficulty =
+  (typeof CompleteSessionRequestPerceivedDifficulty)[keyof typeof CompleteSessionRequestPerceivedDifficulty];
+
+export const CompleteSessionRequestPerceivedDifficulty = {
+  too_easy: "too_easy",
+  well_calibrated: "well_calibrated",
+  too_hard: "too_hard",
+} as const;
 
 export type CompleteSessionRequestExercisesItem = {
   exerciseId?: string;
@@ -355,6 +361,13 @@ export type CompleteSessionRequestExercisesItem = {
 };
 
 export interface CompleteSessionRequest {
+  /**
+   * @minimum 1
+   * @maximum 10
+   */
+  rpe?: number;
+  perceivedDifficulty?: CompleteSessionRequestPerceivedDifficulty;
+  athleteNotes?: string | null;
   exercises: CompleteSessionRequestExercisesItem[];
 }
 
@@ -376,6 +389,13 @@ export interface SessionFeedbackRequest {
   perceivedDifficulty: SessionFeedbackRequestPerceivedDifficulty;
   athleteNotes?: string | null;
   theme?: string | null;
+}
+
+export interface FreeCustomSessionRequest {
+  name?: string;
+  exerciseIds: string[];
+  sets?: number;
+  reps?: string;
 }
 
 export interface ProgramSummary {
@@ -427,6 +447,11 @@ export interface ProgramDetail {
   sessions: SessionWithVariants[];
 }
 
+export interface StartProgramNowResult {
+  success: boolean;
+  startDate: string;
+}
+
 export interface CreateProgramRequest {
   name: string;
   description?: string;
@@ -446,6 +471,14 @@ export const CreateSessionRequestType = {
   athletic_development: "athletic_development",
   running: "running",
   conditioning: "conditioning",
+} as const;
+
+export type CreateSessionRequestSessionType =
+  (typeof CreateSessionRequestSessionType)[keyof typeof CreateSessionRequestSessionType];
+
+export const CreateSessionRequestSessionType = {
+  online: "online",
+  presentiel: "presentiel",
 } as const;
 
 export type CreateSessionRequestVariantsItemMode =
@@ -476,9 +509,9 @@ export type CreateSessionRequestVariantsItem = {
 };
 
 export type CreateSessionRequestBlocksItemExercisesItem = {
-  exerciseId: string;
-  orderIndex: number;
-  sets: number;
+  exerciseId?: string;
+  orderIndex?: number;
+  sets?: number;
   reps?: string;
   loadKg?: number;
   restSeconds?: number;
@@ -502,13 +535,40 @@ export interface CreateSessionRequest {
   dayNumber: number;
   name: string;
   type: CreateSessionRequestType;
-  sessionType?: "online" | "presentiel";
+  sessionType?: CreateSessionRequestSessionType;
   scheduledTime?: string | null;
   visioLink?: string | null;
   estimatedDurationMin?: number;
   coachNotes?: string;
   variants?: CreateSessionRequestVariantsItem[];
   blocks?: CreateSessionRequestBlocksItem[];
+}
+
+export interface UpcomingSession {
+  sessionId: string;
+  sessionName: string;
+  sessionType: string;
+  sessionLocation?: string | null;
+  weekNumber: number;
+  dayNumber: number;
+  scheduledDate: string;
+  estimatedDurationMin?: number | null;
+  isCompleted: boolean;
+  completedActualDate?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
+  isPreview?: boolean;
+  isAppointment?: boolean;
+}
+
+export interface LibrarySession {
+  sessionId: string;
+  sessionName: string;
+  sessionType: string;
+  sessionLocation: string;
+  weekNumber: number;
+  dayNumber: number;
+  estimatedDurationMin?: number | null;
 }
 
 export interface ClientSummary {
@@ -537,32 +597,6 @@ export interface AlertData {
   createdAt?: string;
 }
 
-export interface UpcomingSession {
-  sessionId: string;
-  sessionName: string;
-  sessionType: string;
-  sessionLocation?: string | null;
-  weekNumber: number;
-  dayNumber: number;
-  scheduledDate: string;
-  estimatedDurationMin?: number | null;
-  isCompleted: boolean;
-  completedActualDate?: string | null;
-  scheduledTime?: string | null;
-  visioLink?: string | null;
-  isPreview?: boolean;
-  isAppointment?: boolean;
-}
-
-export interface CoachUpdateAthleteRequest {
-  heightCm?: number;
-  weightKg?: number;
-  fitnessLevel?: string;
-  primaryGoal?: string;
-  trainingFrequency?: number;
-  injuries?: string;
-}
-
 export interface ClientDetail {
   id: string;
   firstName: string;
@@ -581,7 +615,7 @@ export interface ClientDetail {
   todayCheckin?: CheckinData | null;
   recentCheckins: CheckinData[];
   recentSessions: SessionLogSummary[];
-  upcomingSessions: UpcomingSession[];
+  upcomingSessions?: UpcomingSession[];
   activeAlerts: AlertData[];
 }
 
@@ -612,6 +646,35 @@ export interface LinkClientRequest {
   athleteEmail: string;
 }
 
+export interface CoachLinkRequest {
+  /**
+   * 6-character invite code of the athlete to link
+   * @minLength 6
+   * @maxLength 6
+   */
+  inviteCode: string;
+}
+
+export interface CoachUnlinkRequest {
+  athleteId: string;
+}
+
+export interface MorningNotifHourResponse {
+  /**
+   * @minimum 5
+   * @maximum 23
+   */
+  hour: number;
+}
+
+export interface MorningNotifHourBody {
+  /**
+   * @minimum 5
+   * @maximum 23
+   */
+  hour: number;
+}
+
 export interface AthleteLinkRequest {
   /**
    * 6-character invite code from the coach
@@ -619,6 +682,39 @@ export interface AthleteLinkRequest {
    * @maxLength 6
    */
   inviteCode: string;
+}
+
+export interface CoachUpdateAthleteRequest {
+  heightCm?: number;
+  weightKg?: number;
+  fitnessLevel?: string;
+  primaryGoal?: string;
+  trainingFrequency?: number;
+  injuries?: string;
+}
+
+export interface AthletePerformanceTest {
+  id: string;
+  athleteId: string;
+  coachId?: string | null;
+  testType: string;
+  exerciseId?: string | null;
+  exerciseName?: string | null;
+  value: number;
+  unit: string;
+  testedAt: string;
+  notes?: string | null;
+  createdAt?: string;
+}
+
+export interface CreatePerformanceTestRequest {
+  testType: string;
+  exerciseId?: string;
+  exerciseName?: string;
+  value: number;
+  unit: string;
+  testedAt: string;
+  notes?: string;
 }
 
 export interface ExerciseData {
@@ -659,12 +755,22 @@ export interface MessageThread {
   unreadCount: number;
 }
 
+export type MessageDataMediaType =
+  | (typeof MessageDataMediaType)[keyof typeof MessageDataMediaType]
+  | null;
+
+export const MessageDataMediaType = {
+  audio: "audio",
+  video: "video",
+  document: "document",
+} as const;
+
 export interface MessageData {
   id: string;
   senderId: string;
   recipientId: string;
   content: string;
-  mediaType?: "audio" | "video" | "document" | null;
+  mediaType?: MessageDataMediaType;
   mediaUrl?: string | null;
   fileName?: string | null;
   fileSize?: string | null;
@@ -672,17 +778,34 @@ export interface MessageData {
   createdAt: string;
 }
 
+export type SendMessageRequestMediaType =
+  (typeof SendMessageRequestMediaType)[keyof typeof SendMessageRequestMediaType];
+
+export const SendMessageRequestMediaType = {
+  audio: "audio",
+  video: "video",
+  document: "document",
+} as const;
+
 export interface SendMessageRequest {
   recipientId: string;
   content?: string;
-  mediaType?: "audio" | "video" | "document";
+  mediaType?: SendMessageRequestMediaType;
   mediaUrl?: string;
   fileName?: string;
   fileSize?: string;
 }
 
+export type UploadMediaRequestMediaType =
+  (typeof UploadMediaRequestMediaType)[keyof typeof UploadMediaRequestMediaType];
+
+export const UploadMediaRequestMediaType = {
+  audio: "audio",
+  video: "video",
+} as const;
+
 export interface UploadMediaRequest {
-  mediaType: "audio" | "video";
+  mediaType: UploadMediaRequestMediaType;
   contentType: string;
 }
 
@@ -698,33 +821,6 @@ export interface UploadDocumentRequest {
 
 export interface UploadDocumentResponse {
   uploadUrl: string;
-}
-
-export type GetExercisesParams = {
-  category?: string;
-  q?: string;
-};
-
-export interface CoachLinkRequest {
-  inviteCode: string;
-}
-
-export interface CoachUnlinkRequest {
-  athleteId: string;
-}
-
-export interface AthletePerformanceTest {
-  id: string;
-  athleteId: string;
-  coachId?: string | null;
-  testType: string;
-  exerciseId?: string | null;
-  exerciseName?: string | null;
-  value: number;
-  unit: string;
-  testedAt: string;
-  notes?: string | null;
-  createdAt?: string;
 }
 
 export interface NotificationItem {
@@ -744,11 +840,6 @@ export interface NotificationsResponse {
   offset: number;
   limit: number;
   hasMore: boolean;
-}
-
-export interface GetNotificationsParams {
-  offset?: number;
-  limit?: number;
 }
 
 export interface NotificationPreferences {
@@ -802,10 +893,20 @@ export interface CoachChallenge {
   assignments: ChallengeAssignment[];
 }
 
+export type CreateChallengeRequestMetric =
+  (typeof CreateChallengeRequestMetric)[keyof typeof CreateChallengeRequestMetric];
+
+export const CreateChallengeRequestMetric = {
+  reps: "reps",
+  distance: "distance",
+  time: "time",
+  sessions: "sessions",
+} as const;
+
 export interface CreateChallengeRequest {
   title: string;
   description?: string;
-  metric: "reps" | "distance" | "time" | "sessions";
+  metric: CreateChallengeRequestMetric;
   target: number;
   unit?: string;
   startDate: string;
@@ -817,13 +918,24 @@ export interface UpdateProgressRequest {
   progress: number;
 }
 
+export type ScheduledNotificationRecurrenceType =
+  (typeof ScheduledNotificationRecurrenceType)[keyof typeof ScheduledNotificationRecurrenceType];
+
+export const ScheduledNotificationRecurrenceType = {
+  daily: "daily",
+  weekly: "weekly",
+  custom: "custom",
+} as const;
+
+export type ScheduledNotificationRecurrenceConfig = { [key: string]: unknown };
+
 export interface ScheduledNotification {
   id: string;
   coachId: string;
   athleteId: string;
   message: string;
-  recurrenceType: "daily" | "weekly" | "custom";
-  recurrenceConfig: Record<string, unknown>;
+  recurrenceType: ScheduledNotificationRecurrenceType;
+  recurrenceConfig?: ScheduledNotificationRecurrenceConfig;
   sendHour: number;
   active: boolean;
   createdAt?: string | null;
@@ -832,18 +944,44 @@ export interface ScheduledNotification {
   athleteLastName?: string | null;
 }
 
+export type CreateScheduledNotificationRequestRecurrenceType =
+  (typeof CreateScheduledNotificationRequestRecurrenceType)[keyof typeof CreateScheduledNotificationRequestRecurrenceType];
+
+export const CreateScheduledNotificationRequestRecurrenceType = {
+  daily: "daily",
+  weekly: "weekly",
+  custom: "custom",
+} as const;
+
+export type CreateScheduledNotificationRequestRecurrenceConfig = {
+  [key: string]: unknown;
+};
+
 export interface CreateScheduledNotificationRequest {
   athleteId: string;
   message: string;
-  recurrenceType: "daily" | "weekly" | "custom";
-  recurrenceConfig?: Record<string, unknown>;
+  recurrenceType: CreateScheduledNotificationRequestRecurrenceType;
+  recurrenceConfig?: CreateScheduledNotificationRequestRecurrenceConfig;
   sendHour: number;
 }
 
+export type UpdateScheduledNotificationRequestRecurrenceType =
+  (typeof UpdateScheduledNotificationRequestRecurrenceType)[keyof typeof UpdateScheduledNotificationRequestRecurrenceType];
+
+export const UpdateScheduledNotificationRequestRecurrenceType = {
+  daily: "daily",
+  weekly: "weekly",
+  custom: "custom",
+} as const;
+
+export type UpdateScheduledNotificationRequestRecurrenceConfig = {
+  [key: string]: unknown;
+};
+
 export interface UpdateScheduledNotificationRequest {
   message?: string;
-  recurrenceType?: "daily" | "weekly" | "custom";
-  recurrenceConfig?: Record<string, unknown>;
+  recurrenceType?: UpdateScheduledNotificationRequestRecurrenceType;
+  recurrenceConfig?: UpdateScheduledNotificationRequestRecurrenceConfig;
   sendHour?: number;
   active?: boolean;
 }
@@ -877,3 +1015,13 @@ export interface UpdateAppointmentRequest {
   location?: string;
   notes?: string;
 }
+
+export type GetExercisesParams = {
+  category?: string;
+  q?: string;
+};
+
+export type GetNotificationsParams = {
+  offset?: number;
+  limit?: number;
+};

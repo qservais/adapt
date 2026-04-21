@@ -15,4 +15,7 @@ export interface ProgramSummary {
   startDate?: string | null;
   isActive: boolean;
   createdAt?: string;
+  previewEnabled?: boolean;
+  previewAllowStart?: boolean;
+  startsInFuture?: boolean;
 }

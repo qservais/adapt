@@ -14,4 +14,6 @@ export type CreateSessionRequestVariantsItemExercisesItem = {
   loadKg?: number;
   restSeconds?: number;
   coachCue?: string;
+  supersetGroup?: string;
+  supersetLabel?: string;
 };

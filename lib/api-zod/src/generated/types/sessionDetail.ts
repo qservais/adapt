@@ -5,6 +5,8 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SessionBlockItem } from "./sessionBlockItem";
+import type { SessionDetailAthletePRs } from "./sessionDetailAthletePRs";
 import type { SessionExerciseItem } from "./sessionExerciseItem";
 
 export interface SessionDetail {
@@ -12,9 +14,22 @@ export interface SessionDetail {
   sessionId?: string | null;
   name: string;
   mode: string;
+  sessionType?: string | null;
+  sessionLocation?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   exercises: SessionExerciseItem[];
+  blocks?: SessionBlockItem[];
   adaptScore: number;
   overriddenByCoach?: boolean;
+  athletePRs?: SessionDetailAthletePRs;
+  completedAt?: string | null;
+  durationMin?: number | null;
+  rpe?: number | null;
+  sessionsToday?: number;
+  sessionsTodayCompleted?: number;
+  sessionIndex?: number;
+  isFreeSession?: boolean;
 }

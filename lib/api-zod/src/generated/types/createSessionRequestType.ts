@@ -14,4 +14,7 @@ export const CreateSessionRequestType = {
   cardio: "cardio",
   hybrid: "hybrid",
   mobility: "mobility",
+  athletic_development: "athletic_development",
+  running: "running",
+  conditioning: "conditioning",
 } as const;

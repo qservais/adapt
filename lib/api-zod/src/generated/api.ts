@@ -20,7 +20,7 @@ export const HealthCheckResponse = zod.object({
 export const registerBodyPasswordMin = 8;
 
 export const RegisterBody = zod.object({
-  email: zod.string().email(),
+  email: zod.string(),
   password: zod.string().min(registerBodyPasswordMin),
   firstName: zod.string(),
   lastName: zod.string().optional(),
@@ -31,7 +31,7 @@ export const RegisterBody = zod.object({
  * @summary Login
  */
 export const LoginBody = zod.object({
-  email: zod.string().email(),
+  email: zod.string(),
   password: zod.string(),
 });
 
@@ -44,14 +44,22 @@ export const LoginResponse = zod.object({
     role: zod.string(),
     firstName: zod.string(),
     lastName: zod.string().nullish(),
+    gender: zod.string().nullish(),
+    birthDate: zod.string().nullish(),
     age: zod.number().nullish(),
     weightKg: zod.number().nullish(),
     heightCm: zod.number().nullish(),
+    trainingFrequency: zod.number().nullish(),
+    injuries: zod.string().nullish(),
     fitnessLevel: zod.string().nullish(),
     primaryGoal: zod.string().nullish(),
     cycleTracking: zod.boolean().optional(),
+    lastPeriodDate: zod.string().nullish(),
+    avgCycleDays: zod.number().nullish(),
     coachId: zod.string().nullish(),
     inviteCode: zod.string().nullish(),
+    coachName: zod.string().nullish(),
+    avatarUrl: zod.string().nullish(),
   }),
 });
 
@@ -71,14 +79,22 @@ export const RefreshTokenResponse = zod.object({
     role: zod.string(),
     firstName: zod.string(),
     lastName: zod.string().nullish(),
+    gender: zod.string().nullish(),
+    birthDate: zod.string().nullish(),
     age: zod.number().nullish(),
     weightKg: zod.number().nullish(),
     heightCm: zod.number().nullish(),
+    trainingFrequency: zod.number().nullish(),
+    injuries: zod.string().nullish(),
     fitnessLevel: zod.string().nullish(),
     primaryGoal: zod.string().nullish(),
     cycleTracking: zod.boolean().optional(),
+    lastPeriodDate: zod.string().nullish(),
+    avgCycleDays: zod.number().nullish(),
     coachId: zod.string().nullish(),
     inviteCode: zod.string().nullish(),
+    coachName: zod.string().nullish(),
+    avatarUrl: zod.string().nullish(),
   }),
 });
 
@@ -99,14 +115,22 @@ export const GetMeResponse = zod.object({
   role: zod.string(),
   firstName: zod.string(),
   lastName: zod.string().nullish(),
+  gender: zod.string().nullish(),
+  birthDate: zod.string().nullish(),
   age: zod.number().nullish(),
   weightKg: zod.number().nullish(),
   heightCm: zod.number().nullish(),
+  trainingFrequency: zod.number().nullish(),
+  injuries: zod.string().nullish(),
   fitnessLevel: zod.string().nullish(),
   primaryGoal: zod.string().nullish(),
   cycleTracking: zod.boolean().optional(),
+  lastPeriodDate: zod.string().nullish(),
+  avgCycleDays: zod.number().nullish(),
   coachId: zod.string().nullish(),
   inviteCode: zod.string().nullish(),
+  coachName: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
 });
 
 /**
@@ -115,12 +139,18 @@ export const GetMeResponse = zod.object({
 export const UpdateMeBody = zod.object({
   firstName: zod.string().optional(),
   lastName: zod.string().optional(),
+  gender: zod.string().optional(),
+  birthDate: zod.string().optional(),
   age: zod.number().optional(),
   weightKg: zod.number().optional(),
   heightCm: zod.number().optional(),
+  trainingFrequency: zod.number().optional(),
+  injuries: zod.string().optional(),
   fitnessLevel: zod.string().optional(),
   primaryGoal: zod.string().optional(),
   cycleTracking: zod.boolean().optional(),
+  lastPeriodDate: zod.string().nullish(),
+  avgCycleDays: zod.number().nullish(),
 });
 
 export const UpdateMeResponse = zod.object({
@@ -129,14 +159,80 @@ export const UpdateMeResponse = zod.object({
   role: zod.string(),
   firstName: zod.string(),
   lastName: zod.string().nullish(),
+  gender: zod.string().nullish(),
+  birthDate: zod.string().nullish(),
   age: zod.number().nullish(),
   weightKg: zod.number().nullish(),
   heightCm: zod.number().nullish(),
+  trainingFrequency: zod.number().nullish(),
+  injuries: zod.string().nullish(),
   fitnessLevel: zod.string().nullish(),
   primaryGoal: zod.string().nullish(),
   cycleTracking: zod.boolean().optional(),
+  lastPeriodDate: zod.string().nullish(),
+  avgCycleDays: zod.number().nullish(),
   coachId: zod.string().nullish(),
   inviteCode: zod.string().nullish(),
+  coachName: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
+});
+
+/**
+ * @summary Get user badges
+ */
+export const GetBadgesResponse = zod.object({
+  badges: zod.array(
+    zod.object({
+      code: zod.string(),
+      name: zod.string(),
+      description: zod.string(),
+      icon: zod.string(),
+      category: zod.string(),
+      sortOrder: zod.number().nullish(),
+      unlocked: zod.boolean(),
+      unlockedAt: zod.string().nullish(),
+    }),
+  ),
+  total: zod.number(),
+  unlockedCount: zod.number(),
+});
+
+/**
+ * @summary Get user personal records
+ */
+export const GetPersonalRecordsResponse = zod.object({
+  personalRecords: zod.array(
+    zod.object({
+      exerciseId: zod.string(),
+      exerciseName: zod.string(),
+      loadKg: zod.number(),
+      reps: zod.number(),
+      previousLoadKg: zod.number().nullish(),
+      achievedAt: zod.string().optional(),
+      isRecent: zod.boolean().optional(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
+ * @summary Get latest weekly recap
+ */
+export const GetWeeklyRecapResponse = zod.object({
+  recap: zod.object({
+    weekStart: zod.string(),
+    weekEnd: zod.string(),
+    sessionsCompleted: zod.number(),
+    sessionsPlanned: zod.number(),
+    avgAdaptScore: zod.number().nullish(),
+    avgRpe: zod.number().nullish(),
+    totalVolumeKg: zod.number().optional(),
+    prsCount: zod.number().optional(),
+    sessionsDelta: zod.number().optional(),
+    scoreDelta: zod.number().nullish(),
+    rpeDelta: zod.number().nullish(),
+    volumeDelta: zod.number().optional(),
+  }),
 });
 
 /**
@@ -214,6 +310,10 @@ export const GetTodaySessionResponse = zod.object({
   sessionId: zod.string().nullish(),
   name: zod.string(),
   mode: zod.string(),
+  sessionType: zod.string().nullish(),
+  sessionLocation: zod.string().nullish(),
+  scheduledTime: zod.string().nullish(),
+  visioLink: zod.string().nullish(),
   estimatedDurationMin: zod.number().nullish(),
   coachNotes: zod.string().nullish(),
   exercises: zod.array(
@@ -221,17 +321,136 @@ export const GetTodaySessionResponse = zod.object({
       id: zod.string(),
       exerciseId: zod.string(),
       exerciseName: zod.string(),
+      category: zod.string().nullish(),
+      imageUrl: zod.string().nullish(),
+      gifUrl: zod.string().nullish(),
+      muscleGroups: zod.unknown().nullish(),
+      equipment: zod.unknown().nullish(),
+      description: zod.string().nullish(),
+      demoUrl: zod.string().nullish(),
       orderIndex: zod.number(),
       sets: zod.number(),
       reps: zod.string().nullish(),
       nominalLoadKg: zod.number().nullish(),
       adaptedLoadKg: zod.number().nullish(),
       restSeconds: zod.number().nullish(),
+      durationSeconds: zod.number().nullish(),
       coachCue: zod.string().nullish(),
+      lastUsedLoadKg: zod.number().nullish(),
+      lastUsedDate: zod.string().nullish(),
+      blockId: zod.string().nullish(),
+      tempo: zod.string().nullish(),
+      supersetGroup: zod.string().nullish(),
+      supersetLabel: zod.string().nullish(),
     }),
   ),
+  blocks: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.string(),
+        orderIndex: zod.number(),
+        name: zod.string().nullish(),
+        notes: zod.string().nullish(),
+        estimatedDurationMin: zod.number().nullish(),
+        conditioningFormat: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   adaptScore: zod.number(),
   overriddenByCoach: zod.boolean().optional(),
+  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  completedAt: zod.string().nullish(),
+  durationMin: zod.number().nullish(),
+  rpe: zod.number().nullish(),
+  sessionsToday: zod.number().optional(),
+  sessionsTodayCompleted: zod.number().optional(),
+  sessionIndex: zod.number().optional(),
+  isFreeSession: zod.boolean().optional(),
+});
+
+/**
+ * @summary Get all of today's sessions (multi-session programs)
+ */
+export const GetTodaySessionAllResponseItem = zod.object({
+  sessionLogId: zod.string(),
+  sessionId: zod.string().nullish(),
+  name: zod.string(),
+  mode: zod.string(),
+  sessionType: zod.string().nullish(),
+  sessionLocation: zod.string().nullish(),
+  scheduledTime: zod.string().nullish(),
+  visioLink: zod.string().nullish(),
+  estimatedDurationMin: zod.number().nullish(),
+  coachNotes: zod.string().nullish(),
+  exercises: zod.array(
+    zod.object({
+      id: zod.string(),
+      exerciseId: zod.string(),
+      exerciseName: zod.string(),
+      category: zod.string().nullish(),
+      imageUrl: zod.string().nullish(),
+      gifUrl: zod.string().nullish(),
+      muscleGroups: zod.unknown().nullish(),
+      equipment: zod.unknown().nullish(),
+      description: zod.string().nullish(),
+      demoUrl: zod.string().nullish(),
+      orderIndex: zod.number(),
+      sets: zod.number(),
+      reps: zod.string().nullish(),
+      nominalLoadKg: zod.number().nullish(),
+      adaptedLoadKg: zod.number().nullish(),
+      restSeconds: zod.number().nullish(),
+      durationSeconds: zod.number().nullish(),
+      coachCue: zod.string().nullish(),
+      lastUsedLoadKg: zod.number().nullish(),
+      lastUsedDate: zod.string().nullish(),
+      blockId: zod.string().nullish(),
+      tempo: zod.string().nullish(),
+      supersetGroup: zod.string().nullish(),
+      supersetLabel: zod.string().nullish(),
+    }),
+  ),
+  blocks: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.string(),
+        orderIndex: zod.number(),
+        name: zod.string().nullish(),
+        notes: zod.string().nullish(),
+        estimatedDurationMin: zod.number().nullish(),
+        conditioningFormat: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+  adaptScore: zod.number(),
+  overriddenByCoach: zod.boolean().optional(),
+  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  completedAt: zod.string().nullish(),
+  durationMin: zod.number().nullish(),
+  rpe: zod.number().nullish(),
+  sessionsToday: zod.number().optional(),
+  sessionsTodayCompleted: zod.number().optional(),
+  sessionIndex: zod.number().optional(),
+  isFreeSession: zod.boolean().optional(),
+});
+export const GetTodaySessionAllResponse = zod.array(
+  GetTodaySessionAllResponseItem,
+);
+
+/**
+ * @summary Get missed sessions in the last 7 days
+ */
+export const GetMissedSessionsResponse = zod.object({
+  missed: zod.array(
+    zod.object({
+      date: zod.string(),
+      sessionId: zod.string(),
+      sessionName: zod.string(),
+      estimatedDurationMin: zod.number().nullish(),
+    }),
+  ),
 });
 
 /**
@@ -240,12 +459,27 @@ export const GetTodaySessionResponse = zod.object({
 export const GetSessionHistoryResponseItem = zod.object({
   id: zod.string(),
   sessionId: zod.string().nullish(),
+  sessionName: zod.string().nullish(),
   variantMode: zod.string(),
   startedAt: zod.string().nullish(),
   completedAt: zod.string().nullish(),
   rpe: zod.number().nullish(),
   perceivedDifficulty: zod.string().nullish(),
+  athleteNotes: zod.string().nullish(),
+  durationMin: zod.number().nullish(),
   createdAt: zod.string().optional(),
+  isFreeSession: zod.boolean().optional(),
+  freeSessionName: zod.string().nullish(),
+  exercises: zod
+    .array(
+      zod.object({
+        exerciseId: zod.string().nullish(),
+        exerciseName: zod.string(),
+        loadKgUsed: zod.number().nullish(),
+        setsCompleted: zod.number().nullish(),
+      }),
+    )
+    .optional(),
 });
 export const GetSessionHistoryResponse = zod.array(
   GetSessionHistoryResponseItem,
@@ -264,13 +498,27 @@ export const StartSessionResponse = zod.object({
 });
 
 /**
+ * @summary Start a free (library) session
+ */
+export const StartFreeSessionParams = zod.object({
+  sessionId: zod.coerce.string(),
+});
+
+/**
  * @summary Complete a session
  */
 export const CompleteSessionParams = zod.object({
   sessionId: zod.coerce.string(),
 });
 
+export const completeSessionBodyRpeMax = 10;
+
 export const CompleteSessionBody = zod.object({
+  rpe: zod.number().min(1).max(completeSessionBodyRpeMax).optional(),
+  perceivedDifficulty: zod
+    .enum(["too_easy", "well_calibrated", "too_hard"])
+    .optional(),
+  athleteNotes: zod.string().nullish(),
   exercises: zod.array(
     zod.object({
       exerciseId: zod.string().optional(),
@@ -284,6 +532,22 @@ export const CompleteSessionBody = zod.object({
 export const CompleteSessionResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
+  newPRs: zod.array(
+    zod.object({
+      exerciseId: zod.string(),
+      exerciseName: zod.string(),
+      loadKg: zod.number(),
+      previousLoadKg: zod.number().nullish(),
+    }),
+  ),
+  newBadges: zod.array(
+    zod.object({
+      code: zod.string(),
+      name: zod.string(),
+      icon: zod.string(),
+    }),
+  ),
+  durationMin: zod.number().nullish(),
 });
 
 /**
@@ -299,9 +563,62 @@ export const SubmitSessionFeedbackBody = zod.object({
   rpe: zod.number().min(1).max(submitSessionFeedbackBodyRpeMax),
   perceivedDifficulty: zod.enum(["too_easy", "well_calibrated", "too_hard"]),
   athleteNotes: zod.string().nullish(),
+  theme: zod.string().nullish(),
 });
 
 export const SubmitSessionFeedbackResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Start a custom free session with selected exercises
+ */
+export const StartFreeCustomSessionBody = zod.object({
+  name: zod.string().optional(),
+  exerciseIds: zod.array(zod.string()),
+  sets: zod.number().optional(),
+  reps: zod.string().optional(),
+});
+
+/**
+ * @summary Get exercise logs for a session
+ */
+export const GetExerciseLogsParams = zod.object({
+  sessionLogId: zod.coerce.string(),
+});
+
+export const GetExerciseLogsResponseItem = zod.object({
+  exerciseId: zod.string().nullish(),
+  exerciseName: zod.string(),
+  loadKgUsed: zod.number().nullish(),
+  setsCompleted: zod.number().nullish(),
+});
+export const GetExerciseLogsResponse = zod.array(GetExerciseLogsResponseItem);
+
+/**
+ * @summary Log an exercise for a session
+ */
+export const LogExerciseParams = zod.object({
+  sessionLogId: zod.coerce.string(),
+});
+
+export const LogExerciseBody = zod.object({
+  exerciseId: zod.string(),
+  setsCompleted: zod.number().optional(),
+  repsPerSet: zod.array(zod.number()).optional(),
+  loadKgUsed: zod.number().optional(),
+});
+
+/**
+ * @summary Delete an exercise log entry
+ */
+export const DeleteExerciseLogParams = zod.object({
+  sessionLogId: zod.coerce.string(),
+  exerciseId: zod.coerce.string(),
+});
+
+export const DeleteExerciseLogResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });
@@ -318,6 +635,9 @@ export const GetProgramsResponseItem = zod.object({
   startDate: zod.string().nullish(),
   isActive: zod.boolean(),
   createdAt: zod.string().optional(),
+  previewEnabled: zod.boolean().optional(),
+  previewAllowStart: zod.boolean().optional(),
+  startsInFuture: zod.boolean().optional(),
 });
 export const GetProgramsResponse = zod.array(GetProgramsResponseItem);
 
@@ -354,6 +674,9 @@ export const GetProgramResponse = zod.object({
       dayNumber: zod.number(),
       name: zod.string(),
       type: zod.string(),
+      sessionType: zod.string().nullish(),
+      scheduledTime: zod.string().nullish(),
+      visioLink: zod.string().nullish(),
       estimatedDurationMin: zod.number().nullish(),
       coachNotes: zod.string().nullish(),
       variants: zod.array(
@@ -368,17 +691,44 @@ export const GetProgramResponse = zod.object({
               id: zod.string(),
               exerciseId: zod.string(),
               exerciseName: zod.string(),
+              category: zod.string().nullish(),
+              imageUrl: zod.string().nullish(),
+              gifUrl: zod.string().nullish(),
+              muscleGroups: zod.unknown().nullish(),
+              equipment: zod.unknown().nullish(),
+              description: zod.string().nullish(),
+              demoUrl: zod.string().nullish(),
               orderIndex: zod.number(),
               sets: zod.number(),
               reps: zod.string().nullish(),
               nominalLoadKg: zod.number().nullish(),
               adaptedLoadKg: zod.number().nullish(),
               restSeconds: zod.number().nullish(),
+              durationSeconds: zod.number().nullish(),
               coachCue: zod.string().nullish(),
+              lastUsedLoadKg: zod.number().nullish(),
+              lastUsedDate: zod.string().nullish(),
+              blockId: zod.string().nullish(),
+              tempo: zod.string().nullish(),
+              supersetGroup: zod.string().nullish(),
+              supersetLabel: zod.string().nullish(),
             }),
           ),
         }),
       ),
+      blocks: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            type: zod.string(),
+            orderIndex: zod.number(),
+            name: zod.string().nullish(),
+            notes: zod.string().nullish(),
+            estimatedDurationMin: zod.number().nullish(),
+            conditioningFormat: zod.string().nullish(),
+          }),
+        )
+        .optional(),
     }),
   ),
 });
@@ -407,6 +757,9 @@ export const UpdateProgramResponse = zod.object({
   startDate: zod.string().nullish(),
   isActive: zod.boolean(),
   createdAt: zod.string().optional(),
+  previewEnabled: zod.boolean().optional(),
+  previewAllowStart: zod.boolean().optional(),
+  startsInFuture: zod.boolean().optional(),
 });
 
 /**
@@ -432,7 +785,18 @@ export const AddProgramSessionBody = zod.object({
   weekNumber: zod.number(),
   dayNumber: zod.number(),
   name: zod.string(),
-  type: zod.enum(["strength", "cardio", "hybrid", "mobility"]),
+  type: zod.enum([
+    "strength",
+    "cardio",
+    "hybrid",
+    "mobility",
+    "athletic_development",
+    "running",
+    "conditioning",
+  ]),
+  sessionType: zod.enum(["online", "presentiel"]).optional(),
+  scheduledTime: zod.string().nullish(),
+  visioLink: zod.string().nullish(),
   estimatedDurationMin: zod.number().optional(),
   coachNotes: zod.string().optional(),
   variants: zod
@@ -451,6 +815,35 @@ export const AddProgramSessionBody = zod.object({
               loadKg: zod.number().optional(),
               restSeconds: zod.number().optional(),
               coachCue: zod.string().optional(),
+              supersetGroup: zod.string().optional(),
+              supersetLabel: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+  blocks: zod
+    .array(
+      zod.object({
+        type: zod.string(),
+        orderIndex: zod.number(),
+        name: zod.string(),
+        estimatedDurationMin: zod.number().optional(),
+        conditioningFormat: zod.string().optional(),
+        exercises: zod
+          .array(
+            zod.object({
+              exerciseId: zod.string().optional(),
+              orderIndex: zod.number().optional(),
+              sets: zod.number().optional(),
+              reps: zod.string().optional(),
+              loadKg: zod.number().optional(),
+              restSeconds: zod.number().optional(),
+              coachCue: zod.string().optional(),
+              tempo: zod.string().optional(),
+              supersetGroup: zod.string().optional(),
+              supersetLabel: zod.string().optional(),
             }),
           )
           .optional(),
@@ -484,7 +877,18 @@ export const UpdateProgramSessionBody = zod.object({
   weekNumber: zod.number(),
   dayNumber: zod.number(),
   name: zod.string(),
-  type: zod.enum(["strength", "cardio", "hybrid", "mobility"]),
+  type: zod.enum([
+    "strength",
+    "cardio",
+    "hybrid",
+    "mobility",
+    "athletic_development",
+    "running",
+    "conditioning",
+  ]),
+  sessionType: zod.enum(["online", "presentiel"]).optional(),
+  scheduledTime: zod.string().nullish(),
+  visioLink: zod.string().nullish(),
   estimatedDurationMin: zod.number().optional(),
   coachNotes: zod.string().optional(),
   variants: zod
@@ -503,6 +907,35 @@ export const UpdateProgramSessionBody = zod.object({
               loadKg: zod.number().optional(),
               restSeconds: zod.number().optional(),
               coachCue: zod.string().optional(),
+              supersetGroup: zod.string().optional(),
+              supersetLabel: zod.string().optional(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+  blocks: zod
+    .array(
+      zod.object({
+        type: zod.string(),
+        orderIndex: zod.number(),
+        name: zod.string(),
+        estimatedDurationMin: zod.number().optional(),
+        conditioningFormat: zod.string().optional(),
+        exercises: zod
+          .array(
+            zod.object({
+              exerciseId: zod.string().optional(),
+              orderIndex: zod.number().optional(),
+              sets: zod.number().optional(),
+              reps: zod.string().optional(),
+              loadKg: zod.number().optional(),
+              restSeconds: zod.number().optional(),
+              coachCue: zod.string().optional(),
+              tempo: zod.string().optional(),
+              supersetGroup: zod.string().optional(),
+              supersetLabel: zod.string().optional(),
             }),
           )
           .optional(),
@@ -517,6 +950,195 @@ export const UpdateProgramSessionResponse = zod.object({
 });
 
 /**
+ * @summary Get upcoming sessions for the athlete
+ */
+export const GetAthleteUpcomingSessionsResponseItem = zod.object({
+  sessionId: zod.string(),
+  sessionName: zod.string(),
+  sessionType: zod.string(),
+  sessionLocation: zod.string().nullish(),
+  weekNumber: zod.number(),
+  dayNumber: zod.number(),
+  scheduledDate: zod.string(),
+  estimatedDurationMin: zod.number().nullish(),
+  isCompleted: zod.boolean(),
+  completedActualDate: zod.string().nullish(),
+  scheduledTime: zod.string().nullish(),
+  visioLink: zod.string().nullish(),
+  isPreview: zod.boolean().optional(),
+  isAppointment: zod.boolean().optional(),
+});
+export const GetAthleteUpcomingSessionsResponse = zod.array(
+  GetAthleteUpcomingSessionsResponseItem,
+);
+
+/**
+ * @summary Get all sessions from the active program (library)
+ */
+export const GetLibrarySessionsResponseItem = zod.object({
+  sessionId: zod.string(),
+  sessionName: zod.string(),
+  sessionType: zod.string(),
+  sessionLocation: zod.string(),
+  weekNumber: zod.number(),
+  dayNumber: zod.number(),
+  estimatedDurationMin: zod.number().nullish(),
+});
+export const GetLibrarySessionsResponse = zod.array(
+  GetLibrarySessionsResponseItem,
+);
+
+/**
+ * @summary Get athlete performance tests
+ */
+export const GetAthleteTestsResponseItem = zod.object({
+  id: zod.string(),
+  athleteId: zod.string(),
+  coachId: zod.string().nullish(),
+  testType: zod.string(),
+  exerciseId: zod.string().nullish(),
+  exerciseName: zod.string().nullish(),
+  value: zod.number(),
+  unit: zod.string(),
+  testedAt: zod.string(),
+  notes: zod.string().nullish(),
+  createdAt: zod.string().optional(),
+});
+export const GetAthleteTestsResponse = zod.array(GetAthleteTestsResponseItem);
+
+/**
+ * @summary Get programs assigned to the athlete
+ */
+export const GetAthleteProgramsResponseItem = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  athleteId: zod.string(),
+  athleteName: zod.string(),
+  durationWeeks: zod.number(),
+  startDate: zod.string().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.string().optional(),
+  previewEnabled: zod.boolean().optional(),
+  previewAllowStart: zod.boolean().optional(),
+  startsInFuture: zod.boolean().optional(),
+});
+export const GetAthleteProgramsResponse = zod.array(
+  GetAthleteProgramsResponseItem,
+);
+
+/**
+ * @summary Get a preview of a program
+ */
+export const GetAthleteProgramPreviewParams = zod.object({
+  programId: zod.coerce.string(),
+});
+
+export const GetAthleteProgramPreviewResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  athleteId: zod.string(),
+  durationWeeks: zod.number(),
+  startDate: zod.string().nullish(),
+  isActive: zod.boolean(),
+  sessions: zod.array(
+    zod.object({
+      id: zod.string(),
+      weekNumber: zod.number(),
+      dayNumber: zod.number(),
+      name: zod.string(),
+      type: zod.string(),
+      sessionType: zod.string().nullish(),
+      scheduledTime: zod.string().nullish(),
+      visioLink: zod.string().nullish(),
+      estimatedDurationMin: zod.number().nullish(),
+      coachNotes: zod.string().nullish(),
+      variants: zod.array(
+        zod.object({
+          id: zod.string(),
+          mode: zod.string(),
+          volumeModifier: zod.number().optional(),
+          intensityModifier: zod.number().optional(),
+          notes: zod.string().nullish(),
+          exercises: zod.array(
+            zod.object({
+              id: zod.string(),
+              exerciseId: zod.string(),
+              exerciseName: zod.string(),
+              category: zod.string().nullish(),
+              imageUrl: zod.string().nullish(),
+              gifUrl: zod.string().nullish(),
+              muscleGroups: zod.unknown().nullish(),
+              equipment: zod.unknown().nullish(),
+              description: zod.string().nullish(),
+              demoUrl: zod.string().nullish(),
+              orderIndex: zod.number(),
+              sets: zod.number(),
+              reps: zod.string().nullish(),
+              nominalLoadKg: zod.number().nullish(),
+              adaptedLoadKg: zod.number().nullish(),
+              restSeconds: zod.number().nullish(),
+              durationSeconds: zod.number().nullish(),
+              coachCue: zod.string().nullish(),
+              lastUsedLoadKg: zod.number().nullish(),
+              lastUsedDate: zod.string().nullish(),
+              blockId: zod.string().nullish(),
+              tempo: zod.string().nullish(),
+              supersetGroup: zod.string().nullish(),
+              supersetLabel: zod.string().nullish(),
+            }),
+          ),
+        }),
+      ),
+      blocks: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            type: zod.string(),
+            orderIndex: zod.number(),
+            name: zod.string().nullish(),
+            notes: zod.string().nullish(),
+            estimatedDurationMin: zod.number().nullish(),
+            conditioningFormat: zod.string().nullish(),
+          }),
+        )
+        .optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Start a preview program now
+ */
+export const StartProgramNowParams = zod.object({
+  programId: zod.coerce.string(),
+});
+
+export const StartProgramNowResponse = zod.object({
+  success: zod.boolean(),
+  startDate: zod.string(),
+});
+
+/**
+ * @summary Link athlete to a coach using invite code
+ */
+export const athleteLinkBodyInviteCodeMin = 6;
+export const athleteLinkBodyInviteCodeMax = 6;
+
+export const AthleteLinkBody = zod.object({
+  inviteCode: zod
+    .string()
+    .min(athleteLinkBodyInviteCodeMin)
+    .max(athleteLinkBodyInviteCodeMax)
+    .describe("6-character invite code from the coach"),
+});
+
+export const AthleteLinkResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Get coach clients with today's status
  */
 export const GetClientsResponseItem = zod.object({
@@ -524,6 +1146,7 @@ export const GetClientsResponseItem = zod.object({
   firstName: zod.string(),
   lastName: zod.string().nullish(),
   email: zod.string(),
+  avatarUrl: zod.string().nullish(),
   fitnessLevel: zod.string().nullish(),
   primaryGoal: zod.string().nullish(),
   todayCheckin: zod
@@ -560,12 +1183,16 @@ export const GetClientDetailResponse = zod.object({
   firstName: zod.string(),
   lastName: zod.string().nullish(),
   email: zod.string(),
+  avatarUrl: zod.string().nullish(),
   age: zod.number().nullish(),
   weightKg: zod.number().nullish(),
   heightCm: zod.number().nullish(),
   fitnessLevel: zod.string().nullish(),
   primaryGoal: zod.string().nullish(),
   cycleTracking: zod.boolean().optional(),
+  lastPeriodDate: zod.string().nullish(),
+  avgCycleDays: zod.number().nullish(),
+  inviteCode: zod.string().nullish(),
   todayCheckin: zod
     .object({
       id: zod.string(),
@@ -604,14 +1231,49 @@ export const GetClientDetailResponse = zod.object({
     zod.object({
       id: zod.string(),
       sessionId: zod.string().nullish(),
+      sessionName: zod.string().nullish(),
       variantMode: zod.string(),
       startedAt: zod.string().nullish(),
       completedAt: zod.string().nullish(),
       rpe: zod.number().nullish(),
       perceivedDifficulty: zod.string().nullish(),
+      athleteNotes: zod.string().nullish(),
+      durationMin: zod.number().nullish(),
       createdAt: zod.string().optional(),
+      isFreeSession: zod.boolean().optional(),
+      freeSessionName: zod.string().nullish(),
+      exercises: zod
+        .array(
+          zod.object({
+            exerciseId: zod.string().nullish(),
+            exerciseName: zod.string(),
+            loadKgUsed: zod.number().nullish(),
+            setsCompleted: zod.number().nullish(),
+          }),
+        )
+        .optional(),
     }),
   ),
+  upcomingSessions: zod
+    .array(
+      zod.object({
+        sessionId: zod.string(),
+        sessionName: zod.string(),
+        sessionType: zod.string(),
+        sessionLocation: zod.string().nullish(),
+        weekNumber: zod.number(),
+        dayNumber: zod.number(),
+        scheduledDate: zod.string(),
+        estimatedDurationMin: zod.number().nullish(),
+        isCompleted: zod.boolean(),
+        completedActualDate: zod.string().nullish(),
+        scheduledTime: zod.string().nullish(),
+        visioLink: zod.string().nullish(),
+        isPreview: zod.boolean().optional(),
+        isAppointment: zod.boolean().optional(),
+      }),
+    )
+    .optional(),
   activeAlerts: zod.array(
     zod.object({
       id: zod.string(),
@@ -636,6 +1298,27 @@ export const UnlinkClientParams = zod.object({
 });
 
 export const UnlinkClientResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Update client profile (coach)
+ */
+export const CoachUpdateAthleteProfileParams = zod.object({
+  clientId: zod.coerce.string(),
+});
+
+export const CoachUpdateAthleteProfileBody = zod.object({
+  heightCm: zod.number().optional(),
+  weightKg: zod.number().optional(),
+  fitnessLevel: zod.string().optional(),
+  primaryGoal: zod.string().optional(),
+  trainingFrequency: zod.number().optional(),
+  injuries: zod.string().optional(),
+});
+
+export const CoachUpdateAthleteProfileResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });
@@ -683,6 +1366,130 @@ export const OverrideClientSessionResponse = zod.object({
 });
 
 /**
+ * @summary Get performance tests for a client
+ */
+export const GetClientTestsParams = zod.object({
+  clientId: zod.coerce.string(),
+});
+
+export const GetClientTestsResponseItem = zod.object({
+  id: zod.string(),
+  athleteId: zod.string(),
+  coachId: zod.string().nullish(),
+  testType: zod.string(),
+  exerciseId: zod.string().nullish(),
+  exerciseName: zod.string().nullish(),
+  value: zod.number(),
+  unit: zod.string(),
+  testedAt: zod.string(),
+  notes: zod.string().nullish(),
+  createdAt: zod.string().optional(),
+});
+export const GetClientTestsResponse = zod.array(GetClientTestsResponseItem);
+
+/**
+ * @summary Create a performance test for a client
+ */
+export const CreateClientTestParams = zod.object({
+  clientId: zod.coerce.string(),
+});
+
+export const CreateClientTestBody = zod.object({
+  testType: zod.string(),
+  exerciseId: zod.string().optional(),
+  exerciseName: zod.string().optional(),
+  value: zod.number(),
+  unit: zod.string(),
+  testedAt: zod.string(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Delete a performance test
+ */
+export const DeleteClientTestParams = zod.object({
+  clientId: zod.coerce.string(),
+  testId: zod.coerce.string(),
+});
+
+export const DeleteClientTestResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get a session log detail for a client
+ */
+export const GetClientSessionDetailParams = zod.object({
+  clientId: zod.coerce.string(),
+  sessionLogId: zod.coerce.string(),
+});
+
+export const GetClientSessionDetailResponse = zod.object({
+  sessionLogId: zod.string(),
+  sessionId: zod.string().nullish(),
+  name: zod.string(),
+  mode: zod.string(),
+  sessionType: zod.string().nullish(),
+  sessionLocation: zod.string().nullish(),
+  scheduledTime: zod.string().nullish(),
+  visioLink: zod.string().nullish(),
+  estimatedDurationMin: zod.number().nullish(),
+  coachNotes: zod.string().nullish(),
+  exercises: zod.array(
+    zod.object({
+      id: zod.string(),
+      exerciseId: zod.string(),
+      exerciseName: zod.string(),
+      category: zod.string().nullish(),
+      imageUrl: zod.string().nullish(),
+      gifUrl: zod.string().nullish(),
+      muscleGroups: zod.unknown().nullish(),
+      equipment: zod.unknown().nullish(),
+      description: zod.string().nullish(),
+      demoUrl: zod.string().nullish(),
+      orderIndex: zod.number(),
+      sets: zod.number(),
+      reps: zod.string().nullish(),
+      nominalLoadKg: zod.number().nullish(),
+      adaptedLoadKg: zod.number().nullish(),
+      restSeconds: zod.number().nullish(),
+      durationSeconds: zod.number().nullish(),
+      coachCue: zod.string().nullish(),
+      lastUsedLoadKg: zod.number().nullish(),
+      lastUsedDate: zod.string().nullish(),
+      blockId: zod.string().nullish(),
+      tempo: zod.string().nullish(),
+      supersetGroup: zod.string().nullish(),
+      supersetLabel: zod.string().nullish(),
+    }),
+  ),
+  blocks: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.string(),
+        orderIndex: zod.number(),
+        name: zod.string().nullish(),
+        notes: zod.string().nullish(),
+        estimatedDurationMin: zod.number().nullish(),
+        conditioningFormat: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+  adaptScore: zod.number(),
+  overriddenByCoach: zod.boolean().optional(),
+  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  completedAt: zod.string().nullish(),
+  durationMin: zod.number().nullish(),
+  rpe: zod.number().nullish(),
+  sessionsToday: zod.number().optional(),
+  sessionsTodayCompleted: zod.number().optional(),
+  sessionIndex: zod.number().optional(),
+  isFreeSession: zod.boolean().optional(),
+});
+
+/**
  * @summary Get coach alerts
  */
 export const GetAlertsResponseItem = zod.object({
@@ -723,35 +1530,359 @@ export const GetInviteCodeResponse = zod.object({
 });
 
 /**
- * @summary Link athlete to coach roster by athlete email
+ * @summary Link athlete to coach roster by invite code
  */
-export const LinkClientBody = zod.object({
-  athleteEmail: zod
+export const coachLinkBodyInviteCodeMin = 6;
+export const coachLinkBodyInviteCodeMax = 6;
+
+export const CoachLinkBody = zod.object({
+  inviteCode: zod
     .string()
-    .email()
-    .describe("Email address of the athlete to link to this coach's roster"),
+    .min(coachLinkBodyInviteCodeMin)
+    .max(coachLinkBodyInviteCodeMax)
+    .describe("6-character invite code of the athlete to link"),
 });
 
-export const LinkClientResponse = zod.object({
+export const CoachLinkResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });
 
 /**
- * @summary Link athlete to a coach using invite code
+ * @summary Unlink an athlete from coach roster
  */
-export const athleteLinkBodyInviteCodeMin = 6;
-export const athleteLinkBodyInviteCodeMax = 6;
-
-export const AthleteLinkBody = zod.object({
-  inviteCode: zod
-    .string()
-    .min(athleteLinkBodyInviteCodeMin)
-    .max(athleteLinkBodyInviteCodeMax)
-    .describe("6-character invite code from the coach"),
+export const CoachUnlinkBody = zod.object({
+  athleteId: zod.string().uuid(),
 });
 
-export const AthleteLinkResponse = zod.object({
+export const CoachUnlinkResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get coach morning notification hour
+ */
+export const getMorningNotifHourResponseHourMin = 5;
+export const getMorningNotifHourResponseHourMax = 23;
+
+export const GetMorningNotifHourResponse = zod.object({
+  hour: zod
+    .number()
+    .min(getMorningNotifHourResponseHourMin)
+    .max(getMorningNotifHourResponseHourMax),
+});
+
+/**
+ * @summary Update coach morning notification hour
+ */
+export const updateMorningNotifHourBodyHourMin = 5;
+export const updateMorningNotifHourBodyHourMax = 23;
+
+export const UpdateMorningNotifHourBody = zod.object({
+  hour: zod
+    .number()
+    .min(updateMorningNotifHourBodyHourMin)
+    .max(updateMorningNotifHourBodyHourMax),
+});
+
+export const UpdateMorningNotifHourResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get coach appointments
+ */
+export const GetCoachAppointmentsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  location: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  type: zod.string(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+export const GetCoachAppointmentsResponse = zod.array(
+  GetCoachAppointmentsResponseItem,
+);
+
+/**
+ * @summary Create an appointment
+ */
+export const CreateCoachAppointmentBody = zod.object({
+  athleteId: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number().optional(),
+  location: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary Update an appointment
+ */
+export const UpdateCoachAppointmentParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateCoachAppointmentBody = zod.object({
+  startAt: zod.string().optional(),
+  durationMin: zod.number().optional(),
+  location: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+export const UpdateCoachAppointmentResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  location: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  type: zod.string(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete an appointment
+ */
+export const DeleteCoachAppointmentParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteCoachAppointmentResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get scheduled notifications
+ */
+export const GetScheduledNotificationsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  message: zod.string(),
+  recurrenceType: zod.enum(["daily", "weekly", "custom"]),
+  recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
+  sendHour: zod.number(),
+  active: zod.boolean(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+export const GetScheduledNotificationsResponse = zod.array(
+  GetScheduledNotificationsResponseItem,
+);
+
+/**
+ * @summary Create a scheduled notification
+ */
+export const CreateScheduledNotificationBody = zod.object({
+  athleteId: zod.string(),
+  message: zod.string(),
+  recurrenceType: zod.enum(["daily", "weekly", "custom"]),
+  recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
+  sendHour: zod.number(),
+});
+
+/**
+ * @summary Update a scheduled notification
+ */
+export const UpdateScheduledNotificationParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateScheduledNotificationBody = zod.object({
+  message: zod.string().optional(),
+  recurrenceType: zod.enum(["daily", "weekly", "custom"]).optional(),
+  recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
+  sendHour: zod.number().optional(),
+  active: zod.boolean().optional(),
+});
+
+export const UpdateScheduledNotificationResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  message: zod.string(),
+  recurrenceType: zod.enum(["daily", "weekly", "custom"]),
+  recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
+  sendHour: zod.number(),
+  active: zod.boolean(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a scheduled notification
+ */
+export const DeleteScheduledNotificationParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteScheduledNotificationResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get coach challenges
+ */
+export const GetCoachChallengesResponseItem = zod.object({
+  id: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  metric: zod.string(),
+  target: zod.number(),
+  unit: zod.string().nullish(),
+  type: zod.string(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  createdAt: zod.string().nullish(),
+  assignments: zod.array(
+    zod.object({
+      athleteId: zod.string(),
+      athleteName: zod.string(),
+      progress: zod.number(),
+      completedAt: zod.string().nullish(),
+    }),
+  ),
+});
+export const GetCoachChallengesResponse = zod.array(
+  GetCoachChallengesResponseItem,
+);
+
+/**
+ * @summary Create a challenge
+ */
+export const CreateCoachChallengeBody = zod.object({
+  title: zod.string(),
+  description: zod.string().optional(),
+  metric: zod.enum(["reps", "distance", "time", "sessions"]),
+  target: zod.number(),
+  unit: zod.string().optional(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  athleteIds: zod.array(zod.string()),
+});
+
+/**
+ * @summary Update a challenge
+ */
+export const UpdateChallengeParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateChallengeBody = zod.object({
+  title: zod.string(),
+  description: zod.string().optional(),
+  metric: zod.enum(["reps", "distance", "time", "sessions"]),
+  target: zod.number(),
+  unit: zod.string().optional(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  athleteIds: zod.array(zod.string()),
+});
+
+export const UpdateChallengeResponse = zod.object({
+  id: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  metric: zod.string(),
+  target: zod.number(),
+  unit: zod.string().nullish(),
+  type: zod.string(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  createdAt: zod.string().nullish(),
+  assignments: zod.array(
+    zod.object({
+      athleteId: zod.string(),
+      athleteName: zod.string(),
+      progress: zod.number(),
+      completedAt: zod.string().nullish(),
+    }),
+  ),
+});
+
+/**
+ * @summary Delete a challenge
+ */
+export const DeleteCoachChallengeParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteCoachChallengeResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get active challenges for the current user
+ */
+export const GetActiveChallengesResponseItem = zod.object({
+  id: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  metric: zod.string(),
+  target: zod.number(),
+  unit: zod.string().nullish(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  progress: zod.number(),
+  completedAt: zod.string().nullish(),
+  assignmentId: zod.string().nullish(),
+});
+export const GetActiveChallengesResponse = zod.array(
+  GetActiveChallengesResponseItem,
+);
+
+/**
+ * @summary Get a challenge
+ */
+export const GetChallengeParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetChallengeResponse = zod.object({
+  id: zod.string(),
+  title: zod.string(),
+  description: zod.string().nullish(),
+  metric: zod.string(),
+  target: zod.number(),
+  unit: zod.string().nullish(),
+  startDate: zod.string(),
+  endDate: zod.string(),
+  progress: zod.number(),
+  completedAt: zod.string().nullish(),
+  assignmentId: zod.string().nullish(),
+});
+
+/**
+ * @summary Update challenge progress
+ */
+export const UpdateChallengeProgressParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateChallengeProgressBody = zod.object({
+  progress: zod.number(),
+});
+
+export const UpdateChallengeProgressResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });
@@ -852,7 +1983,19 @@ export const MarkMessagesReadResponse = zod.object({
 });
 
 /**
- * @summary Request a presigned URL to upload a document attachment
+ * @summary Get a pre-signed URL to upload media
+ */
+export const UploadMessageMediaBody = zod.object({
+  mediaType: zod.enum(["audio", "video"]),
+  contentType: zod.string(),
+});
+
+export const UploadMessageMediaResponse = zod.object({
+  uploadUrl: zod.string(),
+});
+
+/**
+ * @summary Get a pre-signed URL to upload a document
  */
 export const UploadMessageDocumentBody = zod.object({
   mimeType: zod.string(),
@@ -862,4 +2005,81 @@ export const UploadMessageDocumentBody = zod.object({
 
 export const UploadMessageDocumentResponse = zod.object({
   uploadUrl: zod.string(),
+});
+
+/**
+ * @summary Get notifications
+ */
+export const GetNotificationsQueryParams = zod.object({
+  offset: zod.coerce.number().optional(),
+  limit: zod.coerce.number().optional(),
+});
+
+export const GetNotificationsResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      type: zod.string(),
+      title: zod.string(),
+      body: zod.string().nullish(),
+      link: zod.string().nullish(),
+      isRead: zod.boolean(),
+      createdAt: zod.string().nullish(),
+    }),
+  ),
+  unreadCount: zod.number(),
+  total: zod.number(),
+  offset: zod.number(),
+  limit: zod.number(),
+  hasMore: zod.boolean(),
+});
+
+/**
+ * @summary Mark all notifications as read
+ */
+export const MarkAllNotificationsReadResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const MarkNotificationReadResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get notification preferences
+ */
+export const GetNotificationPreferencesResponse = zod.object({
+  session: zod.boolean(),
+  checkin: zod.boolean(),
+  messages: zod.boolean(),
+  encouragements: zod.boolean(),
+  performance: zod.boolean(),
+});
+
+/**
+ * @summary Update notification preferences
+ */
+export const UpdateNotificationPreferencesBody = zod.object({
+  session: zod.boolean().optional(),
+  checkin: zod.boolean().optional(),
+  messages: zod.boolean().optional(),
+  encouragements: zod.boolean().optional(),
+  performance: zod.boolean().optional(),
+});
+
+export const UpdateNotificationPreferencesResponse = zod.object({
+  session: zod.boolean(),
+  checkin: zod.boolean(),
+  messages: zod.boolean(),
+  encouragements: zod.boolean(),
+  performance: zod.boolean(),
 });

@@ -6,7 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CompleteSessionRequestExercisesItem } from "./completeSessionRequestExercisesItem";
+import type { CompleteSessionRequestPerceivedDifficulty } from "./completeSessionRequestPerceivedDifficulty";
 
 export interface CompleteSessionRequest {
+  /**
+   * @minimum 1
+   * @maximum 10
+   */
+  rpe?: number;
+  perceivedDifficulty?: CompleteSessionRequestPerceivedDifficulty;
+  athleteNotes?: string | null;
   exercises: CompleteSessionRequestExercisesItem[];
 }

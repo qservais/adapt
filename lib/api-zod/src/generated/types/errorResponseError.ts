@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ErrorResponseError = {
+export interface ErrorResponseError {
   code: string;
   message: string;
-};
+}

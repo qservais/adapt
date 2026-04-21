@@ -8,20 +8,26 @@
 import type { AlertData } from "./alertData";
 import type { CheckinData } from "./checkinData";
 import type { SessionLogSummary } from "./sessionLogSummary";
+import type { UpcomingSession } from "./upcomingSession";
 
 export interface ClientDetail {
   id: string;
   firstName: string;
   lastName?: string | null;
   email: string;
+  avatarUrl?: string | null;
   age?: number | null;
   weightKg?: number | null;
   heightCm?: number | null;
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   cycleTracking?: boolean;
+  lastPeriodDate?: string | null;
+  avgCycleDays?: number | null;
+  inviteCode?: string | null;
   todayCheckin?: CheckinData | null;
   recentCheckins: CheckinData[];
   recentSessions: SessionLogSummary[];
+  upcomingSessions?: UpcomingSession[];
   activeAlerts: AlertData[];
 }

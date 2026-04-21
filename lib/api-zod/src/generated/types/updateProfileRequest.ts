@@ -9,10 +9,16 @@
 export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
+  gender?: string;
+  birthDate?: string;
   age?: number;
   weightKg?: number;
   heightCm?: number;
+  trainingFrequency?: number;
+  injuries?: string;
   fitnessLevel?: string;
   primaryGoal?: string;
   cycleTracking?: boolean;
+  lastPeriodDate?: string | null;
+  avgCycleDays?: number | null;
 }

@@ -26,6 +26,14 @@ tags:
     description: Exercise library
   - name: messages
     description: Messaging
+  - name: notifications
+    description: Notifications
+  - name: challenges
+    description: Challenges
+  - name: appointments
+    description: Coach appointments
+  - name: athlete
+    description: Athlete-specific endpoints
 
 security:
   - bearerAuth: []
@@ -168,6 +176,45 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserProfile"
 
+  /users/badges:
+    get:
+      operationId: getBadges
+      tags: [users]
+      summary: Get user badges
+      responses:
+        "200":
+          description: Badges
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadgesResponse"
+
+  /users/prs:
+    get:
+      operationId: getPersonalRecords
+      tags: [users]
+      summary: Get user personal records
+      responses:
+        "200":
+          description: Personal records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalRecordsResponse"
+
+  /users/weekly-recap/latest:
+    get:
+      operationId: getWeeklyRecap
+      tags: [users]
+      summary: Get latest weekly recap
+      responses:
+        "200":
+          description: Weekly recap
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyRecapResponse"
+
   # CHECK-INS
   /checkins:
     post:
@@ -254,6 +301,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /sessions/today-all:
+    get:
+      operationId: getTodaySessionAll
+      tags: [sessions]
+      summary: Get all of today's sessions (multi-session programs)
+      responses:
+        "200":
+          description: All of today's sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionDetail"
+
+  /sessions/missed:
+    get:
+      operationId: getMissedSessions
+      tags: [sessions]
+      summary: Get missed sessions in the last 7 days
+      responses:
+        "200":
+          description: Missed sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissedSessionsResponse"
+
   /sessions/history:
     get:
       operationId: getSessionHistory
@@ -288,6 +363,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /sessions/{sessionId}/start-free:
+    post:
+      operationId: startFreeSession
+      tags: [sessions]
+      summary: Start a free (library) session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Free session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /sessions/{sessionId}/complete:
     post:
       operationId: completeSession
@@ -311,7 +411,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                $ref: "#/components/schemas/CompleteSessionResult"
 
   /sessions/{sessionId}/feedback:
     post:
@@ -333,6 +433,93 @@ paths:
       responses:
         "200":
           description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /sessions/free-custom:
+    post:
+      operationId: startFreeCustomSession
+      tags: [sessions]
+      summary: Start a custom free session with selected exercises
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FreeCustomSessionRequest"
+      responses:
+        "201":
+          description: Custom session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+
+  /sessions/{sessionLogId}/exercise-logs:
+    get:
+      operationId: getExerciseLogs
+      tags: [sessions]
+      summary: Get exercise logs for a session
+      parameters:
+        - name: sessionLogId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Exercise logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionExerciseLog"
+    post:
+      operationId: logExercise
+      tags: [sessions]
+      summary: Log an exercise for a session
+      parameters:
+        - name: sessionLogId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogExerciseRequest"
+      responses:
+        "201":
+          description: Exercise logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /sessions/{sessionLogId}/exercise-logs/{exerciseId}:
+    delete:
+      operationId: deleteExerciseLog
+      tags: [sessions]
+      summary: Delete an exercise log entry
+      parameters:
+        - name: sessionLogId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: exerciseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Exercise log deleted
           content:
             application/json:
               schema:
@@ -531,6 +718,128 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  # ATHLETE
+  /athlete/upcoming-sessions:
+    get:
+      operationId: getAthleteUpcomingSessions
+      tags: [athlete]
+      summary: Get upcoming sessions for the athlete
+      responses:
+        "200":
+          description: Upcoming sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UpcomingSession"
+
+  /athlete/library-sessions:
+    get:
+      operationId: getLibrarySessions
+      tags: [athlete]
+      summary: Get all sessions from the active program (library)
+      responses:
+        "200":
+          description: Library sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibrarySession"
+
+  /athlete/tests:
+    get:
+      operationId: getAthleteTests
+      tags: [athlete]
+      summary: Get athlete performance tests
+      responses:
+        "200":
+          description: Performance tests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AthletePerformanceTest"
+
+  /athlete/programs:
+    get:
+      operationId: getAthletePrograms
+      tags: [athlete]
+      summary: Get programs assigned to the athlete
+      responses:
+        "200":
+          description: Programs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProgramSummary"
+
+  /athlete/programs/{programId}/preview:
+    get:
+      operationId: getAthleteProgramPreview
+      tags: [athlete]
+      summary: Get a preview of a program
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Program preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramDetail"
+
+  /athlete/programs/{programId}/start-now:
+    post:
+      operationId: startProgramNow
+      tags: [athlete]
+      summary: Start a preview program now
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Program started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartProgramNowResult"
+
+  /athlete/link:
+    post:
+      operationId: athleteLink
+      tags: [athlete]
+      summary: Link athlete to a coach using invite code
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AthleteLinkRequest"
+      responses:
+        "200":
+          description: Linked to coach successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid invite code
+
   # COACH
   /coach/clients:
     get:
@@ -583,6 +892,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /coach/clients/{clientId}/profile:
+    patch:
+      operationId: coachUpdateAthleteProfile
+      tags: [coach]
+      summary: Update client profile (coach)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachUpdateAthleteRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /coach/clients/{clientId}/checkins:
     get:
       operationId: getClientCheckins
@@ -628,6 +962,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/clients/{clientId}/tests:
+    get:
+      operationId: getClientTests
+      tags: [coach]
+      summary: Get performance tests for a client
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Performance tests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AthletePerformanceTest"
+    post:
+      operationId: createClientTest
+      tags: [coach]
+      summary: Create a performance test for a client
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePerformanceTestRequest"
+      responses:
+        "201":
+          description: Test created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthletePerformanceTest"
+
+  /coach/clients/{clientId}/tests/{testId}:
+    delete:
+      operationId: deleteClientTest
+      tags: [coach]
+      summary: Delete a performance test
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: testId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Test deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/clients/{clientId}/sessions/{sessionLogId}:
+    get:
+      operationId: getClientSessionDetail
+      tags: [coach]
+      summary: Get a session log detail for a client
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionLogId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
 
   /coach/alerts:
     get:
@@ -681,47 +1107,354 @@ paths:
               schema:
                 $ref: "#/components/schemas/InviteCodeResponse"
 
-  /coach/clients/link:
+  /coach/link:
     post:
-      operationId: linkClient
+      operationId: coachLink
       tags: [coach]
-      summary: Link athlete to coach roster by athlete email
+      summary: Link athlete to coach roster by invite code
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LinkClientRequest"
+              $ref: "#/components/schemas/CoachLinkRequest"
       responses:
         "200":
-          description: Client linked
+          description: Athlete linked
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
-  /athlete/link:
+  /coach/unlink:
     post:
-      operationId: athleteLink
-      tags: [athlete]
-      summary: Link athlete to a coach using invite code
-      security:
-        - bearerAuth: []
+      operationId: coachUnlink
+      tags: [coach]
+      summary: Unlink an athlete from coach roster
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AthleteLinkRequest"
+              $ref: "#/components/schemas/CoachUnlinkRequest"
       responses:
         "200":
-          description: Linked to coach successfully
+          description: Athlete unlinked
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
-        "400":
-          description: Invalid invite code
+
+  /coach/morning-notif-hour:
+    get:
+      operationId: getMorningNotifHour
+      tags: [coach]
+      summary: Get coach morning notification hour
+      responses:
+        "200":
+          description: Morning notification hour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MorningNotifHourResponse"
+    put:
+      operationId: updateMorningNotifHour
+      tags: [coach]
+      summary: Update coach morning notification hour
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MorningNotifHourBody"
+      responses:
+        "200":
+          description: Morning notification hour updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/appointments:
+    get:
+      operationId: getCoachAppointments
+      tags: [appointments]
+      summary: Get coach appointments
+      responses:
+        "200":
+          description: Appointments list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachAppointment"
+    post:
+      operationId: createCoachAppointment
+      tags: [appointments]
+      summary: Create an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentRequest"
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+
+  /coach/appointments/{id}:
+    put:
+      operationId: updateCoachAppointment
+      tags: [appointments]
+      summary: Update an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentRequest"
+      responses:
+        "200":
+          description: Appointment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+    delete:
+      operationId: deleteCoachAppointment
+      tags: [appointments]
+      summary: Delete an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appointment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/scheduled-notifications:
+    get:
+      operationId: getScheduledNotifications
+      tags: [coach]
+      summary: Get scheduled notifications
+      responses:
+        "200":
+          description: Scheduled notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduledNotification"
+    post:
+      operationId: createScheduledNotification
+      tags: [coach]
+      summary: Create a scheduled notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScheduledNotificationRequest"
+      responses:
+        "201":
+          description: Scheduled notification created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledNotification"
+
+  /coach/scheduled-notifications/{id}:
+    put:
+      operationId: updateScheduledNotification
+      tags: [coach]
+      summary: Update a scheduled notification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScheduledNotificationRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledNotification"
+    delete:
+      operationId: deleteScheduledNotification
+      tags: [coach]
+      summary: Delete a scheduled notification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/challenges:
+    get:
+      operationId: getCoachChallenges
+      tags: [challenges]
+      summary: Get coach challenges
+      responses:
+        "200":
+          description: Challenges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachChallenge"
+    post:
+      operationId: createCoachChallenge
+      tags: [challenges]
+      summary: Create a challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChallengeRequest"
+      responses:
+        "201":
+          description: Challenge created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachChallenge"
+
+  /coach/challenges/{id}:
+    put:
+      operationId: updateChallenge
+      tags: [challenges]
+      summary: Update a challenge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChallengeRequest"
+      responses:
+        "200":
+          description: Challenge updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachChallenge"
+    delete:
+      operationId: deleteCoachChallenge
+      tags: [challenges]
+      summary: Delete a challenge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenge deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /challenges/active:
+    get:
+      operationId: getActiveChallenges
+      tags: [challenges]
+      summary: Get active challenges for the current user
+      responses:
+        "200":
+          description: Active challenges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Challenge"
+
+  /challenges/{id}:
+    get:
+      operationId: getChallenge
+      tags: [challenges]
+      summary: Get a challenge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Challenge"
+
+  /challenges/{id}/progress:
+    put:
+      operationId: updateChallengeProgress
+      tags: [challenges]
+      summary: Update challenge progress
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProgressRequest"
+      responses:
+        "200":
+          description: Progress updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
 
   # EXERCISES
   /exercises:
@@ -832,17 +1565,36 @@ paths:
             type: string
       responses:
         "200":
-          description: Marked read
+          description: Messages marked read
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
-  /messages/upload-document:
+  /messages/upload-media:
+    post:
+      operationId: uploadMessageMedia
+      tags: [messages]
+      summary: Get a pre-signed URL to upload media
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadMediaRequest"
+      responses:
+        "200":
+          description: Upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadMediaResponse"
+
+  /messages/document-upload:
     post:
       operationId: uploadMessageDocument
       tags: [messages]
-      summary: Request a presigned URL to upload a document attachment
+      summary: Get a pre-signed URL to upload a document
       requestBody:
         required: true
         content:
@@ -851,15 +1603,96 @@ paths:
               $ref: "#/components/schemas/UploadDocumentRequest"
       responses:
         "200":
-          description: Presigned upload URL
+          description: Upload URL
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UploadDocumentResponse"
-        "413":
-          description: File too large
-        "415":
-          description: Unsupported media type
+
+  # NOTIFICATIONS
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get notifications
+      parameters:
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsResponse"
+
+  /notifications/read-all:
+    put:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/{id}/read:
+    put:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/preferences:
+    get:
+      operationId: getNotificationPreferences
+      tags: [notifications]
+      summary: Get notification preferences
+      responses:
+        "200":
+          description: Preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+    put:
+      operationId: updateNotificationPreferences
+      tags: [notifications]
+      summary: Update notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationPreferencesRequest"
+      responses:
+        "200":
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
 
 components:
   securitySchemes:
@@ -877,19 +1710,22 @@ components:
       required:
         - status
 
+    ErrorResponseError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+
     ErrorResponse:
       type: object
       properties:
         error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-          required:
-            - code
-            - message
+          $ref: "#/components/schemas/ErrorResponseError"
       required:
         - error
 
@@ -908,7 +1744,6 @@ components:
       properties:
         email:
           type: string
-          format: email
         password:
           type: string
           minLength: 8
@@ -930,7 +1765,6 @@ components:
       properties:
         email:
           type: string
-          format: email
         password:
           type: string
       required:
@@ -944,20 +1778,6 @@ components:
           type: string
       required:
         - refreshToken
-
-    AuthResponse:
-      type: object
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        user:
-          $ref: "#/components/schemas/UserProfile"
-      required:
-        - accessToken
-        - refreshToken
-        - user
 
     UserProfile:
       type: object
@@ -973,6 +1793,12 @@ components:
         lastName:
           type: string
           nullable: true
+        gender:
+          type: string
+          nullable: true
+        birthDate:
+          type: string
+          nullable: true
         age:
           type: integer
           nullable: true
@@ -982,6 +1808,12 @@ components:
         heightCm:
           type: integer
           nullable: true
+        trainingFrequency:
+          type: integer
+          nullable: true
+        injuries:
+          type: string
+          nullable: true
         fitnessLevel:
           type: string
           nullable: true
@@ -990,10 +1822,22 @@ components:
           nullable: true
         cycleTracking:
           type: boolean
+        lastPeriodDate:
+          type: string
+          nullable: true
+        avgCycleDays:
+          type: integer
+          nullable: true
         coachId:
           type: string
           nullable: true
         inviteCode:
+          type: string
+          nullable: true
+        coachName:
+          type: string
+          nullable: true
+        avatarUrl:
           type: string
           nullable: true
       required:
@@ -1002,6 +1846,20 @@ components:
         - role
         - firstName
 
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserProfile"
+      required:
+        - accessToken
+        - refreshToken
+        - user
+
     UpdateProfileRequest:
       type: object
       properties:
@@ -1009,18 +1867,32 @@ components:
           type: string
         lastName:
           type: string
+        gender:
+          type: string
+        birthDate:
+          type: string
         age:
           type: integer
         weightKg:
           type: number
         heightCm:
           type: integer
+        trainingFrequency:
+          type: integer
+        injuries:
+          type: string
         fitnessLevel:
           type: string
         primaryGoal:
           type: string
         cycleTracking:
           type: boolean
+        lastPeriodDate:
+          type: string
+          nullable: true
+        avgCycleDays:
+          type: integer
+          nullable: true
 
     CheckinRequest:
       type: object
@@ -1103,6 +1975,20 @@ components:
         - adaptScore
         - sessionMode
 
+    NewBadgeItem:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        icon:
+          type: string
+      required:
+        - code
+        - name
+        - icon
+
     CheckinResponse:
       type: object
       properties:
@@ -1119,6 +2005,10 @@ components:
             exerciseCount:
               type: integer
           nullable: true
+        newBadges:
+          type: array
+          items:
+            $ref: "#/components/schemas/NewBadgeItem"
       required:
         - checkin
 
@@ -1131,6 +2021,25 @@ components:
           type: string
         exerciseName:
           type: string
+        category:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        gifUrl:
+          type: string
+          nullable: true
+        muscleGroups:
+          nullable: true
+        equipment:
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        demoUrl:
+          type: string
+          nullable: true
         orderIndex:
           type: integer
         sets:
@@ -1147,7 +2056,28 @@ components:
         restSeconds:
           type: integer
           nullable: true
+        durationSeconds:
+          type: integer
+          nullable: true
         coachCue:
+          type: string
+          nullable: true
+        lastUsedLoadKg:
+          type: number
+          nullable: true
+        lastUsedDate:
+          type: string
+          nullable: true
+        blockId:
+          type: string
+          nullable: true
+        tempo:
+          type: string
+          nullable: true
+        supersetGroup:
+          type: string
+          nullable: true
+        supersetLabel:
           type: string
           nullable: true
       required:
@@ -1156,6 +2086,32 @@ components:
         - exerciseName
         - orderIndex
         - sets
+
+    SessionBlockItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        orderIndex:
+          type: integer
+        name:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        estimatedDurationMin:
+          type: integer
+          nullable: true
+        conditioningFormat:
+          type: string
+          nullable: true
+      required:
+        - id
+        - type
+        - orderIndex
 
     SessionDetail:
       type: object
@@ -1169,6 +2125,18 @@ components:
           type: string
         mode:
           type: string
+        sessionType:
+          type: string
+          nullable: true
+        sessionLocation:
+          type: string
+          nullable: true
+        scheduledTime:
+          type: string
+          nullable: true
+        visioLink:
+          type: string
+          nullable: true
         estimatedDurationMin:
           type: integer
           nullable: true
@@ -1179,9 +2147,34 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SessionExerciseItem"
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionBlockItem"
         adaptScore:
           type: integer
         overriddenByCoach:
+          type: boolean
+        athletePRs:
+          type: object
+          additionalProperties:
+            type: number
+        completedAt:
+          type: string
+          nullable: true
+        durationMin:
+          type: integer
+          nullable: true
+        rpe:
+          type: integer
+          nullable: true
+        sessionsToday:
+          type: integer
+        sessionsTodayCompleted:
+          type: integer
+        sessionIndex:
+          type: integer
+        isFreeSession:
           type: boolean
       required:
         - sessionLogId
@@ -1190,12 +2183,226 @@ components:
         - exercises
         - adaptScore
 
+    CompleteSessionNewPR:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+        exerciseName:
+          type: string
+        loadKg:
+          type: number
+        previousLoadKg:
+          type: number
+          nullable: true
+      required:
+        - exerciseId
+        - exerciseName
+        - loadKg
+
+    CompleteSessionResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        newPRs:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompleteSessionNewPR"
+        newBadges:
+          type: array
+          items:
+            $ref: "#/components/schemas/NewBadgeItem"
+        durationMin:
+          type: integer
+          nullable: true
+      required:
+        - success
+        - newPRs
+        - newBadges
+
+    MissedSessionItem:
+      type: object
+      properties:
+        date:
+          type: string
+        sessionId:
+          type: string
+        sessionName:
+          type: string
+        estimatedDurationMin:
+          type: integer
+          nullable: true
+      required:
+        - date
+        - sessionId
+        - sessionName
+
+    MissedSessionsResponse:
+      type: object
+      properties:
+        missed:
+          type: array
+          items:
+            $ref: "#/components/schemas/MissedSessionItem"
+      required:
+        - missed
+
+    BadgeItem:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        category:
+          type: string
+        sortOrder:
+          type: integer
+          nullable: true
+        unlocked:
+          type: boolean
+        unlockedAt:
+          type: string
+          nullable: true
+      required:
+        - code
+        - name
+        - description
+        - icon
+        - category
+        - unlocked
+
+    BadgesResponse:
+      type: object
+      properties:
+        badges:
+          type: array
+          items:
+            $ref: "#/components/schemas/BadgeItem"
+        total:
+          type: integer
+        unlockedCount:
+          type: integer
+      required:
+        - badges
+        - total
+        - unlockedCount
+
+    PersonalRecord:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+        exerciseName:
+          type: string
+        loadKg:
+          type: number
+        reps:
+          type: integer
+        previousLoadKg:
+          type: number
+          nullable: true
+        achievedAt:
+          type: string
+        isRecent:
+          type: boolean
+      required:
+        - exerciseId
+        - exerciseName
+        - loadKg
+        - reps
+
+    PersonalRecordsResponse:
+      type: object
+      properties:
+        personalRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonalRecord"
+        total:
+          type: integer
+      required:
+        - personalRecords
+        - total
+
+    WeeklyRecap:
+      type: object
+      properties:
+        weekStart:
+          type: string
+        weekEnd:
+          type: string
+        sessionsCompleted:
+          type: integer
+        sessionsPlanned:
+          type: integer
+        avgAdaptScore:
+          type: number
+          nullable: true
+        avgRpe:
+          type: number
+          nullable: true
+        totalVolumeKg:
+          type: number
+        prsCount:
+          type: integer
+        sessionsDelta:
+          type: integer
+        scoreDelta:
+          type: number
+          nullable: true
+        rpeDelta:
+          type: number
+          nullable: true
+        volumeDelta:
+          type: number
+      required:
+        - weekStart
+        - weekEnd
+        - sessionsCompleted
+        - sessionsPlanned
+
+    WeeklyRecapResponse:
+      type: object
+      properties:
+        recap:
+          $ref: "#/components/schemas/WeeklyRecap"
+      required:
+        - recap
+
+    SessionExerciseLog:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+          nullable: true
+        exerciseName:
+          type: string
+        loadKgUsed:
+          type: number
+          nullable: true
+        setsCompleted:
+          type: integer
+          nullable: true
+      required:
+        - exerciseName
+
     SessionLogSummary:
       type: object
       properties:
         id:
           type: string
         sessionId:
+          type: string
+          nullable: true
+        sessionName:
           type: string
           nullable: true
         variantMode:
@@ -1212,15 +2419,56 @@ components:
         perceivedDifficulty:
           type: string
           nullable: true
+        athleteNotes:
+          type: string
+          nullable: true
+        durationMin:
+          type: integer
+          nullable: true
         createdAt:
           type: string
+        isFreeSession:
+          type: boolean
+        freeSessionName:
+          type: string
+          nullable: true
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionExerciseLog"
       required:
         - id
         - variantMode
 
+    LogExerciseRequest:
+      type: object
+      properties:
+        exerciseId:
+          type: string
+        setsCompleted:
+          type: integer
+        repsPerSet:
+          type: array
+          items:
+            type: integer
+        loadKgUsed:
+          type: number
+      required:
+        - exerciseId
+
     CompleteSessionRequest:
       type: object
       properties:
+        rpe:
+          type: integer
+          minimum: 1
+          maximum: 10
+        perceivedDifficulty:
+          type: string
+          enum: [too_easy, well_calibrated, too_hard]
+        athleteNotes:
+          type: string
+          nullable: true
         exercises:
           type: array
           items:
@@ -1252,9 +2500,28 @@ components:
         athleteNotes:
           type: string
           nullable: true
+        theme:
+          type: string
+          nullable: true
       required:
         - rpe
         - perceivedDifficulty
+
+    FreeCustomSessionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        exerciseIds:
+          type: array
+          items:
+            type: string
+        sets:
+          type: integer
+        reps:
+          type: string
+      required:
+        - exerciseIds
 
     ProgramSummary:
       type: object
@@ -1276,6 +2543,12 @@ components:
           type: boolean
         createdAt:
           type: string
+        previewEnabled:
+          type: boolean
+        previewAllowStart:
+          type: boolean
+        startsInFuture:
+          type: boolean
       required:
         - id
         - name
@@ -1283,6 +2556,73 @@ components:
         - athleteName
         - durationWeeks
         - isActive
+
+    VariantWithExercises:
+      type: object
+      properties:
+        id:
+          type: string
+        mode:
+          type: string
+        volumeModifier:
+          type: number
+        intensityModifier:
+          type: number
+        notes:
+          type: string
+          nullable: true
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionExerciseItem"
+      required:
+        - id
+        - mode
+        - exercises
+
+    SessionWithVariants:
+      type: object
+      properties:
+        id:
+          type: string
+        weekNumber:
+          type: integer
+        dayNumber:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        sessionType:
+          type: string
+          nullable: true
+        scheduledTime:
+          type: string
+          nullable: true
+        visioLink:
+          type: string
+          nullable: true
+        estimatedDurationMin:
+          type: integer
+          nullable: true
+        coachNotes:
+          type: string
+          nullable: true
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/VariantWithExercises"
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionBlockItem"
+      required:
+        - id
+        - weekNumber
+        - dayNumber
+        - name
+        - type
+        - variants
 
     ProgramDetail:
       type: object
@@ -1315,59 +2655,16 @@ components:
         - isActive
         - sessions
 
-    SessionWithVariants:
+    StartProgramNowResult:
       type: object
       properties:
-        id:
+        success:
+          type: boolean
+        startDate:
           type: string
-        weekNumber:
-          type: integer
-        dayNumber:
-          type: integer
-        name:
-          type: string
-        type:
-          type: string
-        estimatedDurationMin:
-          type: integer
-          nullable: true
-        coachNotes:
-          type: string
-          nullable: true
-        variants:
-          type: array
-          items:
-            $ref: "#/components/schemas/VariantWithExercises"
       required:
-        - id
-        - weekNumber
-        - dayNumber
-        - name
-        - type
-        - variants
-
-    VariantWithExercises:
-      type: object
-      properties:
-        id:
-          type: string
-        mode:
-          type: string
-        volumeModifier:
-          type: number
-        intensityModifier:
-          type: number
-        notes:
-          type: string
-          nullable: true
-        exercises:
-          type: array
-          items:
-            $ref: "#/components/schemas/SessionExerciseItem"
-      required:
-        - id
-        - mode
-        - exercises
+        - success
+        - startDate
 
     CreateProgramRequest:
       type: object
@@ -1398,7 +2695,25 @@ components:
           type: string
         type:
           type: string
-          enum: [strength, cardio, hybrid, mobility]
+          enum:
+            [
+              strength,
+              cardio,
+              hybrid,
+              mobility,
+              athletic_development,
+              running,
+              conditioning,
+            ]
+        sessionType:
+          type: string
+          enum: [online, presentiel]
+        scheduledTime:
+          type: string
+          nullable: true
+        visioLink:
+          type: string
+          nullable: true
         estimatedDurationMin:
           type: integer
         coachNotes:
@@ -1430,11 +2745,130 @@ components:
                       type: integer
                     coachCue:
                       type: string
+                    supersetGroup:
+                      type: string
+                    supersetLabel:
+                      type: string
+        blocks:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              orderIndex:
+                type: integer
+              name:
+                type: string
+              estimatedDurationMin:
+                type: integer
+              conditioningFormat:
+                type: string
+              exercises:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    exerciseId:
+                      type: string
+                    orderIndex:
+                      type: integer
+                    sets:
+                      type: integer
+                    reps:
+                      type: string
+                    loadKg:
+                      type: number
+                    restSeconds:
+                      type: integer
+                    coachCue:
+                      type: string
+                    tempo:
+                      type: string
+                    supersetGroup:
+                      type: string
+                    supersetLabel:
+                      type: string
+            required:
+              - type
+              - orderIndex
+              - name
       required:
         - weekNumber
         - dayNumber
         - name
         - type
+
+    UpcomingSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        sessionName:
+          type: string
+        sessionType:
+          type: string
+        sessionLocation:
+          type: string
+          nullable: true
+        weekNumber:
+          type: integer
+        dayNumber:
+          type: integer
+        scheduledDate:
+          type: string
+        estimatedDurationMin:
+          type: integer
+          nullable: true
+        isCompleted:
+          type: boolean
+        completedActualDate:
+          type: string
+          nullable: true
+        scheduledTime:
+          type: string
+          nullable: true
+        visioLink:
+          type: string
+          nullable: true
+        isPreview:
+          type: boolean
+        isAppointment:
+          type: boolean
+      required:
+        - sessionId
+        - sessionName
+        - sessionType
+        - weekNumber
+        - dayNumber
+        - scheduledDate
+        - isCompleted
+
+    LibrarySession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        sessionName:
+          type: string
+        sessionType:
+          type: string
+        sessionLocation:
+          type: string
+        weekNumber:
+          type: integer
+        dayNumber:
+          type: integer
+        estimatedDurationMin:
+          type: integer
+          nullable: true
+      required:
+        - sessionId
+        - sessionName
+        - sessionType
+        - sessionLocation
+        - weekNumber
+        - dayNumber
 
     ClientSummary:
       type: object
@@ -1448,6 +2882,9 @@ components:
           nullable: true
         email:
           type: string
+        avatarUrl:
+          type: string
+          nullable: true
         fitnessLevel:
           type: string
           nullable: true
@@ -1467,58 +2904,6 @@ components:
         - firstName
         - email
         - activeAlerts
-
-    ClientDetail:
-      type: object
-      properties:
-        id:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-          nullable: true
-        email:
-          type: string
-        age:
-          type: integer
-          nullable: true
-        weightKg:
-          type: number
-          nullable: true
-        heightCm:
-          type: integer
-          nullable: true
-        fitnessLevel:
-          type: string
-          nullable: true
-        primaryGoal:
-          type: string
-          nullable: true
-        cycleTracking:
-          type: boolean
-        todayCheckin:
-          $ref: "#/components/schemas/CheckinData"
-          nullable: true
-        recentCheckins:
-          type: array
-          items:
-            $ref: "#/components/schemas/CheckinData"
-        recentSessions:
-          type: array
-          items:
-            $ref: "#/components/schemas/SessionLogSummary"
-        activeAlerts:
-          type: array
-          items:
-            $ref: "#/components/schemas/AlertData"
-      required:
-        - id
-        - firstName
-        - email
-        - activeAlerts
-        - recentCheckins
-        - recentSessions
 
     AlertData:
       type: object
@@ -1554,6 +2939,74 @@ components:
         - isRead
         - isResolved
 
+    ClientDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        email:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          nullable: true
+        weightKg:
+          type: number
+          nullable: true
+        heightCm:
+          type: integer
+          nullable: true
+        fitnessLevel:
+          type: string
+          nullable: true
+        primaryGoal:
+          type: string
+          nullable: true
+        cycleTracking:
+          type: boolean
+        lastPeriodDate:
+          type: string
+          nullable: true
+        avgCycleDays:
+          type: integer
+          nullable: true
+        inviteCode:
+          type: string
+          nullable: true
+        todayCheckin:
+          $ref: "#/components/schemas/CheckinData"
+          nullable: true
+        recentCheckins:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckinData"
+        recentSessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionLogSummary"
+        upcomingSessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpcomingSession"
+        activeAlerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlertData"
+      required:
+        - id
+        - firstName
+        - email
+        - activeAlerts
+        - recentCheckins
+        - recentSessions
+
     ResolveAlertRequest:
       type: object
       properties:
@@ -1587,6 +3040,46 @@ components:
       required:
         - athleteEmail
 
+    CoachLinkRequest:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+          minLength: 6
+          maxLength: 6
+          description: 6-character invite code of the athlete to link
+      required:
+        - inviteCode
+
+    CoachUnlinkRequest:
+      type: object
+      properties:
+        athleteId:
+          type: string
+          format: uuid
+      required:
+        - athleteId
+
+    MorningNotifHourResponse:
+      type: object
+      properties:
+        hour:
+          type: integer
+          minimum: 5
+          maximum: 23
+      required:
+        - hour
+
+    MorningNotifHourBody:
+      type: object
+      properties:
+        hour:
+          type: integer
+          minimum: 5
+          maximum: 23
+      required:
+        - hour
+
     AthleteLinkRequest:
       type: object
       properties:
@@ -1597,6 +3090,82 @@ components:
           description: 6-character invite code from the coach
       required:
         - inviteCode
+
+    CoachUpdateAthleteRequest:
+      type: object
+      properties:
+        heightCm:
+          type: integer
+        weightKg:
+          type: number
+        fitnessLevel:
+          type: string
+        primaryGoal:
+          type: string
+        trainingFrequency:
+          type: integer
+        injuries:
+          type: string
+
+    AthletePerformanceTest:
+      type: object
+      properties:
+        id:
+          type: string
+        athleteId:
+          type: string
+        coachId:
+          type: string
+          nullable: true
+        testType:
+          type: string
+        exerciseId:
+          type: string
+          nullable: true
+        exerciseName:
+          type: string
+          nullable: true
+        value:
+          type: number
+        unit:
+          type: string
+        testedAt:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - athleteId
+        - testType
+        - value
+        - unit
+        - testedAt
+
+    CreatePerformanceTestRequest:
+      type: object
+      properties:
+        testType:
+          type: string
+        exerciseId:
+          type: string
+        exerciseName:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        testedAt:
+          type: string
+        notes:
+          type: string
+      required:
+        - testType
+        - value
+        - unit
+        - testedAt
 
     ExerciseData:
       type: object
@@ -1730,6 +3299,26 @@ components:
       required:
         - recipientId
 
+    UploadMediaRequest:
+      type: object
+      properties:
+        mediaType:
+          type: string
+          enum: [audio, video]
+        contentType:
+          type: string
+      required:
+        - mediaType
+        - contentType
+
+    UploadMediaResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+      required:
+        - uploadUrl
+
     UploadDocumentRequest:
       type: object
       properties:
@@ -1751,3 +3340,371 @@ components:
           type: string
       required:
         - uploadUrl
+
+    NotificationItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        link:
+          type: string
+          nullable: true
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - type
+        - title
+        - isRead
+
+    NotificationsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationItem"
+        unreadCount:
+          type: integer
+        total:
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+        hasMore:
+          type: boolean
+      required:
+        - items
+        - unreadCount
+        - total
+        - offset
+        - limit
+        - hasMore
+
+    NotificationPreferences:
+      type: object
+      properties:
+        session:
+          type: boolean
+        checkin:
+          type: boolean
+        messages:
+          type: boolean
+        encouragements:
+          type: boolean
+        performance:
+          type: boolean
+      required:
+        - session
+        - checkin
+        - messages
+        - encouragements
+        - performance
+
+    UpdateNotificationPreferencesRequest:
+      type: object
+      properties:
+        session:
+          type: boolean
+        checkin:
+          type: boolean
+        messages:
+          type: boolean
+        encouragements:
+          type: boolean
+        performance:
+          type: boolean
+
+    Challenge:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        metric:
+          type: string
+        target:
+          type: number
+        unit:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+        endDate:
+          type: string
+        progress:
+          type: number
+        completedAt:
+          type: string
+          nullable: true
+        assignmentId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - title
+        - metric
+        - target
+        - startDate
+        - endDate
+        - progress
+
+    ChallengeAssignment:
+      type: object
+      properties:
+        athleteId:
+          type: string
+        athleteName:
+          type: string
+        progress:
+          type: number
+        completedAt:
+          type: string
+          nullable: true
+      required:
+        - athleteId
+        - athleteName
+        - progress
+
+    CoachChallenge:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        metric:
+          type: string
+        target:
+          type: number
+        unit:
+          type: string
+          nullable: true
+        type:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        createdAt:
+          type: string
+          nullable: true
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChallengeAssignment"
+      required:
+        - id
+        - title
+        - metric
+        - target
+        - type
+        - startDate
+        - endDate
+        - assignments
+
+    CreateChallengeRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        metric:
+          type: string
+          enum: [reps, distance, time, sessions]
+        target:
+          type: number
+        unit:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        athleteIds:
+          type: array
+          items:
+            type: string
+      required:
+        - title
+        - metric
+        - target
+        - startDate
+        - endDate
+        - athleteIds
+
+    UpdateProgressRequest:
+      type: object
+      properties:
+        progress:
+          type: number
+      required:
+        - progress
+
+    ScheduledNotification:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        athleteId:
+          type: string
+        message:
+          type: string
+        recurrenceType:
+          type: string
+          enum: [daily, weekly, custom]
+        recurrenceConfig:
+          type: object
+          additionalProperties: true
+        sendHour:
+          type: integer
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          nullable: true
+        athleteFirstName:
+          type: string
+          nullable: true
+        athleteLastName:
+          type: string
+          nullable: true
+      required:
+        - id
+        - coachId
+        - athleteId
+        - message
+        - recurrenceType
+        - sendHour
+        - active
+
+    CreateScheduledNotificationRequest:
+      type: object
+      properties:
+        athleteId:
+          type: string
+        message:
+          type: string
+        recurrenceType:
+          type: string
+          enum: [daily, weekly, custom]
+        recurrenceConfig:
+          type: object
+          additionalProperties: true
+        sendHour:
+          type: integer
+      required:
+        - athleteId
+        - message
+        - recurrenceType
+        - sendHour
+
+    UpdateScheduledNotificationRequest:
+      type: object
+      properties:
+        message:
+          type: string
+        recurrenceType:
+          type: string
+          enum: [daily, weekly, custom]
+        recurrenceConfig:
+          type: object
+          additionalProperties: true
+        sendHour:
+          type: integer
+        active:
+          type: boolean
+
+    CoachAppointment:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        athleteId:
+          type: string
+        startAt:
+          type: string
+        durationMin:
+          type: integer
+        location:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        type:
+          type: string
+        createdAt:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          nullable: true
+        athleteFirstName:
+          type: string
+          nullable: true
+        athleteLastName:
+          type: string
+          nullable: true
+      required:
+        - id
+        - coachId
+        - athleteId
+        - startAt
+        - durationMin
+        - type
+
+    CreateAppointmentRequest:
+      type: object
+      properties:
+        athleteId:
+          type: string
+        startAt:
+          type: string
+        durationMin:
+          type: integer
+        location:
+          type: string
+        notes:
+          type: string
+      required:
+        - athleteId
+        - startAt
+
+    UpdateAppointmentRequest:
+      type: object
+      properties:
+        startAt:
+          type: string
+        durationMin:
+          type: integer
+        location:
+          type: string
+        notes:
+          type: string
+

@@ -12,6 +12,7 @@ export interface ClientSummary {
   firstName: string;
   lastName?: string | null;
   email: string;
+  avatarUrl?: string | null;
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   todayCheckin?: CheckinData | null;

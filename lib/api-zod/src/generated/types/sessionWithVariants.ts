@@ -5,6 +5,7 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SessionBlockItem } from "./sessionBlockItem";
 import type { VariantWithExercises } from "./variantWithExercises";
 
 export interface SessionWithVariants {
@@ -13,7 +14,11 @@ export interface SessionWithVariants {
   dayNumber: number;
   name: string;
   type: string;
+  sessionType?: string | null;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
   variants: VariantWithExercises[];
+  blocks?: SessionBlockItem[];
 }

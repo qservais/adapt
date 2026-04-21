@@ -7,8 +7,10 @@
  */
 import type { CheckinData } from "./checkinData";
 import type { CheckinResponseSessionPreview } from "./checkinResponseSessionPreview";
+import type { NewBadgeItem } from "./newBadgeItem";
 
 export interface CheckinResponse {
   checkin: CheckinData;
   sessionPreview?: CheckinResponseSessionPreview;
+  newBadges?: NewBadgeItem[];
 }

@@ -12,12 +12,20 @@ export interface UserProfile {
   role: string;
   firstName: string;
   lastName?: string | null;
+  gender?: string | null;
+  birthDate?: string | null;
   age?: number | null;
   weightKg?: number | null;
   heightCm?: number | null;
+  trainingFrequency?: number | null;
+  injuries?: string | null;
   fitnessLevel?: string | null;
   primaryGoal?: string | null;
   cycleTracking?: boolean;
+  lastPeriodDate?: string | null;
+  avgCycleDays?: number | null;
   coachId?: string | null;
   inviteCode?: string | null;
+  coachName?: string | null;
+  avatarUrl?: string | null;
 }

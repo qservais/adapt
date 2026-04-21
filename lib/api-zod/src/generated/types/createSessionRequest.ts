@@ -5,6 +5,8 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateSessionRequestBlocksItem } from "./createSessionRequestBlocksItem";
+import type { CreateSessionRequestSessionType } from "./createSessionRequestSessionType";
 import type { CreateSessionRequestType } from "./createSessionRequestType";
 import type { CreateSessionRequestVariantsItem } from "./createSessionRequestVariantsItem";
 
@@ -13,7 +15,11 @@ export interface CreateSessionRequest {
   dayNumber: number;
   name: string;
   type: CreateSessionRequestType;
+  sessionType?: CreateSessionRequestSessionType;
+  scheduledTime?: string | null;
+  visioLink?: string | null;
   estimatedDurationMin?: number;
   coachNotes?: string;
   variants?: CreateSessionRequestVariantsItem[];
+  blocks?: CreateSessionRequestBlocksItem[];
 }

@@ -5,14 +5,21 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SessionExerciseLog } from "./sessionExerciseLog";
 
 export interface SessionLogSummary {
   id: string;
   sessionId?: string | null;
+  sessionName?: string | null;
   variantMode: string;
   startedAt?: string | null;
   completedAt?: string | null;
   rpe?: number | null;
   perceivedDifficulty?: string | null;
+  athleteNotes?: string | null;
+  durationMin?: number | null;
   createdAt?: string;
+  isFreeSession?: boolean;
+  freeSessionName?: string | null;
+  exercises?: SessionExerciseLog[];
 }
