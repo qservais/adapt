@@ -32,21 +32,21 @@ async function doRawRefresh(
   refreshTokenValue: string
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
   const url = baseUrl ? `${baseUrl}/api/auth/refresh` : "/api/auth/refresh";
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: refreshTokenValue }),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as { accessToken: string; refreshToken: string };
-  } catch {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken: refreshTokenValue }),
+  });
+  if (res.status === 401 || res.status === 403) {
     return null;
   }
+  if (!res.ok) {
+    throw new Error(`refresh_server_error:${res.status}`);
+  }
+  return (await res.json()) as { accessToken: string; refreshToken: string };
 }
 
 async function refreshAccessToken(): Promise<string | null> {
-  // Queue concurrent refresh requests — lock BEFORE any await
   if (_isRefreshing) {
     return new Promise<string | null>((resolve) => {
       _refreshQueue.push(resolve);
@@ -76,6 +76,10 @@ async function refreshAccessToken(): Promise<string | null> {
     _refreshQueue.forEach((cb) => cb(result.accessToken));
     _refreshQueue = [];
     return result.accessToken;
+  } catch {
+    _refreshQueue.forEach((cb) => cb(null));
+    _refreshQueue = [];
+    return null;
   } finally {
     _isRefreshing = false;
   }

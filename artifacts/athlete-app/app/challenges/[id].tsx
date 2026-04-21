@@ -172,11 +172,14 @@ export default function ChallengeDetailScreen() {
           </Text>
         </View>
 
-        {!isCompleted && (
-          <View style={styles.updateCard}>
-            <Text style={[styles.sectionLabel, { fontFamily: FONTS.mono }]}>METTRE À JOUR</Text>
+        <View style={styles.updateCard}>
+            <Text style={[styles.sectionLabel, { fontFamily: FONTS.mono }]}>
+              {isCompleted ? "CORRIGER MA PROGRESSION" : "METTRE À JOUR"}
+            </Text>
             <Text style={[styles.updateDesc, { fontFamily: FONTS.body }]}>
-              Entre ta progression totale actuelle en {unit}.
+              {isCompleted
+                ? `Corrige la valeur si besoin (en ${unit}).`
+                : `Entre ta progression totale actuelle en ${unit}.`}
             </Text>
             <View style={styles.inputRow}>
               <TextInput
@@ -201,7 +204,6 @@ export default function ChallengeDetailScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        )}
 
         {isCompleted && (
           <View style={[styles.completedBanner, { borderColor: `${COLORS.green}40`, backgroundColor: `${COLORS.green}10` }]}>

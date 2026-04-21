@@ -21,6 +21,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function isAuthError(err: unknown): boolean {
+  if (err == null || typeof err !== "object") return false;
+  const status = (err as Record<string, unknown>)["status"];
+  return status === 401 || status === 403;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,8 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const profile = await getMe();
           setUser(profile);
         }
-      } catch {
-        await tokenStore.clear();
+      } catch (err) {
+        if (isAuthError(err)) {
+          await tokenStore.clear();
+        }
       } finally {
         setIsLoading(false);
       }

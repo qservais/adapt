@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, checkinsTable, sessionLogsTable, exerciseLogsTable, exercisesTable, alertsTable, programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, performanceTestsTable, coachAppointmentsTable, coachJoinRequestsTable } from "@workspace/db";
 import { eq, and, desc, asc, gte, lt, inArray, isNotNull, sql } from "drizzle-orm";
+import { getTodayLocalDate } from "../lib/dateUtils.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
@@ -13,18 +14,24 @@ function resolveAvatarUrl(user: { id: string; avatarUrl: string | null }): strin
   return `/api/users/avatar/${user.id}`;
 }
 
+function sessionDateStr(startDate: string, weekNumber: number, dayNumber: number): string {
+  const d = new Date(startDate + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + (weekNumber - 1) * 7 + (dayNumber - 1));
+  return d.toISOString().split("T")[0]!;
+}
+
 router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const coachId = req.user!.userId;
     const athletes = await db.select().from(usersTable)
-      .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete")));
+      .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete"), eq(usersTable.isActive, true)));
 
     if (athletes.length === 0) {
       res.json({ todayAthletes: [], upcomingSessions: [], pastSessions: [], recentCompleted: [], activeAlerts: [] });
       return;
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayLocalDate();
     const athleteIds = athletes.map(a => a.id);
 
     // Today's check-ins
@@ -67,11 +74,12 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
     });
 
     // Upcoming (today → +7 days) and past (-7 days → yesterday) planned sessions from active programs
-    const now = new Date();
-    const sevenDaysLater = new Date(now.getTime() + 7 * 86400000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
-    const sevenDaysLaterStr = sevenDaysLater.toISOString().split("T")[0];
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
+    const sevenDaysLaterD = new Date(today + "T12:00:00Z");
+    sevenDaysLaterD.setUTCDate(sevenDaysLaterD.getUTCDate() + 7);
+    const sevenDaysAgoD = new Date(today + "T12:00:00Z");
+    sevenDaysAgoD.setUTCDate(sevenDaysAgoD.getUTCDate() - 7);
+    const sevenDaysLaterStr = sevenDaysLaterD.toISOString().split("T")[0]!;
+    const sevenDaysAgoStr = sevenDaysAgoD.toISOString().split("T")[0]!;
 
     const activePrograms = await db.select().from(programsTable)
       .where(eq(programsTable.isActive, true));
@@ -99,7 +107,6 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
 
       const programSessions = await db.select().from(sessionsTable)
         .where(eq(sessionsTable.programId, program.id));
-      const programStart = new Date(program.startDate);
 
       const completedLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
         .from(sessionLogsTable)
@@ -110,10 +117,7 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
       const completedIds = new Set(completedLogs.filter(l => l.sessionId).map(l => l.sessionId));
 
       for (const session of programSessions) {
-        const sessionDate = new Date(programStart);
-        sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
-        sessionDate.setHours(0, 0, 0, 0);
-        const dateStr = sessionDate.toISOString().split("T")[0];
+        const dateStr = sessionDateStr(program.startDate as string, session.weekNumber, session.dayNumber);
         const isCompleted = completedIds.has(session.id);
 
         const entry: SessionEntry = {
@@ -216,7 +220,7 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
     }
 
     const athletes = await db.select().from(usersTable)
-      .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete")));
+      .where(and(eq(usersTable.coachId, coachId), eq(usersTable.role, "athlete"), eq(usersTable.isActive, true)));
 
     if (athletes.length === 0) {
       res.json([]);
@@ -224,11 +228,11 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
     }
 
     const athleteIds = athletes.map(a => a.id);
-    const monthStart = new Date(year, month - 1, 1);
-    const monthEnd = new Date(year, month, 0); // last day of month
-    const monthStartStr = monthStart.toISOString().split("T")[0];
-    const monthEndStr = monthEnd.toISOString().split("T")[0];
-    const todayStr = new Date().toISOString().split("T")[0];
+    const monthM = String(month).padStart(2, "0");
+    const monthStartStr = `${year}-${monthM}-01`;
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const monthEndStr = `${year}-${monthM}-${String(lastDay).padStart(2, "0")}`;
+    const todayStr = getTodayLocalDate();
 
     const activePrograms = await db.select().from(programsTable)
       .where(eq(programsTable.isActive, true));
@@ -257,7 +261,6 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
 
       const programSessions = await db.select().from(sessionsTable)
         .where(eq(sessionsTable.programId, program.id));
-      const programStart = new Date(program.startDate);
 
       const completedLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
         .from(sessionLogsTable)
@@ -268,10 +271,7 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
       const completedIds = new Set(completedLogs.filter(l => l.sessionId).map(l => l.sessionId));
 
       for (const session of programSessions) {
-        const sessionDate = new Date(programStart);
-        sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
-        sessionDate.setHours(0, 0, 0, 0);
-        const dateStr = sessionDate.toISOString().split("T")[0];
+        const dateStr = sessionDateStr(program.startDate as string, session.weekNumber, session.dayNumber);
 
         if (dateStr >= monthStartStr && dateStr <= monthEndStr) {
           const isCompleted = completedIds.has(session.id);
@@ -346,9 +346,9 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
 router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const athletes = await db.select().from(usersTable)
-      .where(and(eq(usersTable.coachId, req.user!.userId), eq(usersTable.role, "athlete")));
+      .where(and(eq(usersTable.coachId, req.user!.userId), eq(usersTable.role, "athlete"), eq(usersTable.isActive, true)));
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayLocalDate();
 
     const results = await Promise.all(athletes.map(async (athlete) => {
       const [todayCheckin] = await db.select().from(checkinsTable)
@@ -445,8 +445,6 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
     }> = [];
 
     if (activeProgram?.startDate) {
-      const programStart = new Date(activeProgram.startDate);
-
       const plannedSessions = await db.select().from(sessionsTable)
         .where(eq(sessionsTable.programId, activeProgram.id));
 
@@ -460,10 +458,6 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       );
 
       for (const session of plannedSessions) {
-        const sessionDate = new Date(programStart);
-        sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
-        sessionDate.setHours(0, 0, 0, 0);
-
         // Return ALL program sessions (no date window) so monthly calendar navigation works
         upcomingSessions.push({
           sessionId: session.id,
@@ -474,7 +468,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
           visioLink: session.visioLink ?? null,
           weekNumber: session.weekNumber,
           dayNumber: session.dayNumber,
-          scheduledDate: sessionDate.toISOString().split("T")[0],
+          scheduledDate: sessionDateStr(activeProgram.startDate as string, session.weekNumber, session.dayNumber),
           estimatedDurationMin: session.estimatedDurationMin,
           isCompleted: completedSessionIds.has(session.id),
         });
@@ -641,6 +635,7 @@ router.post("/coach/clients/:clientId/override", authenticate, requireRole("coac
 
 router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res) => {
   try {
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString();
     const alerts = await db.select({
       id: alertsTable.id,
       athleteId: alertsTable.athleteId,
@@ -656,7 +651,7 @@ router.get("/coach/alerts", authenticate, requireRole("coach"), async (req, res)
     })
       .from(alertsTable)
       .innerJoin(usersTable, eq(alertsTable.athleteId, usersTable.id))
-      .where(and(eq(alertsTable.coachId, req.user!.userId), eq(alertsTable.isResolved, false)))
+      .where(and(eq(alertsTable.coachId, req.user!.userId), gte(alertsTable.createdAt, new Date(ninetyDaysAgo))))
       .orderBy(alertsTable.priority, desc(alertsTable.createdAt));
 
     res.json(alerts.map(a => ({

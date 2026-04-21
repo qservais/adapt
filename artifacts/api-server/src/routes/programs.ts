@@ -339,7 +339,7 @@ const exerciseInputSchema = z.object({
   loadKg: z.number().optional(),
   restSeconds: z.number().int().optional(),
   coachCue: z.string().optional(),
-  tempo: z.string().regex(/^\d-\d-\d-\d$/).optional(),
+  tempo: z.string().regex(/^\d+-\d+-\d+-\d+$/).optional(),
   blockId: z.string().uuid().optional(),
   supersetGroup: z.string().optional(),
   supersetLabel: z.string().optional(),

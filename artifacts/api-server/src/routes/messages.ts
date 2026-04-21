@@ -155,7 +155,7 @@ router.post("/messages", authenticate, async (req, res) => {
       .from(usersTable)
       .where(eq(usersTable.id, recipientId));
 
-    if (recipient && recipient.role === "athlete" && sender) {
+    if (recipient && sender) {
       const prefs = (recipient.notificationPrefs as Record<string, boolean> | null);
       const inAppEnabled = prefs ? prefs["messages"] !== false : true;
       const pushEnabled = prefs ? prefs["push_messages"] !== false : true;
@@ -174,7 +174,7 @@ router.post("/messages", authenticate, async (req, res) => {
         });
       }
 
-      if (pushEnabled) {
+      if (pushEnabled && recipient.pushToken) {
         await sendPushNotification(recipient.pushToken, {
           title: notifTitle,
           body: notifBody,

@@ -5,9 +5,10 @@ import {
   challengeAssignmentsTable,
   usersTable,
 } from "@workspace/db";
-import { eq, and, lte, gte, desc } from "drizzle-orm";
+import { eq, and, lte, gte, desc, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
+import { sendPushNotification } from "../services/push-notification.service.js";
 
 const router = Router();
 
@@ -64,6 +65,21 @@ router.post("/coach/challenges", authenticate, requireRole("coach"), async (req,
       progress: "0",
     }))
   );
+
+  const athletesWithTokens = await db
+    .select({ id: usersTable.id, pushToken: usersTable.pushToken })
+    .from(usersTable)
+    .where(inArray(usersTable.id, athleteIds));
+
+  for (const a of athletesWithTokens) {
+    if (a.pushToken) {
+      await sendPushNotification(a.pushToken, {
+        title: "🏆 Nouveau défi disponible !",
+        body: `${rest.title} — Jusqu'au ${rest.endDate}.`,
+        data: { type: "challenge", challengeId: challenge!.id },
+      });
+    }
+  }
 
   res.status(201).json({ id: challenge!.id });
 });
