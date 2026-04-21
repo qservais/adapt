@@ -1171,7 +1171,7 @@ router.post("/athlete/programs/:programId/start-now", authenticate, requireRole(
     const athleteId = req.user!.userId;
     const programId = String(req.params["programId"]);
 
-    const [program] = await db.select({ id: programsTable.id, athleteId: programsTable.athleteId, previewEnabled: programsTable.previewEnabled, startDate: programsTable.startDate })
+    const [program] = await db.select({ id: programsTable.id, athleteId: programsTable.athleteId, previewEnabled: programsTable.previewEnabled, previewAllowStart: programsTable.previewAllowStart, startDate: programsTable.startDate })
       .from(programsTable)
       .where(and(eq(programsTable.id, programId), eq(programsTable.athleteId, athleteId)));
 
@@ -1182,6 +1182,11 @@ router.post("/athlete/programs/:programId/start-now", authenticate, requireRole(
 
     if (!program.previewEnabled) {
       res.status(403).json({ error: { code: "FORBIDDEN", message: "Ce programme n'est pas en mode aperçu" } });
+      return;
+    }
+
+    if (!program.previewAllowStart) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Le coach n'a pas autorisé le démarrage anticipé" } });
       return;
     }
 
@@ -1269,6 +1274,33 @@ router.post("/sessions/:sessionLogId/log-exercise", authenticate, requireRole("a
     });
 
     res.status(201).json({ success: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.delete("/sessions/:sessionLogId/exercise-logs/:exerciseId", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const sessionLogId = String(req.params["sessionLogId"]);
+    const exerciseId = String(req.params["exerciseId"]);
+    const athleteId = req.user!.userId;
+
+    const [log] = await db.select({ id: sessionLogsTable.id, athleteId: sessionLogsTable.athleteId })
+      .from(sessionLogsTable)
+      .where(eq(sessionLogsTable.id, sessionLogId));
+
+    if (!log || log.athleteId !== athleteId) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Log introuvable" } });
+      return;
+    }
+
+    await db.delete(exerciseLogsTable)
+      .where(and(
+        eq(exerciseLogsTable.sessionLogId, sessionLogId),
+        eq(exerciseLogsTable.exerciseId, exerciseId),
+      ));
+
+    res.json({ success: true });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

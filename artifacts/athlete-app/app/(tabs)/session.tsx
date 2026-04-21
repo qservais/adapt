@@ -223,13 +223,28 @@ export default function SessionTab() {
     }
   };
 
-  const handleCheckExercise = (sessionExId: string) => {
+  const handleCheckExercise = async (sessionExId: string, exerciseId: string) => {
+    const isCurrentlyChecked = checkedExercises.has(sessionExId);
+    // Optimistic UI update
     setCheckedExercises(prev => {
       const next = new Set(prev);
       if (next.has(sessionExId)) next.delete(sessionExId);
       else next.add(sessionExId);
       return next;
     });
+    // Persist uncheck to server
+    if (isCurrentlyChecked && session?.sessionLogId) {
+      try {
+        await customFetch(`/api/sessions/${session.sessionLogId}/exercise-logs/${exerciseId}`, { method: "DELETE" });
+      } catch {
+        // Rollback optimistic update on error
+        setCheckedExercises(prev => {
+          const next = new Set(prev);
+          next.add(sessionExId);
+          return next;
+        });
+      }
+    }
   };
 
   const handleStartProgram = (programId: string, programName: string) => {
@@ -375,7 +390,7 @@ export default function SessionTab() {
                             <TouchableOpacity
                               onPress={() => {
                                 if (isDone) {
-                                  handleCheckExercise(ex.id);
+                                  handleCheckExercise(ex.id, ex.exerciseId);
                                 } else {
                                   handleOpenQuickLog(ex.id, ex.exerciseId, ex.exerciseName);
                                 }
