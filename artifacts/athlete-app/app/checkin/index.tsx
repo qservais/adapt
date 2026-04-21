@@ -229,7 +229,8 @@ export default function CheckinScreen() {
               {
                 text: "Reprendre",
                 onPress: () => {
-                  if (draft.stepIndex > 0) setStepIndex(draft.stepIndex);
+                  const safeIndex = Math.min(Math.max(0, draft.stepIndex ?? 0), steps.length - 1);
+                  setStepIndex(safeIndex);
                   if (draft.values) setValues(draft.values);
                   if (draft.hasPain != null) setHasPain(draft.hasPain);
                   if (draft.painNotes != null) setPainNotes(draft.painNotes);

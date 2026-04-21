@@ -1009,8 +1009,8 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             editing={false}
             onToggleEdit={() => {}}
           />
-          <View style={cStyles.comingSoonBadge}>
-            <Text style={[cStyles.comingSoonText, { fontFamily: FONTS.mono }]}>BIENTÔT</Text>
+          <View style={[cStyles.comingSoonBadge, { backgroundColor: `${COLORS.violet}20`, borderColor: `${COLORS.violet}60` }]}>
+            <Text style={[cStyles.comingSoonText, { fontFamily: FONTS.mono, color: COLORS.violet }]}>BIENTÔT DISPONIBLE</Text>
           </View>
         </View>
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 4, color: colors.textSecondary }]}>
