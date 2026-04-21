@@ -4,11 +4,9 @@ set -e
 # Force-rebuild lib dist files so the working tree is always up to date.
 pnpm run typecheck:libs:force
 
-# Check for any changes in the dist directory after the rebuild: this covers
-#   - tracked files whose content changed (modified/deleted)
-#   - newly generated files that are not yet tracked by git
-# Using git status --porcelain rather than git diff so that untracked new
-# output files are also caught.
+# Check whether the rebuild produced any changes in lib/api-client-react/dist/
+# (shared logic also used by CI). Auto-stage changed files here so the
+# developer can re-run git commit immediately.
 CHANGES=$(git status --porcelain -- lib/api-client-react/dist/)
 
 if [ -n "$CHANGES" ]; then
