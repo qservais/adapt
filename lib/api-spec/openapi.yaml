@@ -2560,6 +2560,10 @@ components:
           nullable: true
         isActive:
           type: boolean
+        isTemplate:
+          type: boolean
+        sessionCount:
+          type: integer
         createdAt:
           type: string
         previewEnabled:
@@ -2662,6 +2666,8 @@ components:
           nullable: true
         isActive:
           type: boolean
+        isTemplate:
+          type: boolean
         sessions:
           type: array
           items:
@@ -2672,6 +2678,7 @@ components:
         - athleteId
         - durationWeeks
         - isActive
+        - isTemplate
         - sessions
 
     StartProgramNowResult:

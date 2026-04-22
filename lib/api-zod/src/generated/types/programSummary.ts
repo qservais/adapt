@@ -14,9 +14,10 @@ export interface ProgramSummary {
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
+  isTemplate?: boolean;
+  sessionCount?: number;
   createdAt?: string;
   previewEnabled?: boolean;
   previewAllowStart?: boolean;
   startsInFuture?: boolean;
-  sessionCount?: number;
 }

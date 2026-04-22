@@ -654,11 +654,12 @@ export const GetProgramsResponseItem = zod.object({
   durationWeeks: zod.number(),
   startDate: zod.string().nullish(),
   isActive: zod.boolean(),
+  isTemplate: zod.boolean().optional(),
+  sessionCount: zod.number().optional(),
   createdAt: zod.string().optional(),
   previewEnabled: zod.boolean().optional(),
   previewAllowStart: zod.boolean().optional(),
   startsInFuture: zod.boolean().optional(),
-  sessionCount: zod.number().optional(),
 });
 export const GetProgramsResponse = zod.array(GetProgramsResponseItem);
 
@@ -688,6 +689,7 @@ export const GetProgramResponse = zod.object({
   durationWeeks: zod.number(),
   startDate: zod.string().nullish(),
   isActive: zod.boolean(),
+  isTemplate: zod.boolean(),
   sessions: zod.array(
     zod.object({
       id: zod.string(),
@@ -777,11 +779,12 @@ export const UpdateProgramResponse = zod.object({
   durationWeeks: zod.number(),
   startDate: zod.string().nullish(),
   isActive: zod.boolean(),
+  isTemplate: zod.boolean().optional(),
+  sessionCount: zod.number().optional(),
   createdAt: zod.string().optional(),
   previewEnabled: zod.boolean().optional(),
   previewAllowStart: zod.boolean().optional(),
   startsInFuture: zod.boolean().optional(),
-  sessionCount: zod.number().optional(),
 });
 
 /**
@@ -1039,11 +1042,12 @@ export const GetAthleteProgramsResponseItem = zod.object({
   durationWeeks: zod.number(),
   startDate: zod.string().nullish(),
   isActive: zod.boolean(),
+  isTemplate: zod.boolean().optional(),
+  sessionCount: zod.number().optional(),
   createdAt: zod.string().optional(),
   previewEnabled: zod.boolean().optional(),
   previewAllowStart: zod.boolean().optional(),
   startsInFuture: zod.boolean().optional(),
-  sessionCount: zod.number().optional(),
 });
 export const GetAthleteProgramsResponse = zod.array(
   GetAthleteProgramsResponseItem,
@@ -1064,6 +1068,7 @@ export const GetAthleteProgramPreviewResponse = zod.object({
   durationWeeks: zod.number(),
   startDate: zod.string().nullish(),
   isActive: zod.boolean(),
+  isTemplate: zod.boolean(),
   sessions: zod.array(
     zod.object({
       id: zod.string(),

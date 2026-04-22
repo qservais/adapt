@@ -15,5 +15,6 @@ export interface ProgramDetail {
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
+  isTemplate: boolean;
   sessions: SessionWithVariants[];
 }

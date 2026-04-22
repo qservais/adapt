@@ -826,7 +826,7 @@ export default function ProgramDetail() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-display text-white">{program.name}</h1>
-              {(program as unknown as { isTemplate?: boolean }).isTemplate && (
+              {program.isTemplate && (
                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-accent/30 text-accent bg-accent/10 mt-1">
                   MODÈLE
                 </span>
@@ -834,7 +834,7 @@ export default function ProgramDetail() {
             </div>
             <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground font-mono">
               <span>{totalWeeks} semaines</span>
-              {!(program as unknown as { isTemplate?: boolean }).isTemplate && program.athleteId && (
+              {!program.isTemplate && program.athleteId && (
                 <>
                   <span>•</span>
                   <Link
@@ -845,7 +845,7 @@ export default function ProgramDetail() {
                   </Link>
                 </>
               )}
-              {!(program as unknown as { isTemplate?: boolean }).isTemplate && program.isActive && (
+              {!program.isTemplate && program.isActive && (
                 <span className="text-primary flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
                   Actif
@@ -888,7 +888,7 @@ export default function ProgramDetail() {
                 : "Visible uniquement du coach pour l'instant"}
             </p>
           </div>
-          {!(program as unknown as { isTemplate?: boolean }).isTemplate && (
+          {!program.isTemplate && (
             <Button
               variant="outline"
               size="sm"

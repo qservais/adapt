@@ -406,11 +406,12 @@ export interface ProgramSummary {
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
+  isTemplate?: boolean;
+  sessionCount?: number;
   createdAt?: string;
   previewEnabled?: boolean;
   previewAllowStart?: boolean;
   startsInFuture?: boolean;
-  sessionCount?: number;
 }
 
 export interface VariantWithExercises {
@@ -445,6 +446,7 @@ export interface ProgramDetail {
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
+  isTemplate: boolean;
   sessions: SessionWithVariants[];
 }
 
