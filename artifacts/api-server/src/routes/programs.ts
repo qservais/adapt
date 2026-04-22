@@ -55,7 +55,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       previewAllowStart: p.previewAllowStart ?? false,
       startsInFuture: p.startDate ? p.startDate > todayStr : false,
       createdAt: p.createdAt,
-      sessionCount: countMap.get(p.id) ?? 0,
+      sessionCount: Number(countMap.get(p.id) ?? 0),
     })));
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });

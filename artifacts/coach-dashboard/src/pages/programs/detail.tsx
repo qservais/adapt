@@ -828,26 +828,38 @@ export default function ProgramDetail() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={togglingPreview}
-            onClick={handlePreviewToggle}
-            className={
-              programSummary?.previewEnabled
-                ? "border-primary/50 text-primary hover:bg-primary/10"
-                : "border-border text-muted-foreground hover:text-primary hover:border-primary/50"
-            }
-          >
-            {togglingPreview ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : programSummary?.previewEnabled ? (
-              <EyeOff className="w-4 h-4 mr-2" />
-            ) : (
-              <Eye className="w-4 h-4 mr-2" />
-            )}
-            {programSummary?.previewEnabled ? "Retirer l'aperçu" : "Envoyer en aperçu"}
-          </Button>
+          <div className="flex flex-col items-end gap-0.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={togglingPreview}
+              onClick={handlePreviewToggle}
+              title={
+                programSummary?.previewEnabled
+                  ? "Désactiver — l'athlète ne verra plus ce programme dans son app"
+                  : "Activer — l'athlète pourra voir le programme dans son app avant son démarrage"
+              }
+              className={
+                programSummary?.previewEnabled
+                  ? "border-primary/50 text-primary hover:bg-primary/10"
+                  : "border-border text-muted-foreground hover:text-primary hover:border-primary/50"
+              }
+            >
+              {togglingPreview ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : programSummary?.previewEnabled ? (
+                <EyeOff className="w-4 h-4 mr-2" />
+              ) : (
+                <Eye className="w-4 h-4 mr-2" />
+              )}
+              {programSummary?.previewEnabled ? "Retirer l'aperçu" : "Envoyer en aperçu"}
+            </Button>
+            <p className="text-[10px] text-muted-foreground">
+              {programSummary?.previewEnabled
+                ? "L'athlète peut voir ce programme dans son app"
+                : "Visible uniquement du coach pour l'instant"}
+            </p>
+          </div>
           <Button
             variant="outline"
             size="sm"
