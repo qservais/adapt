@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable, notificationsTable, SESSION_BLOCK_TYPES } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, count } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 import { sendPushNotification } from "../services/push-notification.service.js";
@@ -33,6 +33,15 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       .innerJoin(usersTable, eq(programsTable.athleteId, usersTable.id))
       .where(eq(programsTable.coachId, req.user!.userId));
 
+    const programIds = programs.map(p => p.id);
+    const sessionCounts = programIds.length > 0
+      ? await db.select({ programId: sessionsTable.programId, cnt: count() })
+          .from(sessionsTable)
+          .where(inArray(sessionsTable.programId, programIds))
+          .groupBy(sessionsTable.programId)
+      : [];
+    const countMap = new Map(sessionCounts.map(r => [r.programId, r.cnt]));
+
     const todayStr = new Date().toISOString().slice(0, 10);
     res.json(programs.map(p => ({
       id: p.id,
@@ -46,6 +55,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       previewAllowStart: p.previewAllowStart ?? false,
       startsInFuture: p.startDate ? p.startDate > todayStr : false,
       createdAt: p.createdAt,
+      sessionCount: countMap.get(p.id) ?? 0,
     })));
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });

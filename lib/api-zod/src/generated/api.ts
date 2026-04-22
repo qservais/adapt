@@ -658,6 +658,7 @@ export const GetProgramsResponseItem = zod.object({
   previewEnabled: zod.boolean().optional(),
   previewAllowStart: zod.boolean().optional(),
   startsInFuture: zod.boolean().optional(),
+  sessionCount: zod.number().optional(),
 });
 export const GetProgramsResponse = zod.array(GetProgramsResponseItem);
 
@@ -780,6 +781,7 @@ export const UpdateProgramResponse = zod.object({
   previewEnabled: zod.boolean().optional(),
   previewAllowStart: zod.boolean().optional(),
   startsInFuture: zod.boolean().optional(),
+  sessionCount: zod.number().optional(),
 });
 
 /**
@@ -1041,6 +1043,7 @@ export const GetAthleteProgramsResponseItem = zod.object({
   previewEnabled: zod.boolean().optional(),
   previewAllowStart: zod.boolean().optional(),
   startsInFuture: zod.boolean().optional(),
+  sessionCount: zod.number().optional(),
 });
 export const GetAthleteProgramsResponse = zod.array(
   GetAthleteProgramsResponseItem,

@@ -36,6 +36,7 @@ import {
   Eye,
   EyeOff,
   PlayCircle,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Dialog,
@@ -274,7 +275,7 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
           <p className="text-sm font-semibold text-white truncate group-hover:text-primary transition-colors">
             {prog.name}
           </p>
-          <div className="flex items-center gap-3 mt-0.5">
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {prog.durationWeeks} sem.
@@ -285,6 +286,17 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
                 {format(new Date(prog.startDate), "d MMM", { locale: fr })}
               </span>
             )}
+            {typeof prog.sessionCount === "number" && prog.sessionCount === 0 ? (
+              <span className="text-[10px] font-semibold text-yellow-400 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                0 séance
+              </span>
+            ) : typeof prog.sessionCount === "number" ? (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Dumbbell className="w-3 h-3" />
+                {prog.sessionCount} séance{prog.sessionCount > 1 ? "s" : ""}
+              </span>
+            ) : null}
             {prog.isActive && (
               <span className="text-[10px] font-bold text-primary flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
@@ -297,7 +309,7 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
                 À VENIR
               </span>
             )}
-            {prog.startsInFuture && prog.previewEnabled && (
+            {prog.previewEnabled && (
               <span className="text-[10px] text-primary flex items-center gap-1">
                 <Eye className="w-2.5 h-2.5" />
                 APERÇU ACTIF
@@ -305,46 +317,44 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
             )}
           </div>
         </div>
-        {prog.startsInFuture && (
-          <div className="flex items-center gap-1.5 shrink-0">
-            {prog.startsInFuture && prog.previewEnabled && (
-              <button
-                onClick={handleAllowStartToggle}
-                disabled={togglingAllowStart}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-colors ${
-                  prog.previewAllowStart
-                    ? "border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/20"
-                    : "border-muted/30 text-muted-foreground bg-muted/10 hover:bg-muted/20"
-                }`}
-                title={prog.previewAllowStart ? "Retirer la permission de démarrer" : "Autoriser l'athlète à démarrer maintenant"}
-              >
-                {togglingAllowStart
-                  ? <Loader2 className="w-3 h-3 animate-spin" />
-                  : prog.previewAllowStart
-                    ? <><PlayCircle className="w-3 h-3" /> Démarrage OK</>
-                    : <><PlayCircle className="w-3 h-3" /> Autoriser</>
-                }
-              </button>
-            )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {prog.startsInFuture && prog.previewEnabled && (
             <button
-              onClick={handlePreviewToggle}
-              disabled={togglingPreview}
+              onClick={handleAllowStartToggle}
+              disabled={togglingAllowStart}
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-colors ${
-                prog.previewEnabled
-                  ? "border-primary/30 text-primary bg-primary/10 hover:bg-primary/20"
-                  : "border-accent/30 text-accent bg-accent/10 hover:bg-accent/20"
+                prog.previewAllowStart
+                  ? "border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/20"
+                  : "border-muted/30 text-muted-foreground bg-muted/10 hover:bg-muted/20"
               }`}
-              title={prog.previewEnabled ? "Désactiver l'aperçu" : "Envoyer en aperçu à l'athlète"}
+              title={prog.previewAllowStart ? "Retirer la permission de démarrer" : "Autoriser l'athlète à démarrer maintenant"}
             >
-              {togglingPreview
+              {togglingAllowStart
                 ? <Loader2 className="w-3 h-3 animate-spin" />
-                : prog.previewEnabled
-                  ? <><EyeOff className="w-3 h-3" /> Retirer</>
-                  : <><Eye className="w-3 h-3" /> Aperçu</>
+                : prog.previewAllowStart
+                  ? <><PlayCircle className="w-3 h-3" /> Démarrage OK</>
+                  : <><PlayCircle className="w-3 h-3" /> Autoriser</>
               }
             </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={handlePreviewToggle}
+            disabled={togglingPreview}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-colors ${
+              prog.previewEnabled
+                ? "border-primary/30 text-primary bg-primary/10 hover:bg-primary/20"
+                : "border-muted/30 text-muted-foreground bg-muted/10 hover:bg-muted/20"
+            }`}
+            title={prog.previewEnabled ? "Désactiver l'aperçu" : "Envoyer en aperçu à l'athlète"}
+          >
+            {togglingPreview
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : prog.previewEnabled
+                ? <><EyeOff className="w-3 h-3" /> Retirer</>
+                : <><Eye className="w-3 h-3" /> Aperçu</>
+            }
+          </button>
+        </div>
         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
       </div>
     </Link>

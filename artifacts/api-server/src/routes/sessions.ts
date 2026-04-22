@@ -12,7 +12,7 @@ import { calculateAdaptedLoad } from "../services/adapt-engine.js";
 import { detectNewPRs, getAthleteCurrentPRs } from "../services/prService.js";
 import { checkAfterSession, checkAfterFeedback } from "../services/badgeService.js";
 import { z } from "zod";
-import { getTodayLocalDate, localDateFromTimestamp, getLocalDayNumber, dateDiffDays } from "../lib/dateUtils.js";
+import { getTodayLocalDate, localDateFromTimestamp, getLocalDayNumber, dateDiffDays, computeSessionDate } from "../lib/dateUtils.js";
 
 const router = Router();
 
@@ -719,9 +719,8 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
 
     const result = [];
     for (const session of plannedSessions) {
-      const sessionDate = new Date(programStart);
-      sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
-      sessionDate.setHours(0, 0, 0, 0);
+      const scheduledDateStr = computeSessionDate(activeProgram.startDate, session.weekNumber, session.dayNumber);
+      const sessionDate = new Date(`${scheduledDateStr}T00:00:00Z`);
 
       const isCompleted = completedMap.has(session.id);
       const completedActualDate = completedMap.get(session.id) ?? null;
@@ -734,7 +733,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           sessionLocation: session.sessionType ?? "presentiel",
           weekNumber: session.weekNumber,
           dayNumber: session.dayNumber,
-          scheduledDate: localDateFromTimestamp(sessionDate),
+          scheduledDate: scheduledDateStr,
           estimatedDurationMin: session.estimatedDurationMin,
           isCompleted,
           completedActualDate,
@@ -1271,7 +1270,7 @@ router.get("/athlete/programs/:programId/preview", authenticate, requireRole("at
       .where(eq(sessionsTable.programId, program.id))
       .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
 
-    const programStart = program.startDate ? new Date(program.startDate) : new Date();
+    const programStartStr = program.startDate ?? new Date().toISOString().slice(0, 10);
 
     const sessionsWithExercises = await Promise.all(programSessions.map(async (session) => {
       const [variant] = await db.select().from(sessionVariantsTable)
@@ -1320,8 +1319,7 @@ router.get("/athlete/programs/:programId/preview", authenticate, requireRole("at
         }));
       }
 
-      const sessionDate = new Date(programStart);
-      sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
+      const scheduledDate = computeSessionDate(programStartStr, session.weekNumber, session.dayNumber);
 
       return {
         sessionId: session.id,
@@ -1329,7 +1327,7 @@ router.get("/athlete/programs/:programId/preview", authenticate, requireRole("at
         type: session.type,
         weekNumber: session.weekNumber,
         dayNumber: session.dayNumber,
-        scheduledDate: localDateFromTimestamp(sessionDate),
+        scheduledDate,
         estimatedDurationMin: session.estimatedDurationMin,
         coachNotes: session.coachNotes ?? null,
         blocks: blocks.map(b => ({ id: b.id, type: b.type, name: b.name ?? null, orderIndex: b.orderIndex })),
@@ -1376,7 +1374,7 @@ router.get("/athlete/preview-program", authenticate, requireRole("athlete"), asy
       .where(eq(sessionsTable.programId, program.id))
       .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
 
-    const programStart = new Date(program.startDate);
+    const programStartStrPrev = program.startDate;
 
     const sessionsWithExercises = await Promise.all(programSessions.map(async (session) => {
       const [variant] = await db.select().from(sessionVariantsTable)
@@ -1425,8 +1423,7 @@ router.get("/athlete/preview-program", authenticate, requireRole("athlete"), asy
         }));
       }
 
-      const sessionDate = new Date(programStart);
-      sessionDate.setDate(programStart.getDate() + (session.weekNumber - 1) * 7 + (session.dayNumber - 1));
+      const scheduledDate = computeSessionDate(programStartStrPrev, session.weekNumber, session.dayNumber);
 
       return {
         sessionId: session.id,
@@ -1434,7 +1431,7 @@ router.get("/athlete/preview-program", authenticate, requireRole("athlete"), asy
         type: session.type,
         weekNumber: session.weekNumber,
         dayNumber: session.dayNumber,
-        scheduledDate: localDateFromTimestamp(sessionDate),
+        scheduledDate,
         estimatedDurationMin: session.estimatedDurationMin,
         coachNotes: session.coachNotes ?? null,
         blocks: blocks.map(b => ({ id: b.id, type: b.type, name: b.name ?? null, orderIndex: b.orderIndex })),

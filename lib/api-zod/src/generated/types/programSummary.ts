@@ -18,4 +18,5 @@ export interface ProgramSummary {
   previewEnabled?: boolean;
   previewAllowStart?: boolean;
   startsInFuture?: boolean;
+  sessionCount?: number;
 }
