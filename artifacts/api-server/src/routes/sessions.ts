@@ -239,12 +239,16 @@ async function getTodaySessionsForProgram(
     .orderBy(asc(sessionsTable.createdAt));
 
   // Primary: sessions whose computed scheduled date is exactly today.
-  const exactMatches = allSessions.filter(
-    (s) => computeSessionDate(startDateStr, s.weekNumber, s.dayNumber) === todayStr
-  );
+  // Guard: skip sessions projected before programStart (can happen with non-Monday starts).
+  const exactMatches = allSessions.filter((s) => {
+    const scheduled = computeSessionDate(startDateStr, s.weekNumber, s.dayNumber);
+    return scheduled === todayStr && scheduled >= startDateStr;
+  });
   if (exactMatches.length > 0) return exactMatches;
 
-  // Fallback: any session scheduled on today's day-of-week (any week).
+  // Fallback: any session scheduled on today's day-of-week (any week),
+  // but only if today is on or after programStart.
+  if (todayStr < startDateStr) return [];
   return allSessions.filter((s) => s.dayNumber === dayNum);
 }
 
@@ -722,7 +726,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
       const isCompleted = completedMap.has(session.id);
       const completedActualDate = completedMap.get(session.id) ?? null;
 
-      if (sessionDate >= minus3Days && sessionDate <= in7Days && sessionDate <= programEnd) {
+      if (sessionDate >= programStart && sessionDate >= minus3Days && sessionDate <= in7Days && sessionDate <= programEnd) {
         result.push({
           sessionId: session.id,
           sessionName: session.name,

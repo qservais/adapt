@@ -23,10 +23,12 @@ export function dateDiffDays(fromDateStr: string, toDateStr: string): number {
 /**
  * Compute the real calendar date for a programme session.
  *
- * dayNumber is an absolute day-of-week (1 = Monday, 7 = Sunday).
- * Training week 1 spans [programStart … programStart+6].
- * The session falls on the day-of-week D within training week N,
- * regardless of what weekday programStart itself is.
+ * Anchors on the Monday of the ISO calendar week that contains programStart.
+ * dayNumber is 1 = Monday … 7 = Sunday (ISO weekday).
+ *
+ * Training week 1 = the full Mon–Sun week that includes programStart.
+ * Sessions scheduled earlier in that week than programStart are
+ * technically before the programme began (callers should guard against this).
  */
 export function computeSessionDate(
   programStartStr: string,
@@ -34,10 +36,12 @@ export function computeSessionDate(
   dayNumber: number
 ): string {
   const startMs = new Date(programStartStr + "T12:00:00Z").getTime();
-  const startDow = new Date(programStartStr + "T12:00:00Z").getUTCDay();
-  const d0 = startDow === 0 ? 7 : startDow; // convert 0=Sun → 7, keep 1–6
-  const offsetInWeek1 = (dayNumber - d0 + 7) % 7;
-  const totalOffset = (weekNumber - 1) * 7 + offsetInWeek1;
-  const targetMs = startMs + totalOffset * 86400000;
+  const startDow = new Date(programStartStr + "T12:00:00Z").getUTCDay(); // 0=Sun … 6=Sat
+  // How many days back to reach Monday (0=Mon already, 6=Sun → go back 6 days)
+  const daysFromMonday = startDow === 0 ? 6 : startDow - 1;
+  const weekMondayMs = startMs - daysFromMonday * 86400000;
+  // dayNumber-1 is offset from Monday (1→0, 7→6)
+  const totalOffset = (weekNumber - 1) * 7 + (dayNumber - 1);
+  const targetMs = weekMondayMs + totalOffset * 86400000;
   return new Date(targetMs).toISOString().split("T")[0]!;
 }
