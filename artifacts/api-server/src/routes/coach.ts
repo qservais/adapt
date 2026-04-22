@@ -67,19 +67,23 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
     const today = getTodayLocalDate();
     const athleteIds = athletes.map(a => a.id);
 
-    // Today's check-ins
+    // Today's check-ins — scoped to this coach's athletes
     const todayCheckins = await db.select().from(checkinsTable)
       .where(and(
+        inArray(checkinsTable.athleteId, athleteIds),
         eq(checkinsTable.date, today),
       ));
-    const checkinByAthlete = new Map(todayCheckins.filter(c => athleteIds.includes(c.athleteId)).map(c => [c.athleteId, c]));
+    const checkinByAthlete = new Map(todayCheckins.map(c => [c.athleteId, c]));
 
-    // Most recent check-in date per athlete (for inactivity detection)
+    // Most recent check-in date per athlete — last 90 days only
+    const ninetyDaysAgo = new Date(today + "T12:00:00Z");
+    ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90);
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split("T")[0]!;
     const allRecentCheckins = await db.select({
       athleteId: checkinsTable.athleteId,
       date: checkinsTable.date,
     }).from(checkinsTable)
-      .where(inArray(checkinsTable.athleteId, athleteIds))
+      .where(and(inArray(checkinsTable.athleteId, athleteIds), gte(checkinsTable.date, ninetyDaysAgoStr)))
       .orderBy(desc(checkinsTable.date));
     const lastCheckinByAthlete = new Map<string, string>();
     for (const c of allRecentCheckins) {
@@ -114,9 +118,42 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
     const sevenDaysLaterStr = sevenDaysLaterD.toISOString().split("T")[0]!;
     const sevenDaysAgoStr = sevenDaysAgoD.toISOString().split("T")[0]!;
 
-    const activePrograms = await db.select().from(programsTable)
-      .where(eq(programsTable.isActive, true));
-    const myPrograms = activePrograms.filter(p => athleteIds.includes(p.athleteId));
+    // Batch: fetch all active programs for this coach's athletes in ONE query (no full-table scan)
+    const myPrograms = athleteIds.length === 0 ? [] : await db.select().from(programsTable)
+      .where(and(
+        inArray(programsTable.athleteId, athleteIds),
+        eq(programsTable.isActive, true),
+      ));
+
+    const myProgramIds = myPrograms.map(p => p.id);
+
+    // Batch: fetch ALL sessions for all programs in ONE query
+    const allProgramSessions = myProgramIds.length > 0
+      ? await db.select().from(sessionsTable).where(inArray(sessionsTable.programId, myProgramIds))
+      : [];
+
+    // Batch: fetch ALL completed logs for all athletes in ONE query
+    const allCompletedLogs = athleteIds.length > 0
+      ? await db.select({ athleteId: sessionLogsTable.athleteId, sessionId: sessionLogsTable.sessionId })
+          .from(sessionLogsTable)
+          .where(and(
+            inArray(sessionLogsTable.athleteId, athleteIds),
+            isNotNull(sessionLogsTable.completedAt),
+          ))
+      : [];
+
+    // Build lookup maps
+    const completedByAthlete = new Map<string, Set<string>>();
+    for (const log of allCompletedLogs) {
+      if (!log.sessionId) continue;
+      if (!completedByAthlete.has(log.athleteId)) completedByAthlete.set(log.athleteId, new Set());
+      completedByAthlete.get(log.athleteId)!.add(log.sessionId);
+    }
+    const sessionsByProgram = new Map<string, typeof allProgramSessions>();
+    for (const s of allProgramSessions) {
+      if (!sessionsByProgram.has(s.programId)) sessionsByProgram.set(s.programId, []);
+      sessionsByProgram.get(s.programId)!.push(s);
+    }
 
     type SessionEntry = {
       athleteId: string;
@@ -138,16 +175,8 @@ router.get("/coach/dashboard", authenticate, requireRole("coach"), async (req, r
       const athlete = athletes.find(a => a.id === program.athleteId);
       if (!athlete) continue;
 
-      const programSessions = await db.select().from(sessionsTable)
-        .where(eq(sessionsTable.programId, program.id));
-
-      const completedLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
-        .from(sessionLogsTable)
-        .where(and(
-          eq(sessionLogsTable.athleteId, athlete.id),
-          isNotNull(sessionLogsTable.completedAt),
-        ));
-      const completedIds = new Set(completedLogs.filter(l => l.sessionId).map(l => l.sessionId));
+      const programSessions = sessionsByProgram.get(program.id) ?? [];
+      const completedIds = completedByAthlete.get(athlete.id) ?? new Set<string>();
 
       for (const session of programSessions) {
         const dateStr = sessionDateStr(program.startDate as string, session.weekNumber, session.dayNumber);
@@ -269,9 +298,40 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
     const monthStartDate = new Date(Date.UTC(year, month - 1, 1));
     const monthEndDate = new Date(Date.UTC(year, month, 1));
 
-    const activePrograms = await db.select().from(programsTable)
-      .where(eq(programsTable.isActive, true));
-    const myPrograms = activePrograms.filter(p => athleteIds.includes(p.athleteId));
+    // Batch: all active programs for this coach's athletes in ONE query
+    const myPrograms = athleteIds.length === 0 ? [] : await db.select().from(programsTable)
+      .where(and(
+        inArray(programsTable.athleteId, athleteIds),
+        eq(programsTable.isActive, true),
+      ));
+
+    const myProgramIds = myPrograms.map(p => p.id);
+
+    // Batch: all sessions + all completed logs in parallel (2 queries total, not 2N)
+    type CalSessionRow = { id: string; programId: string; weekNumber: number; dayNumber: number; name: string; type: string; sessionType: string | null; scheduledTime: string | null; visioLink: string | null; estimatedDurationMin: number | null; coachNotes: string | null; createdAt: Date | null };
+    type CalLogRow = { athleteId: string; sessionId: string | null };
+    const [allProgramSessions, allCompletedLogs] = await Promise.all([
+      myProgramIds.length > 0
+        ? db.select().from(sessionsTable).where(inArray(sessionsTable.programId, myProgramIds)) as Promise<CalSessionRow[]>
+        : Promise.resolve([] as CalSessionRow[]),
+      athleteIds.length > 0
+        ? db.select({ athleteId: sessionLogsTable.athleteId, sessionId: sessionLogsTable.sessionId })
+            .from(sessionLogsTable)
+            .where(and(inArray(sessionLogsTable.athleteId, athleteIds), isNotNull(sessionLogsTable.completedAt))) as Promise<CalLogRow[]>
+        : Promise.resolve([] as CalLogRow[]),
+    ]);
+
+    const completedByAthleteSet = new Map<string, Set<string>>();
+    for (const log of allCompletedLogs) {
+      if (!log.sessionId) continue;
+      if (!completedByAthleteSet.has(log.athleteId)) completedByAthleteSet.set(log.athleteId, new Set());
+      completedByAthleteSet.get(log.athleteId)!.add(log.sessionId);
+    }
+    const sessionsByProgramMap = new Map<string, CalSessionRow[]>();
+    for (const s of allProgramSessions) {
+      if (!sessionsByProgramMap.has(s.programId)) sessionsByProgramMap.set(s.programId, []);
+      sessionsByProgramMap.get(s.programId)!.push(s);
+    }
 
     type CalendarSessionEntry = {
       athleteId: string;
@@ -294,16 +354,8 @@ router.get("/coach/calendar", authenticate, requireRole("coach"), async (req, re
       const athlete = athletes.find(a => a.id === program.athleteId);
       if (!athlete) continue;
 
-      const programSessions = await db.select().from(sessionsTable)
-        .where(eq(sessionsTable.programId, program.id));
-
-      const completedLogs = await db.select({ sessionId: sessionLogsTable.sessionId })
-        .from(sessionLogsTable)
-        .where(and(
-          eq(sessionLogsTable.athleteId, athlete.id),
-          isNotNull(sessionLogsTable.completedAt),
-        ));
-      const completedIds = new Set(completedLogs.filter(l => l.sessionId).map(l => l.sessionId));
+      const programSessions = sessionsByProgramMap.get(program.id) ?? [];
+      const completedIds = completedByAthleteSet.get(athlete.id) ?? new Set<string>();
 
       for (const session of programSessions) {
         const dateStr = sessionDateStr(program.startDate as string, session.weekNumber, session.dayNumber);
@@ -383,20 +435,41 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
     const athletes = await db.select().from(usersTable)
       .where(and(eq(usersTable.coachId, req.user!.userId), eq(usersTable.role, "athlete"), eq(usersTable.isActive, true)));
 
+    if (athletes.length === 0) {
+      res.json([]);
+      return;
+    }
+
     const today = getTodayLocalDate();
+    const athleteIds = athletes.map(a => a.id);
 
-    const results = await Promise.all(athletes.map(async (athlete) => {
-      const [todayCheckin] = await db.select().from(checkinsTable)
-        .where(and(eq(checkinsTable.athleteId, athlete.id), eq(checkinsTable.date, today)));
+    // Batch: 3 queries in parallel instead of N×3 queries
+    const [todayCheckins, activeAlertsAll, lastSessionsAll] = await Promise.all([
+      db.select().from(checkinsTable)
+        .where(and(inArray(checkinsTable.athleteId, athleteIds), eq(checkinsTable.date, today))),
+      db.select({ athleteId: alertsTable.athleteId, id: alertsTable.id }).from(alertsTable)
+        .where(and(inArray(alertsTable.athleteId, athleteIds), eq(alertsTable.isResolved, false))),
+      db.select({ athleteId: sessionLogsTable.athleteId, createdAt: sessionLogsTable.createdAt })
+        .from(sessionLogsTable)
+        .where(inArray(sessionLogsTable.athleteId, athleteIds))
+        .orderBy(desc(sessionLogsTable.createdAt)),
+    ]);
 
-      const activeAlerts = await db.select({ id: alertsTable.id }).from(alertsTable)
-        .where(and(eq(alertsTable.athleteId, athlete.id), eq(alertsTable.isResolved, false)));
+    // Build lookup maps
+    const checkinByAthlete = new Map(todayCheckins.map(c => [c.athleteId, c]));
+    const alertCountByAthlete = new Map<string, number>();
+    for (const a of activeAlertsAll) {
+      alertCountByAthlete.set(a.athleteId, (alertCountByAthlete.get(a.athleteId) ?? 0) + 1);
+    }
+    const lastSessionByAthlete = new Map<string, Date | null>();
+    for (const s of lastSessionsAll) {
+      if (!lastSessionByAthlete.has(s.athleteId)) {
+        lastSessionByAthlete.set(s.athleteId, s.createdAt);
+      }
+    }
 
-      const [lastSession] = await db.select({ createdAt: sessionLogsTable.createdAt }).from(sessionLogsTable)
-        .where(eq(sessionLogsTable.athleteId, athlete.id))
-        .orderBy(desc(sessionLogsTable.createdAt))
-        .limit(1);
-
+    const results = athletes.map((athlete) => {
+      const todayCheckin = checkinByAthlete.get(athlete.id);
       const athletePrivacy = parsePrivacy(athlete.privacySettings);
       const visible = isProfileVisible(athletePrivacy);
 
@@ -413,6 +486,8 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         motivation: todayCheckin.motivation,
         createdAt: todayCheckin.createdAt,
       } : null;
+
+      const lastSession = lastSessionByAthlete.get(athlete.id);
       return {
         id: athlete.id,
         firstName: athlete.firstName,
@@ -422,11 +497,11 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         fitnessLevel: (visible && athletePrivacy.shareContext !== false) ? athlete.fitnessLevel : null,
         primaryGoal: (visible && athletePrivacy.shareContext !== false) ? athlete.primaryGoal : null,
         todayCheckin: rawCheckinFields ? applyCheckinPrivacy(rawCheckinFields, athletePrivacy) : null,
-        activeAlerts: activeAlerts.length,
-        lastSessionDate: visible ? (lastSession?.createdAt?.toISOString() ?? null) : null,
+        activeAlerts: alertCountByAthlete.get(athlete.id) ?? 0,
+        lastSessionDate: visible ? (lastSession?.toISOString() ?? null) : null,
         profilePrivate: !visible,
       };
-    }));
+    });
 
     res.json(results);
   } catch (err) {
