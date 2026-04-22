@@ -54,6 +54,12 @@ export async function duplicateForAthlete(programId: string, data: ApplyTemplate
   });
 }
 
+export async function saveAsTemplate(programId: string): Promise<ProgramTemplate> {
+  return customFetch<ProgramTemplate>(`/api/programs/${programId}/save-as-template`, {
+    method: "POST",
+  });
+}
+
 export async function applyTemplate(templateId: string, data: ApplyTemplateRequest): Promise<{
   id: string;
   name: string;

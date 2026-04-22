@@ -560,6 +560,116 @@ router.post("/programs/:id/duplicate-for-athlete", authenticate, requireRole("co
 
 // ─── END TEMPLATE ROUTES ──────────────────────────────────────────────────────
 
+router.post("/programs/:id/save-as-template", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const programId = String(req.params["id"]);
+
+    const [program] = await db.select().from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, false)));
+    if (!program) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
+      return;
+    }
+
+    const programSessions = await db.select().from(sessionsTable)
+      .where(eq(sessionsTable.programId, programId))
+      .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
+
+    const newTemplate = await db.transaction(async (tx) => {
+      const [tmpl] = await tx.insert(programsTable).values({
+        coachId: req.user!.userId,
+        athleteId: null,
+        name: program.name,
+        description: program.description,
+        durationWeeks: program.durationWeeks,
+        isTemplate: true,
+      }).returning();
+
+      for (const session of programSessions) {
+        const [newSession] = await tx.insert(sessionsTable).values({
+          programId: tmpl.id,
+          weekNumber: session.weekNumber,
+          dayNumber: session.dayNumber,
+          name: session.name,
+          type: session.type,
+          sessionType: session.sessionType,
+          scheduledTime: session.scheduledTime,
+          visioLink: session.visioLink,
+          estimatedDurationMin: session.estimatedDurationMin,
+          coachNotes: session.coachNotes,
+        }).returning();
+
+        const blocks = await tx.select().from(sessionBlocksTable)
+          .where(eq(sessionBlocksTable.sessionId, session.id))
+          .orderBy(sessionBlocksTable.orderIndex);
+
+        const blockIdMap = new Map<string, string>();
+        for (const block of blocks) {
+          const [newBlock] = await tx.insert(sessionBlocksTable).values({
+            sessionId: newSession.id,
+            type: block.type,
+            orderIndex: block.orderIndex,
+            name: block.name,
+            notes: block.notes,
+            estimatedDurationMin: block.estimatedDurationMin,
+            conditioningFormat: block.conditioningFormat,
+          }).returning();
+          blockIdMap.set(block.id, newBlock.id);
+        }
+
+        const variants = await tx.select().from(sessionVariantsTable)
+          .where(eq(sessionVariantsTable.sessionId, session.id));
+
+        for (const variant of variants) {
+          const [newVariant] = await tx.insert(sessionVariantsTable).values({
+            sessionId: newSession.id,
+            mode: variant.mode,
+            volumeModifier: variant.volumeModifier,
+            intensityModifier: variant.intensityModifier,
+            notes: variant.notes,
+          }).returning();
+
+          const exercises = await tx.select().from(sessionExercisesTable)
+            .where(eq(sessionExercisesTable.variantId, variant.id))
+            .orderBy(sessionExercisesTable.orderIndex);
+
+          for (const ex of exercises) {
+            await tx.insert(sessionExercisesTable).values({
+              variantId: newVariant.id,
+              blockId: ex.blockId ? (blockIdMap.get(ex.blockId) ?? null) : null,
+              exerciseId: ex.exerciseId,
+              orderIndex: ex.orderIndex,
+              sets: ex.sets,
+              reps: ex.reps,
+              loadKg: ex.loadKg,
+              restSeconds: ex.restSeconds,
+              coachCue: ex.coachCue,
+              tempo: ex.tempo,
+              supersetGroup: ex.supersetGroup,
+              supersetLabel: ex.supersetLabel,
+            });
+          }
+        }
+      }
+
+      return tmpl;
+    });
+
+    res.status(201).json({
+      id: newTemplate.id,
+      name: newTemplate.name,
+      description: newTemplate.description,
+      durationWeeks: newTemplate.durationWeeks,
+      isTemplate: true,
+      sessionCount: programSessions.length,
+      createdAt: newTemplate.createdAt,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 router.get("/programs/:programId", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const programId = String(req.params["programId"]);

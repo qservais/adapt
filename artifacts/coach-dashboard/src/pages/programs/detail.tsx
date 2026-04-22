@@ -10,6 +10,7 @@ import {
   useDeleteProgramSession,
   addProgramSession,
   updateProgram,
+  saveAsTemplate,
   CreateSessionRequestBlocksItem,
   SessionWithVariants,
 } from "@workspace/api-client-react";
@@ -59,6 +60,7 @@ import {
   CalendarSearch,
   Eye,
   EyeOff,
+  BookmarkPlus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -587,6 +589,7 @@ export default function ProgramDetail() {
   const [copiedSession, setCopiedSession] = useState<SessionWithVariants | null>(null);
   const [draggingSession, setDraggingSession] = useState<SessionWithVariants | null>(null);
   const [togglingPreview, setTogglingPreview] = useState(false);
+  const [savingAsTemplate, setSavingAsTemplate] = useState(false);
   const { toast } = useToast();
 
   const handlePreviewToggle = async () => {
@@ -692,6 +695,20 @@ export default function ProgramDetail() {
       navigate("/programs");
     } catch {
       toast({ title: "Échec de la suppression", variant: "destructive" });
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!programId) return;
+    setSavingAsTemplate(true);
+    try {
+      const tmpl = await saveAsTemplate(programId);
+      toast({ title: `Modèle « ${tmpl.name} » créé`, description: "Disponible dans l'onglet Mes modèles." });
+      queryClient.invalidateQueries({ queryKey: ["/api/programs/templates"] });
+    } catch {
+      toast({ title: "Échec de la création du modèle", variant: "destructive" });
+    } finally {
+      setSavingAsTemplate(false);
     }
   };
 
@@ -871,6 +888,23 @@ export default function ProgramDetail() {
                 : "Visible uniquement du coach pour l'instant"}
             </p>
           </div>
+          {!(program as unknown as { isTemplate?: boolean }).isTemplate && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={savingAsTemplate}
+              onClick={handleSaveAsTemplate}
+              title="Sauvegarder ce programme comme modèle réutilisable"
+              className="border-accent/50 text-accent hover:bg-accent/10"
+            >
+              {savingAsTemplate ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <BookmarkPlus className="w-4 h-4 mr-2" />
+              )}
+              Sauvegarder comme modèle
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
