@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useParams, Link, useLocation } from "wouter";
 import {
@@ -56,6 +57,8 @@ import {
   X,
   GripVertical,
   CalendarSearch,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -577,12 +580,35 @@ export default function ProgramDetail() {
   const programSummary = programs?.find((p) => p.id === programId);
   const athleteName = programSummary?.athleteName;
   const deleteProgramMutation = useDeleteProgram();
+  const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [copiedSession, setCopiedSession] = useState<SessionWithVariants | null>(null);
   const [draggingSession, setDraggingSession] = useState<SessionWithVariants | null>(null);
+  const [togglingPreview, setTogglingPreview] = useState(false);
   const { toast } = useToast();
+
+  const handlePreviewToggle = async () => {
+    if (!programId) return;
+    setTogglingPreview(true);
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const newEnabled = !(programSummary?.previewEnabled ?? false);
+      const res = await fetch(`/api/programs/${programId}/preview`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
+        body: JSON.stringify({ enabled: newEnabled }),
+      });
+      if (!res.ok) throw new Error("Erreur serveur");
+      toast({ title: newEnabled ? "Programme envoyé en aperçu à l'athlète" : "Aperçu désactivé" });
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    } catch {
+      toast({ title: "Erreur lors du changement d'aperçu", variant: "destructive" });
+    } finally {
+      setTogglingPreview(false);
+    }
+  };
 
   const totalWeeks = program?.durationWeeks ?? 1;
   const safeCurrentWeek = Math.min(Math.max(currentWeek, 1), totalWeeks);
@@ -801,14 +827,36 @@ export default function ProgramDetail() {
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-destructive/50 text-destructive hover:bg-destructive/10"
-          onClick={() => setDeleteOpen(true)}
-        >
-          <Trash2 className="w-4 h-4 mr-2" /> Supprimer le programme
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={togglingPreview}
+            onClick={handlePreviewToggle}
+            className={
+              programSummary?.previewEnabled
+                ? "border-primary/50 text-primary hover:bg-primary/10"
+                : "border-border text-muted-foreground hover:text-primary hover:border-primary/50"
+            }
+          >
+            {togglingPreview ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : programSummary?.previewEnabled ? (
+              <EyeOff className="w-4 h-4 mr-2" />
+            ) : (
+              <Eye className="w-4 h-4 mr-2" />
+            )}
+            {programSummary?.previewEnabled ? "Retirer l'aperçu" : "Envoyer en aperçu"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-destructive/50 text-destructive hover:bg-destructive/10"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">

@@ -231,24 +231,21 @@ async function getTodaySessionsForProgram(
   const todayStr = getTodayLocalDate();
   const startDateStr = program.startDate ?? todayStr;
   const dayNum = getLocalDayNumber(todayStr);
-  const diff = dateDiffDays(startDateStr, todayStr);
-  const trainingWeek = Math.min(Math.max(1, Math.floor(diff / 7) + 1), program.durationWeeks ?? 1);
 
-  let sessions = await db.select().from(sessionsTable)
-    .where(and(
-      eq(sessionsTable.programId, program.id),
-      eq(sessionsTable.weekNumber, trainingWeek),
-      eq(sessionsTable.dayNumber, dayNum)
-    ))
+  // Fetch all sessions then filter by canonical scheduled date to stay
+  // consistent with computeSessionDate used in the upcoming-sessions endpoint.
+  const allSessions = await db.select().from(sessionsTable)
+    .where(eq(sessionsTable.programId, program.id))
     .orderBy(asc(sessionsTable.createdAt));
 
-  if (sessions.length === 0) {
-    sessions = await db.select().from(sessionsTable)
-      .where(and(eq(sessionsTable.programId, program.id), eq(sessionsTable.dayNumber, dayNum)))
-      .orderBy(asc(sessionsTable.createdAt));
-  }
+  // Primary: sessions whose computed scheduled date is exactly today.
+  const exactMatches = allSessions.filter(
+    (s) => computeSessionDate(startDateStr, s.weekNumber, s.dayNumber) === todayStr
+  );
+  if (exactMatches.length > 0) return exactMatches;
 
-  return sessions;
+  // Fallback: any session scheduled on today's day-of-week (any week).
+  return allSessions.filter((s) => s.dayNumber === dayNum);
 }
 
 async function getOrCreateTodaySessionLogs(
