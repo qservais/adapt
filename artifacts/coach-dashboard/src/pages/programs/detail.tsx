@@ -138,7 +138,7 @@ function DuplicateDialog({
   session: SessionWithVariants;
   programId: string;
   programName: string;
-  programAthleteId: string;
+  programAthleteId: string | null;
   durationWeeks: number;
   open: boolean;
   onClose: () => void;
@@ -154,7 +154,7 @@ function DuplicateDialog({
       if (targetWeek > durationWeeks) {
         await updateProgram(programId, {
           name: programName,
-          athleteId: programAthleteId,
+          ...(programAthleteId ? { athleteId: programAthleteId } : {}),
           durationWeeks: targetWeek,
         });
       }
@@ -263,7 +263,7 @@ function EditorSessionCard({
   session: SessionWithVariants;
   programId: string;
   programName: string;
-  programAthleteId: string;
+  programAthleteId: string | null;
   durationWeeks: number;
   onRefetch: () => void;
   onCopy?: (session: SessionWithVariants) => void;
@@ -701,7 +701,7 @@ export default function ProgramDetail() {
     try {
       await updateProgram(programId, {
         name: program.name,
-        athleteId: program.athleteId,
+        ...(program.athleteId ? { athleteId: program.athleteId } : {}),
         durationWeeks: nextWeek,
         startDate: program.startDate || undefined,
       });
@@ -720,7 +720,7 @@ export default function ProgramDetail() {
     try {
       await updateProgram(programId, {
         name: program.name,
-        athleteId: program.athleteId,
+        ...(program.athleteId ? { athleteId: program.athleteId } : {}),
         durationWeeks: nextWeek,
         startDate: program.startDate || undefined,
       });
@@ -754,7 +754,7 @@ export default function ProgramDetail() {
       if (weekNumber > totalWeeks) {
         await updateProgram(programId, {
           name: program!.name,
-          athleteId: program!.athleteId,
+          ...(program!.athleteId ? { athleteId: program!.athleteId } : {}),
           durationWeeks: weekNumber,
         });
       }
@@ -807,17 +807,28 @@ export default function ProgramDetail() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-display text-white">{program.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-display text-white">{program.name}</h1>
+              {(program as unknown as { isTemplate?: boolean }).isTemplate && (
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-accent/30 text-accent bg-accent/10 mt-1">
+                  MODÈLE
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground font-mono">
               <span>{totalWeeks} semaines</span>
-              <span>•</span>
-              <Link
-                href={`/clients/${program.athleteId}`}
-                className="hover:text-primary transition-colors"
-              >
-                {athleteName ?? "Voir l'athlète"}
-              </Link>
-              {program.isActive && (
+              {!(program as unknown as { isTemplate?: boolean }).isTemplate && program.athleteId && (
+                <>
+                  <span>•</span>
+                  <Link
+                    href={`/clients/${program.athleteId}`}
+                    className="hover:text-primary transition-colors"
+                  >
+                    {athleteName ?? "Voir l'athlète"}
+                  </Link>
+                </>
+              )}
+              {!(program as unknown as { isTemplate?: boolean }).isTemplate && program.isActive && (
                 <span className="text-primary flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
                   Actif

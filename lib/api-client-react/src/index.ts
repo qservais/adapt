@@ -7,3 +7,4 @@ export * from "./join-requests";
 export * from "./session-list";
 export * from "./stats";
 export * from "./extra-types";
+export * from "./templates";

@@ -13,8 +13,13 @@ import {
   SessionWithVariants,
   ExerciseData,
   CreateSessionRequestVariantsItemMode,
+  getTemplates,
+  createTemplate,
+  deleteTemplate,
+  applyTemplate,
+  ProgramTemplate,
 } from "@workspace/api-client-react";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -37,6 +42,10 @@ import {
   EyeOff,
   PlayCircle,
   AlertTriangle,
+  LayoutTemplate,
+  Trash2,
+  UserCheck,
+  FileText,
 } from "lucide-react";
 import {
   Dialog,
@@ -787,11 +796,348 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
   );
 }
 
+// ─── NEW TEMPLATE SCHEMA & COMPONENTS ────────────────────────────────────────
+
+const createTemplateFormSchema = z.object({
+  name: z.string().min(1, "Le nom est requis"),
+  durationWeeks: z.coerce.number().min(1).max(52),
+  description: z.string().optional(),
+});
+
+function NewTemplateDialog({
+  trigger,
+  onCreated,
+}: {
+  trigger: React.ReactNode;
+  onCreated: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const createMutation = useMutation({
+    mutationFn: createTemplate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs/templates"] });
+      onCreated();
+    },
+  });
+
+  const form = useForm<z.infer<typeof createTemplateFormSchema>>({
+    resolver: zodResolver(createTemplateFormSchema),
+    defaultValues: { name: "", durationWeeks: 4, description: "" },
+  });
+
+  const onSubmit = async (data: z.infer<typeof createTemplateFormSchema>) => {
+    try {
+      await createMutation.mutateAsync({ name: data.name, durationWeeks: data.durationWeeks, description: data.description || undefined });
+      setOpen(false);
+      form.reset();
+      toast({ title: "Modèle créé" });
+    } catch {
+      toast({ title: "Erreur lors de la création", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="bg-card border-border sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-display tracking-widest text-white">
+            NOUVEAU MODÈLE
+          </DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-muted-foreground">Nom du modèle</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Prépa hors-saison — Force..." className="bg-background border-border" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-muted-foreground">Description (optionnel)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Pour débutants, focus force..." className="bg-background border-border" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="durationWeeks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-muted-foreground">Durée (semaines)</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={1} max={52} className="bg-background border-border" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full mt-4" disabled={createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Créer le modèle"}
+            </Button>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ApplyTemplateModal({
+  template,
+  open,
+  onClose,
+}: {
+  template: ProgramTemplate;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { data: clients } = useGetClients();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [athleteId, setAthleteId] = useState("");
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]!);
+  const applyMutation = useMutation({
+    mutationFn: ({ templateId, data }: { templateId: string; data: { athleteId: string; startDate?: string } }) =>
+      applyTemplate(templateId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    },
+  });
+
+  const handleApply = async () => {
+    if (!athleteId) return;
+    try {
+      const result = await applyMutation.mutateAsync({ templateId: template.id, data: { athleteId, startDate } });
+      toast({ title: `Programme « ${result.name} » créé pour ${result.athleteName}` });
+      onClose();
+    } catch {
+      toast({ title: "Erreur lors de l'application du modèle", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="bg-card border-border max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl tracking-widest text-white">
+            APPLIQUER À UN ATHLÈTE
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground text-sm">
+            Modèle : <span className="text-white font-medium">{template.name}</span> — {template.durationWeeks} sem., {template.sessionCount} séance{template.sessionCount > 1 ? "s" : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Athlète</label>
+            <Select value={athleteId} onValueChange={setAthleteId}>
+              <SelectTrigger className="bg-background border-border">
+                <SelectValue placeholder="Choisir un athlète..." />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                {clients?.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.firstName} {c.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Date de début</label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-background border-border"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="border-border flex-1" onClick={onClose}>Annuler</Button>
+            <Button
+              className="flex-1 bg-primary text-black hover:bg-primary/90"
+              onClick={handleApply}
+              disabled={!athleteId || applyMutation.isPending}
+            >
+              {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserCheck className="w-4 h-4 mr-2" />Appliquer</>}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDeleted: () => void }) {
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteTemplate(template.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs/templates"] });
+      onDeleted();
+    },
+  });
+
+  const handleDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync();
+      toast({ title: "Modèle supprimé" });
+      setConfirmDelete(false);
+    } catch {
+      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
+    }
+  };
+
+  return (
+    <>
+      <div className="group bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-all flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <Link href={`/programs/${template.id}`}>
+              <p className="text-sm font-semibold text-white truncate group-hover:text-primary transition-colors cursor-pointer">
+                {template.name}
+              </p>
+            </Link>
+            {template.description && (
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{template.description}</p>
+            )}
+          </div>
+          <span className="shrink-0 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-accent/30 text-accent bg-accent/10">
+            MODÈLE
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {template.durationWeeks} sem.
+          </span>
+          <span className="flex items-center gap-1">
+            <Dumbbell className="w-3 h-3" />
+            {template.sessionCount} séance{template.sessionCount > 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <Button
+            size="sm"
+            className="flex-1 bg-primary text-black hover:bg-primary/90 text-xs h-8"
+            onClick={() => setApplyOpen(true)}
+          >
+            <UserCheck className="w-3.5 h-3.5 mr-1.5" />
+            Appliquer à un athlète
+          </Button>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="p-2 rounded-lg border border-border hover:border-destructive/40 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {applyOpen && (
+        <ApplyTemplateModal template={template} open={applyOpen} onClose={() => setApplyOpen(false)} />
+      )}
+
+      {confirmDelete && (
+        <Dialog open={confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(false)}>
+          <DialogContent className="bg-card border-border max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="text-white">Supprimer ce modèle ?</DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm">
+                Le modèle « {template.name} » sera définitivement supprimé. Cette action est irréversible.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 pt-2">
+              <Button variant="outline" className="border-border" onClick={() => setConfirmDelete(false)}>Annuler</Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Supprimer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+function ModelesTab() {
+  const queryClient = useQueryClient();
+  const { data: templates, isLoading, refetch } = useQuery({
+    queryKey: ["/api/programs/templates"],
+    queryFn: getTemplates,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const allTemplates = templates || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {allTemplates.length} modèle{allTemplates.length > 1 ? "s" : ""} enregistré{allTemplates.length > 1 ? "s" : ""}
+        </p>
+        <NewTemplateDialog
+          onCreated={() => refetch()}
+          trigger={
+            <Button size="sm" className="bg-primary text-black hover:bg-primary/90">
+              <Plus className="w-4 h-4 mr-1.5" />
+              Nouveau modèle
+            </Button>
+          }
+        />
+      </div>
+
+      {allTemplates.length === 0 ? (
+        <div className="py-16 text-center text-muted-foreground bg-card/50 rounded-xl border border-dashed border-border">
+          <LayoutTemplate className="w-8 h-8 mx-auto mb-2 opacity-30" />
+          <p className="text-sm font-medium">Aucun modèle</p>
+          <p className="text-xs mt-1 opacity-70">Créez des modèles réutilisables pour les appliquer rapidement à vos athlètes.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+          {allTemplates.map((template) => (
+            <TemplateCard key={template.id} template={template} onDeleted={() => refetch()} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── END TEMPLATE COMPONENTS ──────────────────────────────────────────────────
+
 export default function ProgramsList() {
   const { data: programs, isLoading, refetch } = useGetPrograms();
   const linkMutation = useCoachLink();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"athletes" | "bibliotheque">("athletes");
+  const [tab, setTab] = useState<"athletes" | "bibliotheque" | "modeles">("athletes");
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [linkError, setLinkError] = useState("");
@@ -940,6 +1286,17 @@ export default function ProgramsList() {
           <BookOpen className="w-4 h-4" />
           Bibliothèque de blocs
         </button>
+        <button
+          onClick={() => setTab("modeles")}
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0 ${
+            tab === "modeles"
+              ? "bg-primary text-black"
+              : "text-muted-foreground hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <LayoutTemplate className="w-4 h-4" />
+          Mes modèles
+        </button>
       </div>
 
       {tab === "athletes" && (
@@ -962,6 +1319,8 @@ export default function ProgramsList() {
       )}
 
       {tab === "bibliotheque" && <BibliothequeTab programs={allPrograms} />}
+
+      {tab === "modeles" && <ModelesTab />}
     </div>
   );
 }
