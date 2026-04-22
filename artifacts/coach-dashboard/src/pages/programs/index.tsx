@@ -16,7 +16,7 @@ import {
   getTemplates,
   createTemplate,
   deleteTemplate,
-  applyTemplate,
+  duplicateForAthlete,
   ProgramTemplate,
 } from "@workspace/api-client-react";
 import { useQueries, useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
@@ -914,7 +914,7 @@ function ApplyTemplateModal({
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]!);
   const applyMutation = useMutation({
     mutationFn: ({ templateId, data }: { templateId: string; data: { athleteId: string; startDate?: string } }) =>
-      applyTemplate(templateId, data),
+      duplicateForAthlete(templateId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     },
@@ -936,7 +936,7 @@ function ApplyTemplateModal({
       <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-xl tracking-widest text-white">
-            APPLIQUER À UN ATHLÈTE
+            UTILISER CE MODÈLE
           </DialogTitle>
           <DialogDescription className="text-muted-foreground text-sm">
             Modèle : <span className="text-white font-medium">{template.name}</span> — {template.durationWeeks} sem., {template.sessionCount} séance{template.sessionCount > 1 ? "s" : ""}
@@ -1043,7 +1043,7 @@ function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDe
             onClick={() => setApplyOpen(true)}
           >
             <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-            Appliquer à un athlète
+            Utiliser ce modèle
           </Button>
           <button
             onClick={() => setConfirmDelete(true)}
@@ -1295,7 +1295,7 @@ export default function ProgramsList() {
           }`}
         >
           <LayoutTemplate className="w-4 h-4" />
-          Mes modèles
+          Bibliothèque
         </button>
       </div>
 

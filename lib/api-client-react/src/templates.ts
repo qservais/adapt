@@ -38,6 +38,22 @@ export async function deleteTemplate(templateId: string): Promise<{ success: boo
   });
 }
 
+export async function duplicateForAthlete(programId: string, data: ApplyTemplateRequest): Promise<{
+  id: string;
+  name: string;
+  athleteId: string | null;
+  athleteName: string;
+  durationWeeks: number;
+  startDate: string | null;
+  isActive: boolean | null;
+  createdAt: string | null;
+}> {
+  return customFetch(`/api/programs/${programId}/duplicate-for-athlete`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function applyTemplate(templateId: string, data: ApplyTemplateRequest): Promise<{
   id: string;
   name: string;

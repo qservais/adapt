@@ -405,6 +405,159 @@ router.post("/programs/templates/:id/apply", authenticate, requireRole("coach"),
   }
 });
 
+// ─── DUPLICATE-FOR-ATHLETE ROUTE ─────────────────────────────────────────────
+
+const duplicateForAthleteSchema = z.object({
+  athleteId: z.string().uuid(),
+  startDate: z.string().optional(),
+});
+
+router.post("/programs/:id/duplicate-for-athlete", authenticate, requireRole("coach"), async (req, res) => {
+  const parsed = duplicateForAthleteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+
+  try {
+    const programId = String(req.params["id"]);
+
+    const [sourceProgram] = await db.select().from(programsTable)
+      .where(and(
+        eq(programsTable.id, programId),
+        eq(programsTable.coachId, req.user!.userId),
+        eq(programsTable.isTemplate, true),
+      ));
+    if (!sourceProgram) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Modèle introuvable" } });
+      return;
+    }
+
+    const [athlete] = await db.select({
+      id: usersTable.id,
+      firstName: usersTable.firstName,
+      lastName: usersTable.lastName,
+      pushToken: usersTable.pushToken,
+      notificationPrefs: usersTable.notificationPrefs,
+    }).from(usersTable)
+      .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, req.user!.userId)));
+    if (!athlete) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlète non lié à ce coach" } });
+      return;
+    }
+
+    const [newProgram] = await db.insert(programsTable).values({
+      coachId: req.user!.userId,
+      athleteId: parsed.data.athleteId,
+      name: sourceProgram.name,
+      description: sourceProgram.description,
+      durationWeeks: sourceProgram.durationWeeks,
+      startDate: parsed.data.startDate,
+      isTemplate: false,
+    }).returning();
+
+    const sourceSessions = await db.select().from(sessionsTable)
+      .where(eq(sessionsTable.programId, programId))
+      .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
+
+    for (const session of sourceSessions) {
+      const [newSession] = await db.insert(sessionsTable).values({
+        programId: newProgram.id,
+        weekNumber: session.weekNumber,
+        dayNumber: session.dayNumber,
+        name: session.name,
+        type: session.type,
+        sessionType: session.sessionType,
+        scheduledTime: session.scheduledTime,
+        visioLink: session.visioLink,
+        estimatedDurationMin: session.estimatedDurationMin,
+        coachNotes: session.coachNotes,
+      }).returning();
+
+      const sourceBlocks = await db.select().from(sessionBlocksTable)
+        .where(eq(sessionBlocksTable.sessionId, session.id))
+        .orderBy(sessionBlocksTable.orderIndex);
+
+      const blockIdMap = new Map<string, string>();
+      for (const block of sourceBlocks) {
+        const [newBlock] = await db.insert(sessionBlocksTable).values({
+          sessionId: newSession.id,
+          type: block.type,
+          orderIndex: block.orderIndex,
+          name: block.name,
+          notes: block.notes,
+          estimatedDurationMin: block.estimatedDurationMin,
+          conditioningFormat: block.conditioningFormat,
+        }).returning();
+        blockIdMap.set(block.id, newBlock.id);
+      }
+
+      const sourceVariants = await db.select().from(sessionVariantsTable)
+        .where(eq(sessionVariantsTable.sessionId, session.id));
+
+      for (const variant of sourceVariants) {
+        const [newVariant] = await db.insert(sessionVariantsTable).values({
+          sessionId: newSession.id,
+          mode: variant.mode,
+          volumeModifier: variant.volumeModifier,
+          intensityModifier: variant.intensityModifier,
+          notes: variant.notes,
+        }).returning();
+
+        const sourceExercises = await db.select().from(sessionExercisesTable)
+          .where(eq(sessionExercisesTable.variantId, variant.id))
+          .orderBy(sessionExercisesTable.orderIndex);
+
+        for (const ex of sourceExercises) {
+          await db.insert(sessionExercisesTable).values({
+            variantId: newVariant.id,
+            blockId: ex.blockId ? (blockIdMap.get(ex.blockId) ?? null) : null,
+            exerciseId: ex.exerciseId,
+            orderIndex: ex.orderIndex,
+            sets: ex.sets,
+            reps: ex.reps,
+            loadKg: ex.loadKg,
+            restSeconds: ex.restSeconds,
+            coachCue: ex.coachCue,
+            tempo: ex.tempo,
+            supersetGroup: ex.supersetGroup,
+            supersetLabel: ex.supersetLabel,
+          });
+        }
+      }
+    }
+
+    const notifTitle = "Nouveau programme disponible 🏋️";
+    const notifBody = `Ton coach t'a attribué un nouveau programme : ${newProgram.name}`;
+    await db.insert(notificationsTable).values({
+      userId: parsed.data.athleteId,
+      type: "new_program",
+      title: notifTitle,
+      body: notifBody,
+      link: "/(tabs)/session",
+    });
+    const prefs = (athlete.notificationPrefs as Record<string, boolean> | null);
+    const pushEnabled = prefs ? prefs["push_session"] !== false && prefs["session"] !== false : true;
+    if (pushEnabled) {
+      await sendPushNotification(athlete.pushToken ?? null, { title: notifTitle, body: notifBody, data: { link: "/(tabs)/session" } });
+    }
+
+    res.status(201).json({
+      id: newProgram.id,
+      name: newProgram.name,
+      athleteId: newProgram.athleteId,
+      athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
+      durationWeeks: newProgram.durationWeeks,
+      startDate: newProgram.startDate,
+      isActive: newProgram.isActive,
+      createdAt: newProgram.createdAt,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 // ─── END TEMPLATE ROUTES ──────────────────────────────────────────────────────
 
 router.get("/programs/:programId", authenticate, requireRole("coach"), async (req, res) => {
