@@ -1382,7 +1382,7 @@ router.get("/athlete/coach-request", authenticate, requireRole("athlete"), async
   }
 });
 
-router.post("/athlete/request-coach", authenticate, requireRole("athlete"), async (req, res) => {
+router.post("/athlete/coach-request", authenticate, requireRole("athlete"), async (req, res) => {
   const schema = z.object({ coachId: z.string().uuid() });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
@@ -1412,7 +1412,7 @@ router.post("/athlete/request-coach", authenticate, requireRole("athlete"), asyn
   }
 });
 
-router.delete("/athlete/request-coach", authenticate, requireRole("athlete"), async (req, res) => {
+router.delete("/athlete/coach-request", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const athleteId = req.user!.userId;
     await db

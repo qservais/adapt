@@ -3,6 +3,39 @@ import { usersTable } from "@workspace/db";
 import { eq, inArray, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
+export async function runSchemaMigrations(): Promise<void> {
+  try {
+    await db.execute(sql`ALTER TABLE programs ALTER COLUMN athlete_id DROP NOT NULL`);
+    logger.info("runSchemaMigrations: athlete_id nullable OK");
+  } catch {
+    // Already nullable — ignore
+  }
+
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS athlete_exercise_preferences (
+        athlete_id uuid NOT NULL REFERENCES users(id),
+        exercise_id uuid NOT NULL REFERENCES exercises(id),
+        preferred_sets integer,
+        preferred_reps varchar(20),
+        preferred_load_kg numeric(6,2),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (athlete_id, exercise_id)
+      )
+    `);
+    logger.info("runSchemaMigrations: athlete_exercise_preferences OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: erreur création athlete_exercise_preferences");
+  }
+
+  try {
+    await db.execute(sql`ALTER TABLE programs ADD COLUMN IF NOT EXISTS is_template boolean NOT NULL DEFAULT false`);
+    logger.info("runSchemaMigrations: is_template column OK");
+  } catch {
+    // Already exists — ignore
+  }
+}
+
 const LMJCOACH_HASH =
   "$2b$12$6sgAadix1kqObp3MZkKeru7JhIABSI9EjoqzSuWZDd5biJN1aEVci";
 const OWEN_HASH =

@@ -164,6 +164,11 @@ export default function ClientDetail() {
   const [addDateOpen, setAddDateOpen] = useState(false);
   const [addDateValue, setAddDateValue] = useState<string>(() => new Date().toISOString().split("T")[0]);
 
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [activateProgramId, setActivateProgramId] = useState<string | null>(null);
+  const [activateStartDate, setActivateStartDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [activating, setActivating] = useState(false);
+
   // Tests state
   const [tests, setTests] = useState<PerformanceTest[] | null>(null);
   const [testsLoading, setTestsLoading] = useState(false);
@@ -309,6 +314,34 @@ export default function ClientDetail() {
   }
 
   const activeProgram = allPrograms?.find(p => p.athleteId === id && p.isActive);
+  const inactivePrograms = allPrograms?.filter(p => p.athleteId === id && !p.isActive) ?? [];
+
+  const openActivateDialog = (programId: string) => {
+    setActivateProgramId(programId);
+    setActivateStartDate(new Date().toISOString().split("T")[0]);
+    setActivateDialogOpen(true);
+  };
+
+  const handleActivateProgram = async () => {
+    if (!activateProgramId) return;
+    setActivating(true);
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch(`/api/programs/${activateProgramId}/activate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate: activateStartDate }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "Programme activé" });
+      setActivateDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    } catch {
+      toast({ title: "Erreur lors de l'activation", variant: "destructive" });
+    } finally {
+      setActivating(false);
+    }
+  };
 
   const handleOverride = async (mode: 'performance' | 'normal' | 'adapt' | 'recovery') => {
     try {
@@ -1774,15 +1807,18 @@ export default function ClientDetail() {
 
       {/* PROGRAMME TAB */}
       {activeTab === "programme" && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {activeProgram ? (
-            <>
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-display text-white">{activeProgram.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-display text-white">{activeProgram.name}</h2>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary uppercase tracking-wider">Actif</span>
+                  </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {activeProgram.durationWeeks} semaine{activeProgram.durationWeeks !== 1 ? "s" : ""}
-                    {activeProgram.startDate && ` · Démarré le ${format(new Date(activeProgram.startDate), 'd MMMM yyyy', { locale: fr })}`}
+                    {activeProgram.startDate && ` · Démarré le ${format(new Date(activeProgram.startDate + "T12:00:00"), 'd MMMM yyyy', { locale: fr })}`}
                   </p>
                 </div>
                 <Link href={`/programs/${activeProgram.id}`}>
@@ -1793,21 +1829,88 @@ export default function ClientDetail() {
                 </Link>
               </div>
               <ProgramGrid programId={activeProgram.id} />
-            </>
+            </div>
           ) : (
-            <div className="bg-card border border-border rounded-xl p-12 text-center">
+            <div className="bg-card border border-border rounded-xl p-8 text-center">
               <Dumbbell className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
               <p className="text-white font-medium mb-1">Aucun programme actif</p>
-              <p className="text-muted-foreground text-sm mb-6">Créez un programme depuis la page Programmes pour le retrouver ici.</p>
+              <p className="text-muted-foreground text-sm mb-4">Activez un programme ci-dessous ou créez-en un nouveau.</p>
               <Link href="/programs">
                 <Button className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20">
-                  Voir les programmes
+                  Créer un programme
                 </Button>
               </Link>
             </div>
           )}
+
+          {inactivePrograms.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-display text-muted-foreground tracking-widest uppercase">Autres programmes</h3>
+              <div className="grid gap-3">
+                {inactivePrograms.map(prog => (
+                  <div key={prog.id} className="flex items-center justify-between bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-colors">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{prog.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {prog.durationWeeks} sem.
+                        {prog.startDate ? ` · Démarré le ${format(new Date(prog.startDate + "T12:00:00"), 'd MMM yyyy', { locale: fr })}` : " · Pas encore démarré"}
+                        {prog.sessionCount > 0 && ` · ${prog.sessionCount} séance${prog.sessionCount > 1 ? "s" : ""}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-4">
+                      <Link href={`/programs/${prog.id}`}>
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-white h-8 px-2">
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        onClick={() => openActivateDialog(prog.id)}
+                        className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 h-8 text-xs"
+                      >
+                        Activer
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      <Dialog open={activateDialogOpen} onOpenChange={setActivateDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white font-display text-xl">ACTIVER LE PROGRAMME</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Date de début</Label>
+              <Input
+                type="date"
+                value={activateStartDate}
+                onChange={e => setActivateStartDate(e.target.value)}
+                className="bg-background border-border text-white"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Le programme actif actuel sera désactivé automatiquement.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivateDialogOpen(false)} className="border-border">
+              Annuler
+            </Button>
+            <Button
+              onClick={handleActivateProgram}
+              disabled={activating || !activateStartDate}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {activating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Activer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

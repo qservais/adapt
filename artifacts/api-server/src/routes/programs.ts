@@ -560,6 +560,36 @@ router.post("/programs/:id/duplicate-for-athlete", authenticate, requireRole("co
 
 // ─── END TEMPLATE ROUTES ──────────────────────────────────────────────────────
 
+router.post("/programs/:id/activate", authenticate, requireRole("coach"), async (req, res) => {
+  const programId = String(req.params["id"]);
+  const schema = z.object({ startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "startDate requis (YYYY-MM-DD)" } });
+    return;
+  }
+  try {
+    const [program] = await db.select({ id: programsTable.id, athleteId: programsTable.athleteId })
+      .from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, false)));
+    if (!program) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
+      return;
+    }
+    if (program.athleteId) {
+      await db.update(programsTable)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(and(eq(programsTable.athleteId, program.athleteId), eq(programsTable.isActive, true)));
+    }
+    await db.update(programsTable)
+      .set({ isActive: true, startDate: parsed.data.startDate, updatedAt: new Date() })
+      .where(eq(programsTable.id, programId));
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 router.post("/programs/:id/save-as-template", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const programId = String(req.params["id"]);
