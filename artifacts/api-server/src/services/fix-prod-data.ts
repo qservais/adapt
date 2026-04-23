@@ -4,13 +4,19 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
 export async function runSchemaMigrations(): Promise<void> {
+  // Drop NOT NULL on athlete_id so templates (athleteId=null) can be inserted
   try {
     await db.execute(sql`ALTER TABLE programs ALTER COLUMN athlete_id DROP NOT NULL`);
-    logger.info("runSchemaMigrations: athlete_id nullable OK");
-  } catch {
-    // Already nullable — ignore
+    logger.info("runSchemaMigrations: athlete_id → nullable OK");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Postgres silently succeeds when column is already nullable; log other errors
+    if (!msg.includes("does not have a not-null constraint")) {
+      logger.warn({ err }, "runSchemaMigrations: athlete_id NOT NULL drop – non-fatal");
+    }
   }
 
+  // Create athlete_exercise_preferences table (missing in older prod deployments)
   try {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS athlete_exercise_preferences (
@@ -25,14 +31,17 @@ export async function runSchemaMigrations(): Promise<void> {
     `);
     logger.info("runSchemaMigrations: athlete_exercise_preferences OK");
   } catch (err) {
-    logger.error({ err }, "runSchemaMigrations: erreur création athlete_exercise_preferences");
+    logger.error({ err }, "runSchemaMigrations: FATAL – athlete_exercise_preferences creation failed");
+    throw err;
   }
 
+  // Add is_template column (missing in older prod deployments)
   try {
     await db.execute(sql`ALTER TABLE programs ADD COLUMN IF NOT EXISTS is_template boolean NOT NULL DEFAULT false`);
     logger.info("runSchemaMigrations: is_template column OK");
-  } catch {
-    // Already exists — ignore
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – is_template column failed");
+    throw err;
   }
 }
 

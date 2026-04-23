@@ -19,11 +19,19 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, async () => {
-  logger.info({ port }, "Server listening");
+async function start() {
   await runSchemaMigrations();
   await fixProdData();
   await ensureAthleteInviteCodes();
-  startAlertJob();
-  startNotificationJob();
+
+  app.listen(port, () => {
+    logger.info({ port }, "Server listening");
+    startAlertJob();
+    startNotificationJob();
+  });
+}
+
+start().catch((err) => {
+  logger.error({ err }, "Fatal startup error");
+  process.exit(1);
 });
