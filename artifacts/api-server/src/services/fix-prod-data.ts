@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 
 export async function runSchemaMigrations(): Promise<void> {
@@ -57,9 +57,12 @@ const TEST_EMAILS = [
   "julien@adapt.demo",
   "lmj-trainer@hotmail.com",
   "marie@adapt.demo",
+  "sara@adapt.demo",
+];
+
+const UNBLOCK_EMAILS = [
   "quentin.servais@hotmail.be",
   "quentin.servais@hotmail.fr",
-  "sara@adapt.demo",
 ];
 
 export async function fixProdData(): Promise<void> {
@@ -134,6 +137,12 @@ export async function fixProdData(): Promise<void> {
   }
 
   try {
+    await unblockAccounts();
+  } catch (err) {
+    logger.error({ err }, "fixProdData: erreur déblocage comptes");
+  }
+
+  try {
     await ensureCoaches();
   } catch (err) {
     logger.error({ err }, "fixProdData: erreur création coaches");
@@ -153,6 +162,18 @@ async function deactivateTestAccounts(): Promise<void> {
     .where(inArray(usersTable.email, TEST_EMAILS));
 
   logger.info({ count: active.length }, "fixProdData: comptes test désactivés");
+}
+
+async function unblockAccounts(): Promise<void> {
+  const blocked = await db
+    .select({ id: usersTable.id, email: usersTable.email })
+    .from(usersTable)
+    .where(and(inArray(usersTable.email, UNBLOCK_EMAILS), eq(usersTable.isActive, false)));
+
+  if (blocked.length === 0) return;
+
+  await db.delete(usersTable).where(inArray(usersTable.id, blocked.map(u => u.id)));
+  logger.info({ emails: blocked.map(u => u.email) }, "fixProdData: comptes bloqués supprimés (ré-inscription possible)");
 }
 
 async function ensureCoaches(): Promise<void> {
