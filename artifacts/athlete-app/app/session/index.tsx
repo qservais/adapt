@@ -246,6 +246,11 @@ export default function SessionIntroScreen() {
                   {ex.coachCue != null && (
                     <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
                   )}
+                  {ex.description != null && ex.description.length > 0 && (
+                    <Text style={[styles.exDesc, { fontFamily: FONTS.body }]}>
+                      {ex.description}
+                    </Text>
+                  )}
                 </View>
                 <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
               </View>
@@ -368,6 +373,7 @@ const styles = StyleSheet.create({
   exName: { fontSize: 15, color: COLORS.white, marginBottom: 3 },
   exDetail: { fontSize: 12, color: COLORS.textSecondary, letterSpacing: 0.3 },
   exCue: { fontSize: 11, color: COLORS.textMuted, fontStyle: "italic", marginTop: 2 },
+  exDesc: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17, marginTop: 4 },
   footer: {
     position: "absolute",
     bottom: 0,

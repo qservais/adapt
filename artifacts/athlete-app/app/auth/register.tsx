@@ -94,7 +94,7 @@ export default function RegisterScreen() {
         <View style={styles.header}>
           <Text style={[styles.title, { fontFamily: FONTS.title }]}>CRÉER UN COMPTE</Text>
           <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-            Rejoins ADAPT by LMJ
+            Rejoins ADAPT
           </Text>
         </View>
 

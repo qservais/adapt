@@ -401,7 +401,7 @@ export default function SessionTab() {
                               {String(globalIndex + 1).padStart(2, "0")}
                             </Text>
                             <View style={{ flex: 1 }}>
-                              <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium, textDecorationLine: isDone ? "line-through" : "none", opacity: isDone ? 0.5 : 1 }]}>
+                              <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary, textDecorationLine: isDone ? "line-through" : "none", opacity: isDone ? 0.5 : 1 }]}>
                                 {ex.exerciseName}
                               </Text>
                               <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
@@ -578,7 +578,7 @@ export default function SessionTab() {
                                               {`S${ps.weekNumber}·J${ps.dayNumber}`}
                                             </Text>
                                             <View style={{ flex: 1 }}>
-                                              <Text style={[styles.previewSessionName, { fontFamily: FONTS.bodyMedium }]} numberOfLines={1}>
+                                              <Text style={[styles.previewSessionName, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]} numberOfLines={1}>
                                                 {ps.name}
                                               </Text>
                                               {ps.estimatedDurationMin != null && (
@@ -655,7 +655,7 @@ export default function SessionTab() {
                             </View>
                             <View style={{ flex: 1 }}>
                               <Text
-                                style={[styles.upcomingName, { fontFamily: FONTS.bodyMedium }]}
+                                style={[styles.upcomingName, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}
                                 numberOfLines={1}
                               >
                                 {s.sessionName}

@@ -49,7 +49,6 @@ export default function OnboardingSplashScreen() {
     >
       <View style={styles.header}>
         <Text style={[styles.logo, { fontFamily: FONTS.title }]}>ADAPT</Text>
-        <Text style={[styles.logoSub, { fontFamily: FONTS.body }]}>by LMJ</Text>
         <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
           Entraîne-toi intelligemment. Récupère mieux. Performe davantage.
         </Text>

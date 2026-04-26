@@ -86,7 +86,6 @@ export default function LoginScreen() {
       >
         <Animated.View style={[styles.header, logoStyle]}>
           <Text style={[styles.logo, { fontFamily: FONTS.title }]}>ADAPT</Text>
-          <Text style={[styles.subtitle, { fontFamily: FONTS.mono }]}>by LMJ</Text>
           <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
             L'entraînement qui s'adapte à toi.
           </Text>

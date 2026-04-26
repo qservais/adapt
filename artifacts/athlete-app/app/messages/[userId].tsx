@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ActivityIndicator,
   Alert,
@@ -26,6 +27,8 @@ import {
   useSendMessage,
   useGetMessageThreads,
   useUploadMessageMedia,
+  useMarkMessagesRead,
+  getGetMessageThreadsQueryKey,
 } from "@workspace/api-client-react";
 import type { MessageData } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
@@ -58,11 +61,13 @@ export default function ChatScreen() {
   const fullscreenVideoRef = useRef<Video | null>(null);
   const [fullscreenVideoUrl, setFullscreenVideoUrl] = useState<string | null>(null);
 
+  const qc = useQueryClient();
   const userIdStr = userId ?? "";
   const messagesQuery = useGetThreadMessages(userIdStr);
   const sendMutation = useSendMessage();
   const threadsQuery = useGetMessageThreads();
   const uploadMutation = useUploadMessageMedia();
+  const markReadMutation = useMarkMessagesRead();
 
   const otherThread = threadsQuery.data?.find((t) => t.userId === userIdStr);
   const messages: MessageData[] = messagesQuery.data ?? [];
@@ -77,6 +82,18 @@ export default function ChatScreen() {
     const timer = setTimeout(() => scrollToBottom(false), 100);
     return () => clearTimeout(timer);
   }, [messages.length]);
+
+  useEffect(() => {
+    if (!userIdStr) return;
+    markReadMutation.mutate(
+      { userId: userIdStr },
+      {
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: getGetMessageThreadsQueryKey() });
+        },
+      }
+    );
+  }, [userIdStr]);
 
   useEffect(() => {
     return () => {
