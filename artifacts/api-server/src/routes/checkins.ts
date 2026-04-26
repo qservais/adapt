@@ -145,19 +145,27 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     checkin = inserted;
   }
 
-  // Create P1 alert if pain reported
+  // Create P1 alert if pain reported — deduplicate: skip if an unresolved pain alert already exists
   if (hasPain) {
     const [user] = await db.select({ coachId: usersTable.coachId, firstName: usersTable.firstName })
       .from(usersTable).where(eq(usersTable.id, req.user!.userId));
-    await db.insert(alertsTable).values({
-      coachId: user?.coachId ?? null,
-      athleteId: req.user!.userId,
-      type: "pain",
-      priority: "p1",
-      message: `${user?.firstName || "Athlete"} a signalé une douleur : ${painNotes || "pas de détails"}`,
-      isRead: false,
-      isResolved: false,
-    });
+    const existingPain = await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(
+        eq(alertsTable.athleteId, req.user!.userId),
+        eq(alertsTable.type, "pain"),
+        eq(alertsTable.isResolved, false)
+      ));
+    if (existingPain.length === 0) {
+      await db.insert(alertsTable).values({
+        coachId: user?.coachId ?? null,
+        athleteId: req.user!.userId,
+        type: "pain",
+        priority: "p1",
+        message: `${user?.firstName || "Athlete"} a signalé une douleur : ${painNotes || "pas de détails"}`,
+        isRead: false,
+        isResolved: false,
+      });
+    }
   }
 
   // Find session preview

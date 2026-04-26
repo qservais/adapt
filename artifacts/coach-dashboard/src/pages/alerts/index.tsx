@@ -80,7 +80,7 @@ export default function AlertsFeed() {
     try {
       await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: note } });
       toast({ title: "Alerte résolue" });
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/coach/alerts"] });
     } catch {
       toast({ title: "Échec de la résolution", variant: "destructive" });
     }
