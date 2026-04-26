@@ -81,6 +81,7 @@ export default function AlertsFeed() {
       await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: note } });
       toast({ title: "Alerte résolue" });
       queryClient.invalidateQueries({ queryKey: ["/api/coach/alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/coach/dashboard"] });
     } catch {
       toast({ title: "Échec de la résolution", variant: "destructive" });
     }
