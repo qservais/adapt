@@ -1,4 +1,5 @@
 import React from "react";
+import { getGenericErrorMessage } from "@/lib/errors";
 import {
   ActivityIndicator,
   ScrollView,
@@ -95,8 +96,7 @@ export default function SessionIntroScreen() {
       await startMutation.mutateAsync({ sessionId: session.sessionLogId });
       router.push("/session/exercise");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Impossible de démarrer la séance";
-      setStartError(msg);
+      setStartError(getGenericErrorMessage(err, "Impossible de démarrer la séance"));
     }
   };
 

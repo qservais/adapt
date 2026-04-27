@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from "react";
+import { getGenericErrorMessage } from "@/lib/errors";
 import {
   ActivityIndicator,
   Alert,
@@ -274,8 +275,7 @@ export default function ProfileScreen() {
       }
       queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Impossible de mettre à jour la photo de profil";
-      Alert.alert("Erreur", msg);
+      Alert.alert("Erreur", getGenericErrorMessage(err, "Impossible de mettre à jour la photo de profil"));
     } finally {
       setAvatarUploading(false);
     }
@@ -396,8 +396,7 @@ export default function ProfileScreen() {
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Impossible de mettre à jour le profil";
-      Alert.alert("Erreur", msg);
+      Alert.alert("Erreur", getGenericErrorMessage(err, "Impossible de mettre à jour le profil"));
     }
   };
 

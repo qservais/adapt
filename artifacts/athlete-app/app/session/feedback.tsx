@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { getGenericErrorMessage } from "@/lib/errors";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -94,8 +95,7 @@ export default function FeedbackScreen() {
       await queryClient.invalidateQueries({ queryKey: ["/api/sessions"] });
       router.replace("/");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Impossible d'envoyer le retour";
-      setSubmitError(msg);
+      setSubmitError(getGenericErrorMessage(err, "Impossible d'envoyer le retour"));
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { getGenericErrorMessage } from "@/lib/errors";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ActivityIndicator,
@@ -117,8 +118,8 @@ export default function ChatScreen() {
       messagesQuery.refetch();
       setTimeout(() => scrollToBottom(true), 150);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Impossible d'envoyer";
-      console.warn(msg);
+      setText(trimmed);
+      Alert.alert("Erreur", getGenericErrorMessage(err, "Impossible d'envoyer le message. Réessaie."));
     }
   };
 

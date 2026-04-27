@@ -9,6 +9,18 @@ function isHttpError(err: unknown): err is HttpError {
   );
 }
 
+function isNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes("network request failed") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("net::err") ||
+    msg.includes("load failed")
+  );
+}
+
 function getErrorCode(err: HttpError): string | undefined {
   const data = err.data as { error?: { code?: string } } | null | undefined;
   return data?.error?.code;
@@ -62,5 +74,11 @@ export function getLoginErrorMessage(err: unknown): string {
 }
 
 export function getGenericErrorMessage(err: unknown, defaultMessage: string): string {
-  return getApiErrorMessage(err, {}, {}, defaultMessage);
+  if (isNetworkError(err)) return "Pas de connexion. Réessaie.";
+  return getApiErrorMessage(
+    err,
+    { 503: "Pas de connexion. Réessaie." },
+    {},
+    defaultMessage
+  );
 }
