@@ -398,12 +398,14 @@ export default function ExerciseScreen() {
         </Pressable>
       </View>
 
-      <ExerciseRibbon
-        exercises={exercises}
-        currentIndex={exerciseIndex}
-        completedCount={exerciseIndex}
-        modeColor={cfg.color}
-      />
+      <View style={styles.ribbonWrapper}>
+        <ExerciseRibbon
+          exercises={exercises}
+          currentIndex={exerciseIndex}
+          completedCount={exerciseIndex}
+          modeColor={cfg.color}
+        />
+      </View>
 
       <View style={styles.identityBlock}>
         <Text style={[styles.setLabel, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
@@ -549,7 +551,7 @@ export default function ExerciseScreen() {
           </View>
         )}
 
-        {exercise.coachCue ? (
+        {exercise.coachCue && exercise.coachCue.trim() !== (exercise.description ?? "").trim() ? (
           <View style={styles.cueBox}>
             <Feather name="message-square" size={14} color={COLORS.cyan} />
             <Text style={[styles.cueText, { fontFamily: FONTS.body }]}>{exercise.coachCue}</Text>
@@ -699,6 +701,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   progressText: { fontSize: 13 },
+  ribbonWrapper: {
+    height: 52,
+    overflow: "hidden",
+  },
   ribbonContent: {
     paddingHorizontal: 16,
     paddingVertical: 8,

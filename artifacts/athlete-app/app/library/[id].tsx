@@ -12,7 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { customFetch } from "@workspace/api-client-react";
+import { customFetch, useGetTodaySession } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 
 interface Routine {
@@ -49,102 +49,122 @@ export default function RoutineDetailScreen() {
     enabled: params.id != null,
   });
 
+  const sessionQuery = useGetTodaySession();
+  const hasSession = sessionQuery.data != null;
+
   const accentColor = routine ? (CATEGORY_COLORS[routine.category] ?? COLORS.cyan) : COLORS.cyan;
 
   return (
-    <ScrollView
-      style={[styles.flex, { backgroundColor: COLORS.bg }]}
-      contentContainerStyle={{
-        paddingTop: topPad + 16,
-        paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40,
-        paddingHorizontal: 20,
-        gap: 16,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Feather name="arrow-left" size={22} color={COLORS.textPrimary} />
-        <Text style={[styles.backText, { fontFamily: FONTS.body }]}>Bibliothèque</Text>
-      </TouchableOpacity>
+    <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={{
+          paddingTop: topPad + 16,
+          paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + (hasSession ? 100 : 40),
+          paddingHorizontal: 20,
+          gap: 16,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={22} color={COLORS.textPrimary} />
+          <Text style={[styles.backText, { fontFamily: FONTS.body }]}>Bibliothèque</Text>
+        </TouchableOpacity>
 
-      {isLoading && (
-        <View style={styles.center}>
-          <ActivityIndicator color={COLORS.cyan} size="large" />
-        </View>
-      )}
-
-      {error != null && (
-        <View style={styles.errorBox}>
-          <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>Routine introuvable.</Text>
-        </View>
-      )}
-
-      {routine != null && (
-        <>
-          <View style={styles.heroSection}>
-            <Text style={[styles.categoryLabel, { fontFamily: FONTS.mono, color: accentColor }]}>
-              {(CATEGORY_LABELS[routine.category] ?? routine.category).toUpperCase()}
-            </Text>
-            <Text style={[styles.routineTitle, { fontFamily: FONTS.title }]}>
-              {routine.title}
-            </Text>
-            {routine.description != null && (
-              <Text style={[styles.description, { fontFamily: FONTS.body }]}>
-                {routine.description}
-              </Text>
-            )}
-            <View style={styles.metaRow}>
-              {routine.durationMin != null && (
-                <View style={[styles.metaBadge, { borderColor: `${accentColor}40`, backgroundColor: `${accentColor}12` }]}>
-                  <Feather name="clock" size={14} color={accentColor} />
-                  <Text style={[styles.metaText, { fontFamily: FONTS.mono, color: accentColor }]}>
-                    {routine.durationMin} min
-                  </Text>
-                </View>
-              )}
-              <View style={[styles.metaBadge, { borderColor: COLORS.border }]}>
-                <Feather name="list" size={14} color={COLORS.textMuted} />
-                <Text style={[styles.metaText, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
-                  {routine.exercises.length} exercice{routine.exercises.length !== 1 ? "s" : ""}
-                </Text>
-              </View>
-            </View>
+        {isLoading && (
+          <View style={styles.center}>
+            <ActivityIndicator color={COLORS.cyan} size="large" />
           </View>
+        )}
 
-          <View style={styles.divider} />
+        {error != null && (
+          <View style={styles.errorBox}>
+            <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>Routine introuvable.</Text>
+          </View>
+        )}
 
-          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>DÉROULÉ</Text>
-
-          <View style={styles.exerciseList}>
-            {routine.exercises.map((ex, idx) => (
-              <View key={idx} style={[styles.exerciseCard, { borderLeftColor: accentColor }]}>
-                <View style={styles.exerciseHeader}>
-                  <View style={[styles.indexBadge, { backgroundColor: `${accentColor}20` }]}>
-                    <Text style={[styles.indexText, { fontFamily: FONTS.monoBold, color: accentColor }]}>
-                      {idx + 1}
+        {routine != null && (
+          <>
+            <View style={styles.heroSection}>
+              <Text style={[styles.categoryLabel, { fontFamily: FONTS.mono, color: accentColor }]}>
+                {(CATEGORY_LABELS[routine.category] ?? routine.category).toUpperCase()}
+              </Text>
+              <Text style={[styles.routineTitle, { fontFamily: FONTS.title }]}>
+                {routine.title}
+              </Text>
+              {routine.description != null && (
+                <Text style={[styles.description, { fontFamily: FONTS.body }]}>
+                  {routine.description}
+                </Text>
+              )}
+              <View style={styles.metaRow}>
+                {routine.durationMin != null && (
+                  <View style={[styles.metaBadge, { borderColor: `${accentColor}40`, backgroundColor: `${accentColor}12` }]}>
+                    <Feather name="clock" size={14} color={accentColor} />
+                    <Text style={[styles.metaText, { fontFamily: FONTS.mono, color: accentColor }]}>
+                      {routine.durationMin} min
                     </Text>
                   </View>
-                  <Text style={[styles.exerciseName, { fontFamily: FONTS.bodyBold }]}>
-                    {ex.name}
+                )}
+                <View style={[styles.metaBadge, { borderColor: COLORS.border }]}>
+                  <Feather name="list" size={14} color={COLORS.textMuted} />
+                  <Text style={[styles.metaText, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+                    {routine.exercises.length} exercice{routine.exercises.length !== 1 ? "s" : ""}
                   </Text>
                 </View>
-                {ex.sets != null && (
-                  <View style={styles.exerciseMeta}>
-                    <Feather name="repeat" size={12} color={COLORS.textMuted} />
-                    <Text style={[styles.exerciseSets, { fontFamily: FONTS.mono }]}>{ex.sets}</Text>
-                  </View>
-                )}
-                {ex.notes != null && (
-                  <Text style={[styles.exerciseNotes, { fontFamily: FONTS.body }]}>
-                    {ex.notes}
-                  </Text>
-                )}
               </View>
-            ))}
-          </View>
-        </>
+            </View>
+
+            <View style={styles.divider} />
+
+            <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>DÉROULÉ</Text>
+
+            <View style={styles.exerciseList}>
+              {routine.exercises.map((ex, idx) => (
+                <View key={idx} style={[styles.exerciseCard, { borderLeftColor: accentColor }]}>
+                  <View style={styles.exerciseHeader}>
+                    <View style={[styles.indexBadge, { backgroundColor: `${accentColor}20` }]}>
+                      <Text style={[styles.indexText, { fontFamily: FONTS.monoBold, color: accentColor }]}>
+                        {idx + 1}
+                      </Text>
+                    </View>
+                    <Text style={[styles.exerciseName, { fontFamily: FONTS.bodyBold }]}>
+                      {ex.name}
+                    </Text>
+                  </View>
+                  {ex.sets != null && (
+                    <View style={styles.exerciseMeta}>
+                      <Feather name="repeat" size={12} color={COLORS.textMuted} />
+                      <Text style={[styles.exerciseSets, { fontFamily: FONTS.mono }]}>{ex.sets}</Text>
+                    </View>
+                  )}
+                  {ex.notes != null && (
+                    <Text style={[styles.exerciseNotes, { fontFamily: FONTS.body }]}>
+                      {ex.notes}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {hasSession && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
+          <TouchableOpacity
+            onPress={() => router.replace("/(tabs)/session")}
+            style={styles.sessionBtn}
+            activeOpacity={0.85}
+          >
+            <Feather name="zap" size={20} color={COLORS.bg} />
+            <Text style={[styles.sessionBtnText, { fontFamily: FONTS.bodyBold }]}>
+              Reprendre ma séance
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -201,4 +221,24 @@ const styles = StyleSheet.create({
   exerciseMeta: { flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 36 },
   exerciseSets: { fontSize: 12, color: COLORS.textMuted },
   exerciseNotes: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 18, paddingLeft: 36 },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.bg,
+  },
+  sessionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: COLORS.cyan,
+    borderRadius: 14,
+    paddingVertical: 16,
+  },
+  sessionBtnText: {
+    fontSize: 16,
+    color: COLORS.bg,
+  },
 });
