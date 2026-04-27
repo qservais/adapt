@@ -319,7 +319,7 @@ export default function SessionTab() {
       contentContainerStyle={{ paddingTop: topPad + (Platform.OS === "web" ? 16 : 52), paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 24 }}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>SÉANCE</Text>
+      <Text style={[styles.screenTitle, { fontFamily: FONTS.title, color: colors.textPrimary }]}>SÉANCE</Text>
 
       <View style={styles.tabRow}>
         {SUB_TABS.map((tab) => (
@@ -348,7 +348,7 @@ export default function SessionTab() {
               <GlowCard glowColor={COLORS.border}>
                 <View style={styles.lockState}>
                   <Feather name="lock" size={32} color={COLORS.textMuted} />
-                  <Text style={[styles.lockTitle, { fontFamily: FONTS.bodyBold }]}>
+                  <Text style={[styles.lockTitle, { fontFamily: FONTS.bodyBold, color: colors.textPrimary }]}>
                     Check-in requis
                   </Text>
                   <Text style={[styles.lockDesc, { fontFamily: FONTS.body }]}>
@@ -455,7 +455,7 @@ export default function SessionTab() {
               <GlowCard glowColor={COLORS.border}>
                 <View style={styles.lockState}>
                   <Feather name="calendar" size={32} color={COLORS.textMuted} />
-                  <Text style={[styles.lockTitle, { fontFamily: FONTS.bodyBold }]}>
+                  <Text style={[styles.lockTitle, { fontFamily: FONTS.bodyBold, color: colors.textPrimary }]}>
                     Jour de repos
                   </Text>
                   <Text style={[styles.lockDesc, { fontFamily: FONTS.body }]}>
@@ -800,7 +800,7 @@ export default function SessionTab() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalOverlay}>
         <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setQuickLogModal(null)} />
         <View style={styles.modalCard}>
-          <Text style={[styles.modalTitle, { fontFamily: FONTS.title }]} numberOfLines={2}>
+          <Text style={[styles.modalTitle, { fontFamily: FONTS.title, color: colors.textPrimary }]} numberOfLines={2}>
             {quickLogModal?.name}
           </Text>
           <Text style={[styles.modalSubtitle, { fontFamily: FONTS.mono }]}>ENREGISTREMENT RAPIDE</Text>
@@ -808,7 +808,7 @@ export default function SessionTab() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.modalLabel, { fontFamily: FONTS.mono }]}>CHARGE (KG)</Text>
               <TextInput
-                style={[styles.modalInput, { fontFamily: FONTS.bodyMedium }]}
+                style={[styles.modalInput, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}
                 value={loadInput}
                 onChangeText={setLoadInput}
                 keyboardType="decimal-pad"
@@ -820,7 +820,7 @@ export default function SessionTab() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.modalLabel, { fontFamily: FONTS.mono }]}>REPS</Text>
               <TextInput
-                style={[styles.modalInput, { fontFamily: FONTS.bodyMedium }]}
+                style={[styles.modalInput, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}
                 value={repsInput}
                 onChangeText={setRepsInput}
                 keyboardType="number-pad"
@@ -859,7 +859,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   screenTitle: {
     fontSize: 44,
-    color: COLORS.white,
     letterSpacing: 5,
     paddingHorizontal: 20,
     marginBottom: 16,
@@ -895,7 +894,7 @@ const styles = StyleSheet.create({
   },
   section: { paddingHorizontal: 20, marginBottom: 20 },
   lockState: { alignItems: "center", gap: 12, padding: 12 },
-  lockTitle: { fontSize: 18, color: COLORS.white },
+  lockTitle: { fontSize: 18 },
   lockDesc: { fontSize: 14, color: COLORS.textSecondary, textAlign: "center" },
   lockBtn: {
     backgroundColor: COLORS.green,
@@ -938,7 +937,7 @@ const styles = StyleSheet.create({
   },
   exRowLast: { borderBottomWidth: 0 },
   exNum: { fontSize: 12, color: COLORS.textMuted, marginTop: 2, minWidth: 24 },
-  exName: { fontSize: 15, color: COLORS.white, marginBottom: 2 },
+  exName: { fontSize: 15, marginBottom: 2 },
   exDetail: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 1 },
   exRest: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
   startBtn: {
@@ -970,7 +969,7 @@ const styles = StyleSheet.create({
   upcomingRowLast: { borderBottomWidth: 0 },
   upcomingDayCol: { minWidth: 90 },
   upcomingDay: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5, textTransform: "capitalize" },
-  upcomingName: { fontSize: 14, color: COLORS.white, marginBottom: 2 },
+  upcomingName: { fontSize: 14, marginBottom: 2 },
   upcomingType: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 1 },
   upcomingDuration: { fontSize: 11, color: COLORS.textSecondary },
   upcomingStartBtn: {
@@ -1103,7 +1102,6 @@ const styles = StyleSheet.create({
   },
   previewSessionName: {
     fontSize: 13,
-    color: COLORS.white,
   },
   previewSessionMeta: {
     fontSize: 10,
@@ -1168,7 +1166,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    color: COLORS.white,
   },
   modalSubtitle: {
     fontSize: 9,
@@ -1194,7 +1191,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 20,
-    color: COLORS.white,
     textAlign: "center",
   },
   modalConfirmBtn: {

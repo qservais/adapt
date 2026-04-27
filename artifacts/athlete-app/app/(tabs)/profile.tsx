@@ -482,7 +482,7 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>
-        <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>PROFIL</Text>
+        <Text style={[styles.screenTitle, { fontFamily: FONTS.title, color: colors.textPrimary }]}>PROFIL</Text>
         <TouchableOpacity onPress={editing ? () => setEditing(false) : startEditing} style={styles.editBtn}>
           <Feather name={editing ? "x" : "edit-2"} size={20} color={COLORS.cyan} />
         </TouchableOpacity>
@@ -514,7 +514,7 @@ export default function ProfileScreen() {
             </View>
           )}
         </TouchableOpacity>
-        <Text style={[styles.displayName, { fontFamily: FONTS.bodyBold }]}>
+        <Text style={[styles.displayName, { fontFamily: FONTS.bodyBold, color: colors.textPrimary }]}>
           {profile?.firstName} {profile?.lastName ?? ""}
         </Text>
         <Text style={[styles.email, { fontFamily: FONTS.mono }]}>{profile?.email}</Text>
@@ -541,26 +541,26 @@ export default function ProfileScreen() {
       {profile != null && (
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
+            <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
               {displayAge ?? "—"}
             </Text>
             <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Âge</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
+            <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
               {formatWeight(profile.weightKg != null ? parseFloat(String(profile.weightKg)) : null)}
             </Text>
             <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>{t("weight", "Poids")}</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
+            <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
               {profile.heightCm ?? "—"}
             </Text>
             <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>cm</Text>
           </View>
           {trainingFreq != null && (
             <View style={styles.statItem}>
-              <Text style={[styles.statVal, { fontFamily: FONTS.monoBold }]}>
+              <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
                 {trainingFreq}×
               </Text>
               <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>/ sem.</Text>
@@ -648,7 +648,7 @@ export default function ProfileScreen() {
                   >
                     <View style={styles.prCardTop}>
                       <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={[styles.prExName, { fontFamily: FONTS.bodyBold }]} numberOfLines={1}>
+                        <Text style={[styles.prExName, { fontFamily: FONTS.bodyBold, color: colors.textPrimary }]} numberOfLines={1}>
                           {pr.exerciseName}
                         </Text>
                         {dateStr && (
@@ -752,7 +752,7 @@ export default function ProfileScreen() {
                           </Text>
                         </View>
                         <View style={{ flex: 1, gap: 3 }}>
-                          <Text style={[styles.progName, { fontFamily: FONTS.bodyBold }]} numberOfLines={1}>
+                          <Text style={[styles.progName, { fontFamily: FONTS.bodyBold, color: colors.textPrimary }]} numberOfLines={1}>
                             {prog.name}
                           </Text>
                           <Text style={[styles.progMeta, { fontFamily: FONTS.mono }]}>
@@ -792,7 +792,7 @@ export default function ProfileScreen() {
                                         </Text>
                                       </View>
                                       <View style={{ flex: 1, gap: 2 }}>
-                                        <Text style={[styles.sessName, { fontFamily: FONTS.bodyMedium }]} numberOfLines={1}>
+                                        <Text style={[styles.sessName, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]} numberOfLines={1}>
                                           {sess.name}
                                         </Text>
                                         <Text style={[styles.sessMeta, { fontFamily: FONTS.mono }]}>
@@ -811,7 +811,7 @@ export default function ProfileScreen() {
                                             {String(i + 1).padStart(2, "0")}
                                           </Text>
                                           <View style={{ flex: 1 }}>
-                                            <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
+                                            <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                                               {ex.name}
                                             </Text>
                                             <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
@@ -889,7 +889,7 @@ export default function ProfileScreen() {
           {gender !== "homme" && (
             <View style={styles.switchRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.switchLabel, { fontFamily: FONTS.bodyMedium }]}>
+                <Text style={[styles.switchLabel, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                   Suivi du cycle
                 </Text>
                 <Text style={[styles.switchDesc, { fontFamily: FONTS.body }]}>
@@ -921,7 +921,7 @@ export default function ProfileScreen() {
                 activeOpacity={0.7}
               >
                 <Feather name="calendar" size={16} color={COLORS.violet} />
-                <Text style={[styles.datePickerText, { fontFamily: FONTS.body, color: lastPeriodDateValue ? COLORS.white : COLORS.textMuted }]}>
+                <Text style={[styles.datePickerText, { fontFamily: FONTS.body, color: lastPeriodDateValue ? colors.textPrimary : COLORS.textMuted }]}>
                   {lastPeriodDateValue
                     ? lastPeriodDateValue.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
                     : "Sélectionner une date"}
@@ -1026,7 +1026,7 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
           >
             <Feather name="calendar" size={16} color={COLORS.cyan} />
-            <Text style={[styles.datePickerText, { fontFamily: FONTS.body, color: birthDateValue ? COLORS.white : COLORS.textMuted }]}>
+            <Text style={[styles.datePickerText, { fontFamily: FONTS.body, color: birthDateValue ? colors.textPrimary : COLORS.textMuted }]}>
               {birthDateValue
                 ? birthDateValue.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
                 : "Sélectionner une date"}
@@ -1054,7 +1054,7 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Feather name="user" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Genre</Text>
-              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                 {GENDER_LABELS[profileGender] ?? profileGender}
               </Text>
             </View>
@@ -1063,7 +1063,7 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Feather name="activity" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Niveau</Text>
-              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                 {FITNESS_LABELS[profile.fitnessLevel] ?? profile.fitnessLevel}
               </Text>
             </View>
@@ -1072,7 +1072,7 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Feather name="target" size={16} color={COLORS.textMuted} />
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Objectif</Text>
-              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                 {GOAL_LABELS[profile.primaryGoal] ?? profile.primaryGoal.replace(/_/g, " ")}
               </Text>
             </View>
@@ -1083,7 +1083,7 @@ export default function ProfileScreen() {
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
                 Suivi du cycle
               </Text>
-              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium }]}>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                 {profile?.cycleTracking ? "Activé" : "Désactivé"}
               </Text>
             </View>
@@ -1106,7 +1106,7 @@ export default function ProfileScreen() {
               <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
                 Code d'invitation
               </Text>
-              <Text style={[styles.infoVal, { fontFamily: FONTS.mono }]}>
+              <Text style={[styles.infoVal, { fontFamily: FONTS.mono, color: colors.textPrimary }]}>
                 {profile.inviteCode}
               </Text>
             </View>
@@ -1206,13 +1206,13 @@ export default function ProfileScreen() {
                         {coach.avatarUrl ? (
                           <Image source={{ uri: resolveMediaUrl(coach.avatarUrl) }} style={{ width: 40, height: 40, borderRadius: 20 }} />
                         ) : (
-                          <Text style={[styles.coachPickerInitials, { fontFamily: FONTS.bodyBold }]}>
+                          <Text style={[styles.coachPickerInitials, { fontFamily: FONTS.bodyBold, color: colors.textPrimary }]}>
                             {coach.firstName[0]}{coach.lastName?.[0] ?? ""}
                           </Text>
                         )}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.coachPickerName, { fontFamily: FONTS.bodyBold, color: selected ? COLORS.cyan : COLORS.white }]}>
+                        <Text style={[styles.coachPickerName, { fontFamily: FONTS.bodyBold, color: selected ? COLORS.cyan : colors.textPrimary }]}>
                           {coach.firstName} {coach.lastName}
                         </Text>
                         <Text style={[styles.coachPickerRole, { fontFamily: FONTS.mono }]}>COACH ADAPT</Text>
@@ -1252,7 +1252,7 @@ export default function ProfileScreen() {
             <View style={styles.quickLinkLeft}>
               <Text style={styles.quickLinkIcon}>📖</Text>
               <View>
-                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Guides ADAPT</Text>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Guides ADAPT</Text>
                 <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
                   Entraînement, nutrition, RPE, tempo
                 </Text>
@@ -1269,7 +1269,7 @@ export default function ProfileScreen() {
             <View style={styles.quickLinkLeft}>
               <Text style={styles.quickLinkIcon}>🗂️</Text>
               <View>
-                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Bibliothèque</Text>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Bibliothèque</Text>
                 <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
                   Échauffements, réathlétisation, relaxation
                 </Text>
@@ -1286,7 +1286,7 @@ export default function ProfileScreen() {
             <View style={styles.quickLinkLeft}>
               <Text style={styles.quickLinkIcon}>🏅</Text>
               <View>
-                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium }]}>Mes badges</Text>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Mes badges</Text>
                 {(badgesQuery.data?.unlockedCount ?? 0) > 0 && (
                   <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
                     {badgesQuery.data?.unlockedCount} / {badgesQuery.data?.total} débloqués
@@ -1324,7 +1324,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 28,
   },
-  screenTitle: { fontSize: 44, color: COLORS.white, letterSpacing: 5 },
+  screenTitle: { fontSize: 44, letterSpacing: 5 },
   editBtn: { padding: 8 },
   rowInputs: { flexDirection: "row", gap: 12 },
   avatarSection: { alignItems: "center", marginBottom: 28, gap: 8 },
@@ -1376,7 +1376,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.bg,
   },
   initials: { fontSize: 38, color: COLORS.cyan },
-  displayName: { fontSize: 22, color: COLORS.white },
+  displayName: { fontSize: 22 },
   email: { fontSize: 13, color: COLORS.textMuted },
   roleBadge: {
     borderRadius: 6,
@@ -1398,7 +1398,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statItem: { alignItems: "center", gap: 4 },
-  statVal: { fontSize: 24, color: COLORS.white },
+  statVal: { fontSize: 24 },
   statLabel: { fontSize: 12, color: COLORS.textSecondary },
   editCard: { gap: 16, marginBottom: 24 },
   sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
@@ -1442,7 +1442,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  switchLabel: { fontSize: 15, color: COLORS.white, marginBottom: 2 },
+  switchLabel: { fontSize: 15, marginBottom: 2 },
   switchDesc: { fontSize: 12, color: COLORS.textMuted },
   infoSection: {
     backgroundColor: COLORS.bgCard,
@@ -1462,7 +1462,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   infoLabel: { flex: 1, fontSize: 14, color: COLORS.textSecondary },
-  infoVal: { fontSize: 14, color: COLORS.white },
+  infoVal: { fontSize: 14 },
   coachSection: { gap: 14, marginBottom: 24 },
   coachHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   coachTitle: { fontSize: 11, color: COLORS.cyan, letterSpacing: 2 },
@@ -1491,7 +1491,7 @@ const styles = StyleSheet.create({
   quickLinkDisabled: { opacity: 0.6 },
   quickLinkLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
   quickLinkIcon: { fontSize: 22 },
-  quickLinkTitle: { fontSize: 15, color: COLORS.white },
+  quickLinkTitle: { fontSize: 15 },
   quickLinkSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   comingSoonBadge: {
     paddingHorizontal: 8,
@@ -1637,7 +1637,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
   },
-  coachPickerInitials: { fontSize: 16, color: COLORS.white },
+  coachPickerInitials: { fontSize: 16 },
   coachPickerName: { fontSize: 15, marginBottom: 2 },
   coachPickerRole: { fontSize: 9, color: COLORS.cyan, letterSpacing: 2 },
   emptyCoachBox: { alignItems: "center", padding: 32 },
@@ -1720,7 +1720,6 @@ const styles = StyleSheet.create({
   },
   prExName: {
     fontSize: 15,
-    color: COLORS.white,
   },
   prDate: {
     fontSize: 12,
@@ -1790,7 +1789,6 @@ const styles = StyleSheet.create({
   },
   progName: {
     fontSize: 15,
-    color: COLORS.white,
   },
   progMeta: {
     fontSize: 11,
@@ -1837,7 +1835,6 @@ const styles = StyleSheet.create({
   },
   sessName: {
     fontSize: 13,
-    color: COLORS.white,
   },
   sessMeta: {
     fontSize: 10,
@@ -1869,7 +1866,6 @@ const styles = StyleSheet.create({
   },
   exName: {
     fontSize: 13,
-    color: COLORS.white,
   },
   exDetail: {
     fontSize: 10,

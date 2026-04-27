@@ -164,7 +164,7 @@ function MonthCalendar({ checkins, year, month }: { checkins: CheckinItem[]; yea
             const modeColor = checkin ? (MODE_CONFIG[checkin.sessionMode as SessionMode]?.color ?? COLORS.border) : null;
             return (
               <View key={di} style={[styles.calCell, checkin != null && { backgroundColor: `${modeColor}30`, borderColor: modeColor ?? COLORS.border, borderWidth: 1 }, isToday && styles.calToday]}>
-                <Text style={[styles.calDayNum, { fontFamily: checkin ? FONTS.monoBold : FONTS.mono }, checkin != null && { color: modeColor ?? COLORS.white }, isToday && !checkin && { color: COLORS.green }]}>
+                <Text style={[styles.calDayNum, { fontFamily: checkin ? FONTS.monoBold : FONTS.mono }, checkin != null && { color: modeColor ?? colors.textPrimary }, isToday && !checkin && { color: COLORS.green }]}>
                   {day}
                 </Text>
                 {checkin != null && <View style={[styles.calDot, { backgroundColor: modeColor ?? COLORS.border }]} />}
@@ -500,7 +500,7 @@ export default function StatsScreen() {
           return (
             <View key={test.id} style={[styles.testRow, i === 0 && styles.testRowFirst]}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.testName, { fontFamily: FONTS.body }]} numberOfLines={1}>{label}</Text>
+                <Text style={[styles.testName, { fontFamily: FONTS.body, color: colors.textPrimary }]} numberOfLines={1}>{label}</Text>
                 <Text style={[styles.testDate, { fontFamily: FONTS.mono }]}>{new Date(test.testedAt).toLocaleDateString("fr-FR")}</Text>
               </View>
               <View style={styles.testRight}>
@@ -678,7 +678,7 @@ export default function StatsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headRow}>
-        <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>STATS</Text>
+        <Text style={[styles.screenTitle, { fontFamily: FONTS.title, color: colors.textPrimary }]}>STATS</Text>
         {activeTab === "training" && (
           <View style={styles.periodRow}>
             {(["7", "14", "30"] as Period[]).map((p) => (
@@ -737,7 +737,7 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 20 },
-  screenTitle: { fontSize: 44, color: COLORS.white, letterSpacing: 5 },
+  screenTitle: { fontSize: 44, letterSpacing: 5 },
   periodRow: { flexDirection: "row", backgroundColor: COLORS.bgCard, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, overflow: "hidden" },
   periodBtn: { paddingHorizontal: 12, paddingVertical: 8 },
   periodActive: { backgroundColor: COLORS.cyanDim },
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
   testsHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
   testRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
   testRowFirst: { borderTopWidth: 0, paddingTop: 0 },
-  testName: { fontSize: 14, color: COLORS.white, marginBottom: 2 },
+  testName: { fontSize: 14, marginBottom: 2 },
   testDate: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
   testRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   testDelta: { fontSize: 11 },

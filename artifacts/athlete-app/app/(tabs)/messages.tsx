@@ -31,7 +31,7 @@ export default function MessagesScreen() {
   return (
     <View style={[styles.flex, { backgroundColor: colors.bg }]}>
       <View style={[styles.header, { paddingTop: topPad + (Platform.OS === "web" ? 16 : 52) }]}>
-        <Text style={[styles.screenTitle, { fontFamily: FONTS.title }]}>
+        <Text style={[styles.screenTitle, { fontFamily: FONTS.title, color: colors.textPrimary }]}>
           MESSAGES
         </Text>
       </View>
@@ -89,7 +89,7 @@ export default function MessagesScreen() {
                       style={[
                         styles.threadName,
                         { fontFamily: hasUnread ? FONTS.bodyBold : FONTS.bodyMedium },
-                        hasUnread && { color: COLORS.white },
+                        hasUnread && { color: colors.textPrimary },
                       ]}
                     >
                       {item.userFirstName ?? "Inconnu"}{" "}
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  screenTitle: { fontSize: 44, color: COLORS.white, letterSpacing: 5 },
+  screenTitle: { fontSize: 44, letterSpacing: 5 },
   empty: {
     flex: 1,
     alignItems: "center",
