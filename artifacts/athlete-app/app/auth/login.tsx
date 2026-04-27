@@ -19,6 +19,7 @@ import Animated, {
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
+import { getLoginErrorMessage } from "@/lib/errors";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
 
@@ -66,8 +67,7 @@ export default function LoginScreen() {
       await login(res.accessToken, res.refreshToken, res.user);
       router.replace("/");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Identifiants invalides";
-      setError(msg);
+      setError(getLoginErrorMessage(err));
     }
   };
 

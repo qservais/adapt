@@ -14,6 +14,7 @@ import { useUpdateMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
+import { getGenericErrorMessage } from "@/lib/errors";
 
 export default function ProfileSetupScreen() {
   const insets = useSafeAreaInsets();
@@ -42,8 +43,7 @@ export default function ProfileSetupScreen() {
       });
       router.push("/onboarding/fitness");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Impossible d'enregistrer le profil";
-      setError(msg);
+      setError(getGenericErrorMessage(err, "Impossible d'enregistrer le profil."));
     }
   };
 

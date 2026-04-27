@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import { useUpdateMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { getGenericErrorMessage } from "@/lib/errors";
 
 const GOALS = [
   {
@@ -51,8 +52,7 @@ export default function GoalScreen() {
         await updateMutation.mutateAsync({ data: { primaryGoal: selected as "strength" | "muscle" | "fat_loss" | "performance" } });
         router.push("/onboarding/invite");
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Impossible d'enregistrer l'objectif";
-        setError(msg);
+        setError(getGenericErrorMessage(err, "Impossible d'enregistrer l'objectif."));
       }
     } else {
       router.push("/onboarding/invite");

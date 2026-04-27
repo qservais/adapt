@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import { useUpdateMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { getGenericErrorMessage } from "@/lib/errors";
 
 const FITNESS_LEVELS = [
   {
@@ -40,8 +41,7 @@ export default function FitnessLevelScreen() {
         await updateMutation.mutateAsync({ data: { fitnessLevel: selected as "beginner" | "intermediate" | "advanced" } });
         router.push("/onboarding/goal");
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Impossible d'enregistrer le niveau";
-        setError(msg);
+        setError(getGenericErrorMessage(err, "Impossible d'enregistrer le niveau."));
       }
     } else {
       router.push("/onboarding/goal");

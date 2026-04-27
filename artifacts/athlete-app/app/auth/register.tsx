@@ -15,6 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
+import { getRegisterErrorMessage } from "@/lib/errors";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -66,8 +67,7 @@ export default function RegisterScreen() {
       await login(res.accessToken, res.refreshToken, res.user);
       router.replace("/onboarding/splash");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Échec de l'inscription";
-      setError(msg);
+      setError(getRegisterErrorMessage(err));
     }
   };
 
