@@ -228,12 +228,54 @@ export default function SessionIntroScreen() {
 
         <View style={styles.exerciseList}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRAMME</Text>
-          {session.exercises?.map((ex, i) => {
-            return (
-              <View key={ex.id} style={styles.exRow}>
-                <View style={styles.exThumbFallback}>
+          {(() => {
+            const exercises = session.exercises ?? [];
+            const blocks = session.blocks ?? [];
+            const blockMap = new Map(blocks.map(b => [b.id, b]));
+
+            type Segment =
+              | { kind: "solo"; exercise: typeof exercises[0]; globalIndex: number }
+              | { kind: "block"; block: typeof blocks[0]; exercises: { ex: typeof exercises[0]; globalIndex: number }[] };
+
+            const segments: Segment[] = [];
+            let globalIdx = 0;
+            const seen = new Set<string>();
+
+            for (const ex of exercises) {
+              if (!ex.blockId) {
+                segments.push({ kind: "solo", exercise: ex, globalIndex: globalIdx });
+                globalIdx++;
+              } else if (!seen.has(ex.blockId)) {
+                const block = blockMap.get(ex.blockId);
+                if (!block) {
+                  segments.push({ kind: "solo", exercise: ex, globalIndex: globalIdx });
+                  globalIdx++;
+                } else {
+                  seen.add(ex.blockId);
+                  const grouped = exercises
+                    .filter(e => e.blockId === ex.blockId)
+                    .map(e => ({ ex: e, globalIndex: globalIdx++ }));
+                  segments.push({ kind: "block", block, exercises: grouped });
+                }
+              }
+            }
+
+            const BLOCK_TYPE_COLORS: Record<string, string> = {
+              superset: COLORS.cyan,
+              circuit: COLORS.amber,
+              conditioning: "#a78bfa",
+            };
+            const BLOCK_TYPE_LABELS: Record<string, string> = {
+              superset: "SUPERSET",
+              circuit: "CIRCUIT",
+              conditioning: "CONDITIONING",
+            };
+
+            const renderExRow = (ex: typeof exercises[0], globalIndex: number, inBlock = false) => (
+              <View key={ex.id} style={[styles.exRow, inBlock && styles.exRowInBlock]}>
+                <View style={[styles.exThumbFallback, inBlock && styles.exThumbInBlock]}>
                   <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-                    {String(i + 1).padStart(2, "0")}
+                    {String(globalIndex + 1).padStart(2, "0")}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -255,7 +297,35 @@ export default function SessionIntroScreen() {
                 <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
               </View>
             );
-          })}
+
+            return segments.map((seg) => {
+              if (seg.kind === "solo") {
+                return renderExRow(seg.exercise, seg.globalIndex);
+              }
+              const blockType = seg.block.type?.toLowerCase() ?? "superset";
+              const accentColor = BLOCK_TYPE_COLORS[blockType] ?? COLORS.cyan;
+              const typeLabel = BLOCK_TYPE_LABELS[blockType] ?? blockType.toUpperCase();
+              const blockLabel = seg.block.name
+                ? `${typeLabel} · ${seg.block.name.toUpperCase()}`
+                : typeLabel;
+              return (
+                <View key={seg.block.id} style={[styles.blockGroup, { borderColor: `${accentColor}40` }]}>
+                  <View style={[styles.blockHeader, { backgroundColor: `${accentColor}12` }]}>
+                    <View style={[styles.blockDot, { backgroundColor: accentColor }]} />
+                    <Text style={[styles.blockLabel, { fontFamily: FONTS.mono, color: accentColor }]}>
+                      {blockLabel}
+                    </Text>
+                    {seg.block.notes != null && (
+                      <Text style={[styles.blockNotes, { fontFamily: FONTS.body }]}>{seg.block.notes}</Text>
+                    )}
+                  </View>
+                  {seg.exercises.map(({ ex, globalIndex }) =>
+                    renderExRow(ex, globalIndex, true)
+                  )}
+                </View>
+              );
+            });
+          })()}
         </View>
       </ScrollView>
 
@@ -456,4 +526,42 @@ const styles = StyleSheet.create({
     borderColor: `${COLORS.amber}30`,
   },
   equipmentTagText: { fontSize: 12, color: COLORS.amber, letterSpacing: 0.3 },
+  blockGroup: {
+    borderWidth: 1,
+    borderRadius: 14,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  blockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    flexWrap: "wrap",
+  },
+  blockDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  blockLabel: {
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  blockNotes: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    flex: 1,
+    fontStyle: "italic",
+  },
+  exRowInBlock: {
+    paddingHorizontal: 14,
+    borderBottomColor: COLORS.border,
+  },
+  exThumbInBlock: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+  },
 });
