@@ -20,7 +20,7 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { WebView } from "react-native-webview";
 import { Svg, Polyline, Circle, Text as SvgText } from "react-native-svg";
-import { customFetch, equipmentLabelFromKey } from "@workspace/api-client-react";
+import { customFetch, equipmentLabelFromKey, useGetTodaySession } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { setFreeSession } from "@/lib/freeSessionStore";
 import type { FreeSessionStartResponse } from "@workspace/api-client-react";
@@ -211,6 +211,9 @@ export default function ExerciseDetailScreen() {
     queryFn: () => customFetch(`/api/athlete/exercises/${params.id}`),
     enabled: params.id != null,
   });
+
+  const sessionQuery = useGetTodaySession();
+  const hasSession = sessionQuery.data != null;
 
   const openDoNowSheet = () => {
     if (!exercise) return;
@@ -536,6 +539,18 @@ export default function ExerciseDetailScreen() {
 
       {exercise != null && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
+          {hasSession && (
+            <TouchableOpacity
+              onPress={() => router.replace("/(tabs)/session")}
+              style={styles.sessionBtn}
+              activeOpacity={0.85}
+            >
+              <Feather name="zap" size={18} color={COLORS.bg} />
+              <Text style={[styles.sessionBtnText, { fontFamily: FONTS.bodyBold }]}>
+                Reprendre ma séance
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={openDoNowSheet}
             disabled={isStarting}
@@ -853,10 +868,23 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingTop: 12,
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.bg,
   },
+  sessionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.cyan,
+    backgroundColor: `${COLORS.cyan}18`,
+  },
+  sessionBtnText: { fontSize: 15, color: COLORS.cyan },
   doNowBtn: {
     flexDirection: "row",
     alignItems: "center",
