@@ -21,6 +21,7 @@ import { ScoreCircle } from "@/components/ui/ScoreCircle";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { BadgeToast } from "@/components/ui/BadgeToast";
+import { useGetTodaySession } from "@workspace/api-client-react";
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
@@ -49,6 +50,10 @@ export default function CheckinResultScreen() {
   const canEditCheckin = createdAt
     ? Date.now() - new Date(createdAt).getTime() < TWO_HOURS_MS
     : false;
+
+  const sessionQuery = useGetTodaySession();
+  const sessionLoaded = !sessionQuery.isLoading;
+  const hasSession = sessionQuery.data != null;
 
   const parsedBadges: Array<{ code: string; name: string; icon: string }> =
     badges ? JSON.parse(badges) : [];
@@ -148,11 +153,19 @@ export default function CheckinResultScreen() {
         </Animated.View>
 
         <Animated.View style={[styles.actions, actionsStyle]}>
-          <GradientButton
-            label="Voir ma séance"
-            onPress={() => router.replace("/session")}
-            icon={<Feather name="zap" size={18} color={COLORS.textInverse} />}
-          />
+          {!sessionLoaded || hasSession ? (
+            <GradientButton
+              label="Voir ma séance"
+              onPress={() => router.replace("/session")}
+              icon={<Feather name="zap" size={18} color={COLORS.textInverse} />}
+            />
+          ) : (
+            <GradientButton
+              label="Accéder à l'app"
+              onPress={() => router.replace("/")}
+              icon={<Feather name="home" size={18} color={COLORS.textInverse} />}
+            />
+          )}
           {canEditCheckin && (
             <TouchableOpacity onPress={handleEditCheckin} style={styles.editCheckinBtn}>
               <Feather name="edit-2" size={13} color={COLORS.textMuted} />
@@ -161,11 +174,13 @@ export default function CheckinResultScreen() {
               </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => router.replace("/")} style={styles.secondaryBtn}>
-            <Text style={[styles.secondaryBtnText, { fontFamily: FONTS.body }]}>
-              Retour à l'accueil
-            </Text>
-          </TouchableOpacity>
+          {hasSession && (
+            <TouchableOpacity onPress={() => router.replace("/")} style={styles.secondaryBtn}>
+              <Text style={[styles.secondaryBtnText, { fontFamily: FONTS.body }]}>
+                Retour à l'accueil
+              </Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </View>
     </View>

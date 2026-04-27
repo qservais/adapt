@@ -478,7 +478,7 @@ export default function ProfileScreen() {
     <ScrollView
       ref={scrollRef}
       style={[styles.flex, { backgroundColor: colors.bg }]}
-      contentContainerStyle={{ paddingTop: topPad + (Platform.OS === "web" ? 16 : 52), paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40, paddingHorizontal: 20 }}
+      contentContainerStyle={{ paddingTop: topPad + (Platform.OS === "web" ? 16 : 20), paddingBottom: insets.bottom + (Platform.OS === "web" ? 84 : 49) + 40, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>
@@ -539,7 +539,7 @@ export default function ProfileScreen() {
       </View>
 
       {profile != null && (
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
               {displayAge ?? "—"}
@@ -569,7 +569,7 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         {(["profil", "records", "programmes"] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -874,6 +874,7 @@ export default function ProfileScreen() {
                 }}
                 style={[
                   styles.genderBtn,
+                  { backgroundColor: colors.bgInput, borderColor: colors.border },
                   gender === g && { borderColor: COLORS.cyan, backgroundColor: COLORS.cyanDim },
                 ]}
               >
@@ -887,7 +888,7 @@ export default function ProfileScreen() {
             ))}
           </View>
           {gender !== "homme" && (
-            <View style={styles.switchRow}>
+            <View style={[styles.switchRow, { backgroundColor: colors.bgInput, borderColor: colors.border }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.switchLabel, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                   Suivi du cycle
@@ -917,7 +918,7 @@ export default function ProfileScreen() {
               </Text>
               <TouchableOpacity
                 onPress={() => setShowLastPeriodPicker(true)}
-                style={[styles.datePicker, { borderColor: COLORS.violet }]}
+                style={[styles.datePicker, { backgroundColor: colors.bgInput, borderColor: COLORS.violet }]}
                 activeOpacity={0.7}
               >
                 <Feather name="calendar" size={16} color={COLORS.violet} />
@@ -985,6 +986,7 @@ export default function ProfileScreen() {
                 onPress={() => setFitnessLevel(level)}
                 style={[
                   styles.segmentBtn,
+                  { backgroundColor: colors.bgInput, borderColor: colors.border },
                   fitnessLevel === level && { borderColor: COLORS.cyan, backgroundColor: COLORS.cyanDim },
                 ]}
               >
@@ -1005,6 +1007,7 @@ export default function ProfileScreen() {
                 onPress={() => setPrimaryGoal(key)}
                 style={[
                   styles.goalBtn,
+                  { backgroundColor: colors.bgInput, borderColor: colors.border },
                   primaryGoal === key && { borderColor: COLORS.violet, backgroundColor: COLORS.violetDim },
                 ]}
               >
@@ -1022,7 +1025,7 @@ export default function ProfileScreen() {
           </Text>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
-            style={styles.datePicker}
+            style={[styles.datePicker, { backgroundColor: colors.bgInput, borderColor: colors.border }]}
             activeOpacity={0.7}
           >
             <Feather name="calendar" size={16} color={COLORS.cyan} />
@@ -1049,7 +1052,7 @@ export default function ProfileScreen() {
           <GradientButton label="Enregistrer" onPress={handleSave} loading={updateMutation.isPending} />
         </GlowCard>
       ) : (
-        <View style={styles.infoSection}>
+        <View style={[styles.infoSection, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           {profileGender != null && (
             <View style={styles.infoRow}>
               <Feather name="user" size={16} color={COLORS.textMuted} />
@@ -1176,7 +1179,7 @@ export default function ProfileScreen() {
         onRequestClose={() => setCoachPickerVisible(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setCoachPickerVisible(false)} />
-        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 20 }]}>
+        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 20, backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <View style={styles.modalHandle} />
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { fontFamily: FONTS.mono }]}>CHOISIR UN COACH</Text>
@@ -1198,7 +1201,7 @@ export default function ProfileScreen() {
                   return (
                     <TouchableOpacity
                       key={coach.id}
-                      style={[styles.coachPickerCard, selected && styles.coachPickerCardSelected]}
+                      style={[styles.coachPickerCard, { backgroundColor: colors.bgElevated, borderColor: colors.border }, selected && styles.coachPickerCardSelected]}
                       onPress={() => setSelectedCoachId(coach.id)}
                       activeOpacity={0.75}
                     >
@@ -1243,7 +1246,7 @@ export default function ProfileScreen() {
       {activeTab === "profil" && <ExtendedProfileSections />}
 
       {activeTab === "profil" && (
-        <View style={styles.quickLinks}>
+        <View style={[styles.quickLinks, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <TouchableOpacity
             onPress={() => router.push("/guides" as any)}
             style={styles.quickLinkRow}

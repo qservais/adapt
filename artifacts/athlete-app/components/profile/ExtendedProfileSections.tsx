@@ -233,6 +233,7 @@ function ToggleChip({
   small?: boolean;
 }) {
   const accent = color ?? COLORS.cyan;
+  const colors = useThemeColors();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -240,13 +241,14 @@ function ToggleChip({
       style={[
         cStyles.chip,
         small && cStyles.chipSmall,
+        { backgroundColor: colors.bgInput, borderColor: colors.border },
         selected && { borderColor: accent, backgroundColor: `${accent}20` },
       ]}
     >
       <Text
         style={[
           cStyles.chipText,
-          { fontFamily: selected ? FONTS.bodyMedium : FONTS.body, color: selected ? accent : COLORS.textSecondary },
+          { fontFamily: selected ? FONTS.bodyMedium : FONTS.body, color: selected ? accent : colors.textSecondary },
           small && { fontSize: 12 },
         ]}
       >
@@ -467,6 +469,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               activeOpacity={editingContext ? 0.7 : 1}
               style={[
                 cStyles.dayChip,
+                { backgroundColor: colors.bgInput, borderColor: colors.border },
                 availableDays.includes(d.key) && cStyles.dayChipActive,
                 !editingContext && { opacity: availableDays.includes(d.key) ? 1 : 0.4 },
               ]}
@@ -490,6 +493,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               activeOpacity={editingContext ? 0.7 : 1}
               style={[
                 cStyles.locationChip,
+                { backgroundColor: colors.bgInput, borderColor: colors.border },
                 trainingLocations.includes(loc.key) && cStyles.locationChipActive,
                 !editingContext && !trainingLocations.includes(loc.key) && { opacity: 0.4 },
               ]}
@@ -571,12 +575,26 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={3}
-            style={[cStyles.textArea, { fontFamily: FONTS.body }]}
+            style={[cStyles.textArea, { fontFamily: FONTS.body, backgroundColor: colors.bgInput, color: colors.textPrimary, borderColor: colors.border }]}
           />
         ) : (
           <Text style={[cStyles.valueText, { fontFamily: FONTS.body, fontStyle: injuries ? "normal" : "italic", color: injuries ? colors.textPrimary : colors.textMuted }]}>
             {injuries || t("no_injury", "Aucune restriction renseignée")}
           </Text>
+        )}
+        {editingContext && (
+          <TouchableOpacity
+            onPress={handleSaveContext}
+            disabled={saving["context"]}
+            style={[cStyles.saveBtn, { opacity: saving["context"] ? 0.6 : 1 }]}
+            activeOpacity={0.8}
+          >
+            {saving["context"] ? (
+              <ActivityIndicator size="small" color={COLORS.bg} />
+            ) : (
+              <Text style={[cStyles.saveBtnText, { fontFamily: FONTS.bodyMedium }]}>Enregistrer</Text>
+            )}
+          </TouchableOpacity>
         )}
       </View>
 
@@ -636,6 +654,20 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             Appuie sur l'icône crayon pour modifier
           </Text>
         )}
+        {editingGoals && (
+          <TouchableOpacity
+            onPress={handleSaveGoals}
+            disabled={saving["goals"]}
+            style={[cStyles.saveBtn, { opacity: saving["goals"] ? 0.6 : 1 }]}
+            activeOpacity={0.8}
+          >
+            {saving["goals"] ? (
+              <ActivityIndicator size="small" color={COLORS.bg} />
+            ) : (
+              <Text style={[cStyles.saveBtnText, { fontFamily: FONTS.bodyMedium }]}>Enregistrer</Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* EXERCICES */}
@@ -652,7 +684,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("avoided_exercises", "Exercices à éviter")}</Text>
         {editingExercises && (
           <TouchableOpacity
-            style={[cStyles.libraryBtn]}
+            style={[cStyles.libraryBtn, { backgroundColor: colors.bgInput, borderColor: colors.border }]}
             onPress={() => {
               setLibraryTarget("avoided");
               setLibrarySelected([...avoidedExercises]);
@@ -671,7 +703,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 onChangeText={setAvoidedInput}
                 placeholder={t("add_exercise", "Ajouter un exercice...")}
                 placeholderTextColor={COLORS.textMuted}
-                style={[cStyles.inlineInput, { fontFamily: FONTS.body }]}
+                style={[cStyles.inlineInput, { fontFamily: FONTS.body, backgroundColor: colors.bgInput, color: colors.textPrimary, borderColor: colors.border }]}
                 onSubmitEditing={addAvoidedExercise}
                 returnKeyType="done"
               />
@@ -709,7 +741,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         <Text style={[cStyles.fieldLabel, { fontFamily: FONTS.body, marginTop: 10, color: colors.textMuted }]}>{t("favorite_exercises", "Exercices préférés")}</Text>
         {editingExercises && (
           <TouchableOpacity
-            style={[cStyles.libraryBtn]}
+            style={[cStyles.libraryBtn, { backgroundColor: colors.bgInput, borderColor: colors.border }]}
             onPress={() => {
               setLibraryTarget("favorite");
               setLibrarySelected([...favoriteExercises]);
@@ -728,7 +760,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 onChangeText={setFavoriteInput}
                 placeholder={t("add_exercise", "Ajouter un exercice...")}
                 placeholderTextColor={COLORS.textMuted}
-                style={[cStyles.inlineInput, { fontFamily: FONTS.body }]}
+                style={[cStyles.inlineInput, { fontFamily: FONTS.body, backgroundColor: colors.bgInput, color: colors.textPrimary, borderColor: colors.border }]}
                 onSubmitEditing={addFavoriteExercise}
                 returnKeyType="done"
               />
@@ -760,6 +792,20 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>{t("none", "Aucun")}</Text>
             }
           </View>
+        )}
+        {editingExercises && (
+          <TouchableOpacity
+            onPress={handleSaveExercises}
+            disabled={saving["exercises"]}
+            style={[cStyles.saveBtn, { opacity: saving["exercises"] ? 0.6 : 1 }]}
+            activeOpacity={0.8}
+          >
+            {saving["exercises"] ? (
+              <ActivityIndicator size="small" color={COLORS.bg} />
+            ) : (
+              <Text style={[cStyles.saveBtnText, { fontFamily: FONTS.bodyMedium }]}>Enregistrer</Text>
+            )}
+          </TouchableOpacity>
         )}
       </View>
 
@@ -850,7 +896,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 <TouchableOpacity
                   key={u.key}
                   onPress={() => setUnits(u.key)}
-                  style={[cStyles.segBtn, units === u.key && cStyles.segBtnActive]}
+                  style={[cStyles.segBtn, { backgroundColor: colors.bgInput, borderColor: colors.border }, units === u.key && cStyles.segBtnActive]}
                 >
                   <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: units === u.key ? COLORS.cyan : COLORS.textSecondary }]}>
                     {u.label}
@@ -879,7 +925,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 <TouchableOpacity
                   key={l.key}
                   onPress={() => setLanguage(l.key)}
-                  style={[cStyles.segBtn, language === l.key && cStyles.segBtnActive]}
+                  style={[cStyles.segBtn, { backgroundColor: colors.bgInput, borderColor: colors.border }, language === l.key && cStyles.segBtnActive]}
                 >
                   <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: language === l.key ? COLORS.cyan : COLORS.textSecondary }]}>
                     {l.label}
@@ -909,7 +955,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 <TouchableOpacity
                   key={t.key}
                   onPress={() => setTheme(t.key)}
-                  style={[cStyles.segBtn, theme === t.key && cStyles.segBtnActive]}
+                  style={[cStyles.segBtn, { backgroundColor: colors.bgInput, borderColor: colors.border }, theme === t.key && cStyles.segBtnActive]}
                 >
                   <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: theme === t.key ? COLORS.cyan : COLORS.textSecondary }]}>
                     {t.label}
@@ -923,6 +969,20 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             </Text>
           )}
         </View>
+        {editingPrefs && (
+          <TouchableOpacity
+            onPress={handleSavePrefs}
+            disabled={saving["prefs"]}
+            style={[cStyles.saveBtn, { opacity: saving["prefs"] ? 0.6 : 1 }]}
+            activeOpacity={0.8}
+          >
+            {saving["prefs"] ? (
+              <ActivityIndicator size="small" color={COLORS.bg} />
+            ) : (
+              <Text style={[cStyles.saveBtnText, { fontFamily: FONTS.bodyMedium }]}>Enregistrer</Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* NOTIFICATIONS */}
@@ -942,7 +1002,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               <TouchableOpacity
                 key={h}
                 onPress={() => setMorningNotifHour(h)}
-                style={[cStyles.durationChip, morningNotifHour === h && cStyles.durationChipActive]}
+                style={[cStyles.durationChip, { backgroundColor: colors.bgInput, borderColor: colors.border }, morningNotifHour === h && cStyles.durationChipActive]}
               >
                 <Text style={[
                   cStyles.durationChipText,
@@ -998,6 +1058,20 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             />
           </View>
         ))}
+        {editingNotifs && (
+          <TouchableOpacity
+            onPress={handleSaveNotifs}
+            disabled={saving["notifs"]}
+            style={[cStyles.saveBtn, { opacity: saving["notifs"] ? 0.6 : 1 }]}
+            activeOpacity={0.8}
+          >
+            {saving["notifs"] ? (
+              <ActivityIndicator size="small" color={COLORS.bg} />
+            ) : (
+              <Text style={[cStyles.saveBtnText, { fontFamily: FONTS.bodyMedium }]}>Enregistrer</Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* APPLICATIONS SANTÉ */}
@@ -1402,4 +1476,18 @@ const cStyles = StyleSheet.create({
     marginBottom: 6,
   },
   libraryBtnText: { fontSize: 12 },
+  saveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.cyan,
+    borderRadius: 12,
+    paddingVertical: 13,
+    marginTop: 4,
+  },
+  saveBtnText: {
+    fontSize: 15,
+    letterSpacing: 0.5,
+    color: COLORS.bg,
+  },
 });
