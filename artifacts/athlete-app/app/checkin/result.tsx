@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -153,7 +154,13 @@ export default function CheckinResultScreen() {
         </Animated.View>
 
         <Animated.View style={[styles.actions, actionsStyle]}>
-          {!sessionLoaded || hasSession ? (
+          {!sessionLoaded ? (
+            <GradientButton
+              label="Chargement..."
+              onPress={() => {}}
+              icon={<ActivityIndicator size="small" color={COLORS.textInverse} />}
+            />
+          ) : hasSession ? (
             <GradientButton
               label="Voir ma séance"
               onPress={() => router.replace("/session")}

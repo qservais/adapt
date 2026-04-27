@@ -517,7 +517,7 @@ export default function ProfileScreen() {
         <Text style={[styles.displayName, { fontFamily: FONTS.bodyBold, color: colors.textPrimary }]}>
           {profile?.firstName} {profile?.lastName ?? ""}
         </Text>
-        <Text style={[styles.email, { fontFamily: FONTS.mono }]}>{profile?.email}</Text>
+        <Text style={[styles.email, { fontFamily: FONTS.mono, color: colors.textMuted }]}>{profile?.email}</Text>
         <View
           style={[
             styles.roleBadge,
@@ -544,26 +544,26 @@ export default function ProfileScreen() {
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
               {displayAge ?? "—"}
             </Text>
-            <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Âge</Text>
+            <Text style={[styles.statLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>Âge</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
               {formatWeight(profile.weightKg != null ? parseFloat(String(profile.weightKg)) : null)}
             </Text>
-            <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>{t("weight", "Poids")}</Text>
+            <Text style={[styles.statLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>{t("weight", "Poids")}</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
               {profile.heightCm ?? "—"}
             </Text>
-            <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>cm</Text>
+            <Text style={[styles.statLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>cm</Text>
           </View>
           {trainingFreq != null && (
             <View style={styles.statItem}>
               <Text style={[styles.statVal, { fontFamily: FONTS.monoBold, color: colors.textPrimary }]}>
                 {trainingFreq}×
               </Text>
-              <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>/ sem.</Text>
+              <Text style={[styles.statLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>/ sem.</Text>
             </View>
           )}
         </View>
@@ -850,7 +850,7 @@ export default function ProfileScreen() {
 
       {activeTab === "profil" && (editing ? (
         <GlowCard glowColor={COLORS.cyan} style={styles.editCard}>
-          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
+          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono, color: colors.textMuted }]}>
             MODIFIER LE PROFIL
           </Text>
           <InputField
@@ -863,7 +863,7 @@ export default function ProfileScreen() {
             value={lastName}
             onChangeText={setLastName}
           />
-          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body }]}>Genre</Text>
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>Genre</Text>
           <View style={styles.genderRow}>
             {(["homme", "femme"] as const).map((g) => (
               <TouchableOpacity
@@ -893,7 +893,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.switchLabel, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                   Suivi du cycle
                 </Text>
-                <Text style={[styles.switchDesc, { fontFamily: FONTS.body }]}>
+                <Text style={[styles.switchDesc, { fontFamily: FONTS.body, color: colors.textMuted }]}>
                   Intègre ta phase cycle dans le score ADAPT
                 </Text>
               </View>
@@ -910,10 +910,10 @@ export default function ProfileScreen() {
           )}
           {gender !== "homme" && cycleTracking && (
             <View style={styles.cycleSection}>
-              <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
+              <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono, color: colors.textMuted }]}>
                 CYCLE MENSTRUEL
               </Text>
-              <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 8, marginBottom: 6 }]}>
+              <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 8, marginBottom: 6, color: colors.textSecondary }]}>
                 Date des dernières règles
               </Text>
               <TouchableOpacity
@@ -978,7 +978,7 @@ export default function ProfileScreen() {
             keyboardType="number-pad"
             placeholder="ex: 4"
           />
-          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body, marginBottom: 6 }]}>Niveau de forme</Text>
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body, marginBottom: 6, color: colors.textSecondary }]}>Niveau de forme</Text>
           <View style={styles.segmentRow}>
             {(["beginner", "intermediate", "advanced"] as const).map((level) => (
               <TouchableOpacity
@@ -999,7 +999,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body, marginBottom: 6 }]}>Objectif principal</Text>
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.body, marginBottom: 6, color: colors.textSecondary }]}>Objectif principal</Text>
           <View style={styles.goalGrid}>
             {(Object.entries(GOAL_LABELS) as [string, string][]).map(([key, label]) => (
               <TouchableOpacity
@@ -1020,7 +1020,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 4, marginBottom: 6 }]}>
+          <Text style={[styles.fieldLabel, { fontFamily: FONTS.bodyMedium, marginTop: 4, marginBottom: 6, color: colors.textSecondary }]}>
             Date de naissance
           </Text>
           <TouchableOpacity
@@ -1056,7 +1056,7 @@ export default function ProfileScreen() {
           {profileGender != null && (
             <View style={styles.infoRow}>
               <Feather name="user" size={16} color={COLORS.textMuted} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Genre</Text>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>Genre</Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                 {GENDER_LABELS[profileGender] ?? profileGender}
               </Text>
@@ -1065,7 +1065,7 @@ export default function ProfileScreen() {
           {profile?.fitnessLevel != null && (
             <View style={styles.infoRow}>
               <Feather name="activity" size={16} color={COLORS.textMuted} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Niveau</Text>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>Niveau</Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                 {FITNESS_LABELS[profile.fitnessLevel] ?? profile.fitnessLevel}
               </Text>
@@ -1074,7 +1074,7 @@ export default function ProfileScreen() {
           {profile?.primaryGoal != null && (
             <View style={styles.infoRow}>
               <Feather name="target" size={16} color={COLORS.textMuted} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Objectif</Text>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>Objectif</Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
                 {GOAL_LABELS[profile.primaryGoal] ?? profile.primaryGoal.replace(/_/g, " ")}
               </Text>
@@ -1083,7 +1083,7 @@ export default function ProfileScreen() {
           {showCycleTracking && (
             <View style={styles.infoRow}>
               <Feather name="refresh-cw" size={16} color={COLORS.textMuted} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
                 Suivi du cycle
               </Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
@@ -1096,7 +1096,7 @@ export default function ProfileScreen() {
             return phase ? (
               <View style={styles.infoRow}>
                 <Feather name="circle" size={16} color={COLORS.violet} />
-                <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Phase actuelle</Text>
+                <Text style={[styles.infoLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>Phase actuelle</Text>
                 <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.violet }]}>
                   {CYCLE_PHASE_LABELS[phase] ?? phase}
                 </Text>
@@ -1106,7 +1106,7 @@ export default function ProfileScreen() {
           {profile?.inviteCode != null && (
             <View style={styles.infoRow}>
               <Feather name="link" size={16} color={COLORS.textMuted} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
                 Code d'invitation
               </Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.mono, color: colors.textPrimary }]}>
@@ -1117,7 +1117,7 @@ export default function ProfileScreen() {
           {hasCoach && (
             <View style={[styles.infoRow, { flexWrap: "wrap", gap: 8 }]}>
               <Feather name="users" size={16} color={COLORS.cyan} />
-              <Text style={[styles.infoLabel, { fontFamily: FONTS.body }]}>Coach</Text>
+              <Text style={[styles.infoLabel, { fontFamily: FONTS.body, color: colors.textSecondary }]}>Coach</Text>
               <Text style={[styles.infoVal, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan, flex: 1 }]}>
                 {profile?.coachName ?? "Connecté"}
               </Text>
@@ -1145,7 +1145,7 @@ export default function ProfileScreen() {
                   EN ATTENTE
                 </Text>
               </View>
-              <Text style={[styles.coachDesc, { fontFamily: FONTS.body }]}>
+              <Text style={[styles.coachDesc, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
                 Ta demande a été envoyée à{" "}
                 <Text style={{ color: COLORS.cyan }}>
                   {coachRequest.coachFirstName} {coachRequest.coachLastName ?? ""}
@@ -1160,7 +1160,7 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <>
-              <Text style={[styles.coachDesc, { fontFamily: FONTS.body }]}>
+              <Text style={[styles.coachDesc, { fontFamily: FONTS.body, color: colors.textSecondary }]}>
                 Choisis ton coach dans la liste pour lui envoyer une demande de connexion.
               </Text>
               <GradientButton
@@ -1189,7 +1189,7 @@ export default function ProfileScreen() {
           </View>
           {(coaches ?? []).length === 0 ? (
             <View style={styles.emptyCoachBox}>
-              <Text style={[styles.coachDesc, { fontFamily: FONTS.body, textAlign: "center" }]}>
+              <Text style={[styles.coachDesc, { fontFamily: FONTS.body, textAlign: "center", color: colors.textSecondary }]}>
                 Aucun coach disponible.
               </Text>
             </View>
@@ -1256,7 +1256,7 @@ export default function ProfileScreen() {
               <Text style={styles.quickLinkIcon}>📖</Text>
               <View>
                 <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Guides ADAPT</Text>
-                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
                   Entraînement, nutrition, RPE, tempo
                 </Text>
               </View>
@@ -1273,7 +1273,7 @@ export default function ProfileScreen() {
               <Text style={styles.quickLinkIcon}>🗂️</Text>
               <View>
                 <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Bibliothèque</Text>
-                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
                   Échauffements, réathlétisation, relaxation
                 </Text>
               </View>
@@ -1291,7 +1291,7 @@ export default function ProfileScreen() {
               <View>
                 <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Mes badges</Text>
                 {(badgesQuery.data?.unlockedCount ?? 0) > 0 && (
-                  <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body }]}>
+                  <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
                     {badgesQuery.data?.unlockedCount} / {badgesQuery.data?.total} débloqués
                   </Text>
                 )}

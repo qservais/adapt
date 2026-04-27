@@ -155,7 +155,7 @@ function CompletionBar({ percent }: { percent: number }) {
   return (
     <View style={[cStyles.completionWrap, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
       <View style={cStyles.completionRow}>
-        <Text style={[cStyles.completionLabel, { fontFamily: FONTS.mono }]}>
+        <Text style={[cStyles.completionLabel, { fontFamily: FONTS.mono, color: colors.textMuted }]}>
           PROFIL COMPLÉTÉ
         </Text>
         <Text style={[cStyles.completionPct, { fontFamily: FONTS.bodyBold, color }]}>
@@ -526,7 +526,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         {editingContext ? (
           <View style={{ gap: 4 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={[cStyles.subLabel, { fontFamily: FONTS.body }]}>{t("session_min", "Minimum")}</Text>
+              <Text style={[cStyles.subLabel, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("session_min", "Minimum")}</Text>
               <Text style={[cStyles.subLabel, { fontFamily: FONTS.bodyMedium, color: COLORS.cyan }]}>{sessionDurationMin ?? 30} min</Text>
             </View>
             <Slider
@@ -540,7 +540,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
               thumbTintColor={COLORS.cyan}
             />
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-              <Text style={[cStyles.subLabel, { fontFamily: FONTS.body }]}>{t("session_max", "Maximum")}</Text>
+              <Text style={[cStyles.subLabel, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("session_max", "Maximum")}</Text>
               <Text style={[cStyles.subLabel, { fontFamily: FONTS.bodyMedium, color: COLORS.violet }]}>{sessionDurationMax ?? 90} min</Text>
             </View>
             <Slider
@@ -650,7 +650,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           ))}
         </View>
         {!editingGoals && !primaryGoal && !secondaryGoal && !fitnessLevel && (
-          <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>
+          <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body, color: colors.textMuted }]}>
             Appuie sur l'icône crayon pour modifier
           </Text>
         )}
@@ -732,7 +732,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                     <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.red }]}>{ex}</Text>
                   </View>
                 ))
-              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>{t("none", "Aucun")}</Text>
+              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("none", "Aucun")}</Text>
             }
           </View>
         )}
@@ -789,7 +789,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                     <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: COLORS.cyan }]}>{ex}</Text>
                   </View>
                 ))
-              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body }]}>{t("none", "Aucun")}</Text>
+              : <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body, color: colors.textMuted }]}>{t("none", "Aucun")}</Text>
             }
           </View>
         )}
@@ -845,7 +845,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                             { borderColor: selected ? color : COLORS.border, backgroundColor: selected ? `${color}20` : "transparent" },
                           ]}
                         >
-                          <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: selected ? color : COLORS.textSecondary }]}>
+                          <Text style={[cStyles.chipText, { fontSize: 12, fontFamily: FONTS.body, color: selected ? color : colors.textSecondary }]}>
                             {item}
                           </Text>
                         </TouchableOpacity>
@@ -1100,7 +1100,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 <Text style={{ fontSize: 18 }}>{app.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[cStyles.healthAppName, { fontFamily: FONTS.bodyMedium }]}>{app.label}</Text>
+                <Text style={[cStyles.healthAppName, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>{app.label}</Text>
               </View>
               <View
                 style={[
