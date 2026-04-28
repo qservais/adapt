@@ -475,6 +475,7 @@ export default function ExerciseScreen() {
       </View>
 
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -756,6 +757,7 @@ const styles = StyleSheet.create({
   progressText: { fontSize: 13 },
   ribbonWrapper: {
     height: 52,
+    flexShrink: 0,
     overflow: "hidden",
   },
   blockBanner: {
@@ -790,6 +792,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     maxWidth: 130,
+    minHeight: 32,
+    flexShrink: 0,
   },
   ribbonPillCurrent: {
     shadowColor: COLORS.cyan,

@@ -379,7 +379,9 @@ export default function FreeExerciseScreen() {
         </Pressable>
       </View>
 
-      <ExerciseRibbon exercises={exercises} currentIndex={exerciseIndex} completedCount={exerciseIndex} modeColor={cfg.color} />
+      <View style={{ height: 52, flexShrink: 0, overflow: "hidden" }}>
+        <ExerciseRibbon exercises={exercises} currentIndex={exerciseIndex} completedCount={exerciseIndex} modeColor={cfg.color} />
+      </View>
 
       <View style={styles.identityBlock}>
         <Text style={[styles.setLabel, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
@@ -394,6 +396,7 @@ export default function FreeExerciseScreen() {
       </View>
 
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -556,7 +559,7 @@ const styles = StyleSheet.create({
   progressChip: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1 },
   progressText: { fontSize: 13 },
   ribbonContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 6 },
-  ribbonPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1, maxWidth: 130 },
+  ribbonPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1, maxWidth: 130, minHeight: 32, flexShrink: 0 },
   ribbonPillCurrent: { shadowColor: COLORS.cyan, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 3 },
   ribbonNum: { fontSize: 11, letterSpacing: 0.5 },
   ribbonName: { fontSize: 12, flexShrink: 1 },
