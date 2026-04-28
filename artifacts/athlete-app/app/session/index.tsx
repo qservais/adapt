@@ -110,7 +110,7 @@ function AdaptBanner({ mode, adaptScore, exercises }: AdaptBannerProps) {
         {loadExercises.length > 0 && (
           <TouchableOpacity onPress={() => setExpanded((v) => !v)} style={adaptStyles.chevronBtn}>
             <Text style={[adaptStyles.detailText, { fontFamily: FONTS.body, color: cfg.color }]}>
-              {expanded ? "Masquer" : "Détails"}
+              {expanded ? "Masquer" : "Voir le détail"}
             </Text>
             <Feather
               name={expanded ? "chevron-up" : "chevron-down"}
