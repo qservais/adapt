@@ -451,8 +451,10 @@ router.delete("/sessions/:sessionLogId", authenticate, requireRole("athlete"), a
       return;
     }
 
-    await db.delete(exerciseLogsTable).where(eq(exerciseLogsTable.sessionLogId, sessionLogId));
-    await db.delete(sessionLogsTable).where(eq(sessionLogsTable.id, sessionLogId));
+    await db.transaction(async (tx) => {
+      await tx.delete(exerciseLogsTable).where(eq(exerciseLogsTable.sessionLogId, sessionLogId));
+      await tx.delete(sessionLogsTable).where(eq(sessionLogsTable.id, sessionLogId));
+    });
 
     res.json({ success: true });
   } catch (err) {
