@@ -407,6 +407,59 @@ export default function ExerciseScreen() {
         />
       </View>
 
+      {(() => {
+        const blocks = session?.blocks ?? [];
+        const currentBlockId = exercise.blockId;
+        if (!currentBlockId) return null;
+        const block = blocks.find(b => b.id === currentBlockId);
+        if (!block) return null;
+
+        const BLOCK_TYPE_COLORS: Record<string, string> = {
+          warm_up: "#FB923C",
+          strength: "#EF4444",
+          power: "#F59E0B",
+          conditioning: "#A78BFA",
+          core: "#22C55E",
+          cool_down: "#00F0FF",
+          mobility: "#34D399",
+          activation: "#60A5FA",
+          technique: "#E879F9",
+          plyometric: "#F97316",
+          hiit: "#FCD34D",
+          superset: "#00F0FF",
+          circuit: "#F59E0B",
+        };
+        const BLOCK_TYPE_LABELS: Record<string, string> = {
+          warm_up: "ÉCHAUFFEMENT",
+          strength: "FORCE",
+          power: "PUISSANCE",
+          conditioning: "CONDITIONNEMENT",
+          core: "GAINAGE",
+          cool_down: "RETOUR AU CALME",
+          mobility: "MOBILITÉ",
+          activation: "ACTIVATION",
+          technique: "TECHNIQUE",
+          plyometric: "PLIOMÉTRIE",
+          hiit: "HIIT",
+          superset: "SUPERSET",
+          circuit: "CIRCUIT",
+        };
+        const blockType = block.type?.toLowerCase() ?? "superset";
+        const accentColor = BLOCK_TYPE_COLORS[blockType] ?? COLORS.cyan;
+        const typeLabel = BLOCK_TYPE_LABELS[blockType] ?? blockType.toUpperCase();
+        const blockLabel = block.name
+          ? `${typeLabel} · ${block.name.toUpperCase()}`
+          : typeLabel;
+        return (
+          <View style={[styles.blockBanner, { backgroundColor: `${accentColor}10`, borderBottomColor: `${accentColor}30` }]}>
+            <View style={[styles.blockBannerDot, { backgroundColor: accentColor }]} />
+            <Text style={[styles.blockBannerText, { fontFamily: FONTS.mono, color: accentColor }]}>
+              {blockLabel}
+            </Text>
+          </View>
+        );
+      })()}
+
       <View style={styles.identityBlock}>
         <Text style={[styles.setLabel, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
           SÉRIE {currentSet}/{exercise.sets}
@@ -704,6 +757,24 @@ const styles = StyleSheet.create({
   ribbonWrapper: {
     height: 52,
     overflow: "hidden",
+  },
+  blockBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+  },
+  blockBannerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    flexShrink: 0,
+  },
+  blockBannerText: {
+    fontSize: 10,
+    letterSpacing: 2,
   },
   ribbonContent: {
     paddingHorizontal: 16,

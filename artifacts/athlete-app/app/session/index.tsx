@@ -12,19 +12,205 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
-import { useGetTodaySession, useStartSession, useGetTodayCheckin, equipmentLabelFromKey } from "@workspace/api-client-react";
+import {
+  useGetTodaySession,
+  useStartSession,
+  useGetTodayCheckin,
+  useCompleteSession,
+  equipmentLabelFromKey,
+} from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
+const BLOCK_TYPE_COLORS: Record<string, string> = {
+  warm_up: "#FB923C",
+  strength: "#EF4444",
+  power: "#F59E0B",
+  conditioning: "#A78BFA",
+  core: "#22C55E",
+  cool_down: "#00F0FF",
+  mobility: "#34D399",
+  activation: "#60A5FA",
+  technique: "#E879F9",
+  plyometric: "#F97316",
+  hiit: "#FCD34D",
+  superset: "#00F0FF",
+  circuit: "#F59E0B",
+};
+
+const BLOCK_TYPE_LABELS: Record<string, string> = {
+  warm_up: "ÉCHAUFFEMENT",
+  strength: "FORCE",
+  power: "PUISSANCE",
+  conditioning: "CONDITIONNEMENT",
+  core: "GAINAGE",
+  cool_down: "RETOUR AU CALME",
+  mobility: "MOBILITÉ",
+  activation: "ACTIVATION",
+  technique: "TECHNIQUE",
+  plyometric: "PLIOMÉTRIE",
+  hiit: "HIIT",
+  superset: "SUPERSET",
+  circuit: "CIRCUIT",
+};
+
+const LOAD_RATIO: Record<string, number> = {
+  adapt: 0.775,
+  recovery: 0.20,
+  performance: 1.025,
+  normal: 1.0,
+};
+
+function getAdaptExplanation(mode: string, score: number): string {
+  if (mode === "recovery") {
+    return `Score ADAPT ${score} — ton corps a besoin de récupérer, charges très réduites.`;
+  }
+  if (score <= 40) return `Score ADAPT ${score} — état physique faible, charges adaptées.`;
+  if (score <= 60) return `Score ADAPT ${score} — légère fatigue détectée, charges allégées.`;
+  return `Score ADAPT ${score} — entraînement modéré recommandé.`;
+}
+
+interface AdaptBannerProps {
+  mode: SessionMode;
+  adaptScore: number;
+  exercises: Array<{
+    id: string;
+    exerciseName: string;
+    nominalLoadKg?: number | null;
+    adaptedLoadKg?: number | null;
+  }>;
+}
+
+function AdaptBanner({ mode, adaptScore, exercises }: AdaptBannerProps) {
+  const [expanded, setExpanded] = React.useState(false);
+  const cfg = MODE_CONFIG[mode];
+  const ratio = LOAD_RATIO[mode] ?? 1.0;
+  const pct = Math.round(ratio * 100);
+  const explanation = getAdaptExplanation(mode, adaptScore);
+
+  const loadExercises = exercises.filter(
+    (ex) => (ex.nominalLoadKg != null && ex.nominalLoadKg > 0) || (ex.adaptedLoadKg != null && ex.adaptedLoadKg > 0)
+  );
+
+  return (
+    <View style={[adaptStyles.container, { borderColor: `${cfg.color}50`, backgroundColor: `${cfg.color}10` }]}>
+      <View style={adaptStyles.topRow}>
+        <View style={[adaptStyles.modeDot, { backgroundColor: cfg.color }]} />
+        <View style={adaptStyles.textGroup}>
+          <Text style={[adaptStyles.pct, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
+            Charges à {pct}%
+          </Text>
+          <Text style={[adaptStyles.explanation, { fontFamily: FONTS.body }]}>
+            {explanation}
+          </Text>
+        </View>
+        {loadExercises.length > 0 && (
+          <TouchableOpacity onPress={() => setExpanded((v) => !v)} style={adaptStyles.chevronBtn}>
+            <Text style={[adaptStyles.detailText, { fontFamily: FONTS.body, color: cfg.color }]}>
+              {expanded ? "Masquer" : "Détails"}
+            </Text>
+            <Feather
+              name={expanded ? "chevron-up" : "chevron-down"}
+              size={14}
+              color={cfg.color}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {expanded && loadExercises.length > 0 && (
+        <View style={adaptStyles.tableContainer}>
+          <View style={[adaptStyles.tableHeader, { borderBottomColor: `${cfg.color}30` }]}>
+            <Text style={[adaptStyles.tableHLabel, { fontFamily: FONTS.mono, flex: 1 }]}>EXERCICE</Text>
+            <Text style={[adaptStyles.tableHLabel, { fontFamily: FONTS.mono, width: 64, textAlign: "center" }]}>PRÉVU</Text>
+            <Text style={[adaptStyles.tableHLabel, { fontFamily: FONTS.mono, width: 64, textAlign: "center", color: cfg.color }]}>ADAPTÉ</Text>
+          </View>
+          {loadExercises.map((ex) => (
+            <View key={ex.id} style={adaptStyles.tableRow}>
+              <Text
+                style={[adaptStyles.tableExName, { fontFamily: FONTS.body, flex: 1 }]}
+                numberOfLines={1}
+              >
+                {ex.exerciseName}
+              </Text>
+              <Text style={[adaptStyles.tableCell, { fontFamily: FONTS.mono, width: 64, textAlign: "center" }]}>
+                {ex.nominalLoadKg != null ? `${ex.nominalLoadKg}kg` : "—"}
+              </Text>
+              <Text style={[adaptStyles.tableCell, { fontFamily: FONTS.monoBold, width: 64, textAlign: "center", color: cfg.color }]}>
+                {ex.adaptedLoadKg != null ? `${ex.adaptedLoadKg}kg` : "—"}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const adaptStyles = StyleSheet.create({
+  container: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  modeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  textGroup: { flex: 1, gap: 3 },
+  pct: { fontSize: 16, letterSpacing: 0.5 },
+  explanation: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 18 },
+  chevronBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingTop: 2,
+    flexShrink: 0,
+  },
+  detailText: { fontSize: 12 },
+  tableContainer: { gap: 0 },
+  tableHeader: {
+    flexDirection: "row",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    marginBottom: 2,
+  },
+  tableHLabel: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 1.5 },
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    alignItems: "center",
+  },
+  tableExName: { fontSize: 13, color: COLORS.white },
+  tableCell: { fontSize: 13, color: COLORS.textSecondary },
+});
+
 export default function SessionIntroScreen() {
   const insets = useSafeAreaInsets();
   const sessionQuery = useGetTodaySession();
   const checkinQuery = useGetTodayCheckin();
   const startMutation = useStartSession();
+  const completeMutation = useCompleteSession();
   const [startError, setStartError] = React.useState("");
+  const [validationMode, setValidationMode] = React.useState(false);
+  const [validatedSets, setValidatedSets] = React.useState<Record<string, boolean[]>>({});
+  const [completing, setCompleting] = React.useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -59,6 +245,66 @@ export default function SessionIntroScreen() {
   const session = sessionQuery.data;
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+
+  const enterValidationMode = () => {
+    const exercises = session?.exercises ?? [];
+    const initial: Record<string, boolean[]> = {};
+    for (const ex of exercises) {
+      initial[ex.id] = Array(ex.sets ?? 1).fill(false);
+    }
+    setValidatedSets(initial);
+    setValidationMode(true);
+  };
+
+  const toggleSet = (exId: string, setIdx: number) => {
+    setValidatedSets((prev) => {
+      const arr = [...(prev[exId] ?? [])];
+      arr[setIdx] = !arr[setIdx];
+      return { ...prev, [exId]: arr };
+    });
+  };
+
+  const validateAllSets = (exId: string, count: number) => {
+    setValidatedSets((prev) => ({
+      ...prev,
+      [exId]: Array(count).fill(true),
+    }));
+  };
+
+  const allValidated = React.useMemo(() => {
+    if (!validationMode || !session) return false;
+    for (const ex of session.exercises ?? []) {
+      const sets = validatedSets[ex.id] ?? [];
+      if (sets.some((v) => !v)) return false;
+      if (sets.length !== (ex.sets ?? 1)) return false;
+    }
+    return (session.exercises?.length ?? 0) > 0;
+  }, [validationMode, validatedSets, session]);
+
+  const handleValidationComplete = async () => {
+    if (!session || !allValidated) return;
+    setCompleting(true);
+    setStartError("");
+    try {
+      const exercises = session.exercises ?? [];
+      await completeMutation.mutateAsync({
+        sessionId: session.sessionLogId,
+        data: {
+          rpe: 5,
+          exercises: exercises.map((ex) => ({
+            exerciseId: ex.exerciseId,
+            setsCompleted: ex.sets,
+            loadKgUsed: ex.adaptedLoadKg ?? ex.nominalLoadKg ?? undefined,
+          })),
+        },
+      });
+      router.replace("/session/complete");
+    } catch (err: unknown) {
+      setStartError(getGenericErrorMessage(err, "Impossible de valider la séance"));
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   if (sessionQuery.isPending) {
     return (
@@ -99,6 +345,8 @@ export default function SessionIntroScreen() {
       setStartError(getGenericErrorMessage(err, "Impossible de démarrer la séance"));
     }
   };
+
+  const showAdaptBanner = modeKey === "adapt" || modeKey === "recovery";
 
   return (
     <View style={[styles.flex, { backgroundColor: COLORS.bg }]}>
@@ -188,6 +436,14 @@ export default function SessionIntroScreen() {
           )}
         </View>
 
+        {showAdaptBanner && (
+          <AdaptBanner
+            mode={modeKey}
+            adaptScore={session.adaptScore}
+            exercises={session.exercises ?? []}
+          />
+        )}
+
         {(() => {
           const allEquipmentKeys = (session.exercises ?? [])
             .flatMap(ex => ((ex.equipment as string[] | null | undefined) ?? []))
@@ -227,7 +483,15 @@ export default function SessionIntroScreen() {
         )}
 
         <View style={styles.exerciseList}>
-          <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRAMME</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRAMME</Text>
+            {validationMode && (
+              <TouchableOpacity onPress={() => setValidationMode(false)} style={styles.exitValidationBtn}>
+                <Feather name="x" size={13} color={COLORS.textMuted} />
+                <Text style={[styles.exitValidationText, { fontFamily: FONTS.body }]}>Annuler</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {(() => {
             const exercises = session.exercises ?? [];
             const blocks = session.blocks ?? [];
@@ -260,43 +524,90 @@ export default function SessionIntroScreen() {
               }
             }
 
-            const BLOCK_TYPE_COLORS: Record<string, string> = {
-              superset: COLORS.cyan,
-              circuit: COLORS.amber,
-              conditioning: "#a78bfa",
-            };
-            const BLOCK_TYPE_LABELS: Record<string, string> = {
-              superset: "SUPERSET",
-              circuit: "CIRCUIT",
-              conditioning: "CONDITIONING",
+            const renderValidationRow = (ex: typeof exercises[0]) => {
+              const setsArr = validatedSets[ex.id] ?? Array(ex.sets ?? 1).fill(false);
+              const allDone = setsArr.every(Boolean);
+              return (
+                <View key={`val-${ex.id}`} style={valStyles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[valStyles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
+                    <Text style={[valStyles.exDetail, { fontFamily: FONTS.mono }]}>
+                      {ex.sets}×{ex.reps}
+                      {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
+                    </Text>
+                    <View style={valStyles.setsRow}>
+                      {setsArr.map((checked, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => toggleSet(ex.id, idx)}
+                          style={[
+                            valStyles.setChip,
+                            checked && valStyles.setChipChecked,
+                            checked && { backgroundColor: `${cfg.color}20`, borderColor: cfg.color },
+                          ]}
+                        >
+                          {checked
+                            ? <Feather name="check" size={11} color={cfg.color} />
+                            : <Text style={[valStyles.setChipLabel, { fontFamily: FONTS.mono }]}>S{idx + 1}</Text>
+                          }
+                        </TouchableOpacity>
+                      ))}
+                      {!allDone && (
+                        <TouchableOpacity
+                          onPress={() => validateAllSets(ex.id, ex.sets ?? 1)}
+                          style={valStyles.validateAllBtn}
+                        >
+                          <Text style={[valStyles.validateAllText, { fontFamily: FONTS.body, color: cfg.color }]}>
+                            Tout valider
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                  {allDone && (
+                    <View style={[valStyles.doneBadge, { backgroundColor: `${cfg.color}15`, borderColor: `${cfg.color}40` }]}>
+                      <Feather name="check-circle" size={14} color={cfg.color} />
+                    </View>
+                  )}
+                </View>
+              );
             };
 
-            const renderExRow = (ex: typeof exercises[0], globalIndex: number, inBlock = false) => (
-              <View key={ex.id} style={[styles.exRow, inBlock && styles.exRowInBlock]}>
-                <View style={[styles.exThumbFallback, inBlock && styles.exThumbInBlock]}>
-                  <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-                    {String(globalIndex + 1).padStart(2, "0")}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
-                  <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
-                    {ex.sets}×{ex.reps}
-                    {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
-                    {ex.restSeconds != null ? ` · ${ex.restSeconds}s repos` : ""}
-                  </Text>
-                  {ex.coachCue != null && (
-                    <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
-                  )}
-                  {ex.description != null && ex.description.length > 0 && (
-                    <Text style={[styles.exDesc, { fontFamily: FONTS.body }]}>
-                      {ex.description}
+            const renderExRow = (ex: typeof exercises[0], globalIndex: number, inBlock = false) => {
+              if (validationMode) {
+                return (
+                  <View key={ex.id} style={inBlock ? valStyles.inBlock : undefined}>
+                    {renderValidationRow(ex)}
+                  </View>
+                );
+              }
+              return (
+                <View key={ex.id} style={[styles.exRow, inBlock && styles.exRowInBlock]}>
+                  <View style={[styles.exThumbFallback, inBlock && styles.exThumbInBlock]}>
+                    <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                      {String(globalIndex + 1).padStart(2, "0")}
                     </Text>
-                  )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
+                    <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                      {ex.sets}×{ex.reps}
+                      {ex.adaptedLoadKg != null ? ` · ${ex.adaptedLoadKg}kg` : ""}
+                      {ex.restSeconds != null ? ` · ${ex.restSeconds}s repos` : ""}
+                    </Text>
+                    {ex.coachCue != null && (
+                      <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
+                    )}
+                    {ex.description != null && ex.description.length > 0 && (
+                      <Text style={[styles.exDesc, { fontFamily: FONTS.body }]}>
+                        {ex.description}
+                      </Text>
+                    )}
+                  </View>
+                  <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
                 </View>
-                <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
-              </View>
-            );
+              );
+            };
 
             return segments.map((seg) => {
               if (seg.kind === "solo") {
@@ -340,18 +651,106 @@ export default function SessionIntroScreen() {
               Cette séance n'a aucun exercice. Contacte ton coach pour la compléter.
             </Text>
           </View>
+        ) : validationMode ? (
+          <TouchableOpacity
+            onPress={handleValidationComplete}
+            disabled={!allValidated || completing}
+            style={[
+              styles.validateCompleteBtn,
+              {
+                backgroundColor: allValidated ? cfg.color : COLORS.bgElevated,
+                opacity: completing ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Feather
+              name="check-circle"
+              size={18}
+              color={allValidated ? COLORS.bg : COLORS.textMuted}
+            />
+            <Text
+              style={[
+                styles.validateCompleteBtnText,
+                {
+                  fontFamily: FONTS.bodyBold,
+                  color: allValidated ? COLORS.bg : COLORS.textMuted,
+                },
+              ]}
+            >
+              {completing
+                ? "ENREGISTREMENT…"
+                : allValidated
+                ? "SÉANCE TERMINÉE !"
+                : "VALIDE TOUTES LES SÉRIES"}
+            </Text>
+          </TouchableOpacity>
         ) : (
-          <GradientButton
-            label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
-            onPress={handleStart}
-            loading={startMutation.isPending}
-            icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
-          />
+          <>
+            <GradientButton
+              label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
+              onPress={handleStart}
+              loading={startMutation.isPending}
+              icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
+            />
+            <TouchableOpacity onPress={enterValidationMode} style={styles.noChronoBtn}>
+              <Feather name="check-square" size={16} color={COLORS.textSecondary} />
+              <Text style={[styles.noChronoBtnText, { fontFamily: FONTS.bodyMedium }]}>
+                Valider sans chrono
+              </Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
     </View>
   );
 }
+
+const valStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 10,
+  },
+  inBlock: {
+    paddingHorizontal: 14,
+  },
+  exName: { fontSize: 15, color: COLORS.white, marginBottom: 2 },
+  exDetail: { fontSize: 12, color: COLORS.textSecondary, letterSpacing: 0.3, marginBottom: 8 },
+  setsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "center" },
+  setChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setChipChecked: {},
+  setChipLabel: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 0.5 },
+  validateAllBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  validateAllText: { fontSize: 12 },
+  doneBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+    flexShrink: 0,
+  },
+});
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
@@ -419,7 +818,21 @@ const styles = StyleSheet.create({
   coachLabel: { fontSize: 10, color: COLORS.cyan, letterSpacing: 2 },
   coachText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 21 },
   exerciseList: { paddingHorizontal: 20, marginBottom: 16, gap: 2 },
-  sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2, marginBottom: 16 },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  sectionTitle: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 2 },
+  exitValidationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  exitValidationText: { fontSize: 12, color: COLORS.textMuted },
   exRow: {
     flexDirection: "row",
     gap: 14,
@@ -468,6 +881,27 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   noExText: { flex: 1, fontSize: 14, color: COLORS.textMuted, lineHeight: 20 },
+  noChronoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  noChronoBtnText: { fontSize: 14, color: COLORS.textSecondary },
+  validateCompleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 14,
+    paddingVertical: 18,
+  },
+  validateCompleteBtnText: { fontSize: 16, letterSpacing: 0.5 },
   emptyState: {
     flex: 1,
     alignItems: "center",
