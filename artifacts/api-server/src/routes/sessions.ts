@@ -266,15 +266,14 @@ async function getOrCreateTodaySessionLogs(
     .orderBy(asc(sessionLogsTable.createdAt));
 
   if (!program) {
-    if (existingLogs.length === 0) {
-      const [newLog] = await db.insert(sessionLogsTable).values({
-        athleteId, sessionId: null, variantMode: forcedMode, checkinId: checkin.id,
-      }).returning();
-      const logs = [newLog!];
-      return { logs, total: 1, completed: 0 };
-    }
-    const completed = existingLogs.filter(l => l.completedAt != null).length;
-    return { logs: existingLogs, total: existingLogs.length, completed };
+    // Don't auto-create an empty log for athletes without a program.
+    // Return completed logs + at most the most recent incomplete log (avoids orphan accumulation).
+    const completedLogs = existingLogs.filter(l => l.completedAt != null);
+    const incompleteLogs = existingLogs.filter(l => l.completedAt == null);
+    const mostRecentIncomplete = incompleteLogs.length > 0 ? [incompleteLogs[incompleteLogs.length - 1]!] : [];
+    const relevantLogs = [...completedLogs, ...mostRecentIncomplete];
+    const completed = completedLogs.length;
+    return { logs: relevantLogs, total: relevantLogs.length, completed };
   }
 
   const todaySessions = await getTodaySessionsForProgram(program);
@@ -339,6 +338,11 @@ router.get("/sessions/today", authenticate, requireRole("athlete"), async (req, 
     const { logs, total, completed } = await getOrCreateTodaySessionLogs(
       athleteId, checkin, forcedMode, program ?? null
     );
+
+    if (logs.length === 0) {
+      res.status(404).json({ error: { code: "NO_SESSION_TODAY", message: "No session scheduled for today" } });
+      return;
+    }
 
     const uncompletedLogs = logs.filter(l => l.completedAt == null);
     const activeLog = uncompletedLogs[0] ?? logs[logs.length - 1]!;
@@ -421,6 +425,36 @@ router.put("/sessions/:sessionId/start", authenticate, requireRole("athlete"), a
         eq(sessionLogsTable.athleteId, req.user!.userId)
       ));
     res.json({ success: true, message: "Session started" });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.delete("/sessions/:sessionLogId", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const sessionLogId = String(req.params["sessionLogId"]);
+    const athleteId = req.user!.userId;
+
+    const [log] = await db.select().from(sessionLogsTable)
+      .where(and(
+        eq(sessionLogsTable.id, sessionLogId),
+        eq(sessionLogsTable.athleteId, athleteId)
+      ));
+
+    if (!log) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Session log not found" } });
+      return;
+    }
+
+    if (log.completedAt != null) {
+      res.status(400).json({ error: { code: "ALREADY_COMPLETED", message: "Cannot cancel a completed session" } });
+      return;
+    }
+
+    await db.delete(exerciseLogsTable).where(eq(exerciseLogsTable.sessionLogId, sessionLogId));
+    await db.delete(sessionLogsTable).where(eq(sessionLogsTable.id, sessionLogId));
+
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

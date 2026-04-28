@@ -22,7 +22,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { equipmentLabelFromKey } from "@workspace/api-client-react";
+import { equipmentLabelFromKey, customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { CircularTimer, type CircularTimerRef } from "@/components/ui/CircularTimer";
 import { Stepper } from "@/components/ui/Stepper";
@@ -294,7 +294,11 @@ export default function FreeExerciseScreen() {
         <Text style={{ color: COLORS.textSecondary, fontFamily: FONTS.body, textAlign: "center" }}>
           Aucun exercice disponible pour cette séance.
         </Text>
-        <TouchableOpacity onPress={() => { clearFreeSession(); router.replace("/"); }} style={styles.backHomeBtn}>
+        <TouchableOpacity onPress={async () => {
+            const s = getFreeSession();
+            if (s) { try { await customFetch(`/api/sessions/${s.sessionLogId}`, { method: "DELETE" }); } catch {} }
+            clearFreeSession(); router.replace("/");
+          }} style={styles.backHomeBtn}>
           <Text style={{ color: COLORS.white, fontFamily: FONTS.bodyMedium }}>Retour à l'accueil</Text>
         </TouchableOpacity>
       </View>
@@ -354,7 +358,16 @@ export default function FreeExerciseScreen() {
               "Ta progression sera perdue.",
               [
                 { text: "Continuer", style: "cancel" },
-                { text: "Quitter", style: "destructive", onPress: () => { clearFreeSession(); router.back(); } },
+                {
+                  text: "Quitter", style: "destructive", onPress: async () => {
+                    const s = getFreeSession();
+                    if (s) {
+                      try { await customFetch(`/api/sessions/${s.sessionLogId}`, { method: "DELETE" }); } catch {}
+                    }
+                    clearFreeSession();
+                    router.back();
+                  }
+                },
               ]
             );
           }}

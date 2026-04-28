@@ -43,7 +43,11 @@ export default function FreeSessionIntroScreen() {
     }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
+    try {
+      await customFetch(`/api/sessions/${session.sessionLogId}`, { method: "DELETE" });
+    } catch {
+    }
     clearFreeSession();
     router.back();
   };
