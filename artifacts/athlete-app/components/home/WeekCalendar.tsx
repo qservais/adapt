@@ -173,8 +173,9 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
         animationType="slide"
         onRequestClose={() => setSheetDate(null)}
       >
-        <Pressable style={styles.overlay} onPress={() => setSheetDate(null)} />
-        <View style={styles.sheet}>
+        <View style={styles.modalContainer}>
+          <Pressable style={styles.overlay} onPress={() => setSheetDate(null)} />
+          <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { fontFamily: FONTS.bodyBold }]}>
@@ -248,6 +249,7 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
               );
             })}
           </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>
@@ -325,8 +327,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  overlay: {
+  modalContainer: {
     flex: 1,
+    justifyContent: "flex-end",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   sheet: {
