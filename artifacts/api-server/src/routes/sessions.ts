@@ -19,13 +19,14 @@ const router = Router();
 async function getLastUsedLoads(
   athleteId: string,
   exerciseIds: string[]
-): Promise<Record<string, { loadKg: number; date: string }>> {
+): Promise<Record<string, { loadKg: number; date: string; repsPerSet: number[] }>> {
   if (exerciseIds.length === 0) return {};
 
   const logs = await db
     .select({
       exerciseId: exerciseLogsTable.exerciseId,
       loadKgUsed: exerciseLogsTable.loadKgUsed,
+      repsPerSet: exerciseLogsTable.repsPerSet,
       createdAt: exerciseLogsTable.createdAt,
     })
     .from(exerciseLogsTable)
@@ -39,7 +40,7 @@ async function getLastUsedLoads(
     )
     .orderBy(desc(exerciseLogsTable.createdAt));
 
-  const result: Record<string, { loadKg: number; date: string }> = {};
+  const result: Record<string, { loadKg: number; date: string; repsPerSet: number[] }> = {};
   for (const log of logs) {
     if (!result[log.exerciseId] && log.loadKgUsed != null) {
       const parsed = parseFloat(log.loadKgUsed);
@@ -47,6 +48,7 @@ async function getLastUsedLoads(
         result[log.exerciseId] = {
           loadKg: parsed,
           date: log.createdAt ? new Date(log.createdAt).toISOString().split("T")[0]! : "",
+          repsPerSet: Array.isArray(log.repsPerSet) ? (log.repsPerSet as number[]) : [],
         };
       }
     }
@@ -133,6 +135,7 @@ async function buildSessionDetail(
     tempo: string | null;
     lastUsedLoadKg: number | null;
     lastUsedDate: string | null;
+    lastUsedRepsPerSet: number[] | null;
     blockId: string | null;
   }[] = [];
 
@@ -227,6 +230,7 @@ async function buildSessionDetail(
         tempo: ex.tempo ?? null,
         lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
         lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
+        lastUsedRepsPerSet: lastUsed[ex.exerciseId]?.repsPerSet ?? null,
         blockId: ex.blockId ?? null,
       }));
     }

@@ -209,6 +209,20 @@ export default function BoardScreen() {
     setRestTimers((t) => ({ ...t, [key]: 0 }));
   }, []);
 
+  const addSet = useCallback((ex: SessionExerciseItem) => {
+    setExState((prev) => {
+      const arr = [...(prev[ex.id] ?? [])];
+      const last = arr[arr.length - 1];
+      arr.push({
+        load: last?.load ?? String(ex.adaptedLoadKg ?? ex.nominalLoadKg ?? ex.lastUsedLoadKg ?? ""),
+        reps: last?.reps ?? (ex.reps ?? ""),
+        done: false,
+      });
+      return { ...prev, [ex.id]: arr };
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
   const allDone = exercises.every((ex) => {
     const sets = exState[ex.id] ?? [];
     return sets.length > 0 && sets.every((s) => s.done);
@@ -280,7 +294,7 @@ export default function BoardScreen() {
     const sets = exState[ex.id] ?? [];
     return acc + sets.filter((s) => s.done).length;
   }, 0);
-  const totalSets = exercises.reduce((acc, ex) => acc + ex.sets, 0);
+  const totalSets = exercises.reduce((acc, ex) => acc + (exState[ex.id]?.length ?? ex.sets), 0);
 
   return (
     <View style={[s.flex, { backgroundColor: COLORS.bg }]}>
@@ -352,12 +366,13 @@ export default function BoardScreen() {
                       <View style={s.setsContainer}>
                         <View style={s.setsHeaderRow}>
                           <Text style={[s.setsHeaderCell, s.colSerie, { fontFamily: FONTS.mono }]}>SÉRIE</Text>
+                          <Text style={[s.setsHeaderCell, s.colPrev, { fontFamily: FONTS.mono }]}>PRÉC.</Text>
                           <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>CHARGE</Text>
                           <Text style={[s.setsHeaderCell, s.colReps, { fontFamily: FONTS.mono }]}>REPS</Text>
                           <View style={s.colCheck} />
                         </View>
 
-                        {sets.map((st, idx) => {
+                        {(sets as SetState[]).map((st, idx) => {
                           const timerKey = `${ex.id}:${idx}`;
                           const remaining = restTimers[timerKey] ?? 0;
                           const showTimer = st.done && remaining > 0;
@@ -369,6 +384,22 @@ export default function BoardScreen() {
                                 <Text style={[s.colSerie, s.setLabel, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.textMuted }]}>
                                   S{idx + 1}
                                 </Text>
+                                <View style={s.colPrev}>
+                                  {(() => {
+                                    const prevLoad = ex.lastUsedLoadKg;
+                                    const prevRepsArr = ex.lastUsedRepsPerSet ?? [];
+                                    const prevReps = prevRepsArr[idx] ?? prevRepsArr[prevRepsArr.length - 1];
+                                    if (prevLoad == null) {
+                                      return <Text style={[s.prevCell, { fontFamily: FONTS.mono }]}>—</Text>;
+                                    }
+                                    const loadStr = prevLoad % 1 === 0 ? `${prevLoad}` : prevLoad.toFixed(1);
+                                    return (
+                                      <Text style={[s.prevCell, { fontFamily: FONTS.mono }]} numberOfLines={1}>
+                                        {loadStr}kg{prevReps != null ? `×${prevReps}` : ""}
+                                      </Text>
+                                    );
+                                  })()}
+                                </View>
                                 <View style={s.colLoad}>
                                   <TextInput
                                     style={[s.input, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.white, borderColor: st.done ? `${cfg.color}50` : COLORS.border }]}
@@ -420,6 +451,17 @@ export default function BoardScreen() {
                             </View>
                           );
                         })}
+                        <TouchableOpacity
+                          style={s.addSetBtn}
+                          onPress={() => addSet(ex)}
+                          activeOpacity={0.7}
+                        >
+                          <Feather name="plus" size={12} color={COLORS.textMuted} />
+                          <Text style={[s.addSetText, { fontFamily: FONTS.mono }]}>
+                            {"AJOUTER UNE SÉRIE"}
+                            {(ex.restSeconds ?? 0) > 0 ? `  ·  ${ex.restSeconds}s` : ""}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   );
@@ -541,9 +583,21 @@ const s = StyleSheet.create({
   },
   setLabel: { fontSize: 11, textAlign: "center" },
   colSerie: { width: 28, textAlign: "center" },
+  colPrev: { width: 68, justifyContent: "center" },
+  prevCell: { fontSize: 11, color: COLORS.textMuted, textAlign: "center" },
   colLoad: { flex: 1 },
   colReps: { flex: 1 },
   colCheck: { width: 36, alignItems: "center" },
+  addSetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  addSetText: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 1.2 },
   input: {
     borderWidth: 1,
     borderRadius: 8,
