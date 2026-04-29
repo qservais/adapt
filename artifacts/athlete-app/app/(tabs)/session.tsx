@@ -482,20 +482,31 @@ export default function SessionTab() {
                   })}
                 </View>
 
-                <TouchableOpacity
-                  onPress={() => exercises.length > 0 ? router.push("/session") : undefined}
-                  style={[
-                    styles.startBtn,
-                    { backgroundColor: cfg.color },
-                    exercises.length === 0 && { backgroundColor: COLORS.border, opacity: 0.5 },
-                  ]}
-                  disabled={exercises.length === 0}
-                >
-                  <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                    {exercises.length === 0 ? "AUCUN EXERCICE" : "DÉMARRER LA SÉANCE"}
-                  </Text>
-                  {exercises.length > 0 && <Feather name="arrow-right" size={18} color={COLORS.bg} />}
-                </TouchableOpacity>
+                {(() => {
+                  const isPresentielNoEx = exercises.length === 0 && session?.sessionLocation === "presentiel";
+                  const canStart = exercises.length > 0 || isPresentielNoEx;
+                  const btnLabel = isPresentielNoEx
+                    ? "CONFIRMER LA PRÉSENCE"
+                    : exercises.length === 0
+                    ? "AUCUN EXERCICE"
+                    : "DÉMARRER LA SÉANCE";
+                  return (
+                    <TouchableOpacity
+                      onPress={() => canStart ? router.push("/session") : undefined}
+                      style={[
+                        styles.startBtn,
+                        { backgroundColor: cfg.color },
+                        !canStart && { backgroundColor: COLORS.border, opacity: 0.5 },
+                      ]}
+                      disabled={!canStart}
+                    >
+                      <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
+                        {btnLabel}
+                      </Text>
+                      {canStart && <Feather name="arrow-right" size={18} color={COLORS.bg} />}
+                    </TouchableOpacity>
+                  );
+                })()}
               </GlowCard>
             </View>
           ) : (
