@@ -213,11 +213,12 @@ export default function SessionIntroScreen() {
   const [validatedSets, setValidatedSets] = React.useState<Record<string, boolean[]>>({});
   const [completing, setCompleting] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"guided" | "board">("guided");
+  const [viewModeLoaded, setViewModeLoaded] = React.useState(false);
 
   React.useEffect(() => {
     AsyncStorage.getItem("adapt_session_view_mode").then((v) => {
       if (v === "guided" || v === "board") setViewMode(v);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setViewModeLoaded(true));
   }, []);
 
   const changeViewMode = (mode: "guided" | "board") => {
@@ -734,7 +735,7 @@ export default function SessionIntroScreen() {
             <GradientButton
               label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
               onPress={handleStart}
-              loading={startMutation.isPending}
+              loading={startMutation.isPending || !viewModeLoaded}
               icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
             />
             {viewMode === "guided" && (
