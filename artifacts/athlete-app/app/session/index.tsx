@@ -212,6 +212,7 @@ export default function SessionIntroScreen() {
   const [validationMode, setValidationMode] = React.useState(false);
   const [validatedSets, setValidatedSets] = React.useState<Record<string, boolean[]>>({});
   const [completing, setCompleting] = React.useState(false);
+  const [presenceConfirmed, setPresenceConfirmed] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"guided" | "board">("guided");
   const [viewModeLoaded, setViewModeLoaded] = React.useState(false);
 
@@ -316,6 +317,28 @@ export default function SessionIntroScreen() {
     } catch (err: unknown) {
       setStartError(getGenericErrorMessage(err, "Impossible de valider la séance"));
     } finally {
+      setCompleting(false);
+    }
+  };
+
+  const handleConfirmPresence = async () => {
+    if (!session) return;
+    setCompleting(true);
+    setStartError("");
+    try {
+      await completeMutation.mutateAsync({
+        sessionId: session.sessionLogId,
+        data: {
+          rpe: 5,
+          exercises: [],
+        },
+      });
+      setPresenceConfirmed(true);
+      setTimeout(() => {
+        router.replace("/session/complete");
+      }, 1200);
+    } catch (err: unknown) {
+      setStartError(getGenericErrorMessage(err, "Impossible de confirmer la présence"));
       setCompleting(false);
     }
   };
@@ -690,7 +713,27 @@ export default function SessionIntroScreen() {
         {startError ? (
           <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{startError}</Text>
         ) : null}
-        {(session.exercises?.length ?? 0) === 0 ? (
+        {(session.exercises?.length ?? 0) === 0 && session.sessionLocation === "presentiel" ? (
+          presenceConfirmed ? (
+            <View style={styles.presenceConfirmedCard}>
+              <Feather name="check-circle" size={22} color={COLORS.cyan} />
+              <Text style={[styles.presenceConfirmedText, { fontFamily: FONTS.bodyBold }]}>
+                Présence confirmée !
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handleConfirmPresence}
+              disabled={completing}
+              style={[styles.confirmPresenceBtn, { opacity: completing ? 0.6 : 1 }]}
+            >
+              <Feather name="check-circle" size={20} color={COLORS.bg} />
+              <Text style={[styles.confirmPresenceBtnText, { fontFamily: FONTS.bodyBold }]}>
+                {completing ? "ENREGISTREMENT…" : "CONFIRMER MA PRÉSENCE"}
+              </Text>
+            </TouchableOpacity>
+          )
+        ) : (session.exercises?.length ?? 0) === 0 ? (
           <View style={styles.noExCard}>
             <Feather name="info" size={18} color={COLORS.textMuted} />
             <Text style={[styles.noExText, { fontFamily: FONTS.body }]}>
@@ -1068,5 +1111,35 @@ const styles = StyleSheet.create({
   modeToggleBtnText: {
     fontSize: 10,
     letterSpacing: 1.5,
+  },
+  confirmPresenceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 14,
+    paddingVertical: 18,
+    backgroundColor: COLORS.cyan,
+  },
+  confirmPresenceBtnText: {
+    fontSize: 16,
+    letterSpacing: 0.5,
+    color: COLORS.bg,
+  },
+  presenceConfirmedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 14,
+    paddingVertical: 18,
+    backgroundColor: `${COLORS.cyan}20`,
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}50`,
+  },
+  presenceConfirmedText: {
+    fontSize: 16,
+    letterSpacing: 0.5,
+    color: COLORS.cyan,
   },
 });
