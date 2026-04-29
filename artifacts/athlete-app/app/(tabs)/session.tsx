@@ -128,11 +128,12 @@ function groupByBlock(
   blocks: SessionBlockItem[]
 ): { block: SessionBlockItem | null; exercises: SessionExerciseItem[] }[] {
   const sortedBlocks = [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const knownBlockIds = new Set(blocks.map((b) => b.id));
   const blockMap = new Map<string, SessionExerciseItem[]>();
   const unassigned: SessionExerciseItem[] = [];
 
   for (const ex of exercises) {
-    if (ex.blockId) {
+    if (ex.blockId && knownBlockIds.has(ex.blockId)) {
       if (!blockMap.has(ex.blockId)) blockMap.set(ex.blockId, []);
       blockMap.get(ex.blockId)!.push(ex);
     } else {
