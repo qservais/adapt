@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   useGetTodaySession,
   useStartSession,
@@ -211,6 +212,18 @@ export default function SessionIntroScreen() {
   const [validationMode, setValidationMode] = React.useState(false);
   const [validatedSets, setValidatedSets] = React.useState<Record<string, boolean[]>>({});
   const [completing, setCompleting] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<"guided" | "board">("guided");
+
+  React.useEffect(() => {
+    AsyncStorage.getItem("adapt_session_view_mode").then((v) => {
+      if (v === "guided" || v === "board") setViewMode(v);
+    }).catch(() => {});
+  }, []);
+
+  const changeViewMode = (mode: "guided" | "board") => {
+    setViewMode(mode);
+    AsyncStorage.setItem("adapt_session_view_mode", mode).catch(() => {});
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -340,7 +353,11 @@ export default function SessionIntroScreen() {
     setStartError("");
     try {
       await startMutation.mutateAsync({ sessionId: session.sessionLogId });
-      router.push("/session/exercise");
+      if (viewMode === "board") {
+        router.push("/session/board");
+      } else {
+        router.push("/session/exercise");
+      }
     } catch (err: unknown) {
       setStartError(getGenericErrorMessage(err, "Impossible de démarrer la séance"));
     }
@@ -686,18 +703,46 @@ export default function SessionIntroScreen() {
           </TouchableOpacity>
         ) : (
           <>
+            <View style={styles.modeToggleRow}>
+              <TouchableOpacity
+                onPress={() => changeViewMode("guided")}
+                style={[
+                  styles.modeToggleBtn,
+                  viewMode === "guided" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
+                ]}
+              >
+                <Feather name="play-circle" size={13} color={viewMode === "guided" ? cfg.color : COLORS.textMuted} />
+                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "guided" ? cfg.color : COLORS.textMuted }]}>
+                  GUIDÉ
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => changeViewMode("board")}
+                style={[
+                  styles.modeToggleBtn,
+                  viewMode === "board" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
+                ]}
+              >
+                <Feather name="grid" size={13} color={viewMode === "board" ? cfg.color : COLORS.textMuted} />
+                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "board" ? cfg.color : COLORS.textMuted }]}>
+                  TABLEAU
+                </Text>
+              </TouchableOpacity>
+            </View>
             <GradientButton
               label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
               onPress={handleStart}
               loading={startMutation.isPending}
               icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
             />
-            <TouchableOpacity onPress={enterValidationMode} style={styles.noChronoBtn}>
-              <Feather name="check-square" size={16} color={COLORS.textSecondary} />
-              <Text style={[styles.noChronoBtnText, { fontFamily: FONTS.bodyMedium }]}>
-                Valider sans chrono
-              </Text>
-            </TouchableOpacity>
+            {viewMode === "guided" && (
+              <TouchableOpacity onPress={enterValidationMode} style={styles.noChronoBtn}>
+                <Feather name="check-square" size={16} color={COLORS.textSecondary} />
+                <Text style={[styles.noChronoBtnText, { fontFamily: FONTS.bodyMedium }]}>
+                  Valider sans chrono
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </View>
@@ -997,5 +1042,25 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
+  },
+  modeToggleRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  modeToggleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  modeToggleBtnText: {
+    fontSize: 11,
+    letterSpacing: 1.5,
   },
 });
