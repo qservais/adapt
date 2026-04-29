@@ -202,8 +202,12 @@ async function buildSessionDetail(
       })
         .from(sessionExercisesTable)
         .innerJoin(exercisesTable, eq(sessionExercisesTable.exerciseId, exercisesTable.id))
+        .leftJoin(sessionBlocksTable, eq(sessionExercisesTable.blockId, sessionBlocksTable.id))
         .where(eq(sessionExercisesTable.variantId, variant.id))
-        .orderBy(sessionExercisesTable.orderIndex);
+        .orderBy(
+          sql`COALESCE(${sessionBlocksTable.orderIndex}, 9999)`,
+          asc(sessionExercisesTable.orderIndex)
+        );
 
       const exerciseIds = exs.map(e => e.exerciseId);
       const lastUsed = await getLastUsedLoads(checkin.athleteId, exerciseIds);

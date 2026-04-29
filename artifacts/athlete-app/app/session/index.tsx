@@ -564,7 +564,19 @@ export default function SessionIntroScreen() {
           {(() => {
             const exercises = session.exercises ?? [];
             const blocks = session.blocks ?? [];
-            const blockMap = new Map(blocks.map(b => [b.id, b]));
+
+            const sortedBlocks = [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+            const knownBlockIds = new Set(blocks.map(b => b.id));
+            const byBlock = new Map<string, typeof exercises>(sortedBlocks.map(b => [b.id, []]));
+            const unassigned: typeof exercises = [];
+
+            for (const ex of exercises) {
+              if (ex.blockId && knownBlockIds.has(ex.blockId)) {
+                byBlock.get(ex.blockId)!.push(ex);
+              } else {
+                unassigned.push(ex);
+              }
+            }
 
             type Segment =
               | { kind: "solo"; exercise: typeof exercises[0]; globalIndex: number }
@@ -572,25 +584,16 @@ export default function SessionIntroScreen() {
 
             const segments: Segment[] = [];
             let globalIdx = 0;
-            const seen = new Set<string>();
 
-            for (const ex of exercises) {
-              if (!ex.blockId) {
-                segments.push({ kind: "solo", exercise: ex, globalIndex: globalIdx });
-                globalIdx++;
-              } else if (!seen.has(ex.blockId)) {
-                const block = blockMap.get(ex.blockId);
-                if (!block) {
-                  segments.push({ kind: "solo", exercise: ex, globalIndex: globalIdx });
-                  globalIdx++;
-                } else {
-                  seen.add(ex.blockId);
-                  const grouped = exercises
-                    .filter(e => e.blockId === ex.blockId)
-                    .map(e => ({ ex: e, globalIndex: globalIdx++ }));
-                  segments.push({ kind: "block", block, exercises: grouped });
-                }
+            for (const block of sortedBlocks) {
+              const blockExercises = byBlock.get(block.id) ?? [];
+              if (blockExercises.length > 0) {
+                const grouped = blockExercises.map(e => ({ ex: e, globalIndex: globalIdx++ }));
+                segments.push({ kind: "block", block, exercises: grouped });
               }
+            }
+            for (const ex of unassigned) {
+              segments.push({ kind: "solo", exercise: ex, globalIndex: globalIdx++ });
             }
 
             const renderValidationRow = (ex: typeof exercises[0]) => {

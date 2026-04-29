@@ -12,7 +12,7 @@ import {
   ProgramDetail,
   SessionWithVariants,
   ExerciseData,
-  CreateSessionRequestVariantsItemMode,
+  CreateSessionRequestBlocksItem,
   getTemplates,
   createTemplate,
   deleteTemplate,
@@ -469,6 +469,45 @@ function ReutiliserModal({
   const handleCopy = async () => {
     if (!targetProgramId) return;
     try {
+      const normalExercises = (block.variants.find(v => v.mode === "normal") ?? block.variants[0])?.exercises ?? [];
+
+      let blocksPayload: CreateSessionRequestBlocksItem[];
+      if (block.blocks && block.blocks.length > 0) {
+        blocksPayload = block.blocks.map((b, bIdx) => ({
+          type: b.type,
+          orderIndex: bIdx,
+          name: b.name ?? block.name,
+          estimatedDurationMin: b.estimatedDurationMin ?? undefined,
+          conditioningFormat: b.conditioningFormat ?? undefined,
+          exercises: normalExercises
+            .filter(e => e.blockId === b.id)
+            .map((e, eIdx) => ({
+              exerciseId: e.exerciseId,
+              orderIndex: eIdx,
+              sets: e.sets,
+              reps: e.reps ?? undefined,
+              loadKg: e.nominalLoadKg ?? undefined,
+              restSeconds: e.restSeconds ?? undefined,
+              coachCue: e.coachCue ?? undefined,
+            })),
+        }));
+      } else {
+        blocksPayload = [{
+          type: block.type,
+          orderIndex: 0,
+          name: block.name,
+          exercises: normalExercises.map((e, eIdx) => ({
+            exerciseId: e.exerciseId,
+            orderIndex: eIdx,
+            sets: e.sets,
+            reps: e.reps ?? undefined,
+            loadKg: e.nominalLoadKg ?? undefined,
+            restSeconds: e.restSeconds ?? undefined,
+            coachCue: e.coachCue ?? undefined,
+          })),
+        }];
+      }
+
       await addMutation.mutateAsync({
         programId: targetProgramId,
         data: {
@@ -478,20 +517,7 @@ function ReutiliserModal({
           type: block.type as "strength" | "cardio" | "hybrid" | "mobility",
           estimatedDurationMin: block.estimatedDurationMin ?? undefined,
           coachNotes: block.coachNotes ?? undefined,
-          variants: block.variants
-            .filter((v) => v.exercises.length > 0)
-            .map((v) => ({
-              mode: v.mode as CreateSessionRequestVariantsItemMode,
-              exercises: v.exercises.map((e) => ({
-                exerciseId: e.exerciseId,
-                orderIndex: e.orderIndex,
-                sets: e.sets,
-                reps: e.reps ?? undefined,
-                loadKg: e.nominalLoadKg ?? undefined,
-                restSeconds: e.restSeconds ?? undefined,
-                coachCue: e.coachCue ?? undefined,
-              })),
-            })),
+          blocks: blocksPayload,
         },
       });
       toast({ title: `Bloc copié dans « ${targetProgram?.name} »` });
