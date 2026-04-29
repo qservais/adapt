@@ -395,7 +395,7 @@ export default function BoardScreen() {
                                     const loadStr = prevLoad % 1 === 0 ? `${prevLoad}` : prevLoad.toFixed(1);
                                     return (
                                       <Text style={[s.prevCell, { fontFamily: FONTS.mono }]} numberOfLines={1}>
-                                        {loadStr}kg{prevReps != null ? `×${prevReps}` : ""}
+                                        {loadStr}kg{prevReps != null ? ` × ${prevReps}` : ""}
                                       </Text>
                                     );
                                   })()}

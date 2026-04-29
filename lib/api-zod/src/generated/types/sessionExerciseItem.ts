@@ -27,6 +27,7 @@ export interface SessionExerciseItem {
   coachCue?: string | null;
   lastUsedLoadKg?: number | null;
   lastUsedDate?: string | null;
+  lastUsedRepsPerSet?: number[] | null;
   blockId?: string | null;
   tempo?: string | null;
   supersetGroup?: string | null;
