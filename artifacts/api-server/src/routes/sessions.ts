@@ -133,27 +133,54 @@ async function buildSessionDetail(
     tempo: string | null;
     lastUsedLoadKg: number | null;
     lastUsedDate: string | null;
+    blockId: string | null;
+  }[] = [];
+
+  let blocks: {
+    id: string;
+    type: string;
+    orderIndex: number;
+    name: string | null;
+    notes: string | null;
+    estimatedDurationMin: number | null;
   }[] = [];
 
   if (sessionLog.sessionId) {
-    let [variant] = await db.select().from(sessionVariantsTable)
-      .where(and(
-        eq(sessionVariantsTable.sessionId, sessionLog.sessionId),
-        eq(sessionVariantsTable.mode, sessionLog.variantMode)
-      ));
-
-    if (!variant) {
-      [variant] = await db.select().from(sessionVariantsTable)
+    const [rawBlocks, variant] = await Promise.all([
+      db.select({
+        id: sessionBlocksTable.id,
+        type: sessionBlocksTable.type,
+        orderIndex: sessionBlocksTable.orderIndex,
+        name: sessionBlocksTable.name,
+        notes: sessionBlocksTable.notes,
+        estimatedDurationMin: sessionBlocksTable.estimatedDurationMin,
+      })
+        .from(sessionBlocksTable)
+        .where(eq(sessionBlocksTable.sessionId, sessionLog.sessionId))
+        .orderBy(asc(sessionBlocksTable.orderIndex)),
+      db.select().from(sessionVariantsTable)
         .where(and(
           eq(sessionVariantsTable.sessionId, sessionLog.sessionId),
-          eq(sessionVariantsTable.mode, "normal")
-        ));
-    }
+          eq(sessionVariantsTable.mode, sessionLog.variantMode)
+        ))
+        .then(async rows => {
+          if (rows[0]) return rows[0];
+          const fallback = await db.select().from(sessionVariantsTable)
+            .where(and(
+              eq(sessionVariantsTable.sessionId, sessionLog.sessionId!),
+              eq(sessionVariantsTable.mode, "normal")
+            ));
+          return fallback[0] ?? null;
+        }),
+    ]);
+
+    blocks = rawBlocks;
 
     if (variant) {
       const exs = await db.select({
         id: sessionExercisesTable.id,
         exerciseId: sessionExercisesTable.exerciseId,
+        blockId: sessionExercisesTable.blockId,
         orderIndex: sessionExercisesTable.orderIndex,
         sets: sessionExercisesTable.sets,
         reps: sessionExercisesTable.reps,
@@ -200,6 +227,7 @@ async function buildSessionDetail(
         tempo: ex.tempo ?? null,
         lastUsedLoadKg: lastUsed[ex.exerciseId]?.loadKg ?? null,
         lastUsedDate: lastUsed[ex.exerciseId]?.date ?? null,
+        blockId: ex.blockId ?? null,
       }));
     }
   }
@@ -220,6 +248,7 @@ async function buildSessionDetail(
     estimatedDurationMin,
     overriddenByCoach: false,
     exercises,
+    blocks,
     rpe: sessionLog.rpe ?? null,
     perceivedDifficulty: sessionLog.perceivedDifficulty ?? null,
   };
