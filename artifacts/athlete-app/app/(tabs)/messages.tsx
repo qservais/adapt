@@ -27,6 +27,7 @@ export default function MessagesScreen() {
 
   const threads: MessageThread[] = threadsQuery.data ?? [];
   const coachId = meQuery.data?.coachId ?? null;
+  const profileLoading = meQuery.isLoading;
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
@@ -44,7 +45,7 @@ export default function MessagesScreen() {
           <Text style={[styles.emptyTitle, { fontFamily: FONTS.bodyBold }]}>
             Aucune conversation
           </Text>
-          {coachId ? (
+          {!profileLoading && coachId ? (
             <>
               <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>
                 Envoie un message à ton coach pour démarrer la conversation.
@@ -65,11 +66,11 @@ export default function MessagesScreen() {
                 </Text>
               </TouchableOpacity>
             </>
-          ) : (
+          ) : !profileLoading ? (
             <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>
               Aucun coach assigné pour le moment. Connecte-toi à un coach depuis ton profil pour commencer.
             </Text>
-          )}
+          ) : null}
         </View>
       ) : (
         <FlashList
