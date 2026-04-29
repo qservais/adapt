@@ -23,7 +23,7 @@ import {
   useGetAthleteUpcomingSessions,
   customFetch,
 } from "@workspace/api-client-react";
-import type { FreeSessionStartResponse } from "@workspace/api-client-react";
+import type { FreeSessionStartResponse, SessionBlockItem, SessionExerciseItem } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { useThemeColors, useFormatWeight } from "@/context/PreferencesContext";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
@@ -80,17 +80,6 @@ interface ProgramDetail {
 
 type SubTab = "today" | "upcoming" | "history";
 
-const CATEGORY_FR: Record<string, string> = {
-  compound: "POLYARTICULAIRE",
-  isolation: "ISOLATION",
-  cardio: "CARDIO",
-  mobility: "MOBILITÉ",
-  plyometric: "PLIOMÉTRIQUE",
-  strength: "FORCE",
-  warmup: "ÉCHAUFFEMENT",
-  cool_down: "RÉCUPÉRATION",
-};
-
 const SESSION_TYPE_FR: Record<string, string> = {
   strength: "Force",
   cardio: "Cardio",
@@ -102,16 +91,62 @@ const SESSION_TYPE_FR: Record<string, string> = {
   sport: "Sport",
 };
 
-function groupByCategory<T extends { category?: string | null }>(
-  items: T[]
-): { category: string; exercises: T[] }[] {
-  const map = new Map<string, T[]>();
-  for (const item of items) {
-    const cat = item.category ?? "general";
-    if (!map.has(cat)) map.set(cat, []);
-    map.get(cat)!.push(item);
+const BLOCK_TYPE_COLORS: Record<string, string> = {
+  warm_up: "#FB923C",
+  strength: "#EF4444",
+  power: "#F59E0B",
+  conditioning: "#A78BFA",
+  core: "#22C55E",
+  cool_down: "#00F0FF",
+  mobility: "#34D399",
+  activation: "#60A5FA",
+  technique: "#E879F9",
+  plyometric: "#F97316",
+  hiit: "#FCD34D",
+  superset: "#00F0FF",
+  circuit: "#F59E0B",
+};
+
+const BLOCK_TYPE_LABELS: Record<string, string> = {
+  warm_up: "ÉCHAUFFEMENT",
+  strength: "FORCE",
+  power: "PUISSANCE",
+  conditioning: "CONDITIONNEMENT",
+  core: "GAINAGE",
+  cool_down: "RETOUR AU CALME",
+  mobility: "MOBILITÉ",
+  activation: "ACTIVATION",
+  technique: "TECHNIQUE",
+  plyometric: "PLIOMÉTRIE",
+  hiit: "HIIT",
+  superset: "SUPERSET",
+  circuit: "CIRCUIT",
+};
+
+function groupByBlock(
+  exercises: SessionExerciseItem[],
+  blocks: SessionBlockItem[]
+): { block: SessionBlockItem | null; exercises: SessionExerciseItem[] }[] {
+  const sortedBlocks = [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const blockMap = new Map<string, SessionExerciseItem[]>();
+  const unassigned: SessionExerciseItem[] = [];
+
+  for (const ex of exercises) {
+    if (ex.blockId) {
+      if (!blockMap.has(ex.blockId)) blockMap.set(ex.blockId, []);
+      blockMap.get(ex.blockId)!.push(ex);
+    } else {
+      unassigned.push(ex);
+    }
   }
-  return Array.from(map.entries()).map(([category, exercises]) => ({ category, exercises }));
+
+  const result: { block: SessionBlockItem | null; exercises: SessionExerciseItem[] }[] = [];
+  for (const block of sortedBlocks) {
+    const exs = blockMap.get(block.id) ?? [];
+    if (exs.length > 0) result.push({ block, exercises: exs });
+  }
+  if (unassigned.length > 0) result.push({ block: null, exercises: unassigned });
+  return result;
 }
 
 export default function SessionTab() {
@@ -167,7 +202,8 @@ export default function SessionTab() {
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const exercises = session?.exercises ?? [];
-  const grouped = groupByCategory(exercises);
+  const blocks = session?.blocks ?? [];
+  const grouped = groupByBlock(exercises, blocks);
   const exerciseIndexMap = new Map(exercises.map((ex, i) => [ex.id, i]));
 
   // Fetch persisted exercise logs to hydrate checked state
@@ -387,16 +423,26 @@ export default function SessionTab() {
                 </Text>
 
                 <View style={styles.exerciseList}>
-                  {grouped.map(({ category, exercises: exs }, gi) => (
-                    <View key={category} style={gi > 0 ? styles.groupBlock : undefined}>
-                      <Text style={[styles.groupHeader, { fontFamily: FONTS.mono }]}>
-                        {CATEGORY_FR[category] ?? "GÉNÉRAL"}
-                      </Text>
+                  {grouped.map(({ block, exercises: exs }, gi) => {
+                    const blockType = block?.type?.toLowerCase() ?? "general";
+                    const accentColor = BLOCK_TYPE_COLORS[blockType] ?? COLORS.cyan;
+                    const typeLabel = BLOCK_TYPE_LABELS[blockType] ?? blockType.toUpperCase();
+                    const blockLabel = block
+                      ? (block.name ? `${typeLabel} · ${block.name.toUpperCase()}` : typeLabel)
+                      : "PROGRAMME";
+                    return (
+                    <View key={block?.id ?? "unassigned"} style={gi > 0 ? styles.groupBlock : undefined}>
+                      <View style={[styles.blockBanner, { backgroundColor: `${block ? accentColor : COLORS.textMuted}10`, borderBottomColor: `${block ? accentColor : COLORS.textMuted}30` }]}>
+                        <View style={[styles.blockBannerDot, { backgroundColor: block ? accentColor : COLORS.textMuted }]} />
+                        <Text style={[styles.blockBannerText, { fontFamily: FONTS.mono, color: block ? accentColor : COLORS.textMuted }]}>
+                          {blockLabel}
+                        </Text>
+                      </View>
                       {exs.map((ex, i) => {
                         const globalIndex = exerciseIndexMap.get(ex.id) ?? 0;
                         const isDone = checkedExercises.has(ex.id);
                         return (
-                          <View key={ex.id} style={[styles.exRow, i === exs.length - 1 && styles.exRowLast]}>
+                          <View key={ex.id} style={[styles.exRow, i === exs.length - 1 && styles.exRowLast]}> 
                             <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
                               {String(globalIndex + 1).padStart(2, "0")}
                             </Text>
@@ -431,7 +477,8 @@ export default function SessionTab() {
                         );
                       })}
                     </View>
-                  ))}
+                  );
+                  })}
                 </View>
 
                 <TouchableOpacity
@@ -920,12 +967,23 @@ const styles = StyleSheet.create({
   exerciseCount: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 16 },
   exerciseList: { gap: 0, marginBottom: 24 },
   groupBlock: { marginTop: 12 },
-  groupHeader: {
+  blockBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    marginBottom: 4,
+    gap: 7,
+  },
+  blockBannerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  blockBannerText: {
     fontSize: 9,
-    color: COLORS.textMuted,
     letterSpacing: 2,
-    marginBottom: 6,
-    marginTop: 4,
   },
   exRow: {
     flexDirection: "row",
