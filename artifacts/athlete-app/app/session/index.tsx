@@ -19,6 +19,8 @@ import {
   useGetTodayCheckin,
   useCompleteSession,
   equipmentLabelFromKey,
+  type SessionExerciseItem,
+  type SessionBlockItem,
 } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { ModeBadge } from "@/components/ui/ModeBadge";
@@ -64,6 +66,31 @@ const LOAD_RATIO: Record<string, number> = {
   performance: 1.025,
   normal: 1.0,
 };
+
+function groupByBlock(
+  exercises: SessionExerciseItem[],
+  blocks: SessionBlockItem[]
+): { block: SessionBlockItem | null; exercises: SessionExerciseItem[] }[] {
+  const sortedBlocks = [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const knownBlockIds = new Set(blocks.map((b) => b.id));
+  const blockMap = new Map<string, SessionExerciseItem[]>();
+  const unassigned: SessionExerciseItem[] = [];
+  for (const ex of exercises) {
+    if (ex.blockId && knownBlockIds.has(ex.blockId)) {
+      if (!blockMap.has(ex.blockId)) blockMap.set(ex.blockId, []);
+      blockMap.get(ex.blockId)!.push(ex);
+    } else {
+      unassigned.push(ex);
+    }
+  }
+  const result: { block: SessionBlockItem | null; exercises: SessionExerciseItem[] }[] = [];
+  for (const block of sortedBlocks) {
+    const exs = blockMap.get(block.id) ?? [];
+    if (exs.length > 0) result.push({ block, exercises: exs });
+  }
+  if (unassigned.length > 0) result.push({ block: null, exercises: unassigned });
+  return result;
+}
 
 function getAdaptExplanation(mode: string, score: number): string {
   if (mode === "recovery") {
@@ -564,36 +591,24 @@ export default function SessionIntroScreen() {
           {(() => {
             const exercises = session.exercises ?? [];
             const blocks = session.blocks ?? [];
-
-            const sortedBlocks = [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
-            const knownBlockIds = new Set(blocks.map(b => b.id));
-            const byBlock = new Map<string, typeof exercises>(sortedBlocks.map(b => [b.id, []]));
-            const unassigned: typeof exercises = [];
-
-            for (const ex of exercises) {
-              if (ex.blockId && knownBlockIds.has(ex.blockId)) {
-                byBlock.get(ex.blockId)!.push(ex);
-              } else {
-                unassigned.push(ex);
-              }
-            }
+            const grouped = groupByBlock(exercises, blocks);
 
             type Segment =
-              | { kind: "solo"; exercise: typeof exercises[0]; globalIndex: number }
-              | { kind: "block"; block: typeof blocks[0]; exercises: { ex: typeof exercises[0]; globalIndex: number }[] };
+              | { kind: "solo"; exercise: SessionExerciseItem; globalIndex: number }
+              | { kind: "block"; block: SessionBlockItem; exercises: { ex: SessionExerciseItem; globalIndex: number }[] };
 
             const segments: Segment[] = [];
             let globalIdx = 0;
 
-            for (const block of sortedBlocks) {
-              const blockExercises = byBlock.get(block.id) ?? [];
-              if (blockExercises.length > 0) {
-                const grouped = blockExercises.map(e => ({ ex: e, globalIndex: globalIdx++ }));
-                segments.push({ kind: "block", block, exercises: grouped });
+            for (const group of grouped) {
+              if (group.block === null) {
+                for (const ex of group.exercises) {
+                  segments.push({ kind: "solo", exercise: ex, globalIndex: globalIdx++ });
+                }
+              } else {
+                const blockExercises = group.exercises.map(e => ({ ex: e, globalIndex: globalIdx++ }));
+                segments.push({ kind: "block", block: group.block, exercises: blockExercises });
               }
-            }
-            for (const ex of unassigned) {
-              segments.push({ kind: "solo", exercise: ex, globalIndex: globalIdx++ });
             }
 
             const renderValidationRow = (ex: typeof exercises[0]) => {
