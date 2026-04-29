@@ -80,6 +80,10 @@ export default function SessionCompleteScreen() {
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
 
+  const isInPerson =
+    session?.sessionLocation === "presentiel" &&
+    (session?.exercises?.length ?? 0) === 0;
+
   useEffect(() => {
     if (session?.sessionType != null && theme === null) {
       setTheme(session.sessionType);
@@ -97,7 +101,7 @@ export default function SessionCompleteScreen() {
     statsY.value = withDelay(500, withTiming(0, { duration: 500 }));
     statsOpacity.value = withDelay(500, withTiming(1, { duration: 500 }));
 
-    if (session?.sessionLogId != null) {
+    if (!isInPerson && session?.sessionLogId != null) {
       completeMutation.mutate(
         { sessionId: session.sessionLogId, data: { exercises: [] } },
         {
@@ -148,6 +152,87 @@ export default function SessionCompleteScreen() {
   }));
 
   const rpeColor = getRPEColor(rpe);
+
+  if (isInPerson) {
+    return (
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: COLORS.bg }]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: insets.top + 64, paddingBottom: insets.bottom + 40 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={[styles.trophy, celebrateStyle]}>
+            <View
+              style={[
+                styles.trophyCircle,
+                {
+                  borderColor: COLORS.green,
+                  backgroundColor: `${COLORS.green}15`,
+                  shadowColor: COLORS.green,
+                },
+              ]}
+            >
+              <Feather name="users" size={72} color={COLORS.green} />
+            </View>
+          </Animated.View>
+
+          <Animated.View style={[styles.textWrap, celebrateStyle]}>
+            <Text style={[styles.congrats, { fontFamily: FONTS.title, color: COLORS.green }]}>
+              PRÉSENCE ENREGISTRÉE !
+            </Text>
+            <Text style={[styles.desc, { fontFamily: FONTS.body }]}>
+              Bonne séance avec ton coach !{"\n"}Continue comme ça, tu es sur la bonne voie.
+            </Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.inPersonCard, statsStyle]}>
+            <View style={styles.inPersonRow}>
+              <View style={[styles.inPersonIconWrap, { backgroundColor: `${COLORS.green}20` }]}>
+                <Feather name="check-circle" size={20} color={COLORS.green} />
+              </View>
+              <View style={styles.inPersonTextWrap}>
+                <Text style={[styles.inPersonTitle, { fontFamily: FONTS.bodyBold }]}>
+                  Séance présentielle
+                </Text>
+                <Text style={[styles.inPersonSub, { fontFamily: FONTS.body }]}>
+                  Ta présence a bien été confirmée auprès de ton coach.
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.inPersonDivider]} />
+
+            <View style={styles.inPersonRow}>
+              <View style={[styles.inPersonIconWrap, { backgroundColor: `${COLORS.cyan}20` }]}>
+                <Feather name="calendar" size={20} color={COLORS.cyan} />
+              </View>
+              <View style={styles.inPersonTextWrap}>
+                <Text style={[styles.inPersonTitle, { fontFamily: FONTS.bodyBold }]}>
+                  Séance enregistrée
+                </Text>
+                <Text style={[styles.inPersonSub, { fontFamily: FONTS.body }]}>
+                  Cette séance sera comptabilisée dans ton historique d'entraînement.
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          <Animated.View style={[styles.actions, statsStyle]}>
+            <GradientButton
+              label="Retour à l'accueil"
+              onPress={() => router.replace("/")}
+              icon={<Feather name="home" size={18} color={COLORS.textInverse} />}
+            />
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -271,7 +356,6 @@ export default function SessionCompleteScreen() {
           </Animated.View>
         )}
 
-        {/* RPE + Notes inline capture (MET-01) */}
         <Animated.View style={[styles.section, statsStyle]}>
           <View style={styles.sectionHeader}>
             <Feather name="star" size={16} color={COLORS.amber} />
@@ -280,7 +364,6 @@ export default function SessionCompleteScreen() {
             </Text>
           </View>
 
-          {/* RPE selector */}
           <Text style={[styles.rpeLabel, { fontFamily: FONTS.body }]}>
             Effort ressenti (RPE){" "}
             <Text style={[styles.rpeBig, { fontFamily: FONTS.monoBold, color: rpeColor }]}>
@@ -305,7 +388,6 @@ export default function SessionCompleteScreen() {
             ))}
           </View>
 
-          {/* Difficulty */}
           <View style={styles.diffRow}>
             {DIFFICULTY_OPTIONS.map(opt => (
               <TouchableOpacity
@@ -331,7 +413,6 @@ export default function SessionCompleteScreen() {
             ))}
           </View>
 
-          {/* Theme */}
           <Text style={[styles.rpeLabel, { fontFamily: FONTS.body, marginTop: 4 }]}>
             Thème de séance
           </Text>
@@ -366,7 +447,6 @@ export default function SessionCompleteScreen() {
             })}
           </View>
 
-          {/* Notes */}
           <TextInput
             style={[styles.notesInput, { fontFamily: FONTS.body }]}
             placeholder="Commentaire libre (optionnel)..."
@@ -519,4 +599,43 @@ const styles = StyleSheet.create({
   actions: { width: "100%", gap: 12 },
   homeBtn: { alignItems: "center", paddingVertical: 14 },
   homeBtnText: { fontSize: 15, color: COLORS.textSecondary },
+  inPersonCard: {
+    width: "100%",
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: `${COLORS.green}40`,
+    padding: 16,
+    gap: 14,
+  },
+  inPersonRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+  },
+  inPersonIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  inPersonTextWrap: {
+    flex: 1,
+    gap: 3,
+  },
+  inPersonTitle: {
+    fontSize: 14,
+    color: COLORS.white,
+  },
+  inPersonSub: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  inPersonDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
 });
