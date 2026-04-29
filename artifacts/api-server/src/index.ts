@@ -4,6 +4,7 @@ import { startAlertJob } from "./services/alert-job.js";
 import { startNotificationJob } from "./services/notification-job.js";
 import { ensureAthleteInviteCodes } from "./services/invite-code-migration.js";
 import { fixProdData, runSchemaMigrations } from "./services/fix-prod-data.js";
+import { runBlockMigration } from "./services/block-migration.js";
 
 const rawPort = process.env["PORT"];
 
@@ -23,6 +24,7 @@ async function start() {
   await runSchemaMigrations();
   await fixProdData();
   await ensureAthleteInviteCodes();
+  await runBlockMigration();
 
   app.listen(port, () => {
     logger.info({ port }, "Server listening");
