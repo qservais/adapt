@@ -11,7 +11,7 @@ import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useGetMessageThreads } from "@workspace/api-client-react";
+import { useGetMessageThreads, useGetMe } from "@workspace/api-client-react";
 import type { MessageThread } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { useThemeColors } from "@/context/PreferencesContext";
@@ -23,8 +23,10 @@ export default function MessagesScreen() {
   const scrollRef = useRef<FlashListRef<MessageThread>>(null);
   useScrollToTop(scrollRef);
   const threadsQuery = useGetMessageThreads();
+  const meQuery = useGetMe();
 
   const threads: MessageThread[] = threadsQuery.data ?? [];
+  const coachId = meQuery.data?.coachId ?? null;
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
@@ -42,9 +44,32 @@ export default function MessagesScreen() {
           <Text style={[styles.emptyTitle, { fontFamily: FONTS.bodyBold }]}>
             Aucune conversation
           </Text>
-          <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>
-            Ton coach te contactera ici une fois que vous serez connectés.
-          </Text>
+          {coachId ? (
+            <>
+              <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>
+                Envoie un message à ton coach pour démarrer la conversation.
+              </Text>
+              <TouchableOpacity
+                style={styles.contactBtn}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: "/messages/[userId]",
+                    params: { userId: coachId },
+                  })
+                }
+              >
+                <Feather name="send" size={16} color={COLORS.bg} style={{ marginRight: 8 }} />
+                <Text style={[styles.contactBtnText, { fontFamily: FONTS.bodyBold }]}>
+                  Contacter mon coach
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>
+              Aucun coach assigné pour le moment. Connecte-toi à un coach depuis ton profil pour commencer.
+            </Text>
+          )}
         </View>
       ) : (
         <FlashList
@@ -154,6 +179,16 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 18, color: COLORS.textSecondary },
   emptyDesc: { fontSize: 14, color: COLORS.textMuted, textAlign: "center", lineHeight: 21 },
+  contactBtn: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.violet,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+    borderRadius: 12,
+  },
+  contactBtnText: { fontSize: 15, color: COLORS.bg },
   threadRow: {
     flexDirection: "row",
     alignItems: "center",
