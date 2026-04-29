@@ -482,7 +482,14 @@ export default function SessionTab() {
                   })}
                 </View>
 
-                {(() => {
+                {session?.completedAt != null ? (
+                  <View style={styles.sessionDoneRow}>
+                    <Feather name="check-circle" size={18} color={COLORS.green} />
+                    <Text style={[styles.sessionDoneText, { fontFamily: FONTS.bodyBold }]}>
+                      Séance terminée
+                    </Text>
+                  </View>
+                ) : (() => {
                   const isPresentielNoEx = exercises.length === 0 && session?.sessionLocation === "presentiel";
                   const canStart = exercises.length > 0 || isPresentielNoEx;
                   const btnLabel = isPresentielNoEx
@@ -1020,6 +1027,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   startBtnText: { fontSize: 15, letterSpacing: 1.5, color: COLORS.bg },
+  sessionDoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    marginTop: 8,
+    borderRadius: 12,
+    backgroundColor: `${COLORS.green}14`,
+    borderWidth: 1,
+    borderColor: `${COLORS.green}40`,
+  },
+  sessionDoneText: { fontSize: 14, letterSpacing: 1, color: COLORS.green },
   emptyState: {
     alignItems: "center",
     gap: 12,

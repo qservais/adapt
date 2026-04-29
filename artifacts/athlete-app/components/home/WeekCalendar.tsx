@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   sheetScroll: {
-    flex: 1,
+    flexShrink: 1,
   },
   sheetSessionItem: {
     flexDirection: "row",
