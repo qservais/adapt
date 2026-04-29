@@ -1,0 +1,231 @@
+# ADAPT — Fix : Ordre des exercices & affichage des blocs côté athlète
+
+## Contexte
+
+Côté **coach**, une séance est segmentée en **blocs nommés** (ex. *Échauffement*, *Travail*, *Récupération*). Chaque bloc contient une liste ordonnée d’exercices.
+
+Côté **athlète**, deux vues existent :
+
+1. **Vue liste programme** (avant démarrage) — affiche tous les exercices avec sets/reps/repos.
+1. **Vue timer step-by-step** (pendant la séance) — affiche un exercice à la fois avec compteur, repos, et progression `1/19`.
+
+**Bug actuel :** dans les deux vues, l’ordre des exercices ne respecte pas l’ordre défini par le coach, et **l’appartenance à un bloc n’est pas visible**. L’athlète voit une liste plate, désordonnée, sans contexte (échauffement vs travail vs récup).
+
+**Tentatives Replit précédentes :** non résolu en production.
+
+-----
+
+## Étape 1 — Diagnostic (à faire AVANT toute modification)
+
+Replit AI doit produire un rapport répondant aux questions ci-dessous. Ne pas coder de fix avant que ce diagnostic soit posé et validé.
+
+### 1.1 Schéma de données
+
+- [ ] Quelle table/quel modèle stocke les exercices d’une séance ?
+- [ ] Comment les **blocs** sont-ils représentés ?
+  - Table `blocks` séparée avec FK `session_id` + table `exercises` avec FK `block_id` ?
+  - Ou champ `block_name` / `block_type` (string) directement sur l’exercice ?
+  - Ou JSON imbriqué sur la séance ?
+- [ ] Existe-t-il un champ `order` / `position` / `sort_index` sur l’exercice ? Sur le bloc ?
+- [ ] Si oui, est-il **rempli** correctement à la création ? Vérifier 2-3 séances en base.
+
+### 1.2 API — endpoint séance athlète
+
+- [ ] Quel endpoint l’app athlète appelle pour charger une séance ? (`GET /sessions/:id` ou autre)
+- [ ] Coller le **shape JSON exact** de la réponse pour une séance qui présente le bug.
+- [ ] La réponse est-elle :
+  - **Plate** (`exercises: [...]` sans groupage) ?
+  - **Groupée par bloc** (`blocks: [{ name, exercises: [...] }]`) ?
+- [ ] Y a-t-il un `ORDER BY` dans la requête SQL/Prisma ? Lequel ?
+
+### 1.3 Front athlète
+
+- [ ] Fichiers concernés (chemins exacts) pour la vue liste **et** la vue timer.
+- [ ] Y a-t-il un `.sort()`, `_.sortBy()`, `orderBy` ou un `Map` qui pourrait briser l’ordre serveur ?
+- [ ] L’aplatissement (flatten) blocs → liste linéaire est-il fait côté serveur ou côté client ?
+- [ ] Le compteur `1/19` du timer est-il aligné sur l’index de la liste aplatie ?
+
+### 1.4 Côté coach
+
+- [ ] Comment l’ordre est-il **persisté** quand le coach :
+  - Ajoute un exercice à un bloc spécifique ?
+  - Réordonne par drag-and-drop (si la feature existe — à confirmer) ?
+- [ ] Le `position` est-il recalculé/sauvegardé à chaque modification ?
+
+### 1.5 Tentatives passées
+
+- [ ] Liste des fichiers touchés lors des tentatives de fix précédentes.
+- [ ] Pour chaque tentative : quelle hypothèse, qu’est-ce qui a été modifié, pourquoi ça n’a pas marché.
+
+-----
+
+## Étape 2 — Modèle de données cible
+
+Si le schéma actuel ne le permet pas, migrer vers ceci :
+
+```
+Session
+├── id
+├── athlete_id
+├── date
+└── blocks: Block[]            ← ordre garanti par block.position
+
+Block
+├── id
+├── session_id (FK)
+├── name           ("Échauffement" | "Travail" | "Récupération" | custom)
+├── type           (enum: WARMUP | WORK | RECOVERY | CUSTOM)
+├── position       (int, ordre du bloc dans la séance)
+└── exercises: Exercise[]
+
+Exercise
+├── id
+├── block_id (FK)
+├── name
+├── sets / reps / rest_seconds / notes / equipment
+└── position       (int, ordre dans le bloc)
+```
+
+**Index recommandés :**
+
+- `Block (session_id, position)`
+- `Exercise (block_id, position)`
+
+**Règle de tri :** toujours `ORDER BY position ASC` côté requête, jamais de tri côté client.
+
+-----
+
+## Étape 3 — API : shape de réponse cible
+
+```json
+{
+  "session": {
+    "id": "...",
+    "date": "2026-04-30",
+    "blocks": [
+      {
+        "id": "blk_1",
+        "name": "Échauffement",
+        "type": "WARMUP",
+        "position": 0,
+        "exercises": [
+          {
+            "id": "ex_1",
+            "name": "Mobilisation hanche 90/90",
+            "sets": 3,
+            "reps": "8-10",
+            "rest_seconds": 45,
+            "notes": "10X /side",
+            "position": 0,
+            "block_id": "blk_1",
+            "block_name": "Échauffement",
+            "block_type": "WARMUP",
+            "global_index": 0,
+            "global_total": 19
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Notes importantes :**
+
+- `block_name` et `block_type` sont **dénormalisés sur chaque exercice** pour que la vue timer (qui itère sur la liste aplatie) ait toujours le contexte du bloc sans avoir à remonter.
+- `global_index` et `global_total` sont calculés côté serveur pour aligner le compteur `1/19` du timer.
+
+-----
+
+## Étape 4 — Front athlète : implémentation
+
+### 4.1 Vue liste type Strong (avant démarrage)
+
+- Afficher **par bloc**, dans l’ordre `block.position`.
+- Header de bloc : nom + type (couleur d’accent : warmup = cyan, work = violet `#A855F7`, recovery = vert).
+- Sous chaque header, exercices dans l’ordre `exercise.position`.
+- Chaque exercice a une **checkbox** ou bouton “Valider la série” comme dans Strong.
+- Numérotation continue (01, 02, 03… globale) **ET** numérotation interne au bloc visible discrètement.
+
+### 4.2 Vue timer step-by-step
+
+- **Header collant** en haut : nom du bloc courant + position dans le bloc (ex. *Échauffement — 1/3*).
+- Couleur d’accent du bloc utilisée pour la barre de progression et les éléments actifs.
+- Compteur global `1/19` conservé.
+- Transition de bloc : afficher un écran de transition court (1-2s) quand on passe d’un bloc à un autre (*“Échauffement terminé — Place au Travail”*).
+
+### 4.3 Switch entre les deux modes
+
+- Toggle accessible en haut de la séance : **Liste** ↔ **Timer**.
+- L’état de progression est partagé : si l’athlète coche 3 exos en mode liste puis switche en timer, le timer démarre au 4e.
+- Persistance locale (AsyncStorage) + sync serveur à chaque validation.
+
+### 4.4 Règles de tri (à appliquer partout)
+
+```ts
+// ✅ TOUJOURS
+session.blocks
+  .sort((a, b) => a.position - b.position)
+  .flatMap(b => b.exercises.sort((x, y) => x.position - y.position));
+
+// ❌ JAMAIS
+exercises.sort((a, b) => a.name.localeCompare(b.name));
+exercises.sort((a, b) => a.id - b.id);
+// Aucun tri par id, name, createdAt, ou autre champ que `position`.
+```
+
+-----
+
+## Étape 5 — Migration des données existantes
+
+Si la base contient déjà des séances sans `position` correctement renseignée :
+
+1. Script de migration qui parcourt toutes les `Session` existantes.
+1. Pour chaque session, recalculer `block.position` et `exercise.position` selon :
+- L’ordre actuel d’apparition (fallback : `createdAt` croissant).
+- L’appartenance à un bloc (si actuellement plat, créer un bloc unique “Travail” par défaut, à corriger ensuite manuellement par le coach).
+1. Logger toutes les sessions modifiées dans un rapport pour relecture par Loïc (LMJ).
+
+-----
+
+## Étape 6 — Acceptance criteria
+
+La feature est considérée fonctionnelle quand **tous** les points suivants sont vrais :
+
+- [ ] Une séance créée par le coach avec 3 blocs (Échauffement / Travail / Récup) et 5 exos chacun s’affiche côté athlète **dans le même ordre exact**, dans les deux vues.
+- [ ] Le header collant en mode timer indique en permanence le nom du bloc courant.
+- [ ] Chaque exercice (vue liste + vue timer) porte un badge visible avec le nom du bloc et la couleur d’accent associée.
+- [ ] La transition entre deux blocs déclenche un écran/animation de transition.
+- [ ] Le toggle Liste ↔ Timer préserve la progression.
+- [ ] Le compteur global `X/Y` est cohérent avec le nombre total d’exercices retournés par l’API.
+- [ ] Test manuel : réordonner un exercice côté coach → vérifier que l’ordre est bien reflété côté athlète après reload.
+- [ ] Test manuel : 3 séances en base avant le fix s’affichent correctement après migration.
+- [ ] Aucun `.sort()` ne subsiste dans le front sur un autre champ que `position`.
+
+-----
+
+## Étape 7 — Conventions Done. / ADAPT à respecter
+
+- Design system : fond noir, accent cyan `#00F0FF` (échauffement), violet `#A855F7` (travail), vert pour récup.
+- Police timer : monospace pour les chiffres (cohérent avec les screens existants).
+- Aucun emoji dans l’UI — utiliser des icônes SVG.
+- Textes en français côté athlète (cohérent avec *Série 1/3*, *Repos*, *Passer le repos*).
+- Footer / about : *Site réalisé par Done. — madebydone.be* si applicable côté web companion.
+
+-----
+
+## Étape 8 — Livrables attendus de Replit AI
+
+1. **Rapport diagnostic** (sections 1.1 à 1.5 ci-dessus, complétées).
+1. **Plan de migration** si le schéma DB doit changer (avec script SQL/Prisma).
+1. **PR séparée pour chaque couche** : DB → API → Front liste → Front timer → Migration de données. Ne pas tout faire en un seul commit géant.
+1. **Tests** : au minimum un test d’intégration qui crée une séance avec 2 blocs + 3 exos chacun et vérifie l’ordre dans la réponse API.
+1. **Captures avant/après** des deux vues côté athlète sur une séance test.
+
+-----
+
+## Notes pour Quentin
+
+- Avant de lancer Replit AI sur ce fichier, lui demander d’abord uniquement l’**Étape 1 (diagnostic)**. Tant que tu n’as pas la structure réelle de la DB et le shape JSON actuel sous les yeux, tout fix sera à l’aveugle.
+- Si Replit a déjà tenté plusieurs fixes infructueux, c’est presque certain qu’il y a un mismatch entre ce que la DB stocke et ce que le front attend — la section 1.5 est donc cruciale.
+- Une fois le diagnostic reçu, recolle-le moi ici. Je pourrai te dire si la cible (Étape 2/3) est réaliste ou s’il faut adapter avant de partir en migration.
