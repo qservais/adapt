@@ -379,6 +379,34 @@ export default function SessionIntroScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={22} color={COLORS.white} />
           </TouchableOpacity>
+          {(session.exercises?.length ?? 0) > 0 && !validationMode && (
+            <View style={styles.modeToggleRow}>
+              <TouchableOpacity
+                onPress={() => changeViewMode("guided")}
+                style={[
+                  styles.modeToggleBtn,
+                  viewMode === "guided" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
+                ]}
+              >
+                <Feather name="play-circle" size={12} color={viewMode === "guided" ? cfg.color : COLORS.textMuted} />
+                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "guided" ? cfg.color : COLORS.textMuted }]}>
+                  GUIDÉ
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => changeViewMode("board")}
+                style={[
+                  styles.modeToggleBtn,
+                  viewMode === "board" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
+                ]}
+              >
+                <Feather name="grid" size={12} color={viewMode === "board" ? cfg.color : COLORS.textMuted} />
+                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "board" ? cfg.color : COLORS.textMuted }]}>
+                  TABLEAU
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <ModeBadge mode={modeKey} size="sm" glow />
         </View>
 
@@ -703,32 +731,6 @@ export default function SessionIntroScreen() {
           </TouchableOpacity>
         ) : (
           <>
-            <View style={styles.modeToggleRow}>
-              <TouchableOpacity
-                onPress={() => changeViewMode("guided")}
-                style={[
-                  styles.modeToggleBtn,
-                  viewMode === "guided" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
-                ]}
-              >
-                <Feather name="play-circle" size={13} color={viewMode === "guided" ? cfg.color : COLORS.textMuted} />
-                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "guided" ? cfg.color : COLORS.textMuted }]}>
-                  GUIDÉ
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => changeViewMode("board")}
-                style={[
-                  styles.modeToggleBtn,
-                  viewMode === "board" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
-                ]}
-              >
-                <Feather name="grid" size={13} color={viewMode === "board" ? cfg.color : COLORS.textMuted} />
-                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "board" ? cfg.color : COLORS.textMuted }]}>
-                  TABLEAU
-                </Text>
-              </TouchableOpacity>
-            </View>
             <GradientButton
               label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
               onPress={handleStart}
@@ -1045,22 +1047,25 @@ const styles = StyleSheet.create({
   },
   modeToggleRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
+    flex: 1,
+    marginHorizontal: 8,
   },
   modeToggleBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.bgCard,
   },
   modeToggleBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 1.5,
   },
 });

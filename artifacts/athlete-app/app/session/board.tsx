@@ -118,15 +118,17 @@ export default function BoardScreen() {
     return init;
   });
 
+  const exerciseIdsKey = exercises.map((e) => e.id).join(",");
   useEffect(() => {
-    if (exercises.length > 0 && Object.keys(exState).length === 0) {
-      const init: Record<string, ExState> = {};
+    if (exercises.length === 0) return;
+    setExState((prev) => {
+      const next: Record<string, ExState> = {};
       for (const ex of exercises) {
-        init[ex.id] = initialSetState(ex);
+        next[ex.id] = prev[ex.id] ?? initialSetState(ex);
       }
-      setExState(init);
-    }
-  }, [exercises.length]);
+      return next;
+    });
+  }, [exerciseIdsKey]);
 
   const [restTimers, setRestTimers] = useState<Record<string, number>>({});
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -453,8 +455,8 @@ export default function BoardScreen() {
             {completing
               ? "ENREGISTREMENT…"
               : allDone
-              ? "SÉANCE TERMINÉE !"
-              : `VALIDE TOUTES LES SÉRIES (${completedCount}/${totalSets})`}
+              ? "TERMINER LA SÉANCE"
+              : `${completedCount}/${totalSets} SÉRIES VALIDÉES`}
           </Text>
         </TouchableOpacity>
       </View>
