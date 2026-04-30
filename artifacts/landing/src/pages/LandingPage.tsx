@@ -1,4 +1,24 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
+import { useFadeIn } from "@/hooks/use-fade-in";
+
+function FadeSection({ children, style, id }: { children: React.ReactNode; style?: React.CSSProperties; id?: string }) {
+  const { ref, visible } = useFadeIn();
+  return (
+    <section
+      id={id}
+      ref={ref as React.RefObject<HTMLElement>}
+      style={{
+        transition: "opacity 0.6s ease, transform 0.6s ease",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(24px)",
+        ...style,
+      }}
+    >
+      {children}
+    </section>
+  );
+}
 
 function AppStoreBadge() {
   return (
@@ -343,7 +363,7 @@ export default function LandingPage() {
       </section>
 
       {/* FEATURES — Ce que fait ADAPT */}
-      <section id="features" style={{ padding: "6rem clamp(1rem, 4vw, 2rem)" }}>
+      <FadeSection id="features" style={{ padding: "6rem clamp(1rem, 4vw, 2rem)" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
             <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "#00F5A0", marginBottom: "0.875rem" }}>// Ce que fait ADAPT</div>
@@ -372,10 +392,10 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </FadeSection>
 
       {/* FOR WHO */}
-      <section id="for-who" style={{ padding: "6rem clamp(1rem, 4vw, 2rem)", borderTop: "1px solid #1E1E1E" }}>
+      <FadeSection id="for-who" style={{ padding: "6rem clamp(1rem, 4vw, 2rem)", borderTop: "1px solid #1E1E1E" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
             <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "#00F5A0", marginBottom: "0.875rem" }}>// Pour qui ?</div>
@@ -428,10 +448,10 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </FadeSection>
 
       {/* SCREENSHOTS */}
-      <section id="screenshots" style={{ padding: "6rem clamp(1rem, 4vw, 2rem)", borderTop: "1px solid #1E1E1E" }}>
+      <FadeSection id="screenshots" style={{ padding: "6rem clamp(1rem, 4vw, 2rem)", borderTop: "1px solid #1E1E1E" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
             <div style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "#00F5A0", marginBottom: "0.875rem" }}>// L'app en images</div>
@@ -456,7 +476,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </FadeSection>
 
       {/* CTA BAND */}
       <section style={{
@@ -498,10 +518,10 @@ export default function LandingPage() {
           <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555", letterSpacing: "0.05em" }}>
             © 2025 ADAPT System · <a href="mailto:hello@adapt-system.be" style={{ color: "#555", textDecoration: "none" }}>hello@adapt-system.be</a>
           </p>
-          <a href="/privacy" style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555", textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = "#888")}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = "#555")}
-          >Mentions légales</a>
+              <Link href="/privacy" style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555", textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
+            onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#888")}
+            onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#555")}
+          >Mentions légales</Link>
         </div>
       </footer>
     </div>
