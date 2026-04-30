@@ -302,19 +302,33 @@ export default function SessionIntroScreen() {
     });
   };
 
-  const validateAllSets = (exId: string, count: number) => {
+  const validateAllSets = (exId: string) => {
     setValidatedSets((prev) => ({
       ...prev,
-      [exId]: Array(count).fill(true),
+      [exId]: (prev[exId] ?? []).map(() => true),
     }));
+  };
+
+  const addSet = (exId: string) => {
+    setValidatedSets((prev) => ({
+      ...prev,
+      [exId]: [...(prev[exId] ?? []), false],
+    }));
+  };
+
+  const removeLastSet = (exId: string, originalSets: number) => {
+    setValidatedSets((prev) => {
+      const arr = prev[exId] ?? [];
+      if (arr.length <= originalSets) return prev;
+      return { ...prev, [exId]: arr.slice(0, -1) };
+    });
   };
 
   const allValidated = React.useMemo(() => {
     if (!validationMode || !session) return false;
     for (const ex of session.exercises ?? []) {
       const sets = validatedSets[ex.id] ?? [];
-      if (sets.some((v) => !v)) return false;
-      if (sets.length !== (ex.sets ?? 1)) return false;
+      if (sets.length === 0 || sets.some((v) => !v)) return false;
     }
     return (session.exercises?.length ?? 0) > 0;
   }, [validationMode, validatedSets, session]);
@@ -331,7 +345,7 @@ export default function SessionIntroScreen() {
           rpe: 5,
           exercises: exercises.map((ex) => ({
             exerciseId: ex.exerciseId,
-            setsCompleted: ex.sets,
+            setsCompleted: validatedSets[ex.id]?.length ?? ex.sets,
             loadKgUsed: ex.adaptedLoadKg ?? ex.nominalLoadKg ?? undefined,
           })),
         },
@@ -610,6 +624,8 @@ export default function SessionIntroScreen() {
             const renderValidationRow = (ex: typeof exercises[0]) => {
               const setsArr = validatedSets[ex.id] ?? Array(ex.sets ?? 1).fill(false);
               const allDone = setsArr.every(Boolean);
+              const originalSets = ex.sets ?? 1;
+              const canRemoveLast = setsArr.length > originalSets && !setsArr[setsArr.length - 1];
               return (
                 <View key={`val-${ex.id}`} style={valStyles.row}>
                   <View style={{ flex: 1 }}>
@@ -635,9 +651,17 @@ export default function SessionIntroScreen() {
                           }
                         </TouchableOpacity>
                       ))}
+                      {canRemoveLast && (
+                        <TouchableOpacity
+                          onPress={() => removeLastSet(ex.id, originalSets)}
+                          style={valStyles.removeSetBtn}
+                        >
+                          <Feather name="minus" size={13} color={COLORS.textMuted} />
+                        </TouchableOpacity>
+                      )}
                       {!allDone && (
                         <TouchableOpacity
-                          onPress={() => validateAllSets(ex.id, ex.sets ?? 1)}
+                          onPress={() => validateAllSets(ex.id)}
                           style={valStyles.validateAllBtn}
                         >
                           <Text style={[valStyles.validateAllText, { fontFamily: FONTS.body, color: cfg.color }]}>
@@ -646,6 +670,13 @@ export default function SessionIntroScreen() {
                         </TouchableOpacity>
                       )}
                     </View>
+                    <TouchableOpacity
+                      onPress={() => addSet(ex.id)}
+                      style={valStyles.addSetBtn}
+                    >
+                      <Feather name="plus" size={11} color={COLORS.textMuted} />
+                      <Text style={[valStyles.addSetText, { fontFamily: FONTS.mono }]}>SÉRIE</Text>
+                    </TouchableOpacity>
                   </View>
                   {allDone && (
                     <View style={[valStyles.doneBadge, { backgroundColor: `${cfg.color}15`, borderColor: `${cfg.color}40` }]}>
@@ -952,6 +983,34 @@ const valStyles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   validateAllText: { fontSize: 12 },
+  addSetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: COLORS.border,
+  },
+  addSetText: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+  },
+  removeSetBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   doneBadge: {
     width: 32,
     height: 32,
