@@ -2,7 +2,7 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white px-6 py-12 max-w-3xl mx-auto">
       <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight text-[#00F5A0] mb-1">ADAPT by LMJ</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-[#00F5A0] mb-1">ADAPT System</h1>
         <h2 className="text-xl font-semibold text-white">Politique de confidentialité</h2>
         <p className="text-sm text-gray-400 mt-1">Dernière mise à jour : 27 mars 2026</p>
       </div>
@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       <section className="mb-8">
         <h3 className="text-lg font-semibold text-white mb-3">1. Présentation</h3>
         <p className="text-gray-300 leading-relaxed">
-          ADAPT by LMJ est une application de coaching fitness personnalisé développée par Loïc Mehdi Houmy Jaumotte. Elle est réservée aux athlètes suivis par le coach Loïc Mehdi Houmy Jaumotte. Cette politique décrit quelles données sont collectées, comment elles sont utilisées et protégées.
+          ADAPT System est une application de coaching fitness personnalisé. Elle est réservée aux athlètes suivis par leur coach. Cette politique décrit quelles données sont collectées, comment elles sont utilisées et protégées.
         </p>
       </section>
 
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
 
       <div className="border-t border-white/10 pt-6 mt-8">
         <p className="text-xs text-gray-500">
-          © 2026 Loïc Mehdi Houmy Jaumotte — ADAPT by LMJ. Tous droits réservés.
+          © 2026 ADAPT System. Tous droits réservés.
         </p>
       </div>
     </div>

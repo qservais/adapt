@@ -16,7 +16,7 @@ function safeNum(v: unknown): number {
 export async function fetchProductByBarcode(barcode: string): Promise<OFFProduct | null> {
   try {
     const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,nutriments,image_front_small_url`;
-    const res = await fetch(url, { headers: { "User-Agent": "ADAPT-by-LMJ/1.0" } });
+    const res = await fetch(url, { headers: { "User-Agent": "ADAPT-System/1.0" } });
     if (!res.ok) return null;
     const json: {
       status: number;

@@ -248,9 +248,15 @@ export default function LandingPage() {
         padding: "0 clamp(1rem, 4vw, 2rem)",
       }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: "64px" }}>
-          <a href="#" style={{ textDecoration: "none", display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.5rem", letterSpacing: "0.1em", color: "#00F5A0" }}>ADAPT</span>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.6rem", color: "#555", letterSpacing: "0.08em" }}>BY LMJ</span>
+          <a href="#" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: "32px", height: "32px", background: "#0A0A0A",
+              border: "1px solid #1E1E1E", borderRadius: "6px", flexShrink: 0,
+            }}>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "20px", lineHeight: 1, color: "#00F5A0", marginTop: "2px" }}>A</span>
+            </span>
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "1.4rem", letterSpacing: "0.1em", color: "#F0F0F0" }}>ADAPT</span>
           </a>
           <div style={{ display: "flex", gap: "clamp(1rem, 3vw, 2.5rem)", alignItems: "center" }}>
             {[

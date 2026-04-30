@@ -85,6 +85,9 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.header, logoStyle]}>
+          <View style={styles.logoMark}>
+            <Text style={[styles.logoMarkLetter, { fontFamily: FONTS.title }]}>A</Text>
+          </View>
           <Text style={[styles.logo, { fontFamily: FONTS.title }]}>ADAPT</Text>
           <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
             L'entraînement qui s'adapte à toi.
@@ -151,6 +154,23 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     marginBottom: 64,
+  },
+  logoMark: {
+    width: 52,
+    height: 52,
+    backgroundColor: "#0A0A0A",
+    borderWidth: 1,
+    borderColor: "#1E1E1E",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  logoMarkLetter: {
+    fontSize: 36,
+    color: COLORS.cyan,
+    lineHeight: 40,
+    includeFontPadding: false,
   },
   logo: {
     fontSize: 80,

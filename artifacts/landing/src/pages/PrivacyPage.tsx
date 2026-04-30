@@ -3,7 +3,7 @@ import { Link } from "wouter";
 const SECTIONS = [
   {
     title: "1. Responsable du traitement",
-    content: `ADAPT by LMJ est responsable du traitement de vos données personnelles collectées via l'application mobile ADAPT et le site adapt-system.be.
+    content: `ADAPT System est responsable du traitement de vos données personnelles collectées via l'application mobile ADAPT et le site adapt-system.be.
 
 Contact : hello@adapt-system.be`,
   },
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
             <span style={{ color: "#00F5A0" }}>CONFIDENTIALITÉ</span>
           </h1>
           <p style={{ color: "#888", lineHeight: 1.7 }}>
-            La présente politique de confidentialité décrit comment ADAPT by LMJ collecte, utilise et protège vos données personnelles conformément au Règlement Général sur la Protection des Données (RGPD) et à la législation belge applicable.
+            La présente politique de confidentialité décrit comment ADAPT System collecte, utilise et protège vos données personnelles conformément au Règlement Général sur la Protection des Données (RGPD) et à la législation belge applicable.
           </p>
         </div>
 
@@ -145,7 +145,7 @@ export default function PrivacyPage() {
             ← Retour à l'accueil
           </Link>
           <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555" }}>
-            © 2026 ADAPT by LMJ
+            © 2026 ADAPT System
           </p>
         </div>
       </main>
