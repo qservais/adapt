@@ -103,9 +103,8 @@ export async function sendWelcomeEmail(
 export async function sendPasswordResetEmail(
   to: string,
   firstName: string,
-  resetToken: string,
+  resetUrl: string,
 ) {
-  const resetUrl = `${DASHBOARD_URL}/reset-password?token=${resetToken}`;
 
   const html = baseTemplate(`
     <h2>Réinitialisation de ton mot de passe</h2>
