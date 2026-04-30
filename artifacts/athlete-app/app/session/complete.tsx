@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Animated, {
@@ -64,6 +64,9 @@ export default function SessionCompleteScreen() {
   const completeMutation = useCompleteSession();
   const feedbackMutation = useSubmitSessionFeedback();
   const confettiRef = useRef<any>(null);
+  const params = useLocalSearchParams<{ bonusSets?: string }>();
+  const _parsedBonus = params.bonusSets != null ? parseInt(params.bonusSets, 10) : 0;
+  const bonusSets = Number.isFinite(_parsedBonus) && _parsedBonus > 0 ? _parsedBonus : 0;
 
   const [rpe, setRpe] = useState(6);
   const [difficulty, setDifficulty] = useState<Difficulty>("well_calibrated");
@@ -306,6 +309,15 @@ export default function SessionCompleteScreen() {
               </Text>
               <Text style={[styles.statLabel, { fontFamily: FONTS.body }]}>Score</Text>
             </View>
+          </Animated.View>
+        )}
+
+        {bonusSets > 0 && (
+          <Animated.View style={[styles.bonusBanner, statsStyle]}>
+            <Feather name="zap" size={16} color={COLORS.amber} />
+            <Text style={[styles.bonusText, { fontFamily: FONTS.bodyBold, color: COLORS.amber }]}>
+              {`Tu as réalisé ${bonusSets} série${bonusSets > 1 ? "s" : ""} de plus que prévu !`}
+            </Text>
           </Animated.View>
         )}
 
@@ -599,6 +611,19 @@ const styles = StyleSheet.create({
   actions: { width: "100%", gap: 12 },
   homeBtn: { alignItems: "center", paddingVertical: 14 },
   homeBtnText: { fontSize: 15, color: COLORS.textSecondary },
+  bonusBanner: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: `${COLORS.amber}15`,
+    borderWidth: 1,
+    borderColor: `${COLORS.amber}50`,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  bonusText: { fontSize: 14, flex: 1 },
   inPersonCard: {
     width: "100%",
     backgroundColor: COLORS.bgCard,

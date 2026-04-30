@@ -350,7 +350,15 @@ export default function SessionIntroScreen() {
           })),
         },
       });
-      router.replace("/session/complete");
+      const totalBonus = exercises.reduce((sum, ex) => {
+        const actual = validatedSets[ex.id]?.length ?? 0;
+        const prescribed = ex.sets ?? 1;
+        return sum + Math.max(0, actual - prescribed);
+      }, 0);
+      router.replace({
+        pathname: "/session/complete",
+        params: totalBonus > 0 ? { bonusSets: String(totalBonus) } : {},
+      });
     } catch (err: unknown) {
       setStartError(getGenericErrorMessage(err, "Impossible de valider la séance"));
     } finally {

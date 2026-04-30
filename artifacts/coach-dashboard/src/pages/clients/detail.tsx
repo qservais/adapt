@@ -1216,6 +1216,11 @@ export default function ClientDetail() {
                                                   const presLoad = ex.prescribed?.loadKg ?? null;
                                                   const realLoad = ex.actual.loadKgUsed ?? null;
                                                   const diff = presLoad !== null && realLoad !== null ? realLoad - presLoad : null;
+                                                  const prescribedSets = ex.prescribed?.sets ?? null;
+                                                  const actualSets = ex.actual.setsCompleted ?? null;
+                                                  const bonusSets = prescribedSets !== null && actualSets !== null
+                                                    ? Math.max(0, actualSets - prescribedSets)
+                                                    : 0;
                                                   return (
                                                     <tr key={ex.exerciseId} className="hover:bg-white/[0.02]">
                                                       <td className="py-2 pr-3 text-white font-medium truncate max-w-[120px]">{ex.exerciseName}</td>
@@ -1225,13 +1230,18 @@ export default function ClientDetail() {
                                                           : <span className="italic">—</span>}
                                                       </td>
                                                       <td className="py-2 pr-2 text-center">
-                                                        <span className="text-white">
+                                                        <span className={cn("font-medium", bonusSets > 0 ? "text-amber-400" : "text-white")}>
                                                           {ex.actual.setsCompleted ?? '?'}×
                                                           {Array.isArray(ex.actual.repsPerSet)
                                                             ? (ex.actual.repsPerSet as number[]).join(',')
                                                             : '?'}
                                                           {realLoad ? ` @${realLoad}kg` : ''}
                                                         </span>
+                                                        {bonusSets > 0 && (
+                                                          <span className="ml-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-mono font-semibold tracking-wide bg-amber-400/10 border border-amber-400/30 text-amber-400">
+                                                            +{bonusSets}
+                                                          </span>
+                                                        )}
                                                       </td>
                                                       <td className="py-2 text-center">
                                                         {diff === null ? (

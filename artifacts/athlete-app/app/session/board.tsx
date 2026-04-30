@@ -238,7 +238,15 @@ export default function BoardScreen() {
       if (isFromFreeStore) {
         router.replace("/session/free-complete");
       } else {
-        router.replace("/session/complete");
+        const totalBonus = exercises.reduce((sum, ex) => {
+          const sets = exState[ex.id] ?? [];
+          const doneSets = sets.filter((s) => s.done);
+          return sum + Math.max(0, doneSets.length - (ex.sets ?? 1));
+        }, 0);
+        router.replace({
+          pathname: "/session/complete",
+          params: totalBonus > 0 ? { bonusSets: String(totalBonus) } : {},
+        });
       }
     } catch (err: unknown) {
       setError(getGenericErrorMessage(err, "Impossible de terminer la séance. Réessaie."));
