@@ -345,7 +345,7 @@ export default function SessionIntroScreen() {
           rpe: 5,
           exercises: exercises.map((ex) => ({
             exerciseId: ex.exerciseId,
-            setsCompleted: validatedSets[ex.id]?.length ?? ex.sets,
+            setsCompleted: validatedSets[ex.id]?.filter(Boolean).length ?? ex.sets,
             loadKgUsed: ex.adaptedLoadKg ?? ex.nominalLoadKg ?? undefined,
           })),
         },
