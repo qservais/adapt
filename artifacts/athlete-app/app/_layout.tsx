@@ -13,7 +13,7 @@ import {
   SpaceMono_700Bold,
 } from "@expo-google-fonts/space-mono";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router } from "expo-router";
+import { Stack, router, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -40,24 +40,31 @@ const queryClient = new QueryClient({
   },
 });
 
+const PUBLIC_AUTH_ROUTES = ["login", "register", "forgot-password", "reset-password"];
+
 function RootLayoutNav() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const segments = useSegments();
 
   usePushNotifications(isAuthenticated && user ? user.id : null);
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        router.replace("/auth/login");
-      }
+    if (isLoading) return;
+    const inAuthGroup = segments[0] === "auth";
+    const currentRoute = segments[1] as string | undefined;
+    const isPublicRoute = inAuthGroup && currentRoute && PUBLIC_AUTH_ROUTES.includes(currentRoute);
+    if (!isAuthenticated && !isPublicRoute) {
+      router.replace("/auth/login");
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, segments]);
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="auth/login" />
       <Stack.Screen name="auth/register" />
+      <Stack.Screen name="auth/forgot-password" />
+      <Stack.Screen name="auth/reset-password" />
       <Stack.Screen name="onboarding/splash" />
       <Stack.Screen name="onboarding/profile" />
       <Stack.Screen name="onboarding/fitness" />

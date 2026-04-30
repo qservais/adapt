@@ -104,16 +104,21 @@ export async function sendPasswordResetEmail(
   to: string,
   firstName: string,
   resetUrl: string,
+  deepLinkUrl?: string,
 ) {
+  const primaryUrl = deepLinkUrl ?? resetUrl;
+  const fallbackSection = deepLinkUrl
+    ? `<p class="url-fallback">Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :<br />${resetUrl}</p>`
+    : `<p class="url-fallback">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br />${resetUrl}</p>`;
 
   const html = baseTemplate(`
     <h2>Réinitialisation de ton mot de passe</h2>
     <p>Bonjour ${firstName},</p>
     <p>Tu as demandé à réinitialiser ton mot de passe ADAPT. Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.</p>
-    <a href="${resetUrl}" class="cta">RÉINITIALISER MON MOT DE PASSE</a>
+    <a href="${primaryUrl}" class="cta">RÉINITIALISER MON MOT DE PASSE</a>
     <p>Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.</p>
     <div class="divider"></div>
-    <p class="url-fallback">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br />${resetUrl}</p>
+    ${fallbackSection}
   `);
 
   await sendEmail({

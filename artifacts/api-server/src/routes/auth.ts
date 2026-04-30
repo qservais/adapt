@@ -248,7 +248,7 @@ router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) => 
   res.json({ success: true, message: "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé." });
 
   try {
-    const [user] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, email: usersTable.email })
+    const [user] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, email: usersTable.email, role: usersTable.role })
       .from(usersTable)
       .where(eq(usersTable.email, email.toLowerCase()));
 
@@ -263,7 +263,10 @@ router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) => 
 
     const DASHBOARD_URL = process.env["DASHBOARD_URL"] ?? "https://adapt-system.be";
     const resetUrl = `${DASHBOARD_URL}/reset-password?token=${resetToken}`;
-    await sendPasswordResetEmail(user.email, user.firstName, resetUrl);
+    const deepLinkUrl = user.role === "athlete"
+      ? `athlete-app://auth/reset-password?token=${resetToken}`
+      : undefined;
+    await sendPasswordResetEmail(user.email, user.firstName, resetUrl, deepLinkUrl);
   } catch (err) {
     console.error("forgot-password background error:", err);
   }
