@@ -7,6 +7,13 @@
  */
 import type { SessionExerciseLog } from "./sessionExerciseLog";
 
+export interface SessionLogBlock {
+  id: string;
+  type: string;
+  name?: string | null;
+  orderIndex: number;
+}
+
 export interface SessionLogSummary {
   id: string;
   sessionId?: string | null;
@@ -21,5 +28,6 @@ export interface SessionLogSummary {
   createdAt?: string;
   isFreeSession?: boolean;
   freeSessionName?: string | null;
+  blocks?: SessionLogBlock[];
   exercises?: SessionExerciseLog[];
 }

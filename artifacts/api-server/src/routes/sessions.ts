@@ -943,6 +943,38 @@ router.get("/sessions/history", authenticate, requireRole("athlete"), async (req
           .leftJoin(exercisesTable, eq(exerciseLogsTable.exerciseId, exercisesTable.id))
           .where(eq(exerciseLogsTable.sessionLogId, log.id));
 
+        const blocks = log.sessionId
+          ? await db
+              .select({
+                id: sessionBlocksTable.id,
+                type: sessionBlocksTable.type,
+                name: sessionBlocksTable.name,
+                orderIndex: sessionBlocksTable.orderIndex,
+              })
+              .from(sessionBlocksTable)
+              .where(eq(sessionBlocksTable.sessionId, log.sessionId))
+              .orderBy(asc(sessionBlocksTable.orderIndex))
+          : [];
+
+        const blockMap = new Map(blocks.map(b => [b.id, b]));
+
+        const sessionExercises = log.sessionId
+          ? await db
+              .select({
+                exerciseId: sessionExercisesTable.exerciseId,
+                blockId: sessionExercisesTable.blockId,
+              })
+              .from(sessionExercisesTable)
+              .where(eq(sessionExercisesTable.sessionId, log.sessionId))
+          : [];
+
+        const exerciseBlockMap = new Map<string, string | null>();
+        for (const se of sessionExercises) {
+          if (!exerciseBlockMap.has(se.exerciseId)) {
+            exerciseBlockMap.set(se.exerciseId, se.blockId ?? null);
+          }
+        }
+
         const durationMin =
           log.startedAt && log.completedAt
             ? Math.max(1, Math.round((new Date(log.completedAt).getTime() - new Date(log.startedAt).getTime()) / 60000))
@@ -966,12 +998,26 @@ router.get("/sessions/history", authenticate, requireRole("athlete"), async (req
           completedAt: log.completedAt,
           createdAt: log.createdAt,
           durationMin,
-          exercises: exerciseLogs.map(e => ({
-            exerciseId: e.exerciseId,
-            exerciseName: e.exerciseName ?? "",
-            loadKgUsed: e.loadKgUsed ? parseFloat(e.loadKgUsed) : null,
-            setsCompleted: e.setsCompleted,
+          blocks: blocks.map(b => ({
+            id: b.id,
+            type: b.type,
+            name: b.name ?? null,
+            orderIndex: b.orderIndex,
           })),
+          exercises: exerciseLogs.map(e => {
+            const blockId = e.exerciseId ? exerciseBlockMap.get(e.exerciseId) ?? null : null;
+            const block = blockId ? blockMap.get(blockId) : undefined;
+            return {
+              exerciseId: e.exerciseId,
+              exerciseName: e.exerciseName ?? "",
+              loadKgUsed: e.loadKgUsed ? parseFloat(e.loadKgUsed) : null,
+              setsCompleted: e.setsCompleted,
+              blockId,
+              blockType: block?.type ?? null,
+              blockName: block?.name ?? null,
+              blockOrderIndex: block?.orderIndex ?? null,
+            };
+          }),
         };
       })
     );

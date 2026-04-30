@@ -2410,8 +2410,37 @@ components:
         setsCompleted:
           type: integer
           nullable: true
+        blockId:
+          type: string
+          nullable: true
+        blockType:
+          type: string
+          nullable: true
+        blockName:
+          type: string
+          nullable: true
+        blockOrderIndex:
+          type: integer
+          nullable: true
       required:
         - exerciseName
+
+    SessionLogBlock:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        name:
+          type: string
+          nullable: true
+        orderIndex:
+          type: integer
+      required:
+        - id
+        - type
+        - orderIndex
 
     SessionLogSummary:
       type: object
@@ -2451,6 +2480,10 @@ components:
         freeSessionName:
           type: string
           nullable: true
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionLogBlock"
         exercises:
           type: array
           items:

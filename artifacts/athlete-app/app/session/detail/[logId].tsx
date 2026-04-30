@@ -11,7 +11,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useGetSessionHistory } from "@workspace/api-client-react";
+import type { SessionExerciseLog, SessionLogBlock } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
+import { BLOCK_TYPE_COLORS, BLOCK_TYPE_LABELS } from "@/constants/blockTypes";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
 
@@ -20,6 +22,37 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   well_calibrated: "Parfait",
   too_hard: "Trop difficile",
 };
+
+function groupExercisesByBlock(
+  exercises: SessionExerciseLog[],
+  blocks: SessionLogBlock[]
+): { block: SessionLogBlock | null; exercises: SessionExerciseLog[] }[] {
+  if (blocks.length === 0) {
+    return [{ block: null, exercises }];
+  }
+
+  const sortedBlocks = [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const knownBlockIds = new Set(blocks.map((b) => b.id));
+  const blockMap = new Map<string, SessionExerciseLog[]>();
+  const unassigned: SessionExerciseLog[] = [];
+
+  for (const ex of exercises) {
+    if (ex.blockId && knownBlockIds.has(ex.blockId)) {
+      if (!blockMap.has(ex.blockId)) blockMap.set(ex.blockId, []);
+      blockMap.get(ex.blockId)!.push(ex);
+    } else {
+      unassigned.push(ex);
+    }
+  }
+
+  const result: { block: SessionLogBlock | null; exercises: SessionExerciseLog[] }[] = [];
+  for (const block of sortedBlocks) {
+    const exs = blockMap.get(block.id) ?? [];
+    if (exs.length > 0) result.push({ block, exercises: exs });
+  }
+  if (unassigned.length > 0) result.push({ block: null, exercises: unassigned });
+  return result;
+}
 
 export default function SessionDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -72,6 +105,17 @@ export default function SessionDetailScreen() {
         year: "numeric",
       })
     : null;
+
+  const exercises = log.exercises ?? [];
+  const blocks = log.blocks ?? [];
+  const hasBlocks = blocks.length > 0;
+  const grouped = groupExercisesByBlock(exercises, blocks);
+
+  let _idx = 0;
+  const groupedWithIndices = grouped.map(({ block, exercises: gExs }) => ({
+    block,
+    exercises: gExs.map((ex) => ({ ex, num: ++_idx })),
+  }));
 
   return (
     <ScrollView
@@ -141,38 +185,72 @@ export default function SessionDetailScreen() {
           </GlowCard>
         )}
 
-        {(log.exercises ?? []).length > 0 && (
+        {exercises.length > 0 && (
           <GlowCard glowColor={COLORS.border} style={styles.exercisesCard}>
             <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>
-              EXERCICES ({(log.exercises ?? []).length})
+              EXERCICES ({exercises.length})
             </Text>
-            {(log.exercises ?? []).map((ex, i) => (
-              <View
-                key={ex.exerciseId ?? i}
-                style={[styles.exRow, i === (log.exercises ?? []).length - 1 && styles.exRowLast]}
-              >
-                <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-                  {String(i + 1).padStart(2, "0")}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
-                    {ex.exerciseName !== "" ? ex.exerciseName : "Exercice inconnu"}
-                  </Text>
-                  <View style={styles.exMeta}>
-                    {ex.setsCompleted != null && (
-                      <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
-                        {ex.setsCompleted} série{ex.setsCompleted !== 1 ? "s" : ""}
+            {groupedWithIndices.map(({ block, exercises: groupExs }, gi) => {
+              const blockType = block?.type?.toLowerCase() ?? "";
+              const accentColor = block ? (BLOCK_TYPE_COLORS[blockType] ?? COLORS.cyan) : null;
+              const typeLabel = block ? (BLOCK_TYPE_LABELS[blockType] ?? blockType.toUpperCase()) : null;
+              const blockLabel = block
+                ? block.name ? `${typeLabel} · ${block.name.toUpperCase()}` : typeLabel
+                : null;
+
+              return (
+                <View key={block?.id ?? "unassigned"} style={gi > 0 ? { marginTop: 4 } : undefined}>
+                  {hasBlocks && blockLabel != null && accentColor != null && (
+                    <View
+                      style={[
+                        styles.blockBanner,
+                        {
+                          backgroundColor: `${accentColor}12`,
+                          borderColor: `${accentColor}30`,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.blockDot, { backgroundColor: accentColor }]} />
+                      <Text style={[styles.blockLabel, { fontFamily: FONTS.mono, color: accentColor }]}>
+                        {blockLabel}
                       </Text>
-                    )}
-                    {ex.loadKgUsed != null && (
-                      <Text style={[styles.exLoad, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
-                        {ex.loadKgUsed} kg
-                      </Text>
-                    )}
-                  </View>
+                    </View>
+                  )}
+                  {groupExs.map(({ ex, num }) => {
+                    const isLast =
+                      gi === groupedWithIndices.length - 1 &&
+                      num === groupExs[groupExs.length - 1]?.num;
+                    return (
+                      <View
+                        key={ex.exerciseId ?? num}
+                        style={[styles.exRow, isLast && styles.exRowLast]}
+                      >
+                        <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                          {String(num).padStart(2, "0")}
+                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>
+                            {ex.exerciseName !== "" ? ex.exerciseName : "Exercice inconnu"}
+                          </Text>
+                          <View style={styles.exMeta}>
+                            {ex.setsCompleted != null && (
+                              <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                                {ex.setsCompleted} série{ex.setsCompleted !== 1 ? "s" : ""}
+                              </Text>
+                            )}
+                            {ex.loadKgUsed != null && (
+                              <Text style={[styles.exLoad, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
+                                {ex.loadKgUsed} kg
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </GlowCard>
         )}
       </View>
@@ -213,6 +291,19 @@ const styles = StyleSheet.create({
   notesLabel: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 1.5 },
   notesText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
   exercisesCard: { gap: 0 },
+  blockBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginHorizontal: -16,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+  },
+  blockDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
+  blockLabel: { fontSize: 9, letterSpacing: 2 },
   exRow: {
     flexDirection: "row",
     alignItems: "flex-start",

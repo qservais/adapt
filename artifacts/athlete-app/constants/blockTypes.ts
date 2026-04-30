@@ -1,0 +1,31 @@
+export const BLOCK_TYPE_COLORS: Record<string, string> = {
+  warm_up: "#FB923C",
+  strength: "#EF4444",
+  power: "#F59E0B",
+  conditioning: "#A78BFA",
+  core: "#22C55E",
+  cool_down: "#00F0FF",
+  mobility: "#34D399",
+  activation: "#60A5FA",
+  technique: "#E879F9",
+  plyometric: "#F97316",
+  hiit: "#FCD34D",
+  superset: "#00F0FF",
+  circuit: "#F59E0B",
+};
+
+export const BLOCK_TYPE_LABELS: Record<string, string> = {
+  warm_up: "ÉCHAUFFEMENT",
+  strength: "FORCE",
+  power: "PUISSANCE",
+  conditioning: "CONDITIONNEMENT",
+  core: "GAINAGE",
+  cool_down: "RETOUR AU CALME",
+  mobility: "MOBILITÉ",
+  activation: "ACTIVATION",
+  technique: "TECHNIQUE",
+  plyometric: "PLIOMÉTRIE",
+  hiit: "HIIT",
+  superset: "SUPERSET",
+  circuit: "CIRCUIT",
+};

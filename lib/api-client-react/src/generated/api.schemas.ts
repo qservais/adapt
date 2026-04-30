@@ -319,6 +319,17 @@ export interface SessionExerciseLog {
   exerciseName: string;
   loadKgUsed?: number | null;
   setsCompleted?: number | null;
+  blockId?: string | null;
+  blockType?: string | null;
+  blockName?: string | null;
+  blockOrderIndex?: number | null;
+}
+
+export interface SessionLogBlock {
+  id: string;
+  type: string;
+  name?: string | null;
+  orderIndex: number;
 }
 
 export interface SessionLogSummary {
@@ -335,6 +346,7 @@ export interface SessionLogSummary {
   createdAt?: string;
   isFreeSession?: boolean;
   freeSessionName?: string | null;
+  blocks?: SessionLogBlock[];
   exercises?: SessionExerciseLog[];
 }
 

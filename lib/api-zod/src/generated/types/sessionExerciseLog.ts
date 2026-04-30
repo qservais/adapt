@@ -11,4 +11,8 @@ export interface SessionExerciseLog {
   exerciseName: string;
   loadKgUsed?: number | null;
   setsCompleted?: number | null;
+  blockId?: string | null;
+  blockType?: string | null;
+  blockName?: string | null;
+  blockOrderIndex?: number | null;
 }
