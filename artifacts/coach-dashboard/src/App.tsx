@@ -7,6 +7,8 @@ import { AppLayout } from "./components/layout/app-layout";
 import "./lib/api-setup";
 
 import LoginPage from "./pages/login";
+import ForgotPasswordPage from "./pages/auth/forgot-password";
+import ResetPasswordPage from "./pages/auth/reset-password";
 import Dashboard from "./pages/dashboard/index";
 import ClientsOverview from "./pages/clients/index";
 import ClientDetail from "./pages/clients/detail";
@@ -25,7 +27,7 @@ import SettingsPage from "./pages/settings/index";
 
 const queryClient = new QueryClient();
 
-const PUBLIC_PATHS = ['/login', '/privacy'];
+const PUBLIC_PATHS = ['/login', '/privacy', '/forgot-password', '/reset-password'];
 
 function AppRouter() {
   const { user, isLoading } = useAuth();
@@ -36,7 +38,7 @@ function AppRouter() {
     return <PrivacyPage />;
   }
 
-  const isPublic = PUBLIC_PATHS.includes(location);
+  const isPublic = PUBLIC_PATHS.some((p) => location === p || location.startsWith(p + '?'));
 
   if (!tokenExists && !isPublic) {
     return <Redirect to="/login" />;
@@ -46,6 +48,8 @@ function AppRouter() {
     return (
       <Switch>
         <Route path="/login" component={LoginPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
       </Switch>
     );
   }

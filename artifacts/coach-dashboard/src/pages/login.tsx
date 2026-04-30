@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -116,7 +117,14 @@ export default function LoginPage() {
           </form>
         </Form>
         
-        <div className="mt-8 text-center text-xs text-muted-foreground font-mono">
+        <div className="mt-6 text-center">
+          <Link href="/forgot-password">
+            <button className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              Mot de passe oublié ?
+            </button>
+          </Link>
+        </div>
+        <div className="mt-4 text-center text-xs text-muted-foreground font-mono">
           <p>Accès démo : coach@adapt.demo / Demo1234!</p>
         </div>
       </div>

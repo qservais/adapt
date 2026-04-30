@@ -131,6 +131,11 @@ export default function LoginScreen() {
               </Text>
             </Text>
           </Pressable>
+          <Pressable onPress={() => router.push("/auth/forgot-password")} style={{ marginTop: 16 }}>
+            <Text style={[styles.footerText, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
+              Mot de passe oublié ?
+            </Text>
+          </Pressable>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>

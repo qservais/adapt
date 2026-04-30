@@ -44,6 +44,8 @@ export const usersTable = pgTable("users", {
   theme: varchar("theme", { length: 20 }).default("dark"),
   units: varchar("units", { length: 10 }).default("metric"),
   privacySettings: jsonb("privacy_settings").$type<{ shareWeight?: boolean; shareSleep?: boolean; shareHeartRate?: boolean; shareBodyFat?: boolean }>(),
+  passwordResetToken: varchar("password_reset_token", { length: 64 }),
+  passwordResetExpiry: timestamp("password_reset_expiry", { withTimezone: true }),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),

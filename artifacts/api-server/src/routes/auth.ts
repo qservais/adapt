@@ -1,11 +1,14 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { randomBytes } from "crypto";
+import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
+import { sendWelcomeEmail, sendPasswordResetEmail } from "../services/email.js";
 
 const router = Router();
 
@@ -20,6 +23,14 @@ if (isProduction && !process.env["JWT_REFRESH_SECRET"]) {
 
 const JWT_SECRET = process.env["JWT_SECRET"] ?? "adapt_jwt_secret_dev_only";
 const JWT_REFRESH_SECRET = process.env["JWT_REFRESH_SECRET"] ?? "adapt_refresh_secret_dev_only";
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "TOO_MANY_REQUESTS", message: "Trop de tentatives. Réessaie dans 15 minutes." } },
+});
 
 function generateTokens(userId: string, role: string, email: string) {
   const accessToken = jwt.sign({ userId, role, email }, JWT_SECRET, { expiresIn: "1h" });
@@ -83,6 +94,8 @@ router.post("/auth/register", async (req, res) => {
 
     const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email);
     await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
+
+    sendWelcomeEmail(email, firstName, role).catch(() => {});
 
     res.status(201).json({
       accessToken,
@@ -216,6 +229,81 @@ router.post("/auth/logout", authenticate, async (req, res) => {
     await db.update(usersTable).set({ refreshToken: null }).where(eq(usersTable.id, req.user!.userId));
     res.json({ success: true, message: "Logged out" });
   } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  const { email } = parsed.data;
+
+  res.json({ success: true, message: "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé." });
+
+  try {
+    const [user] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.email, email.toLowerCase()));
+
+    if (!user) return;
+
+    const resetToken = randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 60 * 60 * 1000);
+
+    await db.update(usersTable)
+      .set({ passwordResetToken: resetToken, passwordResetExpiry: expiry })
+      .where(eq(usersTable.id, user.id));
+
+    await sendPasswordResetEmail(user.email, user.firstName, resetToken);
+  } catch (err) {
+    console.error("forgot-password background error:", err);
+  }
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+router.post("/auth/reset-password", async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  const { token, newPassword } = parsed.data;
+
+  try {
+    const now = new Date();
+    const [user] = await db.select({ id: usersTable.id, passwordResetExpiry: usersTable.passwordResetExpiry })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.passwordResetToken, token),
+          gt(usersTable.passwordResetExpiry, now),
+        ),
+      );
+
+    if (!user) {
+      res.status(400).json({ error: { code: "INVALID_TOKEN", message: "Lien invalide ou expiré." } });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await db.update(usersTable)
+      .set({ passwordHash, passwordResetToken: null, passwordResetExpiry: null, refreshToken: null })
+      .where(eq(usersTable.id, user.id));
+
+    res.json({ success: true, message: "Mot de passe mis à jour avec succès." });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
