@@ -236,7 +236,6 @@ export default function BoardScreen() {
       });
 
       if (isFromFreeStore) {
-        clearFreeSession();
         router.replace("/session/free-complete");
       } else {
         router.replace("/session/complete");
