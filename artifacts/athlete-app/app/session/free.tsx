@@ -19,18 +19,24 @@ function groupByBlock(
   exercises: FreeSessionExercise[],
   blocks: FreeSessionBlock[]
 ): { block: FreeSessionBlock | null; exercises: FreeSessionExercise[] }[] {
-  const blockMap = new Map(blocks.map(b => [b.id, b]));
-  const result: { block: FreeSessionBlock | null; exercises: FreeSessionExercise[] }[] = [];
-
+  const sortedBlocks = [...blocks].sort((a, b) => a.orderIndex - b.orderIndex);
+  const knownBlockIds = new Set(blocks.map((b) => b.id));
+  const blockMap = new Map<string, FreeSessionExercise[]>();
+  const unassigned: FreeSessionExercise[] = [];
   for (const ex of exercises) {
-    const block = ex.blockId ? (blockMap.get(ex.blockId) ?? null) : null;
-    const existing = result.find(g => g.block?.id === block?.id && (block !== null || g.block === null));
-    if (existing) {
-      existing.exercises.push(ex);
+    if (ex.blockId && knownBlockIds.has(ex.blockId)) {
+      if (!blockMap.has(ex.blockId)) blockMap.set(ex.blockId, []);
+      blockMap.get(ex.blockId)!.push(ex);
     } else {
-      result.push({ block, exercises: [ex] });
+      unassigned.push(ex);
     }
   }
+  const result: { block: FreeSessionBlock | null; exercises: FreeSessionExercise[] }[] = [];
+  for (const block of sortedBlocks) {
+    const exs = blockMap.get(block.id) ?? [];
+    if (exs.length > 0) result.push({ block, exercises: exs });
+  }
+  if (unassigned.length > 0) result.push({ block: null, exercises: unassigned });
   return result;
 }
 
