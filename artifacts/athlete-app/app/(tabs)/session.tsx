@@ -265,7 +265,7 @@ export default function SessionTab() {
         estimatedDurationMin: data.estimatedDurationMin ?? null,
         exercises: data.exercises ?? [],
         blocks: data.blocks ?? [],
-        athletePRs: (data as any).athletePRs ?? {},
+        athletePRs: data.athletePRs ?? {},
       });
       router.push("/session/free");
     } catch {
@@ -290,7 +290,7 @@ export default function SessionTab() {
         estimatedDurationMin: data.estimatedDurationMin ?? null,
         exercises: data.exercises ?? [],
         blocks: data.blocks ?? [],
-        athletePRs: (data as any).athletePRs ?? {},
+        athletePRs: data.athletePRs ?? {},
       });
       router.push("/session/board");
     } catch {
