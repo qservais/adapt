@@ -10,9 +10,29 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
-import { getFreeSession, clearFreeSession } from "@/lib/freeSessionStore";
+import { BLOCK_TYPE_COLORS, BLOCK_TYPE_LABELS } from "@/constants/blockTypes";
+import { getFreeSession, clearFreeSession, FreeSessionBlock, FreeSessionExercise } from "@/lib/freeSessionStore";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { customFetch } from "@workspace/api-client-react";
+
+function groupByBlock(
+  exercises: FreeSessionExercise[],
+  blocks: FreeSessionBlock[]
+): { block: FreeSessionBlock | null; exercises: FreeSessionExercise[] }[] {
+  const blockMap = new Map(blocks.map(b => [b.id, b]));
+  const result: { block: FreeSessionBlock | null; exercises: FreeSessionExercise[] }[] = [];
+
+  for (const ex of exercises) {
+    const block = ex.blockId ? (blockMap.get(ex.blockId) ?? null) : null;
+    const existing = result.find(g => g.block?.id === block?.id && (block !== null || g.block === null));
+    if (existing) {
+      existing.exercises.push(ex);
+    } else {
+      result.push({ block, exercises: [ex] });
+    }
+  }
+  return result;
+}
 
 export default function FreeSessionIntroScreen() {
   const insets = useSafeAreaInsets();
@@ -114,25 +134,74 @@ export default function FreeSessionIntroScreen() {
 
         <View style={styles.exerciseList}>
           <Text style={[styles.sectionTitle, { fontFamily: FONTS.mono }]}>PROGRAMME</Text>
-          {session.exercises.map((ex, i) => (
-            <View key={ex.id} style={styles.exRow}>
-              <View style={styles.exThumbFallback}>
-                <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
-                  {String(i + 1).padStart(2, "0")}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
-                <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
-                  {ex.sets}×{ex.reps}
-                  {ex.restSeconds != null && ex.restSeconds > 0 ? ` · ${ex.restSeconds}s repos` : ""}
-                </Text>
-                {ex.coachCue != null && (
-                  <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
-                )}
-              </View>
-            </View>
-          ))}
+          {(() => {
+            const grouped = groupByBlock(session.exercises, session.blocks ?? []);
+            let globalIdx = 0;
+            return grouped.map((group) => {
+              if (group.block === null) {
+                return group.exercises.map((ex) => {
+                  const idx = globalIdx++;
+                  return (
+                    <View key={ex.id} style={styles.exRow}>
+                      <View style={styles.exThumbFallback}>
+                        <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                          {String(idx + 1).padStart(2, "0")}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
+                        <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                          {ex.sets}×{ex.reps}
+                          {ex.restSeconds != null && ex.restSeconds > 0 ? ` · ${ex.restSeconds}s repos` : ""}
+                        </Text>
+                        {ex.coachCue != null && (
+                          <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                });
+              }
+              const blockType = group.block.type?.toLowerCase() ?? "superset";
+              const accentColor = BLOCK_TYPE_COLORS[blockType] ?? COLORS.cyan;
+              const typeLabel = BLOCK_TYPE_LABELS[blockType] ?? blockType.toUpperCase();
+              const blockLabel = group.block.name
+                ? `${typeLabel} · ${group.block.name.toUpperCase()}`
+                : typeLabel;
+              return (
+                <View key={group.block.id} style={[styles.blockGroup, { borderColor: `${accentColor}40` }]}>
+                  <View style={[styles.blockHeader, { backgroundColor: `${accentColor}12` }]}>
+                    <View style={[styles.blockDot, { backgroundColor: accentColor }]} />
+                    <Text style={[styles.blockLabel, { fontFamily: FONTS.mono, color: accentColor }]}>
+                      {blockLabel}
+                    </Text>
+                  </View>
+                  {group.exercises.map((ex) => {
+                    const idx = globalIdx++;
+                    return (
+                      <View key={ex.id} style={[styles.exRow, styles.exRowInBlock]}>
+                        <View style={[styles.exThumbFallback, styles.exThumbInBlock]}>
+                          <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
+                            {String(idx + 1).padStart(2, "0")}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.exName, { fontFamily: FONTS.bodyMedium }]}>{ex.exerciseName}</Text>
+                          <Text style={[styles.exDetail, { fontFamily: FONTS.mono }]}>
+                            {ex.sets}×{ex.reps}
+                            {ex.restSeconds != null && ex.restSeconds > 0 ? ` · ${ex.restSeconds}s repos` : ""}
+                          </Text>
+                          {ex.coachCue != null && (
+                            <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            });
+          })()}
         </View>
       </ScrollView>
 
@@ -242,6 +311,36 @@ const styles = StyleSheet.create({
   exName: { fontSize: 15, color: COLORS.white, marginBottom: 3 },
   exDetail: { fontSize: 12, color: COLORS.textSecondary, letterSpacing: 0.3 },
   exCue: { fontSize: 11, color: COLORS.textMuted, fontStyle: "italic", marginTop: 2 },
+  blockGroup: {
+    borderWidth: 1,
+    borderRadius: 14,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  blockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  blockDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  blockLabel: {
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  exRowInBlock: {
+    paddingHorizontal: 14,
+  },
+  exThumbInBlock: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+  },
   footer: {
     position: "absolute",
     bottom: 0,

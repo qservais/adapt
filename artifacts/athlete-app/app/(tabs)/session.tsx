@@ -171,7 +171,7 @@ export default function SessionTab() {
   const [activeTab, setActiveTab] = useState<SubTab>("today");
   const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
   const [checkedExercises, setCheckedExercises] = useState<Set<string>>(new Set());
-  const [quickLogModal, setQuickLogModal] = useState<{ exerciseId: string; sessionExId: string; name: string } | null>(null);
+  const [quickLogModal, setQuickLogModal] = useState<{ exerciseId: string; sessionExId: string; name: string; nominalLoadKg?: number | null } | null>(null);
   const [loadInput, setLoadInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
   const [loggingExercise, setLoggingExercise] = useState(false);
@@ -300,8 +300,8 @@ export default function SessionTab() {
     }
   };
 
-  const handleOpenQuickLog = (sessionExId: string, exerciseId: string, name: string) => {
-    setQuickLogModal({ sessionExId, exerciseId, name });
+  const handleOpenQuickLog = (sessionExId: string, exerciseId: string, name: string, nominalLoadKg?: number | null) => {
+    setQuickLogModal({ sessionExId, exerciseId, name, nominalLoadKg });
     setLoadInput("");
     setRepsInput("");
   };
@@ -510,7 +510,7 @@ export default function SessionTab() {
                                 if (isDone) {
                                   handleCheckExercise(ex.id, ex.exerciseId);
                                 } else {
-                                  handleOpenQuickLog(ex.id, ex.exerciseId, ex.exerciseName);
+                                  handleOpenQuickLog(ex.id, ex.exerciseId, ex.exerciseName, ex.nominalLoadKg);
                                 }
                               }}
                               style={[styles.exCheckBtn, isDone && { backgroundColor: `${COLORS.green}20`, borderColor: `${COLORS.green}50` }]}
@@ -1055,18 +1055,20 @@ export default function SessionTab() {
           </Text>
           <Text style={[styles.modalSubtitle, { fontFamily: FONTS.mono }]}>ENREGISTREMENT RAPIDE</Text>
           <View style={styles.modalInputRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.modalLabel, { fontFamily: FONTS.mono }]}>CHARGE (KG)</Text>
-              <TextInput
-                style={[styles.modalInput, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}
-                value={loadInput}
-                onChangeText={setLoadInput}
-                keyboardType="decimal-pad"
-                placeholder="0.0"
-                placeholderTextColor={COLORS.textMuted}
-                selectTextOnFocus
-              />
-            </View>
+            {quickLogModal?.nominalLoadKg != null && quickLogModal.nominalLoadKg > 0 && (
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalLabel, { fontFamily: FONTS.mono }]}>CHARGE (KG)</Text>
+                <TextInput
+                  style={[styles.modalInput, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}
+                  value={loadInput}
+                  onChangeText={setLoadInput}
+                  keyboardType="decimal-pad"
+                  placeholder="0.0"
+                  placeholderTextColor={COLORS.textMuted}
+                  selectTextOnFocus
+                />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <Text style={[styles.modalLabel, { fontFamily: FONTS.mono }]}>REPS</Text>
               <TextInput

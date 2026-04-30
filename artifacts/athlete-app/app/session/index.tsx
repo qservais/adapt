@@ -1,6 +1,7 @@
 import React from "react";
 import { getGenericErrorMessage } from "@/lib/errors";
 import {
+  Animated,
   ActivityIndicator,
   Modal,
   ScrollView,
@@ -213,6 +214,30 @@ export default function SessionIntroScreen() {
   const [viewMode, setViewMode] = React.useState<"guided" | "board">("guided");
   const [viewModeLoaded, setViewModeLoaded] = React.useState(false);
   const [detailExercise, setDetailExercise] = React.useState<SessionExerciseItem | null>(null);
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = React.useRef(new Animated.Value(300)).current;
+
+  const openDetail = (ex: SessionExerciseItem) => {
+    setDetailExercise(ex);
+    setModalVisible(true);
+    backdropOpacity.setValue(0);
+    sheetTranslateY.setValue(300);
+    Animated.parallel([
+      Animated.timing(backdropOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.spring(sheetTranslateY, { toValue: 0, tension: 65, friction: 12, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeDetail = () => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(sheetTranslateY, { toValue: 300, duration: 180, useNativeDriver: true }),
+    ]).start(() => {
+      setModalVisible(false);
+      setDetailExercise(null);
+    });
+  };
 
   React.useEffect(() => {
     AsyncStorage.getItem("adapt_session_view_mode").then((v) => {
@@ -644,7 +669,7 @@ export default function SessionIntroScreen() {
                 <TouchableOpacity
                   key={ex.id}
                   style={[styles.exRow, inBlock && styles.exRowInBlock]}
-                  onPress={() => setDetailExercise(ex)}
+                  onPress={() => openDetail(ex)}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.exThumbFallback, inBlock && styles.exThumbInBlock]}>
@@ -700,24 +725,32 @@ export default function SessionIntroScreen() {
       </ScrollView>
 
       <Modal
-        visible={detailExercise !== null}
+        visible={modalVisible}
         transparent
-        animationType="slide"
-        onRequestClose={() => setDetailExercise(null)}
+        animationType="none"
+        onRequestClose={closeDetail}
       >
-        <TouchableOpacity
-          style={detailStyles.backdrop}
-          activeOpacity={1}
-          onPress={() => setDetailExercise(null)}
-        />
+        <Animated.View style={[detailStyles.backdrop, { opacity: backdropOpacity }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={closeDetail}
+          />
+        </Animated.View>
         {detailExercise && (
-          <View style={[detailStyles.sheet, { paddingBottom: insets.bottom + 24 }]}>
+          <Animated.View
+            style={[
+              detailStyles.sheet,
+              { paddingBottom: insets.bottom + 24 },
+              { transform: [{ translateY: sheetTranslateY }] },
+            ]}
+          >
             <View style={detailStyles.handle} />
             <View style={detailStyles.sheetHeader}>
               <Text style={[detailStyles.sheetTitle, { fontFamily: FONTS.title }]} numberOfLines={2}>
                 {detailExercise.exerciseName}
               </Text>
-              <TouchableOpacity onPress={() => setDetailExercise(null)} style={detailStyles.closeBtn}>
+              <TouchableOpacity onPress={closeDetail} style={detailStyles.closeBtn}>
                 <Feather name="x" size={20} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
@@ -733,7 +766,10 @@ export default function SessionIntroScreen() {
                   <Text style={[detailStyles.metaVal, { fontFamily: FONTS.monoBold }]}>{detailExercise.reps}</Text>
                 </View>
               )}
-              {(detailExercise.adaptedLoadKg ?? detailExercise.nominalLoadKg) != null && (
+              {(() => {
+                const load = detailExercise.adaptedLoadKg ?? detailExercise.nominalLoadKg;
+                return load != null && load > 0;
+              })() && (
                 <View style={detailStyles.metaChip}>
                   <Text style={[detailStyles.metaLabel, { fontFamily: FONTS.mono }]}>CHARGE</Text>
                   <Text style={[detailStyles.metaVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
@@ -790,7 +826,7 @@ export default function SessionIntroScreen() {
                 </Text>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
       </Modal>
 
