@@ -4,7 +4,45 @@ export interface CompletedExerciseEntry {
   loadKgUsed: number | null;
 }
 
-interface FreeSessionData {
+export interface FreeSessionBlock {
+  id: string;
+  type: string;
+  orderIndex: number;
+  name?: string | null;
+  notes?: string | null;
+  estimatedDurationMin?: number | null;
+  conditioningFormat?: string | null;
+}
+
+export interface FreeSessionExercise {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  category?: string | null;
+  imageUrl?: string | null;
+  gifUrl?: string | null;
+  muscleGroups?: unknown;
+  equipment?: unknown;
+  description?: string | null;
+  demoUrl?: string | null;
+  orderIndex: number;
+  sets: number;
+  reps?: string | null;
+  nominalLoadKg?: number | null;
+  adaptedLoadKg?: number | null;
+  restSeconds?: number | null;
+  durationSeconds?: number | null;
+  coachCue?: string | null;
+  tempo?: string | null;
+  lastUsedLoadKg?: number | null;
+  lastUsedDate?: string | null;
+  lastUsedRepsPerSet?: number[] | null;
+  blockId?: string | null;
+  supersetGroup?: string | null;
+  supersetLabel?: string | null;
+}
+
+export interface FreeSessionData {
   sessionLogId: string;
   name: string;
   mode: string;
@@ -15,32 +53,8 @@ interface FreeSessionData {
   adaptScore: number;
   coachNotes: string | null;
   estimatedDurationMin: number | null;
-  exercises: Array<{
-    id: string;
-    exerciseId: string;
-    exerciseName: string;
-    category?: string | null;
-    imageUrl?: string | null;
-    gifUrl?: string | null;
-    muscleGroups?: unknown;
-    equipment?: unknown;
-    description?: string | null;
-    demoUrl?: string | null;
-    orderIndex: number;
-    sets: number;
-    reps?: string | null;
-    nominalLoadKg?: number | null;
-    adaptedLoadKg?: number | null;
-    restSeconds?: number | null;
-    durationSeconds?: number | null;
-    coachCue?: string | null;
-    tempo?: string | null;
-    lastUsedLoadKg?: number | null;
-    lastUsedDate?: string | null;
-    blockId?: string | null;
-    supersetGroup?: string | null;
-    supersetLabel?: string | null;
-  }>;
+  exercises: FreeSessionExercise[];
+  blocks?: FreeSessionBlock[];
   athletePRs?: Record<string, number>;
   completedExercises?: CompletedExerciseEntry[];
 }

@@ -24,6 +24,7 @@ import type { SessionBlockItem, SessionExerciseItem } from "@workspace/api-clien
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { BLOCK_TYPE_COLORS, BLOCK_TYPE_LABELS } from "@/constants/blockTypes";
 import { useFormatWeight } from "@/context/PreferencesContext";
+import { getFreeSession, clearFreeSession } from "@/lib/freeSessionStore";
 
 type SetState = { load: string; reps: string; done: boolean };
 type ExState = SetState[];
@@ -67,15 +68,28 @@ function initialSetState(ex: SessionExerciseItem): ExState {
 
 export default function BoardScreen() {
   const insets = useSafeAreaInsets();
-  const sessionQuery = useGetTodaySession();
-  const completeMutation = useCompleteSession();
   const formatWeight = useFormatWeight();
 
-  const session = sessionQuery.data;
-  const exercises = session?.exercises ?? [];
-  const blocks = session?.blocks ?? [];
-  const modeKey = (session?.mode ?? "normal") as SessionMode;
+  const [freeSessionSnapshot] = useState(() => getFreeSession());
+  const isFromFreeStore = freeSessionSnapshot != null;
+
+  const sessionQuery = useGetTodaySession();
+  const completeMutation = useCompleteSession();
+
+  const apiSession = isFromFreeStore ? null : sessionQuery.data;
+
+  const exercises: SessionExerciseItem[] = isFromFreeStore
+    ? (freeSessionSnapshot!.exercises as unknown as SessionExerciseItem[])
+    : (apiSession?.exercises ?? []);
+
+  const blocks: SessionBlockItem[] = isFromFreeStore
+    ? ((freeSessionSnapshot!.blocks ?? []) as unknown as SessionBlockItem[])
+    : (apiSession?.blocks ?? []);
+
+  const modeKey = ((isFromFreeStore ? freeSessionSnapshot!.mode : apiSession?.mode) ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
+  const sessionLogId = isFromFreeStore ? freeSessionSnapshot!.sessionLogId : (apiSession?.sessionLogId ?? "");
+  const sessionName = isFromFreeStore ? freeSessionSnapshot!.name : (apiSession?.name ?? "");
 
   const grouped = groupByBlock(exercises, blocks);
 
@@ -198,7 +212,7 @@ export default function BoardScreen() {
   });
 
   const handleComplete = async () => {
-    if (!session || completing) return;
+    if (completing || !sessionLogId) return;
     setCompleting(true);
     setError("");
     try {
@@ -217,10 +231,16 @@ export default function BoardScreen() {
       });
 
       await completeMutation.mutateAsync({
-        sessionId: session.sessionLogId,
+        sessionId: sessionLogId,
         data: { rpe: 5, exercises: exercisePayload },
       });
-      router.replace("/session/complete");
+
+      if (isFromFreeStore) {
+        clearFreeSession();
+        router.replace("/session/free-complete");
+      } else {
+        router.replace("/session/complete");
+      }
     } catch (err: unknown) {
       setError(getGenericErrorMessage(err, "Impossible de terminer la séance. Réessaie."));
     } finally {
@@ -234,12 +254,19 @@ export default function BoardScreen() {
       "Ta progression non enregistrée sera perdue.",
       [
         { text: "Continuer", style: "cancel" },
-        { text: "Quitter", style: "destructive", onPress: () => router.back() },
+        {
+          text: "Quitter",
+          style: "destructive",
+          onPress: () => {
+            if (isFromFreeStore) clearFreeSession();
+            router.back();
+          },
+        },
       ]
     );
   };
 
-  if (sessionQuery.isPending || (!session && sessionQuery.isFetching)) {
+  if (!isFromFreeStore && (sessionQuery.isPending || (!apiSession && sessionQuery.isFetching))) {
     return (
       <View style={[s.flex, { backgroundColor: COLORS.bg, alignItems: "center", justifyContent: "center" }]}>
         <ActivityIndicator size="large" color={COLORS.cyan} />
@@ -247,7 +274,7 @@ export default function BoardScreen() {
     );
   }
 
-  if (!session) {
+  if (!isFromFreeStore && !apiSession) {
     return (
       <View style={[s.flex, { backgroundColor: COLORS.bg, paddingTop: insets.top + 20, alignItems: "center", justifyContent: "center", gap: 16 }]}>
         <Feather name="alert-circle" size={40} color={COLORS.textMuted} />
@@ -273,7 +300,7 @@ export default function BoardScreen() {
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={[s.headerTitle, { fontFamily: FONTS.title, color: cfg.color }]} numberOfLines={1}>
-            {session.name}
+            {sessionName}
           </Text>
           <Text style={[s.headerSub, { fontFamily: FONTS.mono }]}>
             {completedCount}/{totalSets} séries
@@ -314,6 +341,8 @@ export default function BoardScreen() {
                 {groupExs.map((ex) => {
                   const sets = exState[ex.id] ?? initialSetState(ex);
                   const allExDone = sets.every((s) => s.done);
+                  const hasLoad = (ex.adaptedLoadKg ?? ex.nominalLoadKg ?? ex.lastUsedLoadKg) != null
+                    && (ex.adaptedLoadKg ?? ex.nominalLoadKg ?? ex.lastUsedLoadKg)! > 0;
                   return (
                     <View key={ex.id} style={[s.exCard, allExDone && { opacity: 0.7 }]}>
                       <View style={s.exHeader}>
@@ -324,7 +353,7 @@ export default function BoardScreen() {
                           </Text>
                           <Text style={[s.exTarget, { fontFamily: FONTS.mono }]}>
                             {ex.sets} × {ex.reps ?? "–"}
-                            {(ex.adaptedLoadKg ?? ex.nominalLoadKg) != null
+                            {hasLoad
                               ? `  ·  ${formatWeight(ex.adaptedLoadKg ?? ex.nominalLoadKg!)} cible`
                               : ""}
                             {(ex.restSeconds ?? 0) > 0 ? `  ·  ${ex.restSeconds}s repos` : ""}
@@ -336,8 +365,8 @@ export default function BoardScreen() {
                         <View style={s.setsHeaderRow}>
                           <Text style={[s.setsHeaderCell, s.colSerie, { fontFamily: FONTS.mono }]}>SÉRIE</Text>
                           <Text style={[s.setsHeaderCell, s.colPrev, { fontFamily: FONTS.mono }]}>PRÉC.</Text>
-                          <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>CHARGE</Text>
-                          <Text style={[s.setsHeaderCell, s.colReps, { fontFamily: FONTS.mono }]}>REPS</Text>
+                          {hasLoad && <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>CHARGE</Text>}
+                          <Text style={[s.setsHeaderCell, hasLoad ? s.colReps : s.colRepsWide, { fontFamily: FONTS.mono }]}>REPS</Text>
                           <View style={s.colCheck} />
                         </View>
 
@@ -369,19 +398,21 @@ export default function BoardScreen() {
                                     );
                                   })()}
                                 </View>
-                                <View style={s.colLoad}>
-                                  <TextInput
-                                    style={[s.input, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.white, borderColor: st.done ? `${cfg.color}50` : COLORS.border }]}
-                                    value={st.load}
-                                    onChangeText={(v) => updateSetField(ex.id, idx, "load", v)}
-                                    keyboardType="decimal-pad"
-                                    placeholder="—"
-                                    placeholderTextColor={COLORS.textMuted}
-                                    editable={!st.done}
-                                    selectTextOnFocus
-                                  />
-                                </View>
-                                <View style={s.colReps}>
+                                {hasLoad && (
+                                  <View style={s.colLoad}>
+                                    <TextInput
+                                      style={[s.input, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.white, borderColor: st.done ? `${cfg.color}50` : COLORS.border }]}
+                                      value={st.load}
+                                      onChangeText={(v) => updateSetField(ex.id, idx, "load", v)}
+                                      keyboardType="decimal-pad"
+                                      placeholder="—"
+                                      placeholderTextColor={COLORS.textMuted}
+                                      editable={!st.done}
+                                      selectTextOnFocus
+                                    />
+                                  </View>
+                                )}
+                                <View style={hasLoad ? s.colReps : s.colRepsWide}>
                                   <TextInput
                                     style={[s.input, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.white, borderColor: st.done ? `${cfg.color}50` : COLORS.border }]}
                                     value={st.reps}
@@ -556,6 +587,7 @@ const s = StyleSheet.create({
   prevCell: { fontSize: 11, color: COLORS.textMuted, textAlign: "center" },
   colLoad: { flex: 1 },
   colReps: { flex: 1 },
+  colRepsWide: { flex: 2 },
   colCheck: { width: 36, alignItems: "center" },
   addSetBtn: {
     flexDirection: "row",

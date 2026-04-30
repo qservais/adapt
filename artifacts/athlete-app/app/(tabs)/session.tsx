@@ -31,6 +31,16 @@ import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { setFreeSession } from "@/lib/freeSessionStore";
 
+interface LibrarySession {
+  sessionId: string;
+  sessionName: string;
+  sessionType: string;
+  sessionLocation: string;
+  weekNumber: number;
+  dayNumber: number;
+  estimatedDurationMin: number | null;
+}
+
 interface AthleteProgram {
   id: string;
   name: string;
@@ -168,6 +178,8 @@ export default function SessionTab() {
   const [previewExpanded, setPreviewExpanded] = useState<string | null>(null);
   const [startingProgram, setStartingProgram] = useState(false);
   const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
+  const [showFullProgramme, setShowFullProgramme] = useState(false);
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set());
 
   const checkinQuery = useGetTodayCheckin();
   const sessionQuery = useGetTodaySession();
@@ -183,6 +195,12 @@ export default function SessionTab() {
       ? customFetch(`/api/athlete/programs/${expandedProgramId}/preview`) as Promise<ProgramDetail>
       : Promise.resolve(null),
     enabled: !!expandedProgramId,
+  });
+  const librarySessionsQuery = useQuery<LibrarySession[]>({
+    queryKey: ["/api/athlete/library-sessions"],
+    queryFn: () => customFetch("/api/athlete/library-sessions") as Promise<LibrarySession[]>,
+    enabled: activeTab === "upcoming" && showFullProgramme,
+    staleTime: 5 * 60 * 1000,
   });
 
   useFocusEffect(
@@ -246,9 +264,35 @@ export default function SessionTab() {
         coachNotes: data.coachNotes ?? null,
         estimatedDurationMin: data.estimatedDurationMin ?? null,
         exercises: data.exercises ?? [],
-        athletePRs: data.athletePRs ?? {},
+        blocks: data.blocks ?? [],
+        athletePRs: (data as any).athletePRs ?? {},
       });
       router.push("/session/free");
+    } catch {
+      Alert.alert("Erreur", "Impossible de démarrer cette séance. Réessaie.");
+    } finally {
+      setStartingSessionId(null);
+    }
+  };
+
+  const handleStartBoardSession = async (sessionId: string) => {
+    if (startingSessionId) return;
+    setStartingSessionId(sessionId);
+    try {
+      const data = await customFetch(`/api/sessions/${sessionId}/start-free`, { method: "POST" }) as FreeSessionStartResponse;
+      setFreeSession({
+        sessionLogId: data.sessionLogId,
+        name: data.name,
+        mode: data.mode,
+        isFreeSession: true,
+        adaptScore: data.adaptScore ?? 50,
+        coachNotes: data.coachNotes ?? null,
+        estimatedDurationMin: data.estimatedDurationMin ?? null,
+        exercises: data.exercises ?? [],
+        blocks: data.blocks ?? [],
+        athletePRs: (data as any).athletePRs ?? {},
+      });
+      router.push("/session/board");
     } catch {
       Alert.alert("Erreur", "Impossible de démarrer cette séance. Réessaie.");
     } finally {
@@ -536,7 +580,147 @@ export default function SessionTab() {
 
       {activeTab === "upcoming" && (
         <View style={[styles.section, { gap: 16 }]}>
-          {(() => {
+
+          {/* Mode toggle: Semaine / Programme complet */}
+          <View style={styles.viewToggleRow}>
+            <TouchableOpacity
+              onPress={() => setShowFullProgramme(false)}
+              style={[styles.viewToggleBtn, !showFullProgramme && styles.viewToggleBtnActive]}
+              activeOpacity={0.8}
+            >
+              <Feather name="calendar" size={12} color={!showFullProgramme ? COLORS.cyan : COLORS.textMuted} />
+              <Text style={[styles.viewToggleText, { fontFamily: FONTS.mono, color: !showFullProgramme ? COLORS.cyan : COLORS.textMuted }]}>
+                SEMAINE
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowFullProgramme(true)}
+              style={[styles.viewToggleBtn, showFullProgramme && styles.viewToggleBtnActive]}
+              activeOpacity={0.8}
+            >
+              <Feather name="list" size={12} color={showFullProgramme ? COLORS.cyan : COLORS.textMuted} />
+              <Text style={[styles.viewToggleText, { fontFamily: FONTS.mono, color: showFullProgramme ? COLORS.cyan : COLORS.textMuted }]}>
+                PROGRAMME COMPLET
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Programme complet view */}
+          {showFullProgramme && (
+            <>
+              {librarySessionsQuery.isPending ? (
+                <View style={{ alignItems: "center", paddingVertical: 40 }}>
+                  <ActivityIndicator size="large" color={COLORS.cyan} />
+                </View>
+              ) : librarySessionsQuery.error ? (
+                <View style={styles.emptyState}>
+                  <Feather name="alert-circle" size={32} color={COLORS.textMuted} />
+                  <Text style={[styles.emptyTitle, { fontFamily: FONTS.bodyBold }]}>Impossible de charger</Text>
+                  <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>Vérifie ta connexion et réessaie.</Text>
+                </View>
+              ) : !librarySessionsQuery.data || librarySessionsQuery.data.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Feather name="inbox" size={32} color={COLORS.textMuted} />
+                  <Text style={[styles.emptyTitle, { fontFamily: FONTS.bodyBold }]}>Aucun programme actif</Text>
+                  <Text style={[styles.emptyDesc, { fontFamily: FONTS.body }]}>Ton coach n'a pas encore configuré de programme.</Text>
+                </View>
+              ) : (() => {
+                const sessionsByWeek = new Map<number, LibrarySession[]>();
+                for (const s of librarySessionsQuery.data) {
+                  if (!sessionsByWeek.has(s.weekNumber)) sessionsByWeek.set(s.weekNumber, []);
+                  sessionsByWeek.get(s.weekNumber)!.push(s);
+                }
+                const weeks = [...sessionsByWeek.entries()].sort(([a], [b]) => a - b);
+                return (
+                  <View style={{ gap: 10 }}>
+                    {weeks.map(([weekNum, sessions]) => {
+                      const isExpanded = expandedWeeks.has(weekNum);
+                      const sortedSessions = [...sessions].sort((a, b) => a.dayNumber - b.dayNumber);
+                      return (
+                        <View key={weekNum} style={styles.weekBlock}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              setExpandedWeeks(prev => {
+                                const next = new Set(prev);
+                                if (next.has(weekNum)) next.delete(weekNum);
+                                else next.add(weekNum);
+                                return next;
+                              });
+                            }}
+                            style={styles.weekHeader}
+                            activeOpacity={0.8}
+                          >
+                            <View style={styles.weekHeaderLeft}>
+                              <Text style={[styles.weekLabel, { fontFamily: FONTS.mono }]}>
+                                SEMAINE {weekNum}
+                              </Text>
+                              <Text style={[styles.weekMeta, { fontFamily: FONTS.body }]}>
+                                {sessions.length} séance{sessions.length > 1 ? "s" : ""}
+                              </Text>
+                            </View>
+                            <Feather
+                              name={isExpanded ? "chevron-up" : "chevron-down"}
+                              size={16}
+                              color={COLORS.textMuted}
+                            />
+                          </TouchableOpacity>
+                          {isExpanded && (
+                            <View style={styles.weekSessions}>
+                              {sortedSessions.map((s, si) => {
+                                const isStarting = startingSessionId === s.sessionId;
+                                return (
+                                  <View
+                                    key={s.sessionId}
+                                    style={[
+                                      styles.libSessionRow,
+                                      si === sortedSessions.length - 1 && styles.libSessionRowLast,
+                                    ]}
+                                  >
+                                    <View style={styles.libSessionDayCol}>
+                                      <Text style={[styles.libDayLabel, { fontFamily: FONTS.mono }]}>
+                                        J{s.dayNumber}
+                                      </Text>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                      <Text style={[styles.libSessionName, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]} numberOfLines={1}>
+                                        {s.sessionName}
+                                      </Text>
+                                      <Text style={[styles.libSessionMeta, { fontFamily: FONTS.mono }]}>
+                                        {SESSION_TYPE_FR[s.sessionType] ?? s.sessionType}
+                                        {s.estimatedDurationMin != null ? ` · ${s.estimatedDurationMin} min` : ""}
+                                      </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                      onPress={() => handleStartBoardSession(s.sessionId)}
+                                      disabled={!!startingSessionId}
+                                      style={[styles.libLaunchBtn, { opacity: startingSessionId ? 0.5 : 1 }]}
+                                      activeOpacity={0.8}
+                                    >
+                                      {isStarting ? (
+                                        <ActivityIndicator size="small" color={COLORS.bg} />
+                                      ) : (
+                                        <>
+                                          <Feather name="grid" size={11} color={COLORS.bg} />
+                                          <Text style={[styles.libLaunchText, { fontFamily: FONTS.mono }]}>LANCER</Text>
+                                        </>
+                                      )}
+                                    </TouchableOpacity>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              })()}
+            </>
+          )}
+
+          {/* Semaine view (existing) */}
+          {!showFullProgramme && (() => {
             const futurePrograms = (athleteProgramsQuery.data ?? []).filter(p => p.startsInFuture);
             const isEmpty = futureSessions.length === 0 && futurePrograms.length === 0;
             if (isEmpty) {
@@ -694,7 +878,7 @@ export default function SessionTab() {
                 {futureSessions.length > 0 && (
                   <>
                     {futurePrograms.length > 0 && (
-                      <Text style={[styles.sectionLabel, { fontFamily: FONTS.mono }]}>SÉANCES DU PROGRAMME EN COURS</Text>
+                      <Text style={[styles.sectionLabel, { fontFamily: FONTS.mono }]}>SÉANCES DE LA SEMAINE</Text>
                     )}
                     <GlowCard glowColor={COLORS.border}>
                       {futureSessions.map((s, i) => {
@@ -1303,5 +1487,96 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontSize: 14,
     color: COLORS.textMuted,
+  },
+  viewToggleRow: {
+    flexDirection: "row",
+    borderRadius: 12,
+    backgroundColor: COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 3,
+    gap: 3,
+  },
+  viewToggleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: `${COLORS.cyan}15`,
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}40`,
+  },
+  viewToggleText: {
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  weekBlock: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+    overflow: "hidden",
+  },
+  weekHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  weekHeaderLeft: { flex: 1 },
+  weekLabel: {
+    fontSize: 11,
+    color: COLORS.cyan,
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  weekMeta: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  weekSessions: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  libSessionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 12,
+  },
+  libSessionRowLast: { borderBottomWidth: 0 },
+  libSessionDayCol: { minWidth: 24, alignItems: "center" },
+  libDayLabel: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  libSessionName: { fontSize: 14, marginBottom: 2 },
+  libSessionMeta: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    letterSpacing: 0.3,
+  },
+  libLaunchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: COLORS.cyan,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  libLaunchText: {
+    fontSize: 10,
+    color: COLORS.bg,
+    letterSpacing: 1,
   },
 });
