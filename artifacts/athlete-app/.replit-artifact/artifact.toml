@@ -1,6 +1,6 @@
 kind = "mobile"
-previewPath = "/"
-title = "ADAPT by LMJ"
+previewPath = "/mobile/"
+title = "ADAPT"
 version = "1.0.0"
 id = "artifacts/athlete-app"
 router = "expo-domain"
@@ -12,7 +12,7 @@ version = "1.0.0"
 [[services]]
 ensurePreviewReachable = "/status"
 name = "expo"
-paths = [ "/" ]
+paths = [ "/mobile/" ]
 localPort = 23899
 
 [services.development]
