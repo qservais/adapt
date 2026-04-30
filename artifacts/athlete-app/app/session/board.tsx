@@ -340,8 +340,9 @@ export default function BoardScreen() {
                 {groupExs.map((ex) => {
                   const sets = exState[ex.id] ?? initialSetState(ex);
                   const allExDone = sets.every((s) => s.done);
-                  const hasLoad = (ex.adaptedLoadKg ?? ex.nominalLoadKg ?? ex.lastUsedLoadKg) != null
-                    && (ex.adaptedLoadKg ?? ex.nominalLoadKg ?? ex.lastUsedLoadKg)! > 0;
+                  const prescribedLoad = ex.adaptedLoadKg ?? ex.nominalLoadKg ?? null;
+                  const hasLoad = ((prescribedLoad ?? ex.lastUsedLoadKg) != null)
+                    && ((prescribedLoad ?? ex.lastUsedLoadKg)! > 0);
                   return (
                     <View key={ex.id} style={[s.exCard, allExDone && { opacity: 0.7 }]}>
                       <View style={s.exHeader}>
@@ -352,8 +353,8 @@ export default function BoardScreen() {
                           </Text>
                           <Text style={[s.exTarget, { fontFamily: FONTS.mono }]}>
                             {ex.sets} × {ex.reps ?? "–"}
-                            {hasLoad
-                              ? `  ·  ${formatWeight(ex.adaptedLoadKg ?? ex.nominalLoadKg!)} cible`
+                            {prescribedLoad != null && prescribedLoad > 0
+                              ? `  ·  ${formatWeight(prescribedLoad)} cible`
                               : ""}
                             {(ex.restSeconds ?? 0) > 0 ? `  ·  ${ex.restSeconds}s repos` : ""}
                           </Text>
