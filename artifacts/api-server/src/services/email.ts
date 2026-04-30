@@ -3,7 +3,6 @@ import { logger } from "../lib/logger.js";
 
 const RESEND_API_KEY = process.env["RESEND_API_KEY"];
 const FROM_EMAIL = "ADAPT System <hello@adapt-system.be>";
-const DASHBOARD_URL = process.env["DASHBOARD_URL"] ?? "https://adapt-system.be";
 
 let resend: Resend | null = null;
 if (RESEND_API_KEY) {
@@ -12,7 +11,7 @@ if (RESEND_API_KEY) {
   logger.warn("RESEND_API_KEY not set — emails will be logged but not sent");
 }
 
-async function sendEmail(opts: { to: string; subject: string; html: string }) {
+async function sendEmail(opts: { to: string; subject: string; html: string; text: string }) {
   if (!resend) {
     logger.info({ to: opts.to, subject: opts.subject }, "[EMAIL-MOCK] Would send email");
     return;
@@ -23,6 +22,7 @@ async function sendEmail(opts: { to: string; subject: string; html: string }) {
       to: opts.to,
       subject: opts.subject,
       html: opts.html,
+      text: opts.text,
     });
     if (error) {
       logger.error({ error, to: opts.to }, "Resend error");
@@ -50,7 +50,6 @@ function baseTemplate(content: string): string {
     h2 { font-size: 22px; font-weight: 700; color: #FFFFFF; margin-bottom: 16px; }
     p { font-size: 15px; line-height: 1.7; color: #B0B0B0; margin-bottom: 12px; }
     .cta { display: block; width: 100%; text-align: center; background-color: #00D9FF; color: #000000; font-weight: 700; font-size: 15px; letter-spacing: 1px; padding: 16px 24px; border-radius: 10px; text-decoration: none; margin: 28px 0; }
-    .cta-alt { display: block; width: 100%; text-align: center; background-color: transparent; color: #00D9FF; font-weight: 600; font-size: 13px; padding: 12px 24px; border-radius: 10px; text-decoration: none; border: 1px solid rgba(0,217,255,0.3); margin: 12px 0; }
     .footer { text-align: center; font-size: 11px; color: #444; margin-top: 32px; line-height: 1.8; }
     .highlight { color: #00F5A0; font-weight: 600; }
     .url-fallback { word-break: break-all; font-size: 12px; color: #555; }
@@ -81,11 +80,11 @@ export async function sendWelcomeEmail(
   const isCoach = role === "coach";
   const roleLabel = isCoach ? "coach" : "athlète";
   const nextStep = isCoach
-    ? "Connectez-vous au tableau de bord coach pour commencer à gérer vos athlètes."
-    : "Ouvrez l'application ADAPT pour démarrer votre premier entraînement.";
+    ? "Connecte-toi au tableau de bord coach pour commencer à gérer tes athlètes."
+    : "Ouvre l'application ADAPT pour démarrer ton premier entraînement.";
 
   const html = baseTemplate(`
-    <h2>Bienvenue sur ADAPT, ${firstName} 👋</h2>
+    <h2>Bienvenue sur ADAPT, ${firstName} !</h2>
     <p>Ton compte <span class="highlight">${roleLabel}</span> a bien été créé. Tu fais maintenant partie de la communauté ADAPT.</p>
     <p>${nextStep}</p>
     <div class="divider"></div>
@@ -93,10 +92,27 @@ export async function sendWelcomeEmail(
     <p style="color:#555; font-size:13px;">Ton équipe ADAPT</p>
   `);
 
+  const text = [
+    `ADAPT — INTELLIGENCE PERFORMANCE`,
+    ``,
+    `Bienvenue sur ADAPT, ${firstName} !`,
+    ``,
+    `Ton compte ${roleLabel} a bien été créé. Tu fais maintenant partie de la communauté ADAPT.`,
+    ``,
+    nextStep,
+    ``,
+    `Des questions ? Réponds directement à cet email — on est là.`,
+    ``,
+    `Ton équipe ADAPT`,
+    ``,
+    `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
+  ].join("\n");
+
   await sendEmail({
     to,
     subject: `Bienvenue sur ADAPT, ${firstName} !`,
     html,
+    text,
   });
 }
 
@@ -121,9 +137,32 @@ export async function sendPasswordResetEmail(
     ${fallbackSection}
   `);
 
+  const textLines = [
+    `ADAPT — INTELLIGENCE PERFORMANCE`,
+    ``,
+    `Réinitialisation de ton mot de passe`,
+    ``,
+    `Bonjour ${firstName},`,
+    ``,
+    `Tu as demandé à réinitialiser ton mot de passe ADAPT. Ce lien est valable 1 heure.`,
+    ``,
+    `Lien de réinitialisation :`,
+    primaryUrl,
+  ];
+  if (deepLinkUrl) {
+    textLines.push(``, `Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :`, resetUrl);
+  }
+  textLines.push(
+    ``,
+    `Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.`,
+    ``,
+    `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
+  );
+
   await sendEmail({
     to,
     subject: "Réinitialisation de ton mot de passe ADAPT",
     html,
+    text: textLines.join("\n"),
   });
 }
