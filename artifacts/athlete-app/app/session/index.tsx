@@ -2,6 +2,7 @@ import React from "react";
 import { getGenericErrorMessage } from "@/lib/errors";
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -211,6 +212,7 @@ export default function SessionIntroScreen() {
   const [presenceConfirmed, setPresenceConfirmed] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"guided" | "board">("guided");
   const [viewModeLoaded, setViewModeLoaded] = React.useState(false);
+  const [detailExercise, setDetailExercise] = React.useState<SessionExerciseItem | null>(null);
 
   React.useEffect(() => {
     AsyncStorage.getItem("adapt_session_view_mode").then((v) => {
@@ -637,8 +639,14 @@ export default function SessionIntroScreen() {
                   </View>
                 );
               }
+              const hasDetail = (ex.description != null && ex.description.length > 0) || ex.coachCue != null;
               return (
-                <View key={ex.id} style={[styles.exRow, inBlock && styles.exRowInBlock]}>
+                <TouchableOpacity
+                  key={ex.id}
+                  style={[styles.exRow, inBlock && styles.exRowInBlock]}
+                  onPress={() => setDetailExercise(ex)}
+                  activeOpacity={0.7}
+                >
                   <View style={[styles.exThumbFallback, inBlock && styles.exThumbInBlock]}>
                     <Text style={[styles.exNum, { fontFamily: FONTS.mono }]}>
                       {String(globalIndex + 1).padStart(2, "0")}
@@ -652,16 +660,11 @@ export default function SessionIntroScreen() {
                       {ex.restSeconds != null ? ` · ${ex.restSeconds}s repos` : ""}
                     </Text>
                     {ex.coachCue != null && (
-                      <Text style={[styles.exCue, { fontFamily: FONTS.body }]}>{ex.coachCue}</Text>
-                    )}
-                    {ex.description != null && ex.description.length > 0 && (
-                      <Text style={[styles.exDesc, { fontFamily: FONTS.body }]}>
-                        {ex.description}
-                      </Text>
+                      <Text style={[styles.exCue, { fontFamily: FONTS.body }]} numberOfLines={1}>{ex.coachCue}</Text>
                     )}
                   </View>
-                  <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
-                </View>
+                  <Feather name="chevron-right" size={16} color={hasDetail ? COLORS.textSecondary : COLORS.textMuted} />
+                </TouchableOpacity>
               );
             };
 
@@ -695,6 +698,101 @@ export default function SessionIntroScreen() {
           })()}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={detailExercise !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetailExercise(null)}
+      >
+        <TouchableOpacity
+          style={detailStyles.backdrop}
+          activeOpacity={1}
+          onPress={() => setDetailExercise(null)}
+        />
+        {detailExercise && (
+          <View style={[detailStyles.sheet, { paddingBottom: insets.bottom + 24 }]}>
+            <View style={detailStyles.handle} />
+            <View style={detailStyles.sheetHeader}>
+              <Text style={[detailStyles.sheetTitle, { fontFamily: FONTS.title }]} numberOfLines={2}>
+                {detailExercise.exerciseName}
+              </Text>
+              <TouchableOpacity onPress={() => setDetailExercise(null)} style={detailStyles.closeBtn}>
+                <Feather name="x" size={20} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={detailStyles.metaRow}>
+              <View style={detailStyles.metaChip}>
+                <Text style={[detailStyles.metaLabel, { fontFamily: FONTS.mono }]}>SÉRIES</Text>
+                <Text style={[detailStyles.metaVal, { fontFamily: FONTS.monoBold }]}>{detailExercise.sets}</Text>
+              </View>
+              {detailExercise.reps != null && (
+                <View style={detailStyles.metaChip}>
+                  <Text style={[detailStyles.metaLabel, { fontFamily: FONTS.mono }]}>REPS</Text>
+                  <Text style={[detailStyles.metaVal, { fontFamily: FONTS.monoBold }]}>{detailExercise.reps}</Text>
+                </View>
+              )}
+              {(detailExercise.adaptedLoadKg ?? detailExercise.nominalLoadKg) != null && (
+                <View style={detailStyles.metaChip}>
+                  <Text style={[detailStyles.metaLabel, { fontFamily: FONTS.mono }]}>CHARGE</Text>
+                  <Text style={[detailStyles.metaVal, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
+                    {detailExercise.adaptedLoadKg ?? detailExercise.nominalLoadKg}kg
+                  </Text>
+                </View>
+              )}
+              {detailExercise.restSeconds != null && (
+                <View style={detailStyles.metaChip}>
+                  <Text style={[detailStyles.metaLabel, { fontFamily: FONTS.mono }]}>REPOS</Text>
+                  <Text style={[detailStyles.metaVal, { fontFamily: FONTS.monoBold }]}>{detailExercise.restSeconds}s</Text>
+                </View>
+              )}
+              {detailExercise.tempo != null && (
+                <View style={detailStyles.metaChip}>
+                  <Text style={[detailStyles.metaLabel, { fontFamily: FONTS.mono }]}>TEMPO</Text>
+                  <Text style={[detailStyles.metaVal, { fontFamily: FONTS.monoBold }]}>{detailExercise.tempo}</Text>
+                </View>
+              )}
+            </View>
+
+            {detailExercise.coachCue != null && (
+              <View style={detailStyles.section}>
+                <View style={detailStyles.sectionHeader}>
+                  <Feather name="message-square" size={13} color={COLORS.cyan} />
+                  <Text style={[detailStyles.sectionLabel, { fontFamily: FONTS.mono, color: COLORS.cyan }]}>
+                    INDICATION COACH
+                  </Text>
+                </View>
+                <Text style={[detailStyles.sectionText, { fontFamily: FONTS.body }]}>
+                  {detailExercise.coachCue}
+                </Text>
+              </View>
+            )}
+
+            {detailExercise.description != null && detailExercise.description.length > 0 && (
+              <View style={detailStyles.section}>
+                <View style={detailStyles.sectionHeader}>
+                  <Feather name="info" size={13} color={COLORS.textMuted} />
+                  <Text style={[detailStyles.sectionLabel, { fontFamily: FONTS.mono }]}>
+                    DESCRIPTION
+                  </Text>
+                </View>
+                <Text style={[detailStyles.sectionText, { fontFamily: FONTS.body }]}>
+                  {detailExercise.description}
+                </Text>
+              </View>
+            )}
+
+            {detailExercise.coachCue == null && (detailExercise.description == null || detailExercise.description.length === 0) && (
+              <View style={detailStyles.emptyDetail}>
+                <Text style={[detailStyles.emptyDetailText, { fontFamily: FONTS.body }]}>
+                  Aucune description disponible pour cet exercice.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </Modal>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
         {startError ? (
@@ -1128,5 +1226,101 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.5,
     color: COLORS.cyan,
+  },
+});
+
+const detailStyles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  sheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.bgCard,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    gap: 16,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  sheetTitle: {
+    flex: 1,
+    fontSize: 20,
+    color: COLORS.white,
+    letterSpacing: 1,
+  },
+  closeBtn: {
+    padding: 4,
+    marginTop: 2,
+  },
+  metaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  metaChip: {
+    backgroundColor: COLORS.bg,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    gap: 3,
+  },
+  metaLabel: {
+    fontSize: 8,
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+  },
+  metaVal: {
+    fontSize: 16,
+    color: COLORS.white,
+  },
+  section: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+  },
+  sectionText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 21,
+  },
+  emptyDetail: {
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  emptyDetailText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
   },
 });
