@@ -79,6 +79,7 @@ import type {
   UpdateAppointmentRequest,
   UpdateNotificationPreferencesRequest,
   UpdateProfileRequest,
+  UpdateProgramRequest,
   UpdateProgressRequest,
   UpdateScheduledNotificationRequest,
   UploadDocumentRequest,
@@ -2462,14 +2463,14 @@ export const getUpdateProgramUrl = (programId: string) => {
 
 export const updateProgram = async (
   programId: string,
-  createProgramRequest: CreateProgramRequest,
+  updateProgramRequest: UpdateProgramRequest,
   options?: RequestInit,
 ): Promise<ProgramSummary> => {
   return customFetch<ProgramSummary>(getUpdateProgramUrl(programId), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createProgramRequest),
+    body: JSON.stringify(updateProgramRequest),
   });
 };
 
@@ -2480,14 +2481,14 @@ export const getUpdateProgramMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateProgram>>,
     TError,
-    { programId: string; data: BodyType<CreateProgramRequest> },
+    { programId: string; data: BodyType<UpdateProgramRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateProgram>>,
   TError,
-  { programId: string; data: BodyType<CreateProgramRequest> },
+  { programId: string; data: BodyType<UpdateProgramRequest> },
   TContext
 > => {
   const mutationKey = ["updateProgram"];
@@ -2501,7 +2502,7 @@ export const getUpdateProgramMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateProgram>>,
-    { programId: string; data: BodyType<CreateProgramRequest> }
+    { programId: string; data: BodyType<UpdateProgramRequest> }
   > = (props) => {
     const { programId, data } = props ?? {};
 
@@ -2514,7 +2515,7 @@ export const getUpdateProgramMutationOptions = <
 export type UpdateProgramMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateProgram>>
 >;
-export type UpdateProgramMutationBody = BodyType<CreateProgramRequest>;
+export type UpdateProgramMutationBody = BodyType<UpdateProgramRequest>;
 export type UpdateProgramMutationError = ErrorType<unknown>;
 
 /**
@@ -2527,14 +2528,14 @@ export const useUpdateProgram = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateProgram>>,
     TError,
-    { programId: string; data: BodyType<CreateProgramRequest> },
+    { programId: string; data: BodyType<UpdateProgramRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateProgram>>,
   TError,
-  { programId: string; data: BodyType<CreateProgramRequest> },
+  { programId: string; data: BodyType<UpdateProgramRequest> },
   TContext
 > => {
   return useMutation(getUpdateProgramMutationOptions(options));

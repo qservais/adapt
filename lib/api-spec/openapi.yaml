@@ -610,7 +610,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateProgramRequest"
+              $ref: "#/components/schemas/UpdateProgramRequest"
       responses:
         "200":
           description: Program updated
@@ -2087,6 +2087,11 @@ components:
         lastUsedDate:
           type: string
           nullable: true
+        lastUsedRepsPerSet:
+          type: array
+          items:
+            type: number
+          nullable: true
         blockId:
           type: string
           nullable: true
@@ -2741,6 +2746,24 @@ components:
       required:
         - name
         - athleteId
+        - durationWeeks
+
+    UpdateProgramRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+        durationWeeks:
+          type: integer
+        startDate:
+          type: string
+      required:
+        - name
         - durationWeeks
 
     CreateSessionRequest:

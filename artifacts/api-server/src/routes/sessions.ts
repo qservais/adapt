@@ -965,7 +965,8 @@ router.get("/sessions/history", authenticate, requireRole("athlete"), async (req
                 blockId: sessionExercisesTable.blockId,
               })
               .from(sessionExercisesTable)
-              .where(eq(sessionExercisesTable.sessionId, log.sessionId))
+              .innerJoin(sessionVariantsTable, eq(sessionExercisesTable.variantId, sessionVariantsTable.id))
+              .where(eq(sessionVariantsTable.sessionId, log.sessionId))
           : [];
 
         const exerciseBlockMap = new Map<string, string | null>();

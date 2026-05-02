@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 52,
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     letterSpacing: 6,
     lineHeight: 56,
   },
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 22,
-    color: COLORS.text,
+    color: COLORS.textPrimary,
   },
   successText: {
     fontSize: 15,

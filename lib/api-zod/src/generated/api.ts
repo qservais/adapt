@@ -492,6 +492,16 @@ export const GetSessionHistoryResponseItem = zod.object({
   createdAt: zod.string().optional(),
   isFreeSession: zod.boolean().optional(),
   freeSessionName: zod.string().nullish(),
+  blocks: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.string(),
+        name: zod.string().nullish(),
+        orderIndex: zod.number(),
+      }),
+    )
+    .optional(),
   exercises: zod
     .array(
       zod.object({
@@ -499,6 +509,10 @@ export const GetSessionHistoryResponseItem = zod.object({
         exerciseName: zod.string(),
         loadKgUsed: zod.number().nullish(),
         setsCompleted: zod.number().nullish(),
+        blockId: zod.string().nullish(),
+        blockType: zod.string().nullish(),
+        blockName: zod.string().nullish(),
+        blockOrderIndex: zod.number().nullish(),
       }),
     )
     .optional(),
@@ -615,6 +629,10 @@ export const GetExerciseLogsResponseItem = zod.object({
   exerciseName: zod.string(),
   loadKgUsed: zod.number().nullish(),
   setsCompleted: zod.number().nullish(),
+  blockId: zod.string().nullish(),
+  blockType: zod.string().nullish(),
+  blockName: zod.string().nullish(),
+  blockOrderIndex: zod.number().nullish(),
 });
 export const GetExerciseLogsResponse = zod.array(GetExerciseLogsResponseItem);
 
@@ -769,7 +787,7 @@ export const UpdateProgramParams = zod.object({
 export const UpdateProgramBody = zod.object({
   name: zod.string(),
   description: zod.string().optional(),
-  athleteId: zod.string(),
+  athleteId: zod.string().nullish(),
   durationWeeks: zod.number(),
   startDate: zod.string().optional(),
 });
@@ -1274,6 +1292,16 @@ export const GetClientDetailResponse = zod.object({
       createdAt: zod.string().optional(),
       isFreeSession: zod.boolean().optional(),
       freeSessionName: zod.string().nullish(),
+      blocks: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            type: zod.string(),
+            name: zod.string().nullish(),
+            orderIndex: zod.number(),
+          }),
+        )
+        .optional(),
       exercises: zod
         .array(
           zod.object({
@@ -1281,6 +1309,10 @@ export const GetClientDetailResponse = zod.object({
             exerciseName: zod.string(),
             loadKgUsed: zod.number().nullish(),
             setsCompleted: zod.number().nullish(),
+            blockId: zod.string().nullish(),
+            blockType: zod.string().nullish(),
+            blockName: zod.string().nullish(),
+            blockOrderIndex: zod.number().nullish(),
           }),
         )
         .optional(),

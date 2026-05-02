@@ -183,7 +183,16 @@ router.get("/users/avatar/:userId", async (req, res) => {
 
     res.set("Content-Type", "image/jpeg");
     res.set("Cache-Control", "public, max-age=60");
-    storageFile.createReadStream().pipe(res);
+    const stream = storageFile.createReadStream();
+    stream.on("error", (streamErr) => {
+      console.error("Avatar stream error:", streamErr);
+      if (!res.headersSent) {
+        res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur lors du chargement de l'avatar" } });
+      } else {
+        res.destroy();
+      }
+    });
+    stream.pipe(res);
   } catch (err) {
     console.error("Avatar serve error:", err);
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
@@ -219,10 +228,22 @@ router.post("/users/me/avatar", authenticate, (req, res, next) => {
     const storageFile = bucket.file(objectName);
     await storageFile.save(resized, { contentType: "image/jpeg", resumable: false });
 
+    // Lookup previous avatar to delete it after the DB update succeeds
+    const [prev] = await db.select({ avatarUrl: usersTable.avatarUrl })
+      .from(usersTable).where(eq(usersTable.id, req.user!.userId));
+    const previousAvatar = prev?.avatarUrl ?? null;
+
     const [updatedUser] = await db.update(usersTable)
       .set({ avatarUrl: objectName, updatedAt: new Date() })
       .where(eq(usersTable.id, req.user!.userId))
       .returning();
+
+    // Best-effort cleanup of the previous avatar object — never block the response
+    if (previousAvatar && previousAvatar !== objectName) {
+      bucket.file(previousAvatar).delete({ ignoreNotFound: true }).catch((delErr) => {
+        console.warn("Failed to delete old avatar:", previousAvatar, delErr?.message);
+      });
+    }
 
     res.json({ avatarUrl: `/api/users/avatar/${req.user!.userId}?t=${timestamp}`, user: userProfile(updatedUser) });
   } catch (err) {

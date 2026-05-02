@@ -164,7 +164,7 @@ function MonthCalendar({ checkins, year, month }: { checkins: CheckinItem[]; yea
             const modeColor = checkin ? (MODE_CONFIG[checkin.sessionMode as SessionMode]?.color ?? COLORS.border) : null;
             return (
               <View key={di} style={[styles.calCell, checkin != null && { backgroundColor: `${modeColor}30`, borderColor: modeColor ?? COLORS.border, borderWidth: 1 }, isToday && styles.calToday]}>
-                <Text style={[styles.calDayNum, { fontFamily: checkin ? FONTS.monoBold : FONTS.mono }, checkin != null && { color: modeColor ?? colors.textPrimary }, isToday && !checkin && { color: COLORS.green }]}>
+                <Text style={[styles.calDayNum, { fontFamily: checkin ? FONTS.monoBold : FONTS.mono }, checkin != null && { color: modeColor ?? COLORS.textPrimary }, isToday && !checkin && { color: COLORS.green }]}>
                   {day}
                 </Text>
                 {checkin != null && <View style={[styles.calDot, { backgroundColor: modeColor ?? COLORS.border }]} />}

@@ -1899,7 +1899,7 @@ export default function ClientDetail() {
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {prog.durationWeeks} sem.
                         {prog.startDate ? ` · Démarré le ${format(new Date(prog.startDate + "T12:00:00"), 'd MMM yyyy', { locale: fr })}` : " · Pas encore démarré"}
-                        {prog.sessionCount > 0 && ` · ${prog.sessionCount} séance${prog.sessionCount > 1 ? "s" : ""}`}
+                        {(prog.sessionCount ?? 0) > 0 && ` · ${prog.sessionCount} séance${(prog.sessionCount ?? 0) > 1 ? "s" : ""}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">

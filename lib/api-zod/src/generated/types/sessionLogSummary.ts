@@ -6,13 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SessionExerciseLog } from "./sessionExerciseLog";
-
-export interface SessionLogBlock {
-  id: string;
-  type: string;
-  name?: string | null;
-  orderIndex: number;
-}
+import type { SessionLogBlock } from "./sessionLogBlock";
 
 export interface SessionLogSummary {
   id: string;

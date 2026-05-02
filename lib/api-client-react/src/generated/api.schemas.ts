@@ -476,6 +476,14 @@ export interface CreateProgramRequest {
   startDate?: string;
 }
 
+export interface UpdateProgramRequest {
+  name: string;
+  description?: string;
+  athleteId?: string | null;
+  durationWeeks: number;
+  startDate?: string;
+}
+
 export type CreateSessionRequestType =
   (typeof CreateSessionRequestType)[keyof typeof CreateSessionRequestType];
 

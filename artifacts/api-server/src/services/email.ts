@@ -13,10 +13,12 @@ if (RESEND_API_KEY) {
 
 type Lang = "fr" | "en";
 
-async function sendEmail(opts: { to: string; subject: string; html: string; text: string }) {
+type SendEmailResult = { ok: true } | { ok: false; error: string };
+
+async function sendEmail(opts: { to: string; subject: string; html: string; text: string }): Promise<SendEmailResult> {
   if (!resend) {
     logger.info({ to: opts.to, subject: opts.subject }, "[EMAIL-MOCK] Would send email");
-    return;
+    return { ok: true };
   }
   try {
     const { error } = await resend.emails.send({
@@ -28,9 +30,13 @@ async function sendEmail(opts: { to: string; subject: string; html: string; text
     });
     if (error) {
       logger.error({ error, to: opts.to }, "Resend error");
+      return { ok: false, error: error.message ?? "Resend rejected the email" };
     }
+    return { ok: true };
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown email error";
     logger.error({ err, to: opts.to }, "Failed to send email via Resend");
+    return { ok: false, error: message };
   }
 }
 
@@ -170,7 +176,7 @@ export async function sendWelcomeEmail(
     `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
   ].join("\n");
 
-  await sendEmail({
+  return sendEmail({
     to,
     subject: c.subject(firstName),
     html,
@@ -223,7 +229,7 @@ export async function sendPasswordResetEmail(
     `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
   );
 
-  await sendEmail({
+  return sendEmail({
     to,
     subject: c.subject,
     html,
