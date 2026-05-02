@@ -103,8 +103,10 @@ async function runAlertChecks(): Promise<void> {
       .orderBy(desc(sessionLogsTable.createdAt))
       .limit(2);
 
-    // RPE stored as 1-10 integer; spec says >= 9.5 means we check >= 10
-    if (recentRpe.length >= 2 && recentRpe.every(s => s.rpe !== null && s.rpe >= 9)) {
+    // Spec: trigger at RPE >= 9.5. RPE is currently stored as 1-10 integer
+    // so in practice only 10 satisfies the comparison; using the literal
+    // 9.5 keeps the threshold correct if the column is widened to decimal.
+    if (recentRpe.length >= 2 && recentRpe.every(s => s.rpe !== null && s.rpe >= 9.5)) {
       await createAlertIfNotExists(
         coachId,
         athlete.id,
