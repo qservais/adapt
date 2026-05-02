@@ -94,7 +94,7 @@ router.post("/auth/register", async (req, res) => {
       inviteCode,
     }).returning();
 
-    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email);
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email, user.language);
     await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
 
     sendWelcomeEmail(email, firstName, role, req.locale).catch(() => {});
@@ -150,7 +150,7 @@ router.post("/auth/login", async (req, res) => {
       return;
     }
 
-    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email);
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email, user.language);
     await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
 
     res.json({
@@ -199,7 +199,7 @@ router.post("/auth/refresh", async (req, res) => {
       return;
     }
 
-    const tokens = generateTokens(user.id, user.role, user.email);
+    const tokens = generateTokens(user.id, user.role, user.email, user.language);
     await db.update(usersTable).set({ refreshToken: tokens.refreshToken }).where(eq(usersTable.id, user.id));
 
     res.json({
