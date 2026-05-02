@@ -42,11 +42,13 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [emailInUse, setEmailInUse] = useState(false);
 
   const strength = getPasswordStrength(password);
 
   const handleRegister = async () => {
     setError("");
+    setEmailInUse(false);
     if (!firstName.trim() || !email.trim() || !password) {
       setError("Tous les champs sont requis");
       return;
@@ -68,6 +70,11 @@ export default function RegisterScreen() {
       router.replace("/onboarding/splash");
     } catch (err: unknown) {
       setError(getRegisterErrorMessage(err));
+      const status = (err as { status?: number } | null)?.status;
+      const code = (err as { data?: { error?: { code?: string } } } | null)?.data?.error?.code;
+      if (status === 409 || code === "EMAIL_IN_USE") {
+        setEmailInUse(true);
+      }
     }
   };
 
@@ -141,6 +148,16 @@ export default function RegisterScreen() {
           {error ? (
             <View style={styles.errorWrap}>
               <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{error}</Text>
+              {emailInUse ? (
+                <Pressable
+                  onPress={() => router.push({ pathname: "/auth/forgot-password", params: { email: email.trim().toLowerCase() } })}
+                  style={styles.errorCta}
+                >
+                  <Text style={[styles.errorCtaText, { fontFamily: FONTS.bodySemiBold }]}>
+                    Mot de passe oublié ?
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
 
@@ -182,6 +199,8 @@ const styles = StyleSheet.create({
     borderColor: `${COLORS.red}40`,
   },
   errorText: { color: COLORS.red, fontSize: 13, textAlign: "center" },
+  errorCta: { marginTop: 10, alignItems: "center", paddingVertical: 4 },
+  errorCtaText: { color: COLORS.cyan, fontSize: 14 },
   loginLink: { alignItems: "center" },
   loginText: { fontSize: 15, color: COLORS.textSecondary },
 });
