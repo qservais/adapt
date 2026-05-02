@@ -1,6 +1,7 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import LandingPage from "@/pages/LandingPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -8,6 +9,7 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route component={NotFound} />
     </Switch>
   );

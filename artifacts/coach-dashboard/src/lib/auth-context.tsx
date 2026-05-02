@@ -13,6 +13,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password', '/privacy'];
+
+function isPublicPath(loc: string): boolean {
+  return PUBLIC_PATHS.some((p) => loc === p || loc.startsWith(p + '/') || loc.startsWith(p + '?'));
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
   const [tokenExists, setTokenExists] = useState(!!localStorage.getItem('adapt_coach_access'));
@@ -28,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isCoach = user?.role === 'coach';
 
   useEffect(() => {
-    if (!tokenExists && location !== '/login') {
+    if (!tokenExists && !isPublicPath(location)) {
       navigate('/login');
       return;
     }

@@ -261,8 +261,10 @@ router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) => 
       .set({ passwordResetToken: resetToken, passwordResetExpiry: expiry })
       .where(eq(usersTable.id, user.id));
 
-    const DASHBOARD_URL = process.env["DASHBOARD_URL"] ?? "https://adapt-system.be";
-    const resetUrl = `${DASHBOARD_URL}/reset-password?token=${resetToken}`;
+    const SITE_URL = process.env["SITE_URL"] ?? process.env["DASHBOARD_URL"] ?? "https://adapt-system.be";
+    const resetUrl = user.role === "coach"
+      ? `${SITE_URL}/coach-dashboard/reset-password?token=${resetToken}`
+      : `${SITE_URL}/reset-password?token=${resetToken}`;
     const deepLinkUrl = user.role === "athlete"
       ? `athlete-app://auth/reset-password?token=${resetToken}`
       : undefined;
