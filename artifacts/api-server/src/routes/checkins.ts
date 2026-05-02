@@ -30,13 +30,13 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
 
   const today = getTodayLocalDate();
 
-  // Enforce check-in window: closed after configurable hour (default 22:00)
-  const tz = process.env["APP_TIMEZONE"] ?? "Europe/Brussels";
-  const cutoffHour = parseInt(process.env["CHECKIN_CUTOFF_HOUR"] ?? "24", 10);
+  // Enforce check-in window: closed after configurable hour in UTC (default 14:00 UTC).
+  // Using UTC keeps behavior deterministic regardless of server timezone.
+  const cutoffHour = parseInt(process.env["CHECKIN_CUTOFF_HOUR"] ?? "14", 10);
   if (cutoffHour < 24) {
-    const localHour = parseInt(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: tz }), 10);
-    if (localHour >= cutoffHour) {
-      res.status(422).json({ error: { code: "CHECKIN_WINDOW_CLOSED", message: `Fenêtre de check-in fermée après ${cutoffHour}h00` } });
+    const utcHour = new Date().getUTCHours();
+    if (utcHour >= cutoffHour) {
+      res.status(422).json({ error: { code: "CHECKIN_WINDOW_CLOSED", message: `Fenêtre de check-in fermée après ${cutoffHour}h00 UTC` } });
       return;
     }
   }

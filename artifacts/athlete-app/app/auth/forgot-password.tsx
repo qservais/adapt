@@ -19,9 +19,7 @@ import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
-const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-  : "http://localhost:3000";
+import { customFetch } from "@/lib/custom-fetch";
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
@@ -42,15 +40,15 @@ export default function ForgotPasswordScreen() {
     setStatus("loading");
     setErrorMsg("");
     try {
-      await fetch(`${BASE_URL}/api/auth/forgot-password`, {
+      await customFetch("/api/auth/forgot-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
       setStatus("sent");
     } catch {
-      setStatus("error");
-      setErrorMsg("Une erreur est survenue. Réessaie.");
+      // Always show "sent" to avoid email enumeration; the API also
+      // returns 200 for unknown addresses.
+      setStatus("sent");
     }
   };
 

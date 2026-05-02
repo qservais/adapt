@@ -13,10 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
-
-const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-  : "http://localhost:3000";
+import { customFetch } from "@/lib/custom-fetch";
 
 export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
@@ -57,21 +54,15 @@ export default function ResetPasswordScreen() {
     setStatus("loading");
     setErrorMsg("");
     try {
-      const res = await fetch(`${BASE_URL}/api/auth/reset-password`, {
+      await customFetch("/api/auth/reset-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setErrorMsg(body?.error?.message ?? "Lien invalide ou expiré.");
-        setStatus("error");
-        return;
-      }
       setStatus("success");
       setTimeout(() => router.replace("/auth/login"), 2500);
-    } catch {
-      setErrorMsg("Une erreur est survenue. Réessaie.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Une erreur est survenue. Réessaie.";
+      setErrorMsg(message || "Lien invalide ou expiré.");
       setStatus("error");
     }
   };

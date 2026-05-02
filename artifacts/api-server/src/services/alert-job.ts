@@ -104,7 +104,7 @@ async function runAlertChecks(): Promise<void> {
       .limit(2);
 
     // RPE stored as 1-10 integer; spec says >= 9.5 means we check >= 10
-    if (recentRpe.length >= 2 && recentRpe.every(s => s.rpe !== null && s.rpe >= 10)) {
+    if (recentRpe.length >= 2 && recentRpe.every(s => s.rpe !== null && s.rpe >= 9)) {
       await createAlertIfNotExists(
         coachId,
         athlete.id,

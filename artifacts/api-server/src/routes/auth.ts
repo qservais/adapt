@@ -32,9 +32,11 @@ const forgotPasswordLimiter = rateLimit({
   message: { error: { code: "TOO_MANY_REQUESTS", message: "Trop de tentatives. Réessaie dans 15 minutes." } },
 });
 
-function generateTokens(userId: string, role: string, email: string) {
-  const accessToken = jwt.sign({ userId, role, email }, JWT_SECRET, { expiresIn: "1h" });
-  const refreshToken = jwt.sign({ userId, role, email }, JWT_REFRESH_SECRET, { expiresIn: "30d" });
+function generateTokens(userId: string, role: string, email: string, language?: string | null) {
+  const payload: Record<string, unknown> = { userId, role, email };
+  if (language) payload["language"] = language;
+  const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "1h" });
+  const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: "30d" });
   return { accessToken, refreshToken };
 }
 

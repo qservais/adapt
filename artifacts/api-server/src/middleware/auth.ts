@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { normalizeLocale } from "../locales/index.js";
 
 export interface AuthPayload {
   userId: string;
   role: "athlete" | "coach";
   email: string;
+  language?: string;
 }
 
 declare global {
@@ -28,6 +30,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   try {
     const payload = jwt.verify(token, JWT_SECRET) as AuthPayload;
     req.user = payload;
+    // Refine req.locale from the authenticated user's persisted language
+    // when no explicit header was sent. localeMiddleware ran before auth
+    // (it cannot see req.user), so this re-applies the user's preference.
+    const explicitHeader = req.header("x-language") ?? req.query["lang"]?.toString();
+    if (!explicitHeader && payload.language) {
+      req.locale = normalizeLocale(payload.language);
+    }
     next();
   } catch {
     res.status(401).json({ error: { code: "AUTH_TOKEN_EXPIRED", message: "Token is invalid or expired" } });

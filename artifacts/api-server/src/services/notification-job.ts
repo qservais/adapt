@@ -128,7 +128,11 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
 
   for (const coach of coaches) {
     const targetHour = coach.morningNotifHour ?? 7;
-    if (targetHour !== currentHour) continue;
+    // Window-based: trigger any time after target hour today.
+    // Idempotency is enforced by the per-day notification check below,
+    // so a server restart in the first minute of the target hour will
+    // still catch up on the next hourly tick.
+    if (currentHour < targetHour) continue;
 
     const athletes = await db
       .select({ id: usersTable.id, firstName: usersTable.firstName, pushToken: usersTable.pushToken, notificationPrefs: usersTable.notificationPrefs })

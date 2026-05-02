@@ -307,7 +307,12 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
                 <Dumbbell className="w-3 h-3" />
                 {prog.sessionCount} séance{prog.sessionCount > 1 ? "s" : ""}
               </span>
-            ) : null}
+            ) : (
+              <span className="text-xs text-muted-foreground/60 flex items-center gap-1">
+                <Dumbbell className="w-3 h-3 animate-pulse" />
+                <span className="inline-block h-2 w-8 rounded bg-muted-foreground/20 animate-pulse" />
+              </span>
+            )}
             {prog.isActive && (
               <span className="text-[10px] font-bold text-primary flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
