@@ -80,6 +80,9 @@ export default function LoginPage() {
                   <FormLabel className="text-gray-300">Adresse email</FormLabel>
                   <FormControl>
                     <Input 
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
                       placeholder="coach@adapt.demo" 
                       className="bg-black/50 border-white/10 focus-visible:ring-primary h-12" 
                       {...field} 
@@ -97,7 +100,8 @@ export default function LoginPage() {
                   <FormLabel className="text-gray-300">Mot de passe</FormLabel>
                   <FormControl>
                     <Input 
-                      type="password" 
+                      type="password"
+                      autoComplete="current-password"
                       placeholder="••••••••" 
                       className="bg-black/50 border-white/10 focus-visible:ring-primary h-12" 
                       {...field} 
@@ -119,7 +123,7 @@ export default function LoginPage() {
         
         <div className="mt-6 text-center">
           <Link href="/forgot-password">
-            <button className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <button type="button" className="text-sm text-muted-foreground hover:text-primary transition-colors py-3 px-4 -my-1 inline-block min-h-[44px]">
               Mot de passe oublié ?
             </button>
           </Link>

@@ -1067,7 +1067,7 @@ export default function ProgramDetail() {
           {/* WEEK VIEW */}
           {viewMode === "week" && (
             <div className="p-3 overflow-x-auto">
-              <div className="grid grid-cols-7 gap-1.5 min-w-[700px]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 md:min-w-[700px]">
                 {DAY_NAMES.map((dayLabel, idx) => {
                   const dayNumber = idx + 1;
                   const daySessions = sessionMap.get(`${safeCurrentWeek}-${dayNumber}`) ?? [];

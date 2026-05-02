@@ -170,7 +170,7 @@ export default function ChatView() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto h-[calc(100vh-8rem)] flex flex-col bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+    <div className="max-w-3xl mx-auto h-[calc(100vh-7.5rem)] sm:h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)] flex flex-col bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       <div className="h-16 border-b border-border bg-background/50 flex items-center px-4 gap-4 shrink-0">
         <Link href="/messages" className="text-muted-foreground hover:text-white p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
           <ArrowLeft className="w-5 h-5" />

@@ -584,7 +584,7 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent className="pt-0 overflow-x-auto">
-          <div className="min-w-[500px]">
+          <div className="min-w-[420px] sm:min-w-[500px]">
           <div className="grid grid-cols-7 gap-px mb-2">
             {DAY_HEADERS.map(h => (
               <div key={h} className="text-center text-[10px] font-mono text-muted-foreground uppercase py-1">
@@ -788,53 +788,92 @@ export default function Dashboard() {
               Aucune séance complétée ces 7 derniers jours.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-muted-foreground uppercase font-mono border-b border-border">
-                  <tr>
-                    <th className="py-2 pr-4">Athlète</th>
-                    <th className="py-2 pr-4">Séance</th>
-                    <th className="py-2 pr-4">Mode</th>
-                    <th className="py-2 pr-4 text-center">RPE</th>
-                    <th className="py-2 text-right">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {recentCompleted.map(log => (
-                    <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 pr-4">
-                        <Link href={`/clients/${log.athleteId}`} className="text-white hover:text-primary transition-colors font-medium text-sm">
-                          {log.athleteName}
-                        </Link>
-                      </td>
-                      <td className="py-3 pr-4 text-muted-foreground text-sm">{log.sessionName}</td>
-                      <td className="py-3 pr-4">
-                        <span className={cn(
-                          "text-xs font-mono px-2 py-0.5 rounded-full border",
-                          MODE_BG[log.variantMode] ?? "bg-white/5 border-white/10 text-muted-foreground"
-                        )}>
-                          <span className={MODE_COLORS[log.variantMode] ?? "text-muted-foreground"}>
-                            {log.variantMode.toUpperCase()}
+            <>
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-2">
+                {recentCompleted.map(log => (
+                  <Link key={log.id} href={`/clients/${log.athleteId}`}>
+                    <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-background/40 hover:bg-background/60 active:bg-background/80 border border-border/40 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-sm font-medium text-white truncate">{log.athleteName}</span>
+                          <span className={cn(
+                            "text-[9px] font-mono px-1.5 py-0.5 rounded-full border shrink-0",
+                            MODE_BG[log.variantMode] ?? "bg-white/5 border-white/10 text-muted-foreground"
+                          )}>
+                            <span className={MODE_COLORS[log.variantMode] ?? "text-muted-foreground"}>
+                              {log.variantMode.toUpperCase()}
+                            </span>
                           </span>
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-center">
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">{log.sessionName}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                          {log.completedAt ? format(new Date(log.completedAt), "d MMM HH:mm", { locale: fr }) : "--"}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[9px] uppercase font-mono text-muted-foreground">RPE</div>
                         {log.rpe !== null ? (
-                          <span className={cn("text-sm font-display", log.rpe >= 8 ? "text-destructive" : log.rpe >= 6 ? "text-accent" : "text-primary")}>
-                            {log.rpe}<span className="text-xs text-muted-foreground">/10</span>
+                          <span className={cn("text-base font-display", log.rpe >= 8 ? "text-destructive" : log.rpe >= 6 ? "text-accent" : "text-primary")}>
+                            {log.rpe}<span className="text-[10px] text-muted-foreground">/10</span>
                           </span>
                         ) : (
                           <span className="text-muted-foreground text-xs">--</span>
                         )}
-                      </td>
-                      <td className="py-3 text-right text-xs text-muted-foreground font-mono">
-                        {log.completedAt ? format(new Date(log.completedAt), "d MMM HH:mm", { locale: fr }) : "--"}
-                      </td>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-muted-foreground uppercase font-mono border-b border-border">
+                    <tr>
+                      <th className="py-2 pr-4">Athlète</th>
+                      <th className="py-2 pr-4">Séance</th>
+                      <th className="py-2 pr-4">Mode</th>
+                      <th className="py-2 pr-4 text-center">RPE</th>
+                      <th className="py-2 text-right">Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {recentCompleted.map(log => (
+                      <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 pr-4">
+                          <Link href={`/clients/${log.athleteId}`} className="text-white hover:text-primary transition-colors font-medium text-sm">
+                            {log.athleteName}
+                          </Link>
+                        </td>
+                        <td className="py-3 pr-4 text-muted-foreground text-sm">{log.sessionName}</td>
+                        <td className="py-3 pr-4">
+                          <span className={cn(
+                            "text-xs font-mono px-2 py-0.5 rounded-full border",
+                            MODE_BG[log.variantMode] ?? "bg-white/5 border-white/10 text-muted-foreground"
+                          )}>
+                            <span className={MODE_COLORS[log.variantMode] ?? "text-muted-foreground"}>
+                              {log.variantMode.toUpperCase()}
+                            </span>
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-center">
+                          {log.rpe !== null ? (
+                            <span className={cn("text-sm font-display", log.rpe >= 8 ? "text-destructive" : log.rpe >= 6 ? "text-accent" : "text-primary")}>
+                              {log.rpe}<span className="text-xs text-muted-foreground">/10</span>
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">--</span>
+                          )}
+                        </td>
+                        <td className="py-3 text-right text-xs text-muted-foreground font-mono">
+                          {log.completedAt ? format(new Date(log.completedAt), "d MMM HH:mm", { locale: fr }) : "--"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

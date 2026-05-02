@@ -241,7 +241,96 @@ export default function ClientsOverview() {
           </Tabs>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile: cards */}
+        <div className="md:hidden divide-y divide-border/50">
+          {filteredClients.map((client) => {
+            const hasCheckin = !!client.todayCheckin;
+            const score = client.todayCheckin?.adaptScore || 0;
+            const alerts = client.activeAlerts;
+
+            let rowState = "default";
+            if (alerts > 0) rowState = "danger";
+            else if (!hasCheckin || score < 40) rowState = "warning";
+            else if (hasCheckin && score >= 60) rowState = "good";
+
+            const stateStyles = {
+              danger: "border-l-[3px] border-l-destructive bg-destructive/5",
+              warning: "border-l-[3px] border-l-accent bg-accent/5",
+              good: "border-l-[3px] border-l-primary bg-primary/5",
+              default: "border-l-[3px] border-l-transparent",
+            };
+
+            return (
+              <Link key={client.id} href={`/clients/${client.id}`}>
+                <div className={cn("p-4 active:bg-white/5 transition-colors", stateStyles[rowState as keyof typeof stateStyles])}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-white overflow-hidden flex-shrink-0">
+                      {client.avatarUrl ? (
+                        <img src={client.avatarUrl} alt={client.firstName} className="w-full h-full object-cover" />
+                      ) : (
+                        <>{client.firstName[0]}{client.lastName?.[0]}</>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-white truncate">{client.firstName} {client.lastName}</div>
+                      <div className="text-xs text-muted-foreground truncate">{client.email}</div>
+                    </div>
+                    {alerts > 0 && (
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-destructive text-white font-bold text-xs shrink-0">
+                        {alerts}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-background/40 rounded-lg p-2">
+                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">Score</div>
+                      {hasCheckin ? (
+                        <div className="flex items-baseline gap-1">
+                          <span className={cn("text-lg font-display leading-none",
+                            score >= 60 ? "text-primary" : score >= 40 ? "text-secondary" : "text-accent"
+                          )}>{score}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">/100</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground italic text-xs">--</span>
+                      )}
+                    </div>
+                    <div className="bg-background/40 rounded-lg p-2">
+                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">Mode</div>
+                      {client.todayCheckin?.sessionMode ? (
+                        <ModeBadge mode={client.todayCheckin.sessionMode} />
+                      ) : (
+                        <span className="text-muted-foreground italic text-xs">--</span>
+                      )}
+                    </div>
+                    <div className="bg-background/40 rounded-lg p-2">
+                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">Check-in</div>
+                      {hasCheckin ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          OK
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+                          --
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+          {filteredClients.length === 0 && (
+            <div className="px-6 py-12 text-center text-muted-foreground text-sm">
+              Aucun athlète trouvé selon les critères.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-muted-foreground uppercase font-mono bg-background/30 border-b border-border">
               <tr>

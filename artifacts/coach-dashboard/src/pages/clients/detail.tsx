@@ -1645,7 +1645,42 @@ export default function ClientDetail() {
                       <CardTitle className="text-sm font-mono text-muted-foreground uppercase tracking-wider">Historique</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto">
+                      {/* Mobile: cards */}
+                      <div className="sm:hidden divide-y divide-border/30">
+                        {[...typeTests].reverse().map((test, i) => {
+                          const prevTest = [...typeTests].reverse()[i + 1];
+                          const d = prevTest ? test.value - prevTest.value : null;
+                          return (
+                            <div key={test.id} className="flex items-center justify-between gap-2 px-3 py-2.5">
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs text-muted-foreground">
+                                  {format(new Date(test.testedAt + "T12:00:00"), 'd MMM yyyy', { locale: fr })}
+                                </div>
+                                <div className="font-display text-white text-base">
+                                  {test.value} <span className="text-xs text-muted-foreground">{test.unit}</span>
+                                  {d !== null && (
+                                    <span className={cn(
+                                      "ml-2 text-[10px] font-mono",
+                                      d > 0 ? "text-primary" : d < 0 ? "text-destructive" : "text-muted-foreground"
+                                    )}>
+                                      {d > 0 ? "+" : ""}{d === 0 ? "±0" : d.toFixed(1)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => setDeleteTestId(test.id)}
+                                className="p-2 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                aria-label="Supprimer le test"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Desktop: table */}
+                      <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-border">
