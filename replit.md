@@ -27,6 +27,21 @@ Full-stack fitness coaching app. Athletes submit a daily check-in (sleep/energy/
 - **Mobile**: Expo (React Native) — Task #2
 - **Coach dashboard**: React + Vite — Task #3
 
+## Bilingual FR/EN (i18n)
+
+ADAPT is fully bilingual French / English across all 4 artifacts.
+
+- **Default language**: French. Detection order = `localStorage('adapt_lang')` → `navigator.language` → `fr` fallback.
+- **Web (landing + coach-dashboard)**: `i18next` + `react-i18next` + `i18next-browser-languagedetector`. Init in `src/lib/i18n.ts`. Strings in `src/locales/fr.json` and `src/locales/en.json` (matching keyspaces).
+- **Mobile (athlete-app)**: custom system via `useT()` hook from `context/PreferencesContext.tsx`. The `TRANSLATIONS` object holds `fr` and `en` sections with matching keys. Language is persisted to backend (`users.language`) and reapplied on auth restore.
+- **API server**: `localeMiddleware` (`src/middleware/i18n.ts`) wired in `src/app.ts` reads `Accept-Language` then `req.user.language`. Auth emails (welcome / password reset) accept and use the recipient's language for FR/EN templates.
+- **Language switchers**:
+  - Landing: `<LanguageSwitcher compact />` in nav (LandingPage) and PrivacyPage
+  - Coach Dashboard: `<LanguageSwitcher />` in `pages/settings/index.tsx` "Langue de l'interface" section + persists to `/users/me/profile`
+  - Athlete App: lang segmented control in `components/profile/ExtendedProfileSections.tsx` (lines 917-938) — saves via `usePreferences().setLanguage` then PUT profile
+- **Pages translated** (coach-dashboard): app-sidebar, dashboard, clients/index, programs/index, library/index, content/index, messages/index, notifications/index, alerts/index, challenges/index, settings/index, auth pages (login, forgot, reset)
+- **Athlete screens translated**: dashboard (tabs/index), session, profile, checkin, auth/login, auth/register, onboarding/{goal,fitness,profile}, components/home/{ChallengeCard,WeekCalendar}
+
 ## Completed Features (Tasks)
 - **Task #26**: Daily step counter (`daily_steps` DB table, `GET/POST /stats/steps`, `GET/PUT /users/me/stats-order`), `StepsSection` component with bar chart (7/14/30d) + manual entry modal. `DraggableSectionList` using `PanResponder` for drag-and-drop section reordering — long-press activates mode, drag handles visible per section, hover indicator shown, order persisted to DB. Migration: `lib/db/migrations/0020_task26_steps_stats_order.sql`.
 

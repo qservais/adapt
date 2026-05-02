@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -145,6 +146,7 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
 type AthleteFilter = "tous" | "actif" | "inactif";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [athleteFilter, setAthleteFilter] = useState<AthleteFilter>("tous");
   const [calendarMonth, setCalendarMonth] = useState<{ year: number; month: number }>(() => {
     const d = new Date();
@@ -321,8 +323,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       <div>
-        <h1 className="text-2xl md:text-3xl font-display text-white">TABLEAU DE BORD</h1>
-        <p className="text-muted-foreground text-sm mt-1">Vue opérationnelle du jour · {dayStrCapitalized}</p>
+        <h1 className="text-2xl md:text-3xl font-display text-white">{t("dashboard.title")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("dashboard.subtitle", { date: dayStrCapitalized })}</p>
       </div>
 
       {/* DASH-01: Active alerts banner */}
@@ -365,7 +367,7 @@ export default function Dashboard() {
         <Card className="bg-card border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
-              <Users className="w-3.5 h-3.5" /> Athlètes actifs
+              <Users className="w-3.5 h-3.5" /> {t("dashboard.kpi_active_athletes")}
             </div>
             <div className="text-3xl font-display text-white">{todayAthletes.length}</div>
             <div className="text-xs text-muted-foreground">{totalCheckins} check-in{totalCheckins !== 1 ? "s" : ""} aujourd'hui</div>
@@ -375,7 +377,7 @@ export default function Dashboard() {
         <Card className="bg-card border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
-              <TrendingUp className="w-3.5 h-3.5" /> Score ADAPT moyen
+              <TrendingUp className="w-3.5 h-3.5" /> {t("dashboard.kpi_avg_adapt_score")}
             </div>
             <div className={cn("text-3xl font-display", avgScore !== null ? (avgScore >= 60 ? "text-primary" : avgScore >= 40 ? "text-accent" : "text-destructive") : "text-muted-foreground")}>
               {avgScore !== null ? avgScore : "--"}
@@ -387,7 +389,7 @@ export default function Dashboard() {
         <Card className="bg-card border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Taux complétion
+              <CheckCircle2 className="w-3.5 h-3.5" /> {t("dashboard.kpi_completion_rate")}
             </div>
             <div className={cn("text-3xl font-display", completionRate !== null ? (completionRate >= 70 ? "text-primary" : completionRate >= 40 ? "text-accent" : "text-destructive") : "text-muted-foreground")}>
               {completionRate !== null ? `${completionRate}%` : "--"}
@@ -399,7 +401,7 @@ export default function Dashboard() {
         <Card className="bg-card border-border">
           <CardContent className="p-4 flex flex-col gap-1">
             <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">
-              <Zap className="w-3.5 h-3.5" /> Mode ADAPT
+              <Zap className="w-3.5 h-3.5" /> {t("dashboard.kpi_adapt_mode")}
             </div>
             <div className="text-3xl font-display text-accent">{adaptCount}</div>
             <div className="text-xs text-muted-foreground">athlète{adaptCount !== 1 ? "s" : ""} en mode adapté</div>
@@ -430,7 +432,7 @@ export default function Dashboard() {
                         : "text-muted-foreground hover:text-white hover:bg-white/5"
                     )}
                   >
-                    {f === "tous" ? `Tous (${todayAthletes.length})` : f === "actif" ? `Actifs (${activeAthletes.length})` : `Inactifs (${inactiveAthletes.length})`}
+                    {f === "tous" ? t("dashboard.filter_all", { count: todayAthletes.length }) : f === "actif" ? t("dashboard.filter_active", { count: activeAthletes.length }) : t("dashboard.filter_inactive", { count: inactiveAthletes.length })}
                   </button>
                 ))}
               </div>
@@ -439,7 +441,7 @@ export default function Dashboard() {
           <CardContent className="pt-0">
             {filteredAthletes.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground text-sm italic">
-                {athleteFilter === "inactif" ? "Aucun athlète inactif — bravo !" : "Aucun athlète dans votre équipe."}
+                {athleteFilter === "inactif" ? t("dashboard.no_athletes_inactive", "Aucun athlète inactif — bravo !") : t("dashboard.no_athletes_team")}
               </div>
             ) : (
               <div className="space-y-2">
@@ -457,7 +459,7 @@ export default function Dashboard() {
                           {athlete.hasCheckin ? (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                              Check-in reçu
+                              {t("dashboard.status_checkin_received")}
                             </div>
                           ) : athlete.daysSinceCheckin !== null && athlete.daysSinceCheckin >= 3 ? (
                             <div className="flex items-center gap-1.5 text-xs text-destructive">
@@ -467,7 +469,7 @@ export default function Dashboard() {
                           ) : (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                              Pas de check-in aujourd'hui
+                              {t("dashboard.status_no_checkin")}
                             </div>
                           )}
                         </div>
@@ -505,7 +507,7 @@ export default function Dashboard() {
             <CardContent className="pt-0">
               {upcomingSessions.length === 0 ? (
                 <div className="py-6 text-center text-muted-foreground text-sm italic">
-                  Aucune séance planifiée dans les 7 prochains jours.
+                  {t("dashboard.no_upcoming_sessions")}
                 </div>
               ) : (
                 <div className="space-y-1 max-h-[200px] overflow-y-auto pr-1">
@@ -529,7 +531,7 @@ export default function Dashboard() {
             <CardContent className="pt-0">
               {pastSessions.length === 0 ? (
                 <div className="py-6 text-center text-muted-foreground text-sm italic">
-                  Aucune séance passée ces 7 derniers jours.
+                  {t("dashboard.no_past_sessions")}
                 </div>
               ) : (
                 <div className="space-y-1 max-h-[200px] overflow-y-auto pr-1">

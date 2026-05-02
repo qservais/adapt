@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Link } from "wouter";
 import {
@@ -110,6 +111,7 @@ function NewProgramDialog({
   trigger: React.ReactNode;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const { data: clients } = useGetClients();
   const createMutation = useCreateProgram();
   const [open, setOpen] = useState(false);
@@ -151,7 +153,7 @@ function NewProgramDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-muted-foreground">Nom du programme</FormLabel>
+                  <FormLabel className="text-muted-foreground">{t("programs.label_program_name")}</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Préparation hors-saison..."
@@ -168,7 +170,7 @@ function NewProgramDialog({
               name="athleteId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-muted-foreground">Assigner un athlète</FormLabel>
+                  <FormLabel className="text-muted-foreground">{t("programs.label_assign_athlete")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="bg-background border-border">
@@ -193,7 +195,7 @@ function NewProgramDialog({
                 name="durationWeeks"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-muted-foreground">Durée (semaines)</FormLabel>
+                    <FormLabel className="text-muted-foreground">{t("programs.label_duration")}</FormLabel>
                     <FormControl>
                       <Input type="number" min={1} className="bg-background border-border" {...field} />
                     </FormControl>
@@ -206,7 +208,7 @@ function NewProgramDialog({
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-muted-foreground">Date de début</FormLabel>
+                    <FormLabel className="text-muted-foreground">{t("programs.label_start_date")}</FormLabel>
                     <FormControl>
                       <Input type="date" className="bg-background border-border" {...field} />
                     </FormControl>
@@ -837,6 +839,7 @@ function NewTemplateDialog({
   trigger: React.ReactNode;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -906,7 +909,7 @@ function NewTemplateDialog({
               name="durationWeeks"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-muted-foreground">Durée (semaines)</FormLabel>
+                  <FormLabel className="text-muted-foreground">{t("programs.label_duration")}</FormLabel>
                   <FormControl>
                     <Input type="number" min={1} max={52} className="bg-background border-border" {...field} />
                   </FormControl>
@@ -933,6 +936,7 @@ function ApplyTemplateModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { data: clients } = useGetClients();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -985,7 +989,7 @@ function ApplyTemplateModal({
             </Select>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Date de début</label>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">{t("programs.label_start_date")}</label>
             <Input
               type="date"
               value={startDate}

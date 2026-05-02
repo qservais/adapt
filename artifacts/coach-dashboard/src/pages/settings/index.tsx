@@ -1,10 +1,13 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Settings, Camera, User, Mail, Save, LogOut } from "lucide-react";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { setLanguage, type SupportedLanguage } from "@/lib/i18n";
+import { Loader2, Settings, Camera, User, Mail, Save, LogOut, Languages } from "lucide-react";
 
 async function uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
   const token = localStorage.getItem("adapt_coach_access");
@@ -15,7 +18,7 @@ async function uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-  if (!res.ok) throw new Error("Échec de l'upload");
+  if (!res.ok) throw new Error("Upload failed");
   return res.json();
 }
 
@@ -26,10 +29,21 @@ async function updateProfile(data: { firstName: string; lastName: string }): Pro
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Échec de la mise à jour");
+  if (!res.ok) throw new Error("Update failed");
+}
+
+async function updateLanguagePreference(lang: SupportedLanguage): Promise<void> {
+  const token = localStorage.getItem("adapt_coach_access");
+  if (!token) return;
+  await fetch("/api/users/me/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ language: lang }),
+  }).catch(() => {});
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { user, refetchUser, logout } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +54,11 @@ export default function SettingsPage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
+  useEffect(() => {
+    setFirstName(user?.firstName ?? "");
+    setLastName(user?.lastName ?? "");
+  }, [user?.firstName, user?.lastName]);
+
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -49,9 +68,9 @@ export default function SettingsPage() {
     try {
       await uploadAvatar(file);
       if (refetchUser) await refetchUser();
-      toast({ title: "Photo de profil mise à jour" });
+      toast({ title: t("settings.avatar.uploadSuccess") });
     } catch {
-      toast({ title: "Échec de l'upload", variant: "destructive" });
+      toast({ title: t("settings.avatar.uploadError"), variant: "destructive" });
       setAvatarPreview(null);
     } finally {
       setIsUploadingAvatar(false);
@@ -63,12 +82,18 @@ export default function SettingsPage() {
     try {
       await updateProfile({ firstName, lastName });
       if (refetchUser) await refetchUser();
-      toast({ title: "Profil mis à jour" });
+      toast({ title: t("settings.profile.saveSuccess") });
     } catch {
-      toast({ title: "Échec de la mise à jour", variant: "destructive" });
+      toast({ title: t("settings.profile.saveError"), variant: "destructive" });
     } finally {
       setIsSavingProfile(false);
     }
+  };
+
+  const handleLanguageChange = (lang: SupportedLanguage) => {
+    setLanguage(lang);
+    updateLanguagePreference(lang).catch(() => {});
+    toast({ title: t("settings.language.saved") });
   };
 
   const avatarSrc = avatarPreview || user?.avatarUrl || null;
@@ -78,19 +103,21 @@ export default function SettingsPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
       <div>
         <h1 className="text-3xl font-display text-white flex items-center gap-3">
-          <Settings className="w-8 h-8 text-primary" /> PARAMÈTRES
+          <Settings className="w-8 h-8 text-primary" /> {t("settings.title")}
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">Gérez votre profil et vos préférences.</p>
+        <p className="text-muted-foreground text-sm mt-1">{t("settings.subtitle")}</p>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-6 space-y-6">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Photo de profil</h2>
+        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+          {t("settings.avatar.section")}
+        </h2>
 
         <div className="flex items-center gap-6">
           <div className="relative shrink-0">
             <div className="w-20 h-20 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center">
               {avatarSrc ? (
-                <img src={avatarSrc} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl font-display text-primary">{initials}</span>
               )}
@@ -103,9 +130,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Format JPG ou PNG. Max 5 Mo. La photo apparaîtra dans la barre latérale.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("settings.avatar.hint")}</p>
             <Button
               variant="outline"
               size="sm"
@@ -114,7 +139,7 @@ export default function SettingsPage() {
               disabled={isUploadingAvatar}
             >
               <Camera className="w-4 h-4 mr-2" />
-              Changer la photo
+              {t("settings.avatar.change")}
             </Button>
             <input
               ref={fileInputRef}
@@ -128,12 +153,14 @@ export default function SettingsPage() {
       </div>
 
       <div className="bg-card border border-border rounded-xl p-6 space-y-5">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Informations personnelles</h2>
+        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+          {t("settings.profile.section")}
+        </h2>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-3 h-3" /> Prénom
+              <User className="w-3 h-3" /> {t("settings.profile.firstName")}
             </Label>
             <Input
               value={firstName}
@@ -143,7 +170,7 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-1.5">
             <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-3 h-3" /> Nom
+              <User className="w-3 h-3" /> {t("settings.profile.lastName")}
             </Label>
             <Input
               value={lastName}
@@ -155,14 +182,14 @@ export default function SettingsPage() {
 
         <div className="space-y-1.5">
           <Label className="text-muted-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
-            <Mail className="w-3 h-3" /> Email
+            <Mail className="w-3 h-3" /> {t("settings.profile.email")}
           </Label>
           <Input
             value={user?.email ?? ""}
             disabled
             className="bg-background border-border text-muted-foreground cursor-not-allowed"
           />
-          <p className="text-[11px] text-muted-foreground">L'email ne peut pas être modifié.</p>
+          <p className="text-[11px] text-muted-foreground">{t("settings.profile.emailLocked")}</p>
         </div>
 
         <div className="flex justify-end pt-2">
@@ -172,17 +199,31 @@ export default function SettingsPage() {
             className="bg-primary hover:bg-primary/90"
           >
             {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-            Enregistrer
+            {t("settings.profile.save")}
           </Button>
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Session</h2>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <Languages className="w-4 h-4" /> {t("settings.language.section")}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-2">{t("settings.language.hint")}</p>
+          </div>
+        </div>
+        <LanguageSwitcher onChange={handleLanguageChange} />
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+          {t("settings.session.section")}
+        </h2>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-white">Se déconnecter</p>
-            <p className="text-xs text-muted-foreground">Quitte la session en cours sur cet appareil.</p>
+            <p className="text-sm text-white">{t("settings.session.logoutTitle")}</p>
+            <p className="text-xs text-muted-foreground">{t("settings.session.logoutHint")}</p>
           </div>
           <Button
             variant="outline"
@@ -190,7 +231,7 @@ export default function SettingsPage() {
             onClick={() => logout()}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Déconnexion
+            {t("settings.session.logout")}
           </Button>
         </div>
       </div>

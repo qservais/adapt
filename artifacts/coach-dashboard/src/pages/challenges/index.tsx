@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useGetCoachChallenges, useCreateCoachChallenge, useDeleteCoachChallenge } from "@workspace/api-client-react";
 import type { CoachChallenge, CreateChallengeRequest } from "@workspace/api-client-react";
@@ -39,6 +40,7 @@ function daysRemaining(endDate: string) {
 }
 
 export default function ChallengesPage() {
+  const { t } = useTranslation();
   const { data: challenges, isLoading, refetch } = useGetCoachChallenges({
     query: { queryKey: ["/api/coach/challenges"] },
   });
@@ -118,7 +120,7 @@ export default function ChallengesPage() {
             <Trophy className="w-8 h-8 text-accent" /> CHALLENGES
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Motivez vos athlètes avec des défis personnalisés.
+            {t("challenges.subtitle")}
           </p>
         </div>
         <Button onClick={() => setShowCreate(true)} className="gap-2">
@@ -129,7 +131,7 @@ export default function ChallengesPage() {
       {!challenges?.length ? (
         <div className="text-center py-20 bg-card rounded-xl border border-border">
           <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground text-lg">Aucun challenge actif</p>
+          <p className="text-muted-foreground text-lg">{t("challenges.no_challenge_active")}</p>
           <p className="text-muted-foreground text-sm mt-1">Créez le premier défi pour motiver vos athlètes.</p>
         </div>
       ) : (
@@ -147,11 +149,11 @@ export default function ChallengesPage() {
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display tracking-wider">CRÉER UN CHALLENGE</DialogTitle>
+            <DialogTitle className="font-display tracking-wider">{t("challenges.dialog_create_title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
-              <Label>Titre *</Label>
+              <Label>{t("challenges.label_title")}</Label>
               <Input
                 placeholder="Ex. : 100 pompes en 30 jours"
                 value={form.title ?? ""}
@@ -159,7 +161,7 @@ export default function ChallengesPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Description</Label>
+              <Label>{t("challenges.label_description")}</Label>
               <Textarea
                 placeholder="Détails du défi (optionnel)"
                 value={form.description ?? ""}
@@ -169,7 +171,7 @@ export default function ChallengesPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Métrique *</Label>
+                <Label>{t("challenges.label_metric")}</Label>
                 <Select value={form.metric} onValueChange={v => setForm(f => ({ ...f, metric: v as CreateChallengeRequest["metric"], unit: METRIC_LABELS[v]?.defaultUnit }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -182,7 +184,7 @@ export default function ChallengesPage() {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Objectif *</Label>
+                <Label>{t("challenges.label_target")}</Label>
                 <Input
                   type="number"
                   placeholder="Ex. : 100"

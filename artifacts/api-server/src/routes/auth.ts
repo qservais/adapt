@@ -95,7 +95,7 @@ router.post("/auth/register", async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email);
     await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
 
-    sendWelcomeEmail(email, firstName, role).catch(() => {});
+    sendWelcomeEmail(email, firstName, role, req.locale).catch(() => {});
 
     res.status(201).json({
       accessToken,
@@ -248,7 +248,7 @@ router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) => 
   res.json({ success: true, message: "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé." });
 
   try {
-    const [user] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, email: usersTable.email, role: usersTable.role })
+    const [user] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, email: usersTable.email, role: usersTable.role, language: usersTable.language })
       .from(usersTable)
       .where(eq(usersTable.email, email.toLowerCase()));
 
@@ -268,7 +268,8 @@ router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) => 
     const deepLinkUrl = user.role === "athlete"
       ? `athlete-app://auth/reset-password?token=${resetToken}`
       : undefined;
-    await sendPasswordResetEmail(user.email, user.firstName, resetUrl, deepLinkUrl);
+    const lang = (user.language === "en" ? "en" : user.language === "fr" ? "fr" : req.locale) as "fr" | "en";
+    await sendPasswordResetEmail(user.email, user.firstName, resetUrl, deepLinkUrl, lang);
   } catch (err) {
     console.error("forgot-password background error:", err);
   }

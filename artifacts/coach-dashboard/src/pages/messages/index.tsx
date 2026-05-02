@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useGetMessageThreads } from "@workspace/api-client-react";
 import { Loader2, MessageSquare } from "lucide-react";
 import { Link } from "wouter";
@@ -5,6 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export default function MessagesList() {
+  const { t } = useTranslation();
   const { data: threads, isLoading } = useGetMessageThreads({ query: { queryKey: ['/api/messages/threads'], refetchInterval: 10000 }});
 
   if (isLoading) {
@@ -17,7 +19,7 @@ export default function MessagesList() {
         <h1 className="text-3xl font-display text-white flex items-center gap-3">
           <MessageSquare className="w-8 h-8 text-primary" /> MESSAGES
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">Communication directe avec les athlètes.</p>
+        <p className="text-muted-foreground text-sm mt-1">{t("messages_page.subtitle")}</p>
       </div>
 
       <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden divide-y divide-border/50">
@@ -51,7 +53,7 @@ export default function MessagesList() {
 
         {threads?.length === 0 && (
           <div className="p-12 text-center text-muted-foreground">
-            Aucune conversation active.
+            {t("messages_page.no_conversations")}
           </div>
         )}
       </div>

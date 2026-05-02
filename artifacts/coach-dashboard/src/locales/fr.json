@@ -1,0 +1,209 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "loading": "Chargement…",
+    "search": "Rechercher",
+    "yes": "Oui",
+    "no": "Non",
+    "ok": "OK",
+    "send": "Envoyer",
+    "duplicate": "Dupliquer",
+    "settings": "Paramètres",
+    "language": "Langue",
+    "logout": "Déconnexion",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "error": "Erreur",
+    "success": "Succès",
+    "required": "Obligatoire",
+    "optional": "Optionnel",
+    "all": "Tous",
+    "none": "Aucun",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "week": "Semaine",
+    "day": "Jour",
+    "month": "Mois",
+    "year": "Année",
+    "min": "min",
+    "sec": "sec",
+    "kg": "kg",
+    "reps": "reps",
+    "sets": "séries"
+  },
+  "auth": {
+    "login": {
+      "title": "ADAPT COACH",
+      "subtitle": "INTELLIGENCE PERFORMANCE",
+      "email": "Adresse email",
+      "emailPlaceholder": "coach@adapt.demo",
+      "password": "Mot de passe",
+      "submit": "CONNEXION SÉCURISÉE",
+      "submitting": "CONNEXION…",
+      "forgotLink": "Mot de passe oublié ?",
+      "demoHint": "Accès démo : coach@adapt.demo / Demo1234!",
+      "errorInvalid": "Identifiants invalides",
+      "errorGeneric": "Échec de la connexion. Réessaie."
+    },
+    "forgot": {
+      "title": "ADAPT COACH",
+      "subtitle": "RÉINITIALISATION",
+      "instructions": "Saisis ton adresse email. Tu recevras un lien pour choisir un nouveau mot de passe.",
+      "email": "Adresse email",
+      "submit": "ENVOYER LE LIEN",
+      "submitting": "ENVOI…",
+      "back": "← Retour à la connexion",
+      "successTitle": "EMAIL ENVOYÉ",
+      "successMessage": "Si un compte existe pour cet email, tu vas recevoir un lien dans quelques instants. Pense à vérifier tes spams."
+    },
+    "reset": {
+      "title": "ADAPT COACH",
+      "subtitle": "NOUVEAU MOT DE PASSE",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "submit": "CHANGER LE MOT DE PASSE",
+      "submitting": "MISE À JOUR…",
+      "successTitle": "MOT DE PASSE MIS À JOUR",
+      "successMessage": "Tu peux maintenant te connecter avec ton nouveau mot de passe.",
+      "goToLogin": "ALLER À LA CONNEXION",
+      "errorMismatch": "Les mots de passe ne correspondent pas",
+      "errorTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+      "errorInvalidLink": "Lien invalide ou expiré. Demande un nouveau lien.",
+      "errorGeneric": "Échec de la mise à jour. Réessaie."
+    },
+    "denied": {
+      "title": "ACCÈS REFUSÉ",
+      "message": "Ce portail est réservé aux coachs. Utilise l'application athlète."
+    }
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "clients": "Athlètes",
+    "programs": "Programmes",
+    "library": "Bibliothèque",
+    "content": "Contenu",
+    "challenges": "Challenges",
+    "messages": "Messagerie",
+    "alerts": "Alertes",
+    "notifications": "Notifications",
+    "settings": "Paramètres"
+  },
+  "settings": {
+    "title": "PARAMÈTRES",
+    "subtitle": "Gérez votre profil et vos préférences.",
+    "avatar": {
+      "section": "Photo de profil",
+      "hint": "Format JPG ou PNG. Max 5 Mo. La photo apparaîtra dans la barre latérale.",
+      "change": "Changer la photo",
+      "uploadSuccess": "Photo de profil mise à jour",
+      "uploadError": "Échec de l'upload"
+    },
+    "profile": {
+      "section": "Informations personnelles",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Email",
+      "emailLocked": "L'email ne peut pas être modifié.",
+      "save": "Enregistrer",
+      "saveSuccess": "Profil mis à jour",
+      "saveError": "Échec de la mise à jour"
+    },
+    "language": {
+      "section": "Langue",
+      "hint": "Choisis la langue de l'interface.",
+      "fr": "Français",
+      "en": "English",
+      "saved": "Langue mise à jour"
+    },
+    "session": {
+      "section": "Session",
+      "logoutTitle": "Se déconnecter",
+      "logoutHint": "Quitte la session en cours sur cet appareil.",
+      "logout": "Déconnexion"
+    }
+  },
+  "sidebar": {
+    "app_title": "ADAPT", "app_role": "COACH", "group_main": "Menu Principal",
+    "item_dashboard_title": "Tableau de bord", "item_dashboard_subtitle": "Vue opérationnelle du jour",
+    "item_athletes_title": "Athlètes", "item_athletes_subtitle": "Profils, alertes et check-ins",
+    "item_programs_title": "Programmes", "item_programs_subtitle": "Plans d'entraînement",
+    "item_library_title": "Bibliothèque", "item_library_subtitle": "Exercices et ressources",
+    "item_content_title": "Contenu", "item_content_subtitle": "Guides et routines athlètes",
+    "item_challenges_title": "Challenges", "item_challenges_subtitle": "Défis pour les athlètes",
+    "item_notifications_title": "Notifications", "item_notifications_subtitle": "Rappels et motivation",
+    "item_alerts_title": "Alertes", "item_alerts_subtitle": "Signaux à traiter",
+    "item_messages_title": "Messages", "item_messages_subtitle": "Échanges avec les athlètes",
+    "item_settings_title": "Paramètres", "item_settings_subtitle": "Profil et préférences",
+    "logout": "Se déconnecter"
+  },
+  "dashboard": {
+    "title": "TABLEAU DE BORD", "subtitle": "Vue opérationnelle du jour · {{date}}",
+    "kpi_active_athletes": "Athlètes actifs", "kpi_avg_adapt_score": "Score ADAPT moyen", "kpi_completion_rate": "Taux complétion", "kpi_adapt_mode": "Mode ADAPT",
+    "today_title": "AUJOURD'HUI", "filter_all": "Tous ({{count}})", "filter_active": "Actifs ({{count}})", "filter_inactive": "Inactifs ({{count}})",
+    "no_athletes_team": "Aucun athlète dans votre équipe.", "status_checkin_received": "Check-in reçu", "status_no_checkin": "Pas de check-in aujourd'hui",
+    "upcoming_sessions_title": "SÉANCES À VENIR", "no_upcoming_sessions": "Aucune séance planifiée dans les 7 prochains jours.",
+    "past_sessions_title": "SÉANCES PASSÉES", "no_past_sessions": "Aucune séance passée ces 7 derniers jours.",
+    "calendar_title": "CALENDRIER MENSUEL", "btn_add_appt": "Nouveau RDV"
+  },
+  "clients": {
+    "title": "ATHLÈTES", "subtitle": "Gestion des profils, alertes et check-ins quotidiens.",
+    "search_placeholder": "Rechercher...", "btn_link_code": "Lier par code",
+    "tab_all": "Tous", "tab_active_today": "Actifs aujourd'hui", "tab_alerts": "Alertes",
+    "no_clients_found": "Aucun athlète trouvé selon les critères.",
+    "table_col_athlete": "Athlète", "table_col_score": "ADAPT Score", "table_col_mode": "Mode de séance", "table_col_status": "Statut check-in",
+    "dialog_link_title": "LIER UN ATHLÈTE", "dialog_link_desc": "Entrez le code d'invitation à 6 caractères de votre athlète pour le connecter à votre compte coach.",
+    "btn_approve": "Accepter", "btn_reject": "Refuser", "btn_copy_code": "Copier le code"
+  },
+  "programs": {
+    "title": "PROGRAMMES", "btn_add_program": "Programme",
+    "dialog_create_title": "CRÉER UN PROGRAMME", "label_program_name": "Nom du programme",
+    "label_assign_athlete": "Assigner un athlète", "label_duration": "Durée (semaines)",
+    "label_start_date": "Date de début", "btn_create": "Créer le programme",
+    "card_status_active": "ACTIF", "card_status_future": "À VENIR", "card_status_preview": "APERÇU ACTIF"
+  },
+  "library": {
+    "title": "BIBLIOTHÈQUE", "btn_new_exercise": "Nouvel exercice", "search_placeholder": "Rechercher un exercice...",
+    "filter_all": "Tous", "no_exercise_found": "Aucun exercice trouvé.",
+    "dialog_create_title": "NOUVEL EXERCICE", "dialog_edit_title": "MODIFIER L'EXERCICE",
+    "label_name": "Nom *", "label_category": "Catégorie", "label_muscles": "Groupes musculaires",
+    "label_equipment": "Équipement", "label_description": "Description"
+  },
+  "content": {
+    "title": "CONTENU", "subtitle": "Guides éducatifs et bibliothèque de routines pour vos athlètes.",
+    "btn_new_guide": "Nouveau guide", "btn_new_routine": "Nouvelle routine",
+    "tab_guides": "Guides", "tab_routines": "Routines",
+    "no_guides": "Aucun guide. Créez-en un !", "no_routines": "Aucune routine. Créez-en une !"
+  },
+  "messages_page": {
+    "title": "MESSAGES", "subtitle": "Communication directe avec les athlètes.",
+    "no_conversations": "Aucune conversation active.", "input_placeholder": "Écrire un message..."
+  },
+  "notifications_page": {
+    "title": "NOTIFICATIONS", "subtitle": "Motivations matinales et rappels programmés pour vos athlètes.",
+    "btn_new_reminder": "Nouveau rappel", "morning_phrase_title": "Phrase matinale automatique",
+    "custom_reminders_title": "Rappels personnalisés", "no_reminders": "Aucun rappel programmé."
+  },
+  "alerts": {
+    "title": "FLUX D'ALERTES", "subtitle": "Interventions et avertissements en temps réel.",
+    "tab_unresolved": "Non résolues", "tab_resolved": "Résolues", "tab_all": "Toutes",
+    "no_alerts_all": "Tout est en ordre.", "btn_mark_resolved": "Marquer résolu", "btn_reopen": "Rouvrir"
+  },
+  "challenges": {
+    "title": "CHALLENGES", "subtitle": "Motivez vos athlètes avec des défis personnalisés.",
+    "btn_new_challenge": "Créer un challenge", "no_challenge_active": "Aucun challenge actif",
+    "dialog_create_title": "CRÉER UN CHALLENGE", "label_title": "Titre *",
+    "label_description": "Description", "label_metric": "Métrique *", "label_target": "Objectif *"
+  }
+}

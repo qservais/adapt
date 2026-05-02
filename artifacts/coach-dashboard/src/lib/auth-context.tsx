@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useGetMe, UserProfile } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
+import { setLanguage as setI18nLanguage, type SupportedLanguage } from "@/lib/i18n";
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -46,6 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       navigate('/clients');
     }
   }, [tokenExists, location, user, isCoach]);
+
+  useEffect(() => {
+    const userLang = (user as unknown as { language?: string } | null)?.language;
+    if (userLang === "fr" || userLang === "en") {
+      setI18nLanguage(userLang as SupportedLanguage);
+    }
+  }, [user]);
 
   const setAuth = (access: string, refresh: string) => {
     localStorage.setItem('adapt_coach_access', access);

@@ -1,0 +1,148 @@
+{
+  "nav": {
+    "features": "Features",
+    "forWho": "For who",
+    "screenshots": "Screenshots",
+    "coachAccess": "COACH ACCESS →"
+  },
+  "hero": {
+    "kicker": "// Smart sports coaching",
+    "title": "ADAPT",
+    "subtitle1": "Training that adapts to you.",
+    "subtitle2": "The platform that connects coaches and athletes. Personalized programs, 30-second check-ins, real-time tracking.",
+    "downloadAppStoreAria": "Download on the App Store",
+    "appStoreSmall": "DOWNLOAD ON THE",
+    "appStoreLarge": "App Store",
+    "coachLink": "COACH PORTAL →",
+    "stat1Number": "100%",
+    "stat1Label": "Adaptive",
+    "stat2Number": "30s",
+    "stat2Label": "Daily check-in",
+    "stat3Number": "iOS",
+    "stat3Label": "Available on"
+  },
+  "features": {
+    "kicker": "// What ADAPT does",
+    "title1": "THREE PILLARS,",
+    "title2": "ONE COHERENT SYSTEM",
+    "f1Title": "Daily ADAPT score",
+    "f1Desc": "Every morning, you log your energy, sleep and motivation in 30 seconds. The algorithm computes your ADAPT score and adjusts your session accordingly.",
+    "f2Title": "Personalized programs",
+    "f2Desc": "Your coach builds tailored programs: exercise blocks, intensities, rest days. Each session is recalculated based on how you feel today.",
+    "f3Title": "Real-time tracking with your coach",
+    "f3Desc": "Your coach sees your check-ins, performances and PRs as they come in. Automatic alerts, built-in messaging — distance no longer matters."
+  },
+  "forWho": {
+    "kicker": "// Who is it for?",
+    "title1": "TWO PROFILES,",
+    "title2": "ONE ECOSYSTEM",
+    "athletesLabel": "ATHLETES",
+    "athletesDesc": "No more generic programs. ADAPT adjusts every session based on how you feel today. High fatigue? Intensity adapts. You're firing on all cylinders? We push the loads.",
+    "athletesItems": [
+      "Session tailored every morning",
+      "Quick check-in (30 seconds)",
+      "Track loads during sessions",
+      "Automatic personal records",
+      "Messaging with your coach",
+      "Badges and weekly challenges"
+    ],
+    "coachesLabel": "COACHES",
+    "coachesDesc": "Centralize the management of all your athletes in a single dashboard. Build custom programs, receive check-ins, and get real-time alerts.",
+    "coachesItems": [
+      "Multi-athlete dashboard",
+      "Block-based program creation",
+      "Automatic fatigue alerts",
+      "Complete exercise library",
+      "Direct messaging per athlete",
+      "Appointment management"
+    ]
+  },
+  "screenshots": {
+    "kicker": "// The app in pictures",
+    "title1": "THREE SCREENS,",
+    "title2": "ALL THE POWER",
+    "label1": "Check-in & today's session",
+    "label2": "Coach dashboard",
+    "label3": "Personal records"
+  },
+  "phoneCheckin": {
+    "brand": "ADAPT",
+    "active": "ACTIVE",
+    "today": "Wednesday · Check-in",
+    "feel": "How are you feeling?",
+    "feelTired": "Tired",
+    "feelOk": "OK",
+    "feelFire": "Fired up",
+    "todaySession": "Today's session",
+    "sessionName": "UPPER STRENGTH A",
+    "exercises": "Exercises",
+    "duration": "Duration",
+    "volume": "Volume",
+    "start": "START →",
+    "ex1": "Bench press",
+    "ex2": "Barbell row"
+  },
+  "phoneDashboard": {
+    "kicker": "DASHBOARD",
+    "title": "COACH MARTIN",
+    "active": "Active",
+    "checkins": "Check-ins",
+    "alerts": "Alerts",
+    "athletes": "Athletes",
+    "energy": "🔥 High energy",
+    "tired": "😴 Fatigue",
+    "ready": "💪 Ready"
+  },
+  "phonePr": {
+    "kicker": "PROGRESS",
+    "title": "PERSONAL RECORDS",
+    "newPr": "🏆 NEW PR!",
+    "squatNote": "Squat · +2.5kg vs previous",
+    "squat": "Squat",
+    "bench": "Bench press",
+    "deadlift": "Deadlift",
+    "row": "Barbell row"
+  },
+  "cta": {
+    "kicker": "// Join ADAPT",
+    "title1": "READY TO PROGRESS",
+    "title2": "DIFFERENTLY?",
+    "subtitle": "Athlete or coach, ADAPT adapts to you. Download the app or create your free coach account.",
+    "createCoach": "CREATE COACH ACCOUNT →"
+  },
+  "footer": {
+    "rights": "© {{year}} ADAPT System ·",
+    "privacy": "Legal & Privacy"
+  },
+  "reset": {
+    "brand": "ADAPT",
+    "title": "RESET MY PASSWORD",
+    "instructions": "This link must be opened in the <strong style=\"color: #00F5A0\">ADAPT</strong> app on your phone. If the app didn't open automatically, tap the button below.",
+    "openApp": "OPEN IN THE ADAPT APP",
+    "noApp": "Don't have the ADAPT app installed yet? Ask your coach for it.",
+    "back": "← Back to home",
+    "invalidTitle": "INVALID LINK",
+    "invalidMessage": "This link is invalid or has expired. Request a new one from the app."
+  },
+  "privacy": {
+    "navLabel": "Privacy policy",
+    "kicker": "// Legal",
+    "title1": "PRIVACY",
+    "title2": "POLICY",
+    "intro": "This privacy policy describes how ADAPT System collects, uses and protects your personal data in accordance with the General Data Protection Regulation (GDPR) and applicable Belgian legislation.",
+    "back": "← Back to home",
+    "copyright": "© {{year}} ADAPT System",
+    "sections": [
+      { "title": "1. Data controller", "content": "ADAPT System is responsible for processing your personal data collected through the ADAPT mobile app and the adapt-system.be website.\n\nContact: hello@adapt-system.be" },
+      { "title": "2. Data we collect", "content": "We collect the following data:\n\n— Account information: last name, first name, email address, password (encrypted)\n— Profile data: weight, height, goals, date of birth\n— Training data: daily check-ins (energy, sleep, motivation), completed sessions, loads used, personal records\n— Communication data: messages exchanged with your coach via the app\n— Technical data: device identifier, IP address, connection logs" },
+      { "title": "3. Purposes of processing", "content": "Your data is used to:\n\n— Provide and personalize the sports coaching service\n— Adapt training programs to your daily state\n— Enable communication between coaches and athletes\n— Send notifications related to your program\n— Ensure the security and proper functioning of the app\n— Comply with our legal obligations" },
+      { "title": "4. Legal basis", "content": "Processing of your data is based on:\n\n— Performance of the contract (delivery of the ADAPT service)\n— Your explicit consent for sensitive data (health and performance data)\n— Our legitimate interests in improving the service\n— Compliance with our legal obligations" },
+      { "title": "5. Data sharing", "content": "Your data is shared with:\n\n— Your ADAPT coach: check-in data, performances, messages\n— Our technical subcontractors (hosting, email sending) under confidentiality agreement\n— Competent authorities in case of legal obligation\n\nWe never sell your data to third parties." },
+      { "title": "6. Data retention", "content": "Your data is kept:\n\n— Account and profile data: for the duration of your registration + 2 years\n— Training data: for the duration of your registration\n— Messaging data: for the duration of your registration\n— Technical logs: 12 months maximum\n\nIn case of account deletion, your data is erased within 30 days, unless legally required to be retained." },
+      { "title": "7. Your rights", "content": "In accordance with GDPR, you have the following rights:\n\n— Right of access: obtain a copy of your data\n— Right to rectification: correct inaccurate data\n— Right to erasure: request deletion of your data\n— Right to portability: receive your data in a structured format\n— Right to object: object to certain processing\n— Right to restriction: restrict the use of your data\n\nTo exercise these rights, contact us at: hello@adapt-system.be\n\nYou can also lodge a complaint with the Data Protection Authority (DPA): www.autoriteprotectiondonnees.be" },
+      { "title": "8. Security", "content": "We implement appropriate technical and organizational measures to protect your data:\n\n— Password encryption (bcrypt)\n— Encrypted communications (HTTPS/TLS)\n— Data access restricted to authorized personnel\n— Regular backups" },
+      { "title": "9. Cookies", "content": "The ADAPT mobile app does not use cookies. The adapt-system.be website may use technical cookies necessary for the proper functioning of the site. No advertising or tracking cookies are used." },
+      { "title": "10. Changes", "content": "This privacy policy may be updated. In case of substantial changes, you will be notified by email or via the app. The date of the last update is indicated below.\n\nLast updated: April 30, 2026" }
+    ]
+  }
+}

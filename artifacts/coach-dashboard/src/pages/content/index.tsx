@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Loader2, BookOpen, Layers } from "lucide-react";
@@ -70,6 +71,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function ContentPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"guides" | "routines">("guides");
@@ -222,9 +224,9 @@ export default function ContentPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display tracking-wider text-white">CONTENU</h1>
+          <h1 className="text-2xl font-display tracking-wider text-white">{t("content.title")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Guides éducatifs et bibliothèque de routines pour vos athlètes.
+            {t("content.subtitle")}
           </p>
         </div>
         <Button
@@ -286,7 +288,7 @@ export default function ContentPage() {
             );
           })}
           {!guidesQuery.isLoading && guides.length === 0 && (
-            <p className="text-muted-foreground text-sm text-center py-8">Aucun guide. Créez-en un !</p>
+            <p className="text-muted-foreground text-sm text-center py-8">{t("content.no_guides")}</p>
           )}
         </div>
       )}
@@ -328,7 +330,7 @@ export default function ContentPage() {
             );
           })}
           {!routinesQuery.isLoading && routines.length === 0 && (
-            <p className="text-muted-foreground text-sm text-center py-8">Aucune routine. Créez-en une !</p>
+            <p className="text-muted-foreground text-sm text-center py-8">{t("content.no_routines")}</p>
           )}
         </div>
       )}

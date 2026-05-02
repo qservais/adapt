@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 function useSearchParam(key: string): string {
   if (typeof window === "undefined") return "";
@@ -7,6 +9,7 @@ function useSearchParam(key: string): string {
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const token = useSearchParam("token");
   const [autoOpenAttempted, setAutoOpenAttempted] = useState(false);
 
@@ -27,20 +30,17 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <div style={shell}>
+        <div style={{ position: "absolute", top: 16, right: 16 }}>
+          <LanguageSwitcher />
+        </div>
         <div style={card}>
-          <h1 style={titleStyle}>LIEN INVALIDE</h1>
-          <p style={subtitle}>
-            Ce lien de réinitialisation est invalide ou a expiré. Demande un nouveau lien depuis l'app ADAPT.
-          </p>
+          <h1 style={titleStyle}>{t("reset.invalidTitle")}</h1>
+          <p style={subtitle}>{t("reset.invalidMessage")}</p>
           <Link
             href="/"
-            style={{
-              ...primaryBtn,
-              textDecoration: "none",
-              display: "inline-block",
-            }}
+            style={{ ...primaryBtn, textDecoration: "none", display: "inline-block" }}
           >
-            ← Retour à l'accueil
+            {t("reset.back")}
           </Link>
         </div>
       </div>
@@ -49,20 +49,22 @@ export default function ResetPasswordPage() {
 
   return (
     <div style={shell}>
+      <div style={{ position: "absolute", top: 16, right: 16 }}>
+        <LanguageSwitcher />
+      </div>
       <div style={card}>
-        <p style={kicker}>ADAPT</p>
-        <h1 style={titleStyle}>RÉINITIALISER<br />MON MOT DE PASSE</h1>
-        <p style={subtitle}>
-          Ce lien doit être ouvert dans l'app <strong style={{ color: "#00F5A0" }}>ADAPT</strong> sur ton téléphone. Si l'app ne s'est pas ouverte automatiquement, appuie sur le bouton ci-dessous.
-        </p>
+        <p style={kicker}>{t("reset.brand")}</p>
+        <h1 style={titleStyle} dangerouslySetInnerHTML={{ __html: t("reset.title").replace(" ", "<br/>") }} />
+        <p
+          style={subtitle}
+          dangerouslySetInnerHTML={{ __html: t("reset.instructions") }}
+        />
 
-        <a href={deepLink} style={primaryBtn}>OUVRIR DANS L'APP ADAPT</a>
+        <a href={deepLink} style={primaryBtn}>{t("reset.openApp")}</a>
 
         <div style={divider} />
 
-        <p style={footerNote}>
-          Tu n'as pas encore l'app ADAPT installée ? Demande-la à ton coach.
-        </p>
+        <p style={footerNote}>{t("reset.noApp")}</p>
         <Link
           href="/"
           style={{
@@ -72,7 +74,7 @@ export default function ResetPasswordPage() {
             marginTop: 16,
           }}
         >
-          ← Retour à l'accueil
+          {t("reset.back")}
         </Link>
       </div>
     </div>
@@ -86,6 +88,7 @@ const shell: React.CSSProperties = {
   justifyContent: "center",
   background: "#0A0A0A",
   padding: 24,
+  position: "relative",
 };
 
 const card: React.CSSProperties = {

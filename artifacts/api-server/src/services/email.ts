@@ -11,6 +11,8 @@ if (RESEND_API_KEY) {
   logger.warn("RESEND_API_KEY not set — emails will be logged but not sent");
 }
 
+type Lang = "fr" | "en";
+
 async function sendEmail(opts: { to: string; subject: string; html: string; text: string }) {
   if (!resend) {
     logger.info({ to: opts.to, subject: opts.subject }, "[EMAIL-MOCK] Would send email");
@@ -32,9 +34,9 @@ async function sendEmail(opts: { to: string; subject: string; html: string; text
   }
 }
 
-function baseTemplate(content: string): string {
+function baseTemplate(content: string, lang: Lang, footerText: string): string {
   return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -65,52 +67,112 @@ function baseTemplate(content: string): string {
     </div>
     <div class="footer">
       © ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be<br />
-      Vous recevez cet email car vous avez un compte sur ADAPT System.
+      ${footerText}
     </div>
   </div>
 </body>
 </html>`;
 }
 
+const WELCOME_COPY = {
+  fr: {
+    subject: (name: string) => `Bienvenue sur ADAPT, ${name} !`,
+    h2: (name: string) => `Bienvenue sur ADAPT, ${name} !`,
+    accountCreated: (role: string) => `Ton compte <span class="highlight">${role}</span> a bien été créé. Tu fais maintenant partie de la communauté ADAPT.`,
+    accountCreatedText: (role: string) => `Ton compte ${role} a bien été créé. Tu fais maintenant partie de la communauté ADAPT.`,
+    coachStep: "Connecte-toi au tableau de bord coach pour commencer à gérer tes athlètes.",
+    athleteStep: "Ouvre l'application ADAPT pour démarrer ton premier entraînement.",
+    questions: "Des questions ? Réponds directement à cet email — on est là.",
+    signature: "Ton équipe ADAPT",
+    coach: "coach",
+    athlete: "athlète",
+    footer: "Vous recevez cet email car vous avez un compte sur ADAPT System.",
+  },
+  en: {
+    subject: (name: string) => `Welcome to ADAPT, ${name}!`,
+    h2: (name: string) => `Welcome to ADAPT, ${name}!`,
+    accountCreated: (role: string) => `Your <span class="highlight">${role}</span> account has been created. You're now part of the ADAPT community.`,
+    accountCreatedText: (role: string) => `Your ${role} account has been created. You're now part of the ADAPT community.`,
+    coachStep: "Sign in to the coach dashboard to start managing your athletes.",
+    athleteStep: "Open the ADAPT app to start your first workout.",
+    questions: "Any questions? Just reply to this email — we're here.",
+    signature: "Your ADAPT team",
+    coach: "coach",
+    athlete: "athlete",
+    footer: "You're receiving this email because you have an account on ADAPT System.",
+  },
+} as const;
+
+const RESET_COPY = {
+  fr: {
+    subject: "Réinitialisation de ton mot de passe ADAPT",
+    h2: "Réinitialisation de ton mot de passe",
+    hello: (name: string) => `Bonjour ${name},`,
+    instructions: 'Tu as demandé à réinitialiser ton mot de passe ADAPT. Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.',
+    instructionsText: "Tu as demandé à réinitialiser ton mot de passe ADAPT. Ce lien est valable 1 heure.",
+    cta: "RÉINITIALISER MON MOT DE PASSE",
+    ignore: "Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.",
+    fallbackApp: (url: string) => `<p class="url-fallback">Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :<br />${url}</p>`,
+    fallbackBtn: (url: string) => `<p class="url-fallback">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br />${url}</p>`,
+    fallbackAppText: "Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :",
+    linkLabel: "Lien de réinitialisation :",
+    footer: "Vous recevez cet email car vous avez un compte sur ADAPT System.",
+  },
+  en: {
+    subject: "Reset your ADAPT password",
+    h2: "Reset your password",
+    hello: (name: string) => `Hello ${name},`,
+    instructions: 'You requested to reset your ADAPT password. Click the button below — this link is valid for <span class="highlight">1 hour</span>.',
+    instructionsText: "You requested to reset your ADAPT password. This link is valid for 1 hour.",
+    cta: "RESET MY PASSWORD",
+    ignore: "If you didn't make this request, ignore this email. Your password won't change.",
+    fallbackApp: (url: string) => `<p class="url-fallback">If the app doesn't open, use this link in your browser:<br />${url}</p>`,
+    fallbackBtn: (url: string) => `<p class="url-fallback">If the button doesn't work, copy this link into your browser:<br />${url}</p>`,
+    fallbackAppText: "If the app doesn't open, use this link in your browser:",
+    linkLabel: "Reset link:",
+    footer: "You're receiving this email because you have an account on ADAPT System.",
+  },
+} as const;
+
 export async function sendWelcomeEmail(
   to: string,
   firstName: string,
   role: "athlete" | "coach",
+  lang: Lang = "fr",
 ) {
+  const c = WELCOME_COPY[lang] ?? WELCOME_COPY.fr;
   const isCoach = role === "coach";
-  const roleLabel = isCoach ? "coach" : "athlète";
-  const nextStep = isCoach
-    ? "Connecte-toi au tableau de bord coach pour commencer à gérer tes athlètes."
-    : "Ouvre l'application ADAPT pour démarrer ton premier entraînement.";
+  const roleLabel = isCoach ? c.coach : c.athlete;
+  const nextStep = isCoach ? c.coachStep : c.athleteStep;
 
   const html = baseTemplate(`
-    <h2>Bienvenue sur ADAPT, ${firstName} !</h2>
-    <p>Ton compte <span class="highlight">${roleLabel}</span> a bien été créé. Tu fais maintenant partie de la communauté ADAPT.</p>
+    <h2>${c.h2(firstName)}</h2>
+    <p>${c.accountCreated(roleLabel)}</p>
     <p>${nextStep}</p>
     <div class="divider"></div>
-    <p>Des questions ? Réponds directement à cet email — on est là.</p>
-    <p style="color:#555; font-size:13px;">Ton équipe ADAPT</p>
-  `);
+    <p>${c.questions}</p>
+    <p style="color:#555; font-size:13px;">${c.signature}</p>
+  `, lang, c.footer);
 
   const text = [
     `ADAPT — INTELLIGENCE PERFORMANCE`,
     ``,
-    `Bienvenue sur ADAPT, ${firstName} !`,
+    c.h2(firstName),
     ``,
-    `Ton compte ${roleLabel} a bien été créé. Tu fais maintenant partie de la communauté ADAPT.`,
+    c.accountCreatedText(roleLabel),
     ``,
     nextStep,
     ``,
-    `Des questions ? Réponds directement à cet email — on est là.`,
+    c.questions,
     ``,
-    `Ton équipe ADAPT`,
+    c.signature,
     ``,
     `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
   ].join("\n");
 
   await sendEmail({
     to,
-    subject: `Bienvenue sur ADAPT, ${firstName} !`,
+    subject: c.subject(firstName),
     html,
     text,
   });
@@ -121,47 +183,49 @@ export async function sendPasswordResetEmail(
   firstName: string,
   resetUrl: string,
   deepLinkUrl?: string,
+  lang: Lang = "fr",
 ) {
+  const c = RESET_COPY[lang] ?? RESET_COPY.fr;
   const primaryUrl = deepLinkUrl ?? resetUrl;
   const fallbackSection = deepLinkUrl
-    ? `<p class="url-fallback">Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :<br />${resetUrl}</p>`
-    : `<p class="url-fallback">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br />${resetUrl}</p>`;
+    ? c.fallbackApp(resetUrl)
+    : c.fallbackBtn(resetUrl);
 
   const html = baseTemplate(`
-    <h2>Réinitialisation de ton mot de passe</h2>
-    <p>Bonjour ${firstName},</p>
-    <p>Tu as demandé à réinitialiser ton mot de passe ADAPT. Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.</p>
-    <a href="${primaryUrl}" class="cta">RÉINITIALISER MON MOT DE PASSE</a>
-    <p>Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.</p>
+    <h2>${c.h2}</h2>
+    <p>${c.hello(firstName)}</p>
+    <p>${c.instructions}</p>
+    <a href="${primaryUrl}" class="cta">${c.cta}</a>
+    <p>${c.ignore}</p>
     <div class="divider"></div>
     ${fallbackSection}
-  `);
+  `, lang, c.footer);
 
   const textLines = [
     `ADAPT — INTELLIGENCE PERFORMANCE`,
     ``,
-    `Réinitialisation de ton mot de passe`,
+    c.h2,
     ``,
-    `Bonjour ${firstName},`,
+    c.hello(firstName),
     ``,
-    `Tu as demandé à réinitialiser ton mot de passe ADAPT. Ce lien est valable 1 heure.`,
+    c.instructionsText,
     ``,
-    `Lien de réinitialisation :`,
+    c.linkLabel,
     primaryUrl,
   ];
   if (deepLinkUrl) {
-    textLines.push(``, `Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :`, resetUrl);
+    textLines.push(``, c.fallbackAppText, resetUrl);
   }
   textLines.push(
     ``,
-    `Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.`,
+    c.ignore,
     ``,
     `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
   );
 
   await sendEmail({
     to,
-    subject: "Réinitialisation de ton mot de passe ADAPT",
+    subject: c.subject,
     html,
     text: textLines.join("\n"),
   });

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Link } from "wouter";
 import {
@@ -22,6 +23,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ClientsOverview() {
+  const { t } = useTranslation();
   const { data: clients, isLoading } = useGetClients({ query: { queryKey: ["/api/coach/clients"], refetchInterval: 30000 } });
   const { data: inviteData } = useGetInviteCode();
   const { data: joinRequests, isLoading: requestsLoading } = useGetCoachJoinRequests();
@@ -134,7 +136,7 @@ export default function ClientsOverview() {
               size="icon"
               onClick={handleCopyCode}
               className="border-primary/30 hover:bg-primary/20 text-primary h-12 w-12"
-              title="Copier le code"
+              title={t("clients.btn_copy_code")}
             >
               {codeCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             </Button>
@@ -205,14 +207,14 @@ export default function ClientsOverview() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-display text-white">ATHLÈTES</h1>
-          <p className="text-muted-foreground text-sm truncate">Gestion des profils, alertes et check-ins quotidiens.</p>
+          <h1 className="text-2xl md:text-3xl font-display text-white">{t("clients.title")}</h1>
+          <p className="text-muted-foreground text-sm truncate">{t("clients.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap sm:flex-nowrap">
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher..."
+              placeholder={t("clients.search_placeholder")}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 w-full sm:w-[200px] lg:w-[250px] bg-card border-border"
@@ -224,7 +226,7 @@ export default function ClientsOverview() {
             variant="outline"
           >
             <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">Lier par code</span>
+            <span className="hidden sm:inline">{t("clients.btn_link_code")}</span>
             <span className="sm:hidden">Lier</span>
           </Button>
         </div>
@@ -234,9 +236,9 @@ export default function ClientsOverview() {
         <div className="border-b border-border p-4 bg-background/50">
           <Tabs value={filter} onValueChange={setFilter} className="w-full overflow-x-auto">
             <TabsList className="bg-background/50 border border-border w-full sm:w-auto">
-              <TabsTrigger value="all" className="text-xs sm:text-sm">Tous</TabsTrigger>
-              <TabsTrigger value="active" className="text-xs sm:text-sm">Actifs aujourd'hui</TabsTrigger>
-              <TabsTrigger value="alerts" className="text-xs sm:text-sm data-[state=active]:text-destructive">Alertes</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs sm:text-sm">{t("clients.tab_all")}</TabsTrigger>
+              <TabsTrigger value="active" className="text-xs sm:text-sm">{t("clients.tab_active_today")}</TabsTrigger>
+              <TabsTrigger value="alerts" className="text-xs sm:text-sm data-[state=active]:text-destructive">{t("clients.tab_alerts")}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -324,7 +326,7 @@ export default function ClientsOverview() {
           })}
           {filteredClients.length === 0 && (
             <div className="px-6 py-12 text-center text-muted-foreground text-sm">
-              Aucun athlète trouvé selon les critères.
+              {t("clients.no_clients_found")}
             </div>
           )}
         </div>
@@ -334,10 +336,10 @@ export default function ClientsOverview() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-muted-foreground uppercase font-mono bg-background/30 border-b border-border">
               <tr>
-                <th className="px-6 py-4 font-semibold">Athlète</th>
-                <th className="px-6 py-4 font-semibold">ADAPT Score</th>
-                <th className="px-6 py-4 font-semibold">Mode de séance</th>
-                <th className="px-6 py-4 font-semibold">Statut check-in</th>
+                <th className="px-6 py-4 font-semibold">{t("clients.table_col_athlete")}</th>
+                <th className="px-6 py-4 font-semibold">{t("clients.table_col_score")}</th>
+                <th className="px-6 py-4 font-semibold">{t("clients.table_col_mode")}</th>
+                <th className="px-6 py-4 font-semibold">{t("clients.table_col_status")}</th>
                 <th className="px-6 py-4 font-semibold text-right">Alertes actives</th>
               </tr>
             </thead>
@@ -428,7 +430,7 @@ export default function ClientsOverview() {
               {filteredClients.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
-                    Aucun athlète trouvé selon les critères.
+                    {t("clients.no_clients_found")}
                   </td>
                 </tr>
               )}
@@ -440,9 +442,9 @@ export default function ClientsOverview() {
       <Dialog open={linkDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white font-display text-xl">LIER UN ATHLÈTE</DialogTitle>
+            <DialogTitle className="text-white font-display text-xl">{t("clients.dialog_link_title")}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Entrez le code d'invitation à 6 caractères de votre athlète pour le connecter à votre compte coach.
+              {t("clients.dialog_link_desc")}
             </DialogDescription>
           </DialogHeader>
 

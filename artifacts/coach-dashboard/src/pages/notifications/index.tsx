@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import {
   useGetScheduledNotifications,
@@ -54,6 +55,7 @@ function athleteName(n: ScheduledNotification) {
 }
 
 export default function NotificationsPage() {
+  const { t } = useTranslation();
   const { data: notifications, isLoading, refetch } = useGetScheduledNotifications({
     query: { queryKey: ["/api/coach/scheduled-notifications"] },
   });
@@ -202,7 +204,7 @@ export default function NotificationsPage() {
             <Bell className="w-8 h-8 text-primary" /> NOTIFICATIONS
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Motivations matinales et rappels programmés pour vos athlètes.
+            {t("notifications_page.subtitle")}
           </p>
         </div>
         <Button
@@ -216,7 +218,7 @@ export default function NotificationsPage() {
       <div className="bg-card border border-border rounded-xl p-6">
         <div className="flex items-center gap-3 mb-4">
           <Sun className="w-5 h-5 text-amber-400" />
-          <h2 className="text-lg font-display text-white">Phrase matinale automatique</h2>
+          <h2 className="text-lg font-display text-white">{t("notifications_page.morning_phrase_title")}</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           Chaque matin, vos athlètes reçoivent une phrase de motivation + le résumé de leur séance du jour.
@@ -255,7 +257,7 @@ export default function NotificationsPage() {
         {(!notifications || notifications.length === 0) ? (
           <div className="bg-card border border-dashed border-border rounded-xl p-8 text-center">
             <Bell className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-            <p className="text-muted-foreground text-sm">Aucun rappel programmé.</p>
+            <p className="text-muted-foreground text-sm">{t("notifications_page.no_reminders")}</p>
             <p className="text-muted-foreground text-xs mt-1">
               Créez des rappels personnalisés pour motiver vos athlètes.
             </p>

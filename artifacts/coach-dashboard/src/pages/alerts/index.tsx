@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useGetAlerts, useResolveAlert } from "@workspace/api-client-react";
 import { Loader2, AlertTriangle, CheckCircle2, User, MessageSquare, RotateCcw, Clock } from "lucide-react";
 import { Link } from "wouter";
@@ -53,6 +54,7 @@ type AlertItem = {
 };
 
 export default function AlertsFeed() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: alerts, isLoading, refetch } = useGetAlerts({
     query: { queryKey: ["/api/coach/alerts"], refetchInterval: 30000 },
@@ -130,7 +132,7 @@ export default function AlertsFeed() {
             <AlertTriangle className="w-8 h-8 text-destructive" /> FLUX D'ALERTES
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Interventions et avertissements en temps réel.
+            {t("alerts.subtitle")}
           </p>
         </div>
       </div>
@@ -285,7 +287,7 @@ export default function AlertsFeed() {
           <div className="py-20 text-center text-muted-foreground bg-card/30 rounded-2xl border border-dashed border-border flex flex-col items-center">
             <CheckCircle2 className="w-12 h-12 text-primary/50 mb-3" />
             <p className="text-lg text-white">
-              {filter === "resolved" ? "Aucune alerte résolue." : "Tout est en ordre."}
+              {filter === "resolved" ? t("alerts.no_alerts_resolved", "Aucune alerte résolue.") : t("alerts.no_alerts_all")}
             </p>
             <p className="text-sm">
               {filter === "resolved"

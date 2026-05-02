@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import { useGetAlerts, useGetMessageThreads } from "@workspace/api-client-react"
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { t } = useTranslation();
   const { logout, user } = useAuth();
   
   const { data: alerts } = useGetAlerts({ query: { queryKey: ['/api/coach/alerts'], refetchInterval: 30000 }});
@@ -26,73 +28,73 @@ export function AppSidebar() {
 
   const items = [
     {
-      title: "Tableau de bord",
-      subtitle: "Vue opérationnelle du jour",
+      title: t("sidebar.item_dashboard_title"),
+      subtitle: t("sidebar.item_dashboard_subtitle"),
       url: "/",
       icon: LayoutDashboard,
       exactMatch: true,
     },
     {
-      title: "Athlètes",
-      subtitle: "Profils, alertes et check-ins",
+      title: t("sidebar.item_athletes_title"),
+      subtitle: t("sidebar.item_athletes_subtitle"),
       url: "/clients",
       icon: Users,
       exactMatch: false,
     },
     {
-      title: "Programmes",
-      subtitle: "Plans d'entraînement",
+      title: t("sidebar.item_programs_title"),
+      subtitle: t("sidebar.item_programs_subtitle"),
       url: "/programs",
       icon: Dumbbell,
       exactMatch: false,
     },
     {
-      title: "Bibliothèque",
-      subtitle: "Exercices et ressources",
+      title: t("sidebar.item_library_title"),
+      subtitle: t("sidebar.item_library_subtitle"),
       url: "/library",
       icon: Library,
       exactMatch: false,
     },
     {
-      title: "Contenu",
-      subtitle: "Guides et routines athlètes",
+      title: t("sidebar.item_content_title"),
+      subtitle: t("sidebar.item_content_subtitle"),
       url: "/content",
       icon: BookCopy,
       exactMatch: false,
     },
     {
-      title: "Challenges",
-      subtitle: "Défis pour les athlètes",
+      title: t("sidebar.item_challenges_title"),
+      subtitle: t("sidebar.item_challenges_subtitle"),
       url: "/challenges",
       icon: Trophy,
       exactMatch: false,
     },
     {
-      title: "Notifications",
-      subtitle: "Rappels et motivation",
+      title: t("sidebar.item_notifications_title"),
+      subtitle: t("sidebar.item_notifications_subtitle"),
       url: "/notifications",
       icon: BellRing,
       exactMatch: false,
     },
     {
-      title: "Alertes",
-      subtitle: "Signaux à traiter",
+      title: t("sidebar.item_alerts_title"),
+      subtitle: t("sidebar.item_alerts_subtitle"),
       url: "/alerts",
       icon: Bell,
       badge: unresolvedAlertsCount > 0 ? unresolvedAlertsCount : null,
       exactMatch: false,
     },
     {
-      title: "Messages",
-      subtitle: "Échanges avec les athlètes",
+      title: t("sidebar.item_messages_title"),
+      subtitle: t("sidebar.item_messages_subtitle"),
       url: "/messages",
       icon: MessageSquare,
       badge: unreadMessagesCount > 0 ? unreadMessagesCount : null,
       exactMatch: false,
     },
     {
-      title: "Paramètres",
-      subtitle: "Profil et préférences",
+      title: t("sidebar.item_settings_title"),
+      subtitle: t("sidebar.item_settings_subtitle"),
       url: "/settings",
       icon: Settings,
       badge: null,
@@ -110,11 +112,11 @@ export function AppSidebar() {
       <SidebarContent className="overflow-y-auto">
         <div className="p-4 lg:p-6 pb-3">
           <h1 className="text-2xl lg:text-3xl font-display text-white tracking-widest text-shadow-neon-primary">
-            ADAPT <span className="text-primary">COACH</span>
+            {t("sidebar.app_title")} <span className="text-primary">{t("sidebar.app_role")}</span>
           </h1>
         </div>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground uppercase font-mono tracking-widest text-xs mb-2">Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-muted-foreground uppercase font-mono tracking-widest text-xs mb-2">{t("sidebar.group_main")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -164,7 +166,7 @@ export function AppSidebar() {
           className="flex items-center gap-3 w-full px-2 py-2 text-sm text-muted-foreground hover:text-white transition-colors"
         >
           <LogOut className="w-4 h-4" />
-          <span>Se déconnecter</span>
+          <span>{t("sidebar.logout")}</span>
         </button>
       </SidebarFooter>
     </Sidebar>

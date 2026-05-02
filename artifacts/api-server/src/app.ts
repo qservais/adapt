@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
+import { localeMiddleware } from "./middleware/locale.js";
 
 const app: Express = express();
 
@@ -36,6 +37,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(localeMiddleware);
 
 // Rate limiting
 const generalLimiter = rateLimit({

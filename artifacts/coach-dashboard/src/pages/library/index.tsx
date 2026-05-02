@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { EQUIPMENT_CATALOG, EQUIPMENT_CATEGORIES, equipmentKeyFromLabel } from "@workspace/api-client-react";
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -124,6 +125,7 @@ async function addToCalendar(clientId: string, exerciseId: string, dateStr: stri
 }
 
 export default function LibraryPage() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [muscleGroupFilter, setMuscleGroupFilter] = useState("");
@@ -292,7 +294,7 @@ export default function LibraryPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display text-white">BIBLIOTHÈQUE</h1>
+          <h1 className="text-3xl font-display text-white">{t("library.title")}</h1>
           <p className="text-muted-foreground text-sm">
             {exercises ? `${exercises.length} exercice${exercises.length !== 1 ? "s" : ""}` : "..."} · Créez et organisez vos exercices
           </p>
@@ -308,7 +310,7 @@ export default function LibraryPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un exercice..."
+            placeholder={t("library.search_placeholder")}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9 bg-card border-border"
@@ -370,7 +372,7 @@ export default function LibraryPage() {
       ) : displayedExercises.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-3">
           <Dumbbell className="w-12 h-12 opacity-20" />
-          <p className="text-sm italic">Aucun exercice trouvé.</p>
+          <p className="text-sm italic">{t("library.no_exercise_found")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -485,7 +487,7 @@ export default function LibraryPage() {
 
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Nom *</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.label_name")}</Label>
               <Input
                 autoFocus
                 value={form.name}
@@ -496,7 +498,7 @@ export default function LibraryPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Catégorie</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.label_category")}</Label>
               <div className="flex flex-wrap gap-2">
                 {CATEGORIES.map(c => (
                   <button
@@ -517,7 +519,7 @@ export default function LibraryPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Groupes musculaires</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.label_muscles")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {MUSCLE_GROUPS.map(mg => {
                   const selected = form.muscleGroups.includes(mg);
@@ -542,7 +544,7 @@ export default function LibraryPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Équipement</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.label_equipment")}</Label>
               <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
                 {EQUIPMENT_CATEGORIES.map(cat => (
                   <div key={cat}>
