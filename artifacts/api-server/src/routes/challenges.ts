@@ -8,7 +8,7 @@ import {
 import { eq, and, lte, gte, desc, inArray } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
-import { sendPushNotification } from "../services/push-notification.service.js";
+import { notifyUser } from "../services/notify.service.js";
 import { getTodayLocalDate } from "../lib/dateUtils.js";
 
 const router = Router();
@@ -67,20 +67,18 @@ router.post("/coach/challenges", authenticate, requireRole("coach"), async (req,
     }))
   );
 
-  const athletesWithTokens = await db
-    .select({ id: usersTable.id, pushToken: usersTable.pushToken })
-    .from(usersTable)
-    .where(inArray(usersTable.id, athleteIds));
-
-  for (const a of athletesWithTokens) {
-    if (a.pushToken) {
-      await sendPushNotification(a.pushToken, {
+  await Promise.all(
+    athleteIds.map((athleteId) =>
+      notifyUser({
+        userId: athleteId,
+        type: "new_challenge",
         title: "🏆 Nouveau défi disponible !",
         body: `${rest.title} — Jusqu'au ${rest.endDate}.`,
-        data: { type: "challenge", challengeId: challenge!.id },
-      });
-    }
-  }
+        link: `/(tabs)/challenges`,
+        data: { challengeId: challenge!.id },
+      })
+    )
+  );
 
   res.status(201).json({ id: challenge!.id });
 });

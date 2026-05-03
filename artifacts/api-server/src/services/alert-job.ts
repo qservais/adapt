@@ -3,6 +3,17 @@ import { db } from "@workspace/db";
 import { checkinsTable, sessionLogsTable, alertsTable, usersTable, exerciseLogsTable, sessionExercisesTable, sessionVariantsTable } from "@workspace/db";
 import { eq, and, desc, gte, isNull, not, lt, sql, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
+import { notifyUser } from "./notify.service.js";
+
+const ALERT_TYPE_TITLES: Record<string, string> = {
+  pain: "🚨 Douleur signalée",
+  inactivity: "⏰ Inactivité prolongée",
+  low_score: "📉 Score ADAPT critique",
+  high_rpe: "🔥 RPE élevé répété",
+  missed_checkins: "📅 Check-ins manqués",
+  load_progression: "📊 Progression en charge stagnante",
+  fatigue: "😴 Fatigue/courbatures élevées",
+};
 
 async function createAlertIfNotExists(
   coachId: string,
@@ -27,6 +38,20 @@ async function createAlertIfNotExists(
       message,
     });
     logger.info({ athleteId, type, priority }, "Alert created");
+
+    // Notify coach (in-app + push) — best-effort, never blocks alert creation
+    try {
+      await notifyUser({
+        userId: coachId,
+        type: "coach_alert",
+        title: ALERT_TYPE_TITLES[type] ?? "Nouvelle alerte",
+        body: message,
+        link: `/clients/${athleteId}`,
+        data: { alertType: type, priority, athleteId },
+      });
+    } catch (err) {
+      logger.error({ err, coachId, type }, "Coach alert notification failed");
+    }
   }
 }
 

@@ -7,6 +7,7 @@ import { calculateAdaptScore } from "../services/adapt-engine.js";
 import { checkAfterCheckin } from "../services/badgeService.js";
 import { z } from "zod";
 import { getTodayLocalDate } from "../lib/dateUtils.js";
+import { notifyUser } from "../services/notify.service.js";
 
 const router = Router();
 
@@ -156,15 +157,31 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
         eq(alertsTable.isResolved, false)
       ));
     if (existingPain.length === 0) {
+      const alertMessage = `${user?.firstName || "Athlete"} a signalé une douleur : ${painNotes || "pas de détails"}`;
       await db.insert(alertsTable).values({
         coachId: user?.coachId ?? null,
         athleteId: req.user!.userId,
         type: "pain",
         priority: "p1",
-        message: `${user?.firstName || "Athlete"} a signalé une douleur : ${painNotes || "pas de détails"}`,
+        message: alertMessage,
         isRead: false,
         isResolved: false,
       });
+
+      if (user?.coachId) {
+        try {
+          await notifyUser({
+            userId: user.coachId,
+            type: "coach_alert",
+            title: "🚨 Douleur signalée",
+            body: alertMessage,
+            link: `/clients/${req.user!.userId}`,
+            data: { alertType: "pain", priority: "p1", athleteId: req.user!.userId },
+          });
+        } catch {
+          // best-effort: never fail the check-in if push fails
+        }
+      }
     }
   }
 

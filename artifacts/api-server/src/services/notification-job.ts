@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
-import { sendPushNotification } from "./push-notification.service.js";
+import { notifyUser } from "./notify.service.js";
 
 const PHRASES_MOTIVATION = [
   "Chaque répétition te rapproche de la meilleure version de toi-même.",
@@ -109,13 +109,6 @@ async function getSessionSummaryForAthlete(athleteId: string, todayDate: string)
   }
 }
 
-function isPushEnabled(prefs: Record<string, boolean> | null, key: string): boolean {
-  if (!prefs) return true;
-  const pushKey = `push_${key}`;
-  if (pushKey in prefs) return prefs[pushKey] !== false;
-  return prefs[key] !== false;
-}
-
 async function runMorningNotifications(currentHour: number): Promise<void> {
   logger.info({ currentHour }, "Checking morning notifications...");
 
@@ -135,7 +128,7 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
     if (currentHour < targetHour) continue;
 
     const athletes = await db
-      .select({ id: usersTable.id, firstName: usersTable.firstName, pushToken: usersTable.pushToken, notificationPrefs: usersTable.notificationPrefs })
+      .select({ id: usersTable.id, firstName: usersTable.firstName })
       .from(usersTable)
       .where(and(eq(usersTable.coachId, coach.id), eq(usersTable.role, "athlete")));
 
@@ -157,23 +150,13 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
       const body = sessionSummary ? `${phrase}\n\n📋 ${sessionSummary}` : `${phrase}\n\n🌿 Journée de récupération — profites-en pour te reposer.`;
       const title = "Bonjour ! Voici ta dose de motivation 💪";
 
-      await db.insert(notificationsTable).values({
+      await notifyUser({
         userId: athlete.id,
         type: "morning_motivation",
         title,
         body,
         link: "/(tabs)/session",
       });
-
-      const prefs = (athlete.notificationPrefs as Record<string, boolean> | null);
-      if (isPushEnabled(prefs, "session")) {
-        const pushBody = sessionSummary ? `${phrase}\n\n📋 ${sessionSummary}` : `${phrase}`;
-        await sendPushNotification(athlete.pushToken, {
-          title,
-          body: pushBody,
-          data: { link: "/(tabs)/session" },
-        });
-      }
 
       logger.info({ athleteId: athlete.id, coachId: coach.id }, "Morning notification sent");
     }
@@ -213,29 +196,13 @@ async function runScheduledReminders(currentHour: number): Promise<void> {
       );
     if (existing.length > 0) continue;
 
-    await db.insert(notificationsTable).values({
+    await notifyUser({
       userId: notif.athleteId,
       type: "scheduled_reminder",
       title: "Rappel de ton coach",
       body: `${notif.message}\n\n[ref:${notif.id}]`,
       link: "/(tabs)/session",
     });
-
-    const [athlete] = await db
-      .select({ pushToken: usersTable.pushToken, notificationPrefs: usersTable.notificationPrefs })
-      .from(usersTable)
-      .where(eq(usersTable.id, notif.athleteId));
-
-    if (athlete) {
-      const prefs = (athlete.notificationPrefs as Record<string, boolean> | null);
-      if (isPushEnabled(prefs, "session")) {
-        await sendPushNotification(athlete.pushToken, {
-          title: "Rappel de ton coach",
-          body: notif.message,
-          data: { link: "/(tabs)/session" },
-        });
-      }
-    }
 
     logger.info({ notifId: notif.id, athleteId: notif.athleteId }, "Scheduled reminder sent");
   }

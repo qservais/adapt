@@ -22,7 +22,7 @@ const DEFAULT_PREFS = {
 
 const PAGE_SIZE = 20;
 
-router.get("/notifications", authenticate, requireRole("athlete"), async (req, res) => {
+router.get("/notifications", authenticate, async (req, res) => {
   try {
     const userId = req.user!.userId;
     const offset = Math.max(0, parseInt(String(req.query["offset"] ?? "0"), 10) || 0);
@@ -69,7 +69,7 @@ router.get("/notifications", authenticate, requireRole("athlete"), async (req, r
   }
 });
 
-router.put("/notifications/read-all", authenticate, requireRole("athlete"), async (req, res) => {
+router.put("/notifications/read-all", authenticate, async (req, res) => {
   try {
     await db
       .update(notificationsTable)
@@ -81,7 +81,7 @@ router.put("/notifications/read-all", authenticate, requireRole("athlete"), asyn
   }
 });
 
-router.put("/notifications/:id/read", authenticate, requireRole("athlete"), async (req, res) => {
+router.put("/notifications/:id/read", authenticate, async (req, res) => {
   try {
     await db
       .update(notificationsTable)

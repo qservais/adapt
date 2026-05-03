@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { messagesTable, usersTable, notificationsTable } from "@workspace/db";
+import { messagesTable, usersTable } from "@workspace/db";
 import { eq, or, and, desc } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { ObjectStorageService } from "../lib/objectStorage.js";
 import { z } from "zod";
-import { sendPushNotification } from "../services/push-notification.service.js";
+import { notifyUser } from "../services/notify.service.js";
 
 const router = Router();
 const storage = new ObjectStorageService();
@@ -203,16 +203,7 @@ router.post("/messages", authenticate, async (req, res) => {
       .from(usersTable)
       .where(eq(usersTable.id, req.user!.userId));
 
-    const [recipient] = await db
-      .select({ pushToken: usersTable.pushToken, notificationPrefs: usersTable.notificationPrefs, role: usersTable.role })
-      .from(usersTable)
-      .where(eq(usersTable.id, recipientId));
-
-    if (recipient && sender) {
-      const prefs = (recipient.notificationPrefs as Record<string, boolean> | null);
-      const inAppEnabled = prefs ? prefs["messages"] !== false : true;
-      const pushEnabled = prefs ? prefs["push_messages"] !== false : true;
-
+    if (sender) {
       const notifTitle = `Message de ${sender.firstName}`;
       const notifBody = mediaType === "audio"
         ? "🎤 Message vocal"
@@ -223,23 +214,13 @@ router.post("/messages", authenticate, async (req, res) => {
             : content.slice(0, 100);
       const notifLink = `/messages/${req.user!.userId}`;
 
-      if (inAppEnabled) {
-        await db.insert(notificationsTable).values({
-          userId: recipientId,
-          type: "message",
-          title: notifTitle,
-          body: notifBody,
-          link: notifLink,
-        });
-      }
-
-      if (pushEnabled && recipient.pushToken) {
-        await sendPushNotification(recipient.pushToken, {
-          title: notifTitle,
-          body: notifBody,
-          data: { link: notifLink },
-        });
-      }
+      await notifyUser({
+        userId: recipientId,
+        type: "message",
+        title: notifTitle,
+        body: notifBody,
+        link: notifLink,
+      });
     }
 
     res.status(201).json(message);
