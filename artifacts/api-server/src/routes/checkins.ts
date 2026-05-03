@@ -8,6 +8,7 @@ import { checkAfterCheckin } from "../services/badgeService.js";
 import { z } from "zod";
 import { getTodayLocalDate } from "../lib/dateUtils.js";
 import { notifyUser } from "../services/notify.service.js";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
 
@@ -184,8 +185,9 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
             link: `/clients/${req.user!.userId}`,
             data: { alertType: "pain", priority: "p1", athleteId: req.user!.userId },
           });
-        } catch {
-          // best-effort: never fail the check-in if push fails
+        } catch (err) {
+          // best-effort: never fail the check-in, but log so silent drops are visible
+          logger.error({ err, coachId: user.coachId, athleteId: req.user!.userId }, "Coach pain alert notification failed");
         }
       }
     }

@@ -76,7 +76,7 @@ export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult>
       await sendPushNotification(user.pushToken, {
         title,
         body,
-        data: { link, ...(data ?? {}) },
+        data: { link: link ?? meta.defaultLink, ...(data ?? {}) },
       });
       pushDone = true;
     } catch (err) {
