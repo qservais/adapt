@@ -3,7 +3,7 @@ import { notificationsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { sendPushNotification } from "./push-notification.service.js";
-import { NOTIFICATION_TYPES, type NotificationType } from "../lib/notifications/types.js";
+import { NOTIFICATION_TYPES, type NotificationType, type NotificationTypeMeta } from "../lib/notifications/types.js";
 
 export interface NotifyUserOptions {
   userId: string;
@@ -27,7 +27,7 @@ export interface NotifyResult {
  */
 export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult> {
   const { userId, type, title, body, link, data } = opts;
-  const meta = NOTIFICATION_TYPES[type];
+  const meta: NotificationTypeMeta | undefined = NOTIFICATION_TYPES[type];
   if (!meta) {
     logger.warn({ type }, "notifyUser: unknown notification type");
     return { inApp: false, push: false };
@@ -47,23 +47,31 @@ export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult>
   }
 
   const prefs = (user.notificationPrefs as Record<string, boolean> | null) ?? null;
-  const inAppEnabled = prefs ? prefs[meta.prefsKey] !== false : true;
-  const pushEnabled = prefs ? prefs[`push_${meta.prefsKey}`] !== false : true;
+  const baseKey = meta.prefsKey;
+  const pushKey = `push_${baseKey}`;
+  // In-app: prefs[base] ?? defaultEnabled
+  const inAppEnabled = prefs && baseKey in prefs ? prefs[baseKey] !== false : meta.defaultEnabled;
+  // Push: prefs[push_<key>] ?? prefs[<key>] ?? defaultEnabled — channel-specific opt-out wins,
+  // otherwise fall back to the base toggle, finally to the type's default.
+  const pushEnabled =
+    prefs && pushKey in prefs
+      ? prefs[pushKey] !== false
+      : prefs && baseKey in prefs
+        ? prefs[baseKey] !== false
+        : meta.defaultEnabled;
 
   let inAppDone = false;
   if (inAppEnabled) {
-    try {
-      await db.insert(notificationsTable).values({
-        userId,
-        type,
-        title,
-        body,
-        link: link ?? null,
-      });
-      inAppDone = true;
-    } catch (err) {
-      logger.error({ err, userId, type }, "notifyUser: failed to insert in-app notification");
-    }
+    // In-app insert errors propagate by design — the in-app channel is the
+    // authoritative record, so a silent drop would hide a real bug.
+    await db.insert(notificationsTable).values({
+      userId,
+      type,
+      title,
+      body,
+      link: link ?? meta.defaultLink ?? null,
+    });
+    inAppDone = true;
   }
 
   let pushDone = false;
