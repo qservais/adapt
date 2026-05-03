@@ -14,9 +14,11 @@ import { COLORS, FONTS } from "@/constants/theme";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { customFetch } from "@/lib/custom-fetch";
+import { useT } from "@/context/PreferencesContext";
 
 export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { token } = useLocalSearchParams<{ token: string }>();
 
   const [newPassword, setNewPassword] = useState("");
@@ -28,12 +30,12 @@ export default function ResetPasswordScreen() {
     return (
       <View style={[styles.center, { backgroundColor: COLORS.bg, paddingTop: insets.top + 40 }]}>
         <Feather name="x-circle" size={48} color={COLORS.red} />
-        <Text style={[styles.errorTitle, { fontFamily: FONTS.bodySemiBold }]}>Lien invalide</Text>
+        <Text style={[styles.errorTitle, { fontFamily: FONTS.bodySemiBold }]}>{t("invalid_link", "Lien invalide")}</Text>
         <Text style={[styles.errorSubtitle, { fontFamily: FONTS.body }]}>
-          Ce lien de réinitialisation est invalide ou a expiré.
+          {t("invalid_link_subtitle", "Ce lien de réinitialisation est invalide ou a expiré.")}
         </Text>
         <GradientButton
-          label="Demander un nouveau lien"
+          label={t("request_new_link", "Demander un nouveau lien")}
           onPress={() => router.replace("/auth/forgot-password")}
         />
       </View>
@@ -42,12 +44,12 @@ export default function ResetPasswordScreen() {
 
   const handleSubmit = async () => {
     if (!newPassword || newPassword.length < 8) {
-      setErrorMsg("Le mot de passe doit contenir au moins 8 caractères");
+      setErrorMsg(t("pwd_min_8", "Le mot de passe doit contenir au moins 8 caractères"));
       setStatus("error");
       return;
     }
     if (newPassword !== confirm) {
-      setErrorMsg("Les mots de passe ne correspondent pas");
+      setErrorMsg(t("passwords_dont_match", "Les mots de passe ne correspondent pas"));
       setStatus("error");
       return;
     }
@@ -61,8 +63,8 @@ export default function ResetPasswordScreen() {
       setStatus("success");
       setTimeout(() => router.replace("/auth/login"), 2500);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Une erreur est survenue. Réessaie.";
-      setErrorMsg(message || "Lien invalide ou expiré.");
+      const message = err instanceof Error ? err.message : t("error_generic", "Une erreur est survenue. Réessaie.");
+      setErrorMsg(message || t("invalid_or_expired", "Lien invalide ou expiré."));
       setStatus("error");
     }
   };
@@ -72,10 +74,10 @@ export default function ResetPasswordScreen() {
       <View style={[styles.center, { backgroundColor: COLORS.bg, paddingTop: insets.top + 40 }]}>
         <Feather name="check-circle" size={48} color={COLORS.green} />
         <Text style={[styles.successTitle, { fontFamily: FONTS.bodySemiBold }]}>
-          Mot de passe mis à jour !
+          {t("pwd_updated", "Mot de passe mis à jour !")}
         </Text>
         <Text style={[styles.successSubtitle, { fontFamily: FONTS.body }]}>
-          Redirection vers la connexion…
+          {t("redirecting_login", "Redirection vers la connexion…")}
         </Text>
       </View>
     );
@@ -95,15 +97,15 @@ export default function ResetPasswordScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { fontFamily: FONTS.title }]}>NOUVEAU</Text>
+          <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("new_pwd_title", "NOUVEAU")}</Text>
           <Text style={[styles.titleSub, { fontFamily: FONTS.title, color: COLORS.cyan }]}>
-            MOT DE PASSE
+            {t("new_pwd_title_sub", "MOT DE PASSE")}
           </Text>
         </View>
 
         <View style={styles.form}>
           <InputField
-            label="Nouveau mot de passe"
+            label={t("new_password", "Nouveau mot de passe")}
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="••••••••"
@@ -111,7 +113,7 @@ export default function ResetPasswordScreen() {
             autoComplete="new-password"
           />
           <InputField
-            label="Confirmer le mot de passe"
+            label={t("confirm_password_label", "Confirmer le mot de passe")}
             value={confirm}
             onChangeText={setConfirm}
             placeholder="••••••••"
@@ -124,7 +126,7 @@ export default function ResetPasswordScreen() {
             </View>
           ) : null}
           <GradientButton
-            label="CHANGER MON MOT DE PASSE"
+            label={t("change_my_password", "CHANGER MON MOT DE PASSE")}
             onPress={handleSubmit}
             loading={status === "loading"}
           />

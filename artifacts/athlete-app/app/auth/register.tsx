@@ -19,24 +19,29 @@ import { getRegisterErrorMessage } from "@/lib/errors";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { useT } from "@/context/PreferencesContext";
 
-function getPasswordStrength(p: string): { score: number; label: string; color: string } {
+function getPasswordStrength(
+  p: string,
+  labels: { weak: string; medium: string; good: string; strong: string }
+): { score: number; label: string; color: string } {
   if (p.length === 0) return { score: 0, label: "", color: COLORS.border };
   let score = 0;
   if (p.length >= 8) score++;
   if (/[A-Z]/.test(p)) score++;
   if (/[0-9]/.test(p)) score++;
   if (/[^A-Za-z0-9]/.test(p)) score++;
-  if (score <= 1) return { score: 25, label: "Faible", color: COLORS.red };
-  if (score === 2) return { score: 50, label: "Moyen", color: COLORS.amber };
-  if (score === 3) return { score: 75, label: "Bon", color: COLORS.cyan };
-  return { score: 100, label: "Fort", color: COLORS.green };
+  if (score <= 1) return { score: 25, label: labels.weak, color: COLORS.red };
+  if (score === 2) return { score: 50, label: labels.medium, color: COLORS.amber };
+  if (score === 3) return { score: 75, label: labels.good, color: COLORS.cyan };
+  return { score: 100, label: labels.strong, color: COLORS.green };
 }
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
   const registerMutation = useRegister();
+  const t = useT();
 
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
@@ -44,17 +49,22 @@ export default function RegisterScreen() {
   const [error, setError] = useState("");
   const [emailInUse, setEmailInUse] = useState(false);
 
-  const strength = getPasswordStrength(password);
+  const strength = getPasswordStrength(password, {
+    weak: t("pwd_strength_weak", "Faible"),
+    medium: t("pwd_strength_medium", "Moyen"),
+    good: t("pwd_strength_good", "Bon"),
+    strong: t("pwd_strength_strong", "Fort"),
+  });
 
   const handleRegister = async () => {
     setError("");
     setEmailInUse(false);
     if (!firstName.trim() || !email.trim() || !password) {
-      setError("Tous les champs sont requis");
+      setError(t("all_fields_required", "Tous les champs sont requis"));
       return;
     }
     if (password.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caractères");
+      setError(t("pwd_min_8", "Le mot de passe doit contenir au moins 8 caractères"));
       return;
     }
     try {
@@ -99,22 +109,22 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={[styles.title, { fontFamily: FONTS.title }]}>CRÉER UN COMPTE</Text>
+          <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("create_account_title", "CRÉER UN COMPTE")}</Text>
           <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-            Rejoins ADAPT
+            {t("join_adapt", "Rejoins ADAPT")}
           </Text>
         </View>
 
         <View style={styles.form}>
           <InputField
-            label="Prénom"
+            label={t("first_name", "Prénom")}
             value={firstName}
             onChangeText={setFirstName}
             placeholder="Alex"
             autoCapitalize="words"
           />
           <InputField
-            label="Email"
+            label={t("email", "Email")}
             value={email}
             onChangeText={setEmail}
             placeholder="ton@email.com"
@@ -123,10 +133,10 @@ export default function RegisterScreen() {
           />
           <View style={{ gap: 8 }}>
             <InputField
-              label="Mot de passe"
+              label={t("password", "Mot de passe")}
               value={password}
               onChangeText={setPassword}
-              placeholder="Min. 8 caractères"
+              placeholder={t("pwd_min_chars_placeholder", "Min. 8 caractères")}
               secureToggle
             />
             {password.length > 0 && (
@@ -154,7 +164,7 @@ export default function RegisterScreen() {
                   style={styles.errorCta}
                 >
                   <Text style={[styles.errorCtaText, { fontFamily: FONTS.bodySemiBold }]}>
-                    Mot de passe oublié ?
+                    {t("forgot_password", "Mot de passe oublié ?")}
                   </Text>
                 </Pressable>
               ) : null}
@@ -162,7 +172,7 @@ export default function RegisterScreen() {
           ) : null}
 
           <GradientButton
-            label="Créer mon compte"
+            label={t("create_my_account", "Créer mon compte")}
             onPress={handleRegister}
             loading={registerMutation.isPending}
           />
@@ -170,9 +180,9 @@ export default function RegisterScreen() {
 
         <Pressable onPress={() => router.push("/auth/login")} style={styles.loginLink}>
           <Text style={[styles.loginText, { fontFamily: FONTS.body }]}>
-            Déjà un compte ?{" "}
+            {t("already_have_account", "Déjà un compte ?")}{" "}
             <Text style={{ color: COLORS.cyan, fontFamily: FONTS.bodySemiBold }}>
-              Se connecter
+              {t("sign_in_link", "Se connecter")}
             </Text>
           </Text>
         </Pressable>

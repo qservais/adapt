@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useGetWeeklyRecap } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { useT } from "@/context/PreferencesContext";
 
 function DeltaChip({ delta, unit, invert }: { delta?: number | null; unit?: string; invert?: boolean }) {
   if (delta == null) return null;
@@ -50,6 +51,7 @@ function StatRow({ label, value, delta, unit, invertDelta, color }: {
 
 export default function WeeklyRecapScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const recapQuery = useGetWeeklyRecap();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
@@ -72,19 +74,19 @@ export default function WeeklyRecapScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>BILAN SEMAINE</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("weekly_recap_uppercase", "BILAN SEMAINE")}</Text>
       </View>
 
       {recapQuery.isPending ? (
         <View style={styles.centerWrap}>
           <ActivityIndicator size="large" color={COLORS.cyan} />
-          <Text style={[styles.loadingText, { fontFamily: FONTS.body }]}>Calcul en cours...</Text>
+          <Text style={[styles.loadingText, { fontFamily: FONTS.body }]}>{t("calculating", "Calcul en cours...")}</Text>
         </View>
       ) : recapQuery.isError || !recap ? (
         <View style={styles.centerWrap}>
           <Feather name="alert-circle" size={40} color={COLORS.textMuted} />
           <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
-            Pas encore de données pour cette semaine.
+            {t("no_data_week", "Pas encore de données pour cette semaine.")}
           </Text>
         </View>
       ) : (
@@ -101,7 +103,7 @@ export default function WeeklyRecapScreen() {
           </View>
 
           <GlowCard glowColor={COLORS.violet} style={styles.card}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>SÉANCES</Text>
+            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>{t("sessions_uppercase", "SÉANCES")}</Text>
             <View style={styles.completionRow}>
               <View style={styles.completionNumbers}>
                 <Text style={[styles.completionBig, { fontFamily: FONTS.monoBold, color: COLORS.violet }]}>
@@ -124,22 +126,22 @@ export default function WeeklyRecapScreen() {
             </View>
             {recap.sessionsDelta != null && (
               <View style={styles.deltaRow}>
-                <Text style={[styles.deltaLabel, { fontFamily: FONTS.body }]}>vs semaine précédente :</Text>
+                <Text style={[styles.deltaLabel, { fontFamily: FONTS.body }]}>{t("vs_prev_week", "vs semaine précédente :")}</Text>
                 <DeltaChip delta={recap.sessionsDelta} />
               </View>
             )}
           </GlowCard>
 
           <GlowCard glowColor={COLORS.green} style={styles.card}>
-            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>PERFORMANCES</Text>
+            <Text style={[styles.cardTitle, { fontFamily: FONTS.mono }]}>{t("performances_uppercase", "PERFORMANCES")}</Text>
             <StatRow
-              label="Score ADAPT moyen"
+              label={t("avg_adapt_score", "Score ADAPT moyen")}
               value={recap.avgAdaptScore != null ? recap.avgAdaptScore.toFixed(1) : "—"}
               delta={recap.scoreDelta != null ? Math.round(recap.scoreDelta) : null}
               color={COLORS.green}
             />
             <StatRow
-              label="RPE moyen"
+              label={t("avg_rpe", "RPE moyen")}
               value={recap.avgRpe != null ? recap.avgRpe.toFixed(1) : "—"}
               delta={recap.rpeDelta != null ? Math.round(recap.rpeDelta * 10) / 10 : null}
               invertDelta
@@ -147,7 +149,7 @@ export default function WeeklyRecapScreen() {
             />
             {(recap.totalVolumeKg ?? 0) > 0 && (
               <StatRow
-                label="Volume total"
+                label={t("total_volume", "Volume total")}
                 value={`${recap.totalVolumeKg?.toFixed(0)} kg`}
                 delta={recap.volumeDelta != null ? Math.round(recap.volumeDelta) : null}
                 unit=" kg"
@@ -156,7 +158,7 @@ export default function WeeklyRecapScreen() {
             )}
             {(recap.prsCount ?? 0) > 0 && (
               <StatRow
-                label="Nouveaux records"
+                label={t("new_records", "Nouveaux records")}
                 value={recap.prsCount!}
                 color={COLORS.green}
               />
@@ -167,7 +169,7 @@ export default function WeeklyRecapScreen() {
             <View style={styles.emptyCard}>
               <Feather name="moon" size={32} color={COLORS.textMuted} />
               <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
-                Aucune séance cette semaine. Commence aujourd'hui !
+                {t("no_session_this_week", "Aucune séance cette semaine. Commence aujourd'hui !")}
               </Text>
             </View>
           )}

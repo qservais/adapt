@@ -20,6 +20,7 @@ import {
   type NotificationsResponse,
 } from "@workspace/api-client-react";
 import { COLORS } from "@/constants/theme";
+import { useT } from "@/context/PreferencesContext";
 
 const PAGE_SIZE = 20;
 
@@ -45,16 +46,16 @@ function notifIconColor(type: string): string {
   }
 }
 
-function timeAgo(iso?: string | null): string {
+function timeAgo(iso: string | null | undefined, t: (k: string, f?: string) => string): string {
   if (!iso) return "";
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "À l'instant";
-  if (mins < 60) return `Il y a ${mins} min`;
+  if (mins < 1) return t("just_now", "À l'instant");
+  if (mins < 60) return t("minutes_ago", "Il y a {0} min").replace("{0}", String(mins));
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `Il y a ${hrs}h`;
+  if (hrs < 24) return t("hours_ago", "Il y a {0}h").replace("{0}", String(hrs));
   const days = Math.floor(hrs / 24);
-  return `Il y a ${days}j`;
+  return t("days_ago", "Il y a {0}j").replace("{0}", String(days));
 }
 
 const SAFE_LINK_PREFIXES = ["checkin", "session", "messages", "stats", "profile", "notifications", "badges", "weekly-recap"];
@@ -69,10 +70,12 @@ function NotifRow({
   item,
   onRead,
   onNavigate,
+  t,
 }: {
   item: NotificationItem;
   onRead: (id: string) => void;
   onNavigate: (link: Href) => void;
+  t: (k: string, f?: string) => string;
 }) {
   function handlePress() {
     if (!item.isRead) onRead(item.id);
@@ -93,7 +96,7 @@ function NotifRow({
       <View style={styles.rowContent}>
         <Text style={[styles.rowTitle, !item.isRead && styles.rowTitleBold]}>{item.title}</Text>
         {item.body ? <Text style={styles.rowBody}>{item.body}</Text> : null}
-        <Text style={styles.rowTime}>{timeAgo(item.createdAt)}</Text>
+        <Text style={styles.rowTime}>{timeAgo(item.createdAt, t)}</Text>
       </View>
       {!item.isRead && <View style={styles.dot} />}
     </TouchableOpacity>
@@ -104,6 +107,7 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
+  const t = useT();
 
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [offset, setOffset] = useState(0);
@@ -171,11 +175,11 @@ export default function NotificationsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>{t("notifications_title", "Notifications")}</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={() => markAll()} style={styles.markAllBtn}>
             <Feather name="check-square" size={18} color={COLORS.cyan} />
-            <Text style={styles.markAllText}>Tout lire</Text>
+            <Text style={styles.markAllText}>{t("mark_all_short", "Tout lire")}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -185,7 +189,7 @@ export default function NotificationsScreen() {
       ) : items.length === 0 ? (
         <View style={styles.empty}>
           <Feather name="bell" size={40} color={COLORS.textMuted} />
-          <Text style={styles.emptyText}>Aucune notification</Text>
+          <Text style={styles.emptyText}>{t("no_notifications", "Aucune notification")}</Text>
         </View>
       ) : (
         <FlatList
@@ -196,6 +200,7 @@ export default function NotificationsScreen() {
               item={item}
               onRead={(id) => markOne({ id })}
               onNavigate={(path) => router.push(path)}
+              t={t}
             />
           )}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}

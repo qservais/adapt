@@ -7,14 +7,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useGetBadges } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useT } from "@/context/PreferencesContext";
 import type { BadgeItem } from "@workspace/api-client-react";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  special: "Spécial",
-  streak: "Streak",
-  sessions: "Séances",
-  pr: "Records",
-};
 
 const CATEGORY_ORDER = ["special", "streak", "sessions", "pr"];
 
@@ -66,7 +60,14 @@ function BadgeCard({ badge }: { badge: BadgeItem }) {
 
 export default function BadgesScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const badgesQuery = useGetBadges();
+  const CATEGORY_LABELS: Record<string, string> = {
+    special: t("badge_cat_special", "Spécial"),
+    streak: t("badge_cat_streak", "Streak"),
+    sessions: t("badge_cat_sessions", "Séances"),
+    pr: t("badge_cat_pr", "Records"),
+  };
 
   const badges = badgesQuery.data?.badges ?? [];
   const unlockedCount = badgesQuery.data?.unlockedCount ?? 0;
@@ -85,7 +86,7 @@ export default function BadgesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>MES BADGES</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("my_badges", "MES BADGES")}</Text>
         <View style={styles.counter}>
           <Text style={[styles.counterText, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>
             {unlockedCount}

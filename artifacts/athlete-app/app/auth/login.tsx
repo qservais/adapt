@@ -22,11 +22,13 @@ import { COLORS, FONTS } from "@/constants/theme";
 import { getLoginErrorMessage } from "@/lib/errors";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
+import { useT } from "@/context/PreferencesContext";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
   const loginMutation = useLogin();
+  const t = useT();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,7 +59,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     setError("");
     if (!email.trim() || !password) {
-      setError("L'email et le mot de passe sont requis");
+      setError(t("email_password_required", "L'email et le mot de passe sont requis"));
       return;
     }
     try {
@@ -90,13 +92,13 @@ export default function LoginScreen() {
           </View>
           <Text style={[styles.logo, { fontFamily: FONTS.title }]}>ADAPT</Text>
           <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
-            L'entraînement qui s'adapte à toi.
+            {t("auth_tagline", "L'entraînement qui s'adapte à toi.")}
           </Text>
         </Animated.View>
 
         <Animated.View style={[styles.form, formStyle]}>
           <InputField
-            label="Email"
+            label={t("email", "Email")}
             value={email}
             onChangeText={setEmail}
             placeholder="ton@email.com"
@@ -105,7 +107,7 @@ export default function LoginScreen() {
             autoComplete="email"
           />
           <InputField
-            label="Mot de passe"
+            label={t("password", "Mot de passe")}
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
@@ -119,7 +121,7 @@ export default function LoginScreen() {
             </View>
           ) : null}
           <GradientButton
-            label="Se connecter"
+            label={t("sign_in", "Se connecter")}
             onPress={handleLogin}
             loading={loginMutation.isPending}
           />
@@ -128,15 +130,15 @@ export default function LoginScreen() {
         <Animated.View style={[styles.footer, formStyle]}>
           <Pressable onPress={() => router.push("/auth/register")}>
             <Text style={[styles.footerText, { fontFamily: FONTS.body }]}>
-              Pas encore de compte ?{" "}
+              {t("no_account_yet", "Pas encore de compte ?")}{" "}
               <Text style={{ color: COLORS.cyan, fontFamily: FONTS.bodySemiBold }}>
-                Créer un compte
+                {t("create_account", "Créer un compte")}
               </Text>
             </Text>
           </Pressable>
           <Pressable onPress={() => router.push("/auth/forgot-password")} style={{ marginTop: 16 }}>
             <Text style={[styles.footerText, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
-              Mot de passe oublié ?
+              {t("forgot_password", "Mot de passe oublié ?")}
             </Text>
           </Pressable>
         </Animated.View>

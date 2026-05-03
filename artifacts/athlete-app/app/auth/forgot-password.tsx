@@ -20,9 +20,11 @@ import { COLORS, FONTS } from "@/constants/theme";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { customFetch } from "@/lib/custom-fetch";
+import { useT } from "@/context/PreferencesContext";
 
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const params = useLocalSearchParams<{ email?: string }>();
   const [email, setEmail] = useState(typeof params.email === "string" ? params.email : "");
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
@@ -33,7 +35,7 @@ export default function ForgotPasswordScreen() {
 
   const handleSubmit = async () => {
     if (!email.trim()) {
-      setErrorMsg("L'adresse email est requise");
+      setErrorMsg(t("email_required", "L'adresse email est requise"));
       setStatus("error");
       return;
     }
@@ -70,30 +72,30 @@ export default function ForgotPasswordScreen() {
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={[styles.title, { fontFamily: FONTS.title }]}>MOT DE PASSE</Text>
-          <Text style={[styles.titleSub, { fontFamily: FONTS.title, color: COLORS.cyan }]}>OUBLIÉ</Text>
+          <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("forgot_pwd_title", "MOT DE PASSE")}</Text>
+          <Text style={[styles.titleSub, { fontFamily: FONTS.title, color: COLORS.cyan }]}>{t("forgot_pwd_title_sub", "OUBLIÉ")}</Text>
         </View>
 
         {status === "sent" ? (
           <Animated.View style={[styles.successCard, formStyle]}>
             <Feather name="check-circle" size={48} color={COLORS.green} />
-            <Text style={[styles.successTitle, { fontFamily: FONTS.bodySemiBold }]}>Email envoyé !</Text>
+            <Text style={[styles.successTitle, { fontFamily: FONTS.bodySemiBold }]}>{t("email_sent_title", "Email envoyé !")}</Text>
             <Text style={[styles.successText, { fontFamily: FONTS.body }]}>
-              Si un compte existe avec cette adresse, tu recevras un lien de réinitialisation dans quelques minutes. Vérifie aussi tes spams.
+              {t("email_sent_text", "Si un compte existe avec cette adresse, tu recevras un lien de réinitialisation dans quelques minutes. Vérifie aussi tes spams.")}
             </Text>
             <Pressable onPress={() => router.replace("/auth/login")} style={styles.backToLogin}>
               <Text style={[styles.backToLoginText, { fontFamily: FONTS.bodySemiBold, color: COLORS.cyan }]}>
-                Retour à la connexion
+                {t("back_to_login", "Retour à la connexion")}
               </Text>
             </Pressable>
           </Animated.View>
         ) : (
           <Animated.View style={[styles.form, formStyle]}>
             <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-              Saisis ton adresse email. Tu recevras un lien pour choisir un nouveau mot de passe.
+              {t("forgot_pwd_subtitle", "Saisis ton adresse email. Tu recevras un lien pour choisir un nouveau mot de passe.")}
             </Text>
             <InputField
-              label="Email"
+              label={t("email", "Email")}
               value={email}
               onChangeText={setEmail}
               placeholder="ton@email.com"
@@ -107,7 +109,7 @@ export default function ForgotPasswordScreen() {
               </View>
             ) : null}
             <GradientButton
-              label="ENVOYER LE LIEN"
+              label={t("send_link_btn", "ENVOYER LE LIEN")}
               onPress={handleSubmit}
               loading={status === "loading"}
             />

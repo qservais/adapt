@@ -40,7 +40,7 @@ import {
 } from "@workspace/api-client-react";
 import { tokenStore } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
-import { useFormatWeight, useThemeColors, useT } from "@/context/PreferencesContext";
+import { useFormatWeight, useThemeColors, useT, usePreferences } from "@/context/PreferencesContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import ExtendedProfileSections from "@/components/profile/ExtendedProfileSections";
 import { PRHistoryModal } from "@/components/profile/PRHistoryModal";
@@ -158,6 +158,7 @@ export default function ProfileScreen() {
   const formatWeight = useFormatWeight();
   const colors = useThemeColors();
   const t = useT();
+  const { language, setLanguage } = usePreferences();
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
@@ -1303,10 +1304,45 @@ export default function ProfileScreen() {
       )}
 
 
+      <View style={styles.prefsBlock}>
+        <Text style={[styles.prefsLabel, { fontFamily: FONTS.mono, color: colors.textMuted }]}>
+          {t("preferences", "Préférences").toUpperCase()}
+        </Text>
+        <View style={styles.prefsRow}>
+          <Text style={[styles.prefsRowLabel, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>
+            {t("language_label", "Langue")}
+          </Text>
+          <View style={styles.langSwitch}>
+            {(["fr", "en"] as const).map((lng) => {
+              const active = language === lng;
+              return (
+                <Pressable
+                  key={lng}
+                  onPress={() => setLanguage(lng)}
+                  style={[
+                    styles.langBtn,
+                    active && { backgroundColor: COLORS.cyan, borderColor: COLORS.cyan },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.langBtnText,
+                      { fontFamily: FONTS.mono, color: active ? COLORS.bg : colors.textSecondary },
+                    ]}
+                  >
+                    {lng === "fr" ? t("lang_fr", "Français") : t("lang_en", "English")}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
       <Pressable onPress={handleLogout} style={styles.logoutBtn}>
         <Feather name="log-out" size={18} color={COLORS.red} />
         <Text style={[styles.logoutText, { fontFamily: FONTS.bodyMedium }]}>
-          Se déconnecter
+          {t("logout", "Se déconnecter")}
         </Text>
       </Pressable>
 
@@ -1505,6 +1541,33 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   comingSoonText: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 1 },
+  prefsBlock: {
+    marginTop: 24,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+    gap: 12,
+  },
+  prefsLabel: { fontSize: 11, letterSpacing: 1.5 },
+  prefsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  prefsRowLabel: { fontSize: 14 },
+  langSwitch: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  langBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  langBtnText: { fontSize: 11, letterSpacing: 1 },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
