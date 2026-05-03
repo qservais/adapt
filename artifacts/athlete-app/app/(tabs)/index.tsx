@@ -249,7 +249,7 @@ function StateNoPending({
 function FreeSessionCTA() {
   return (
     <TouchableOpacity
-      onPress={() => router.push("/library/custom-session" as any)}
+      onPress={() => router.push("/library/custom-session")}
       style={styles.freeSessionCTA}
       activeOpacity={0.85}
     >

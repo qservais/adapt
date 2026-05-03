@@ -249,7 +249,7 @@ export default function LibraryScreen() {
       </Text>
 
       <TouchableOpacity
-        onPress={() => router.push("/library/custom-session" as any)}
+        onPress={() => router.push("/library/custom-session")}
         style={styles.createSessionBtn}
         activeOpacity={0.8}
       >

@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { Swipeable } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -192,6 +193,7 @@ export default function ExerciseScreen() {
   const [workTimerStarted, setWorkTimerStarted] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [setOverrides, setSetOverrides] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setShowDescription(true);
@@ -253,7 +255,8 @@ export default function ExerciseScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     pushHistory();
 
-    if (currentSet < (exercise?.sets ?? 1)) {
+    const totalSets = setOverrides[exercise?.id ?? ""] ?? exercise?.sets ?? 1;
+    if (currentSet < totalSets) {
       resetTimerState();
       if ((exercise?.restSeconds ?? 0) > 0) {
         setShowRest(true);
@@ -334,8 +337,30 @@ export default function ExerciseScreen() {
   const currentPR = athletePRs?.[exercise.exerciseId];
   const isAbovePR = currentPR != null && currentLoad > currentPR;
 
+  const effectiveSets = setOverrides[exercise.id] ?? exercise.sets ?? 1;
+  const canDeleteSet = effectiveSets > 1 && effectiveSets > currentSet;
+
+  const handleRemoveSet = () => {
+    if (!canDeleteSet) return;
+    Alert.alert(
+      "Supprimer une série ?",
+      `La série S${effectiveSets} sera retirée de cet exercice.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () => {
+            setSetOverrides((prev) => ({ ...prev, [exercise.id]: effectiveSets - 1 }));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          },
+        },
+      ],
+    );
+  };
+
   const setDoneLabel = () => {
-    if (currentSet < (exercise.sets ?? 1)) return `Série ${currentSet} terminée`;
+    if (currentSet < effectiveSets) return `Série ${currentSet} terminée`;
     if (isLast) return "Terminer la séance";
     return "Exercice suivant";
   };
@@ -460,19 +485,35 @@ export default function ExerciseScreen() {
         );
       })()}
 
-      <View style={styles.identityBlock}>
-        <Text style={[styles.setLabel, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
-          SÉRIE {currentSet}/{exercise.sets}
-        </Text>
-        <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
-          {exercise.exerciseName}
-        </Text>
-        <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
-          {hasDurationTimer
-            ? `${exercise.durationSeconds}s`
-            : `${exercise.reps} REPS`}
-        </Text>
-      </View>
+      <Swipeable
+        overshootRight={false}
+        renderRightActions={canDeleteSet ? () => (
+          <TouchableOpacity
+            onPress={handleRemoveSet}
+            style={styles.swipeDeleteAction}
+            activeOpacity={0.85}
+          >
+            <Feather name="trash-2" size={22} color={COLORS.white} />
+            <Text style={[styles.swipeDeleteText, { fontFamily: FONTS.bodyBold }]}>
+              Supprimer
+            </Text>
+          </TouchableOpacity>
+        ) : undefined}
+      >
+        <View style={styles.identityBlock}>
+          <Text style={[styles.setLabel, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
+            SÉRIE {currentSet}/{effectiveSets}
+          </Text>
+          <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
+            {exercise.exerciseName}
+          </Text>
+          <Text style={[styles.repsText, { fontFamily: FONTS.mono }]}>
+            {hasDurationTimer
+              ? `${exercise.durationSeconds}s`
+              : `${exercise.reps} REPS`}
+          </Text>
+        </View>
+      </Swipeable>
 
       <ScrollView
         style={styles.flex}
@@ -930,6 +971,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  swipeDeleteAction: {
+    backgroundColor: COLORS.red ?? "#E53935",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 110,
+    flexDirection: "row",
+    gap: 8,
+  },
+  swipeDeleteText: {
+    color: COLORS.white,
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   equipmentRow: {
     flexDirection: "row",
