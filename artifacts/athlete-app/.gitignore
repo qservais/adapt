@@ -19,6 +19,13 @@ android/
 *.key
 *.mobileprovision
 
+# EAS / store credentials — NEVER commit
+play-store-service-account.json
+*-service-account.json
+
+# Optional: uncomment if you prefer to keep google-services.json out of git
+# google-services.json
+
 # Metro
 .metro-health-check*
 
