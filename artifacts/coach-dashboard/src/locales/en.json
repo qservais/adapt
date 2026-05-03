@@ -127,6 +127,15 @@
       "en": "English",
       "saved": "Language updated"
     },
+    "webPush": {
+      "section": "Browser notifications",
+      "off": "Get athlete alerts and messages directly in your browser, even with no tab open.",
+      "on": "Enabled. You will receive alerts and messages in this browser.",
+      "denied": "Blocked in your browser settings. Allow notifications for this site, then reload.",
+      "unsupported": "Your browser does not support push notifications.",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
     "session": {
       "section": "Session",
       "logoutTitle": "Sign out",

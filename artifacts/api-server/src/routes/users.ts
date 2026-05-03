@@ -139,6 +139,100 @@ const pushTokenSchema = z.object({
   token: z.string().min(1),
 });
 
+// ───── Web Push (browser notifications, mainly coach dashboard) ───────────
+// Allowlist of well-known push service hosts. Restricting to these prevents
+// authenticated users from registering arbitrary endpoints that the server
+// would later POST to (SSRF mitigation).
+const WEB_PUSH_ALLOWED_HOSTS = [
+  /\.googleapis\.com$/i,           // FCM (Chrome, Edge, Brave, Opera)
+  /\.push\.services\.mozilla\.com$/i, // Mozilla autopush (Firefox)
+  /^push\.services\.mozilla\.com$/i,
+  /\.notify\.windows\.com$/i,      // WNS (Edge legacy)
+  /\.push\.apple\.com$/i,          // Apple (Safari 16+)
+  /\.web\.push\.apple\.com$/i,
+];
+
+function isAllowedPushEndpoint(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") return false;
+    return WEB_PUSH_ALLOWED_HOSTS.some((re) => re.test(u.hostname));
+  } catch {
+    return false;
+  }
+}
+
+const webPushSubscribeSchema = z.object({
+  endpoint: z.string().url().refine(isAllowedPushEndpoint, {
+    message: "Endpoint not allowed (must be an https URL on a known push service host)",
+  }),
+  keys: z.object({
+    p256dh: z.string().min(1).max(256),
+    auth: z.string().min(1).max(256),
+  }),
+});
+
+router.get("/users/web-push/public-key", async (_req, res) => {
+  const key = process.env.VAPID_PUBLIC_KEY ?? null;
+  if (!key) {
+    res.status(503).json({ error: { code: "WEB_PUSH_UNCONFIGURED", message: "Web push n'est pas configuré sur ce serveur" } });
+    return;
+  }
+  res.json({ publicKey: key });
+});
+
+router.post("/users/web-push/subscribe", authenticate, async (req, res) => {
+  const parsed = webPushSubscribeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const [user] = await db
+      .select({ subs: usersTable.webPushSubscriptions })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.userId));
+    const existing = (user?.subs as Array<{ endpoint: string; keys: { p256dh: string; auth: string }; createdAt?: string }> | null) ?? [];
+    const filtered = existing.filter((s) => s.endpoint !== parsed.data.endpoint);
+    const next = [
+      ...filtered,
+      { endpoint: parsed.data.endpoint, keys: parsed.data.keys, createdAt: new Date().toISOString() },
+    ];
+    await db
+      .update(usersTable)
+      .set({ webPushSubscriptions: next, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.userId));
+    res.json({ success: true, count: next.length });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
+const webPushUnsubscribeSchema = z.object({ endpoint: z.string().url() });
+
+router.delete("/users/web-push/subscribe", authenticate, async (req, res) => {
+  const parsed = webPushUnsubscribeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const [user] = await db
+      .select({ subs: usersTable.webPushSubscriptions })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.userId));
+    const existing = (user?.subs as Array<{ endpoint: string; keys: { p256dh: string; auth: string }; createdAt?: string }> | null) ?? [];
+    const next = existing.filter((s) => s.endpoint !== parsed.data.endpoint);
+    await db
+      .update(usersTable)
+      .set({ webPushSubscriptions: next, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.user!.userId));
+    res.json({ success: true, count: next.length });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+  }
+});
+
 router.post("/users/push-token", authenticate, async (req, res) => {
   const parsed = pushTokenSchema.safeParse(req.body);
   if (!parsed.success) {

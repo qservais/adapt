@@ -3,6 +3,7 @@ import { notificationsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { sendPushNotification } from "./push-notification.service.js";
+import { sendWebPushToUser, type StoredSubscription } from "./web-push.service.js";
 import { NOTIFICATION_TYPES, type NotificationType, type NotificationTypeMeta } from "../lib/notifications/types.js";
 
 export interface NotifyUserOptions {
@@ -17,6 +18,7 @@ export interface NotifyUserOptions {
 export interface NotifyResult {
   inApp: boolean;
   push: boolean;
+  webPush: number;
 }
 
 /**
@@ -30,20 +32,21 @@ export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult>
   const meta: NotificationTypeMeta | undefined = NOTIFICATION_TYPES[type];
   if (!meta) {
     logger.warn({ type }, "notifyUser: unknown notification type");
-    return { inApp: false, push: false };
+    return { inApp: false, push: false, webPush: 0 };
   }
 
   const [user] = await db
     .select({
       pushToken: usersTable.pushToken,
       notificationPrefs: usersTable.notificationPrefs,
+      webPushSubscriptions: usersTable.webPushSubscriptions,
     })
     .from(usersTable)
     .where(eq(usersTable.id, userId));
 
   if (!user) {
     logger.warn({ userId, type }, "notifyUser: user not found");
-    return { inApp: false, push: false };
+    return { inApp: false, push: false, webPush: 0 };
   }
 
   const prefs = (user.notificationPrefs as Record<string, boolean> | null) ?? null;
@@ -84,5 +87,25 @@ export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult>
     }
   }
 
-  return { inApp: inAppDone, push: pushDone };
+  // Web push (coach dashboard, etc.) — gated by the same prefs as Expo push,
+  // best-effort, never blocks the in-app insert. Dead subscriptions are
+  // pruned by the service.
+  let webPushSent = 0;
+  if (pushEnabled) {
+    const subs = (user.webPushSubscriptions as StoredSubscription[] | null) ?? [];
+    if (subs.length > 0) {
+      try {
+        const r = await sendWebPushToUser(userId, subs, {
+          title,
+          body,
+          data: { link: link ?? meta.defaultLink, ...(data ?? {}) },
+        });
+        webPushSent = r.sent;
+      } catch (err) {
+        logger.error({ err, userId, type }, "notifyUser: web push send failed (in-app still delivered)");
+      }
+    }
+  }
+
+  return { inApp: inAppDone, push: pushDone, webPush: webPushSent };
 }

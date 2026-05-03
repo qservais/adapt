@@ -28,6 +28,7 @@ export const usersTable = pgTable("users", {
   inviteCode: varchar("invite_code", { length: 6 }).unique(),
   refreshToken: varchar("refresh_token", { length: 512 }),
   notificationPrefs: jsonb("notification_prefs"),
+  webPushSubscriptions: jsonb("web_push_subscriptions").$type<Array<{ endpoint: string; keys: { p256dh: string; auth: string }; createdAt?: string }>>().default([]),
   statsOrder: json("stats_order").$type<string[]>(),
   avatarUrl: text("avatar_url"),
   morningNotifHour: integer("morning_notif_hour").default(7),

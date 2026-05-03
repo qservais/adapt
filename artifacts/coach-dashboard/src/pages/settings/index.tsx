@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { setLanguage, type SupportedLanguage } from "@/lib/i18n";
-import { Loader2, Settings, Camera, User, Mail, Save, LogOut, Languages } from "lucide-react";
+import { Loader2, Settings, Camera, User, Mail, Save, LogOut, Languages, Bell, BellOff } from "lucide-react";
+import { useWebPush } from "@/hooks/useWebPush";
 
 async function uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
   const token = localStorage.getItem("adapt_coach_access");
@@ -95,6 +96,43 @@ export default function SettingsPage() {
     updateLanguagePreference(lang).catch(() => {});
     toast({ title: t("settings.language.saved") });
   };
+
+  function WebPushSection() {
+    const { state, busy, enable, disable } = useWebPush();
+    const isOn = state === "granted-on";
+    return (
+      <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              {isOn ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+              {t("settings.webPush.section")}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-2">
+              {state === "unsupported"
+                ? t("settings.webPush.unsupported")
+                : state === "denied"
+                ? t("settings.webPush.denied")
+                : isOn
+                ? t("settings.webPush.on")
+                : t("settings.webPush.off")}
+            </p>
+          </div>
+          {state !== "unsupported" && state !== "denied" && (
+            <Button
+              variant={isOn ? "outline" : "default"}
+              className={isOn ? "border-border" : "bg-primary hover:bg-primary/90"}
+              disabled={busy || state === "loading"}
+              onClick={() => (isOn ? void disable() : void enable())}
+            >
+              {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isOn ? t("settings.webPush.disable") : t("settings.webPush.enable")}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const avatarSrc = avatarPreview || user?.avatarUrl || null;
   const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`;
@@ -215,6 +253,8 @@ export default function SettingsPage() {
         </div>
         <LanguageSwitcher onChange={handleLanguageChange} />
       </div>
+
+      <WebPushSection />
 
       <div className="bg-card border border-border rounded-xl p-6 space-y-4">
         <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">

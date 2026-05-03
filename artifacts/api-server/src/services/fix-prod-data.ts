@@ -43,6 +43,15 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – is_template column failed");
     throw err;
   }
+
+  // Web Push subscriptions storage (task #209) — array of { endpoint, keys, createdAt }
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS web_push_subscriptions jsonb DEFAULT '[]'::jsonb`);
+    logger.info("runSchemaMigrations: web_push_subscriptions column OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – web_push_subscriptions column failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =
