@@ -5,15 +5,20 @@ import { eq, and, desc, gte, isNull, not, lt, sql, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { notifyUser } from "./notify.service.js";
 
-const ALERT_TYPE_TITLES: Record<string, string> = {
-  pain: "🚨 Douleur signalée",
-  inactivity: "⏰ Inactivité prolongée",
-  low_score: "📉 Score ADAPT critique",
-  high_rpe: "🔥 RPE élevé répété",
-  missed_checkins: "📅 Check-ins manqués",
-  load_progression: "📊 Progression en charge stagnante",
-  fatigue: "😴 Fatigue/courbatures élevées",
+const ALERT_TYPE_TITLES: Record<string, { fr: string; en: string }> = {
+  pain:             { fr: "🚨 Douleur signalée",                en: "🚨 Pain reported" },
+  inactivity:       { fr: "⏰ Inactivité prolongée",            en: "⏰ Prolonged inactivity" },
+  low_score:        { fr: "📉 Score ADAPT critique",            en: "📉 Critical ADAPT score" },
+  high_rpe:         { fr: "🔥 RPE élevé répété",                en: "🔥 Sustained high RPE" },
+  missed_checkins:  { fr: "📅 Check-ins manqués",               en: "📅 Missed check-ins" },
+  load_progression: { fr: "📊 Progression en charge stagnante", en: "📊 Stalled load progression" },
+  fatigue:          { fr: "😴 Fatigue/courbatures élevées",     en: "😴 High fatigue / soreness" },
 };
+const FALLBACK_ALERT_TITLE = { fr: "Nouvelle alerte", en: "New alert" } as const;
+
+function pickLang(lang: string | null | undefined): "fr" | "en" {
+  return lang === "en" ? "en" : "fr";
+}
 
 async function createAlertIfNotExists(
   coachId: string,
@@ -41,10 +46,16 @@ async function createAlertIfNotExists(
 
     // Notify coach (in-app + push) — best-effort, never blocks alert creation
     try {
+      const [coach] = await db
+        .select({ language: usersTable.language })
+        .from(usersTable)
+        .where(eq(usersTable.id, coachId));
+      const lang = pickLang(coach?.language);
+      const titles = ALERT_TYPE_TITLES[type] ?? FALLBACK_ALERT_TITLE;
       await notifyUser({
         userId: coachId,
         type: "coach_alert",
-        title: ALERT_TYPE_TITLES[type] ?? "Nouvelle alerte",
+        title: titles[lang],
         body: message,
         link: `/clients/${athleteId}`,
         data: { alertType: type, priority, athleteId },

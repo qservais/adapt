@@ -150,6 +150,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
   if (hasPain) {
     const [user] = await db.select({ coachId: usersTable.coachId, firstName: usersTable.firstName })
       .from(usersTable).where(eq(usersTable.id, req.user!.userId));
+    const COACH_PAIN_TITLE = { fr: "🚨 Douleur signalée", en: "🚨 Pain reported" } as const;
     const existingPain = await db.select({ id: alertsTable.id }).from(alertsTable)
       .where(and(
         eq(alertsTable.athleteId, req.user!.userId),
@@ -170,10 +171,15 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
 
       if (user?.coachId) {
         try {
+          const [coach] = await db
+            .select({ language: usersTable.language })
+            .from(usersTable)
+            .where(eq(usersTable.id, user.coachId));
+          const lang: "fr" | "en" = coach?.language === "en" ? "en" : "fr";
           await notifyUser({
             userId: user.coachId,
             type: "coach_alert",
-            title: "🚨 Douleur signalée",
+            title: COACH_PAIN_TITLE[lang],
             body: alertMessage,
             link: `/clients/${req.user!.userId}`,
             data: { alertType: "pain", priority: "p1", athleteId: req.user!.userId },

@@ -75,13 +75,15 @@ await test("default prefs (null) → in-app written, push attempted (no token = 
   }
 });
 
-await test("prefs.messages=false → in-app skipped", async () => {
+await test("prefs.messages=false → in-app STILL recorded, push gated off", async () => {
+  // Per spec: prefs gate the push channel only. In-app is always recorded
+  // so the user can review what they missed inside the app.
   const uid = await makeUser({ messages: false });
   try {
     const r = await notifyUser({ userId: uid, type: "message", title: "t", body: "b" });
-    assert(r.inApp === false, "in-app should be skipped");
+    assert(r.inApp === true, "in-app should always be recorded");
     assert(r.push === false, "push should fall back to base=false");
-    assert((await countNotifs(uid)) === 0, "no notification row inserted");
+    assert((await countNotifs(uid)) === 1, "one notification row inserted");
   } finally {
     await cleanup(uid);
   }

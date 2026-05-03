@@ -49,10 +49,9 @@ export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult>
   const prefs = (user.notificationPrefs as Record<string, boolean> | null) ?? null;
   const baseKey = meta.prefsKey;
   const pushKey = `push_${baseKey}`;
-  // In-app: prefs[base] ?? defaultEnabled
-  const inAppEnabled = prefs && baseKey in prefs ? prefs[baseKey] !== false : meta.defaultEnabled;
   // Push: prefs[push_<key>] ?? prefs[<key>] ?? defaultEnabled — channel-specific opt-out wins,
   // otherwise fall back to the base toggle, finally to the type's default.
+  // In-app is ALWAYS recorded (the prefs gate channel = push only), per task spec.
   const pushEnabled =
     prefs && pushKey in prefs
       ? prefs[pushKey] !== false
@@ -60,19 +59,16 @@ export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult>
         ? prefs[baseKey] !== false
         : meta.defaultEnabled;
 
-  let inAppDone = false;
-  if (inAppEnabled) {
-    // In-app insert errors propagate by design — the in-app channel is the
-    // authoritative record, so a silent drop would hide a real bug.
-    await db.insert(notificationsTable).values({
-      userId,
-      type,
-      title,
-      body,
-      link: link ?? meta.defaultLink ?? null,
-    });
-    inAppDone = true;
-  }
+  // In-app insert errors propagate by design — the in-app channel is the
+  // authoritative record, so a silent drop would hide a real bug.
+  await db.insert(notificationsTable).values({
+    userId,
+    type,
+    title,
+    body,
+    link: link ?? meta.defaultLink ?? null,
+  });
+  const inAppDone = true;
 
   let pushDone = false;
   if (pushEnabled && user.pushToken) {
