@@ -111,8 +111,11 @@
     "createCoach": "CREATE COACH ACCOUNT →"
   },
   "footer": {
-    "rights": "© {{year}} ADAPT System ·",
-    "privacy": "Legal & Privacy"
+    "rights": "© {{year}} ADAPT System.",
+    "legal": "Legal notice",
+    "privacy": "Privacy",
+    "cookies": "Cookies",
+    "legalNavAria": "Legal links"
   },
   "notFound": {
     "message": "Page not found",
@@ -127,6 +130,40 @@
     "back": "← Back to home",
     "invalidTitle": "INVALID LINK",
     "invalidMessage": "This link is invalid or has expired. Request a new one from the app."
+  },
+  "legal": {
+    "navLabel": "Legal notice",
+    "kicker": "// Legal",
+    "title1": "LEGAL",
+    "title2": "NOTICE",
+    "intro": "In accordance with applicable Belgian law, you will find below the legal information regarding the publisher of the adapt-system.be website and the ADAPT mobile application.",
+    "sections": [
+      { "title": "1. Site publisher", "content": "Site published by ADAPT System.\n\nContact: hello@adapt-system.be" },
+      { "title": "2. Hosting", "content": "This site is hosted on a secure cloud infrastructure.\n\nFor any technical question, please contact the site's contact email address." },
+      { "title": "3. Purpose of the site", "content": "The adapt-system.be website presents the ADAPT platform, a smart sports coaching service connecting coaches and athletes through a mobile app and a web dashboard. Its purpose is to present the service, allow contact and provide the legal information relating to the use of the application." },
+      { "title": "4. Intellectual property", "content": "All elements of this site (structure, texts, logos, graphics, photographs, videos, illustrations, source code, trademarks, database) are protected by the laws in force relating to intellectual property.\n\nAny reproduction, representation, modification, publication or adaptation, in whole or in part, by any means whatsoever, is prohibited without the prior written authorization of the publisher, except for uses permitted by law.\n\nContent belonging to third parties (partner logos, photographs, etc.) remains the exclusive property of their respective holders." },
+      { "title": "5. Responsibility for user content", "content": "Users who transmit content via the application (photos, messages, training data) warrant that they have the necessary rights to such content and warrant that it does not infringe the rights of third parties.\n\nThe publisher disclaims any responsibility for content provided by users and reserves the right to remove any manifestly unlawful content." },
+      { "title": "6. Authorized use of the site", "content": "The user agrees not to use the site and the application:\n\n— for illegal purposes or contrary to public decency\n— to attempt intrusion, disruption or breach of security\n— to send unsolicited messages (spam)\n— to impersonate a third party\n— to exploit content without authorization\n— to introduce malicious elements (viruses, scripts)" },
+      { "title": "7. Limitation of liability", "content": "The information provided on the site is given for guidance only. The publisher strives to ensure the accuracy and updating of the information, but cannot guarantee the absence of any error or service interruption.\n\nThe use of sports advice and training programs is at the user's own responsibility, who is invited to consult a healthcare professional in case of doubt. This limitation applies within the limits of applicable law." },
+      { "title": "8. External links", "content": "The site may contain links to third-party services (App Store, social networks, etc.) over which the publisher has no control. The publisher disclaims all responsibility regarding their content, privacy policies or practices." },
+      { "title": "9. Personal data", "content": "The processing of personal data is the subject of a dedicated privacy policy, accessible from the site's footer." },
+      { "title": "10. Applicable law", "content": "These legal notices are governed by Belgian law.\n\nAny dispute relating to the use of the site or the application will be submitted to the competent courts of the publisher's registered office.\n\nLast updated: May 3, 2026" }
+    ]
+  },
+  "cookies": {
+    "navLabel": "Cookie policy",
+    "kicker": "// Legal",
+    "title1": "COOKIE",
+    "title2": "POLICY",
+    "intro": "This page describes the use of cookies and similar technologies on the adapt-system.be website. The ADAPT mobile application does not use cookies.",
+    "sections": [
+      { "title": "1. What is a cookie?", "content": "A cookie is a small text file placed on your device (computer, tablet, smartphone) when visiting a website. It allows the site to remember certain information related to your browsing, such as your language preference or your session." },
+      { "title": "2. Cookies used on this site", "content": "The adapt-system.be site uses only cookies strictly necessary for the operation of the site:\n\n— Language preference (fr / en): stored locally in your browser to remember your display choice.\n\nNo audience measurement, advertising or third-party tracking cookies are placed." },
+      { "title": "3. Consent", "content": "Cookies strictly necessary for the operation of the site do not require your prior consent, in accordance with applicable legislation. As no other cookies are used, no consent banner is displayed." },
+      { "title": "4. Manage cookies", "content": "You can delete the cookies placed on your device at any time via your browser settings:\n\n— Chrome: Settings > Privacy and security > Cookies\n— Firefox: Settings > Privacy & Security\n— Safari: Preferences > Privacy\n— Edge: Settings > Cookies and site permissions\n\nDeleting the language preference will reset your choice on your next visit." },
+      { "title": "5. Third-party content", "content": "The site loads fonts from Google Fonts (fonts.googleapis.com / fonts.gstatic.com) to display the site's typography. These resources may generate connection logs on Google's side. No cookies are placed via these resources." },
+      { "title": "6. Updates", "content": "This policy may be updated to reflect changes in the technologies used or in legislation. The date of the last update is indicated below.\n\nLast updated: May 3, 2026" }
+    ]
   },
   "privacy": {
     "navLabel": "Privacy policy",

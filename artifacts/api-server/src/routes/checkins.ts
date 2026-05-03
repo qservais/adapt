@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getTodayLocalDate } from "../lib/dateUtils.js";
 import { notifyUser } from "../services/notify.service.js";
 import { logger } from "../lib/logger.js";
+import { t } from "../locales/index.js";
 
 const router = Router();
 
@@ -54,7 +55,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     : false;
 
   if (existing && !isWithin2h) {
-    res.status(409).json({ error: { code: "CHECKIN_ALREADY_EXISTS", message: "Tu as déjà fait ton check-in aujourd'hui" } });
+    res.status(409).json({ error: { code: "CHECKIN_ALREADY_EXISTS", message: t(req.locale, "errors.checkinAlreadyExists") } });
     return;
   }
 

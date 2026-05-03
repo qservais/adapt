@@ -6,6 +6,7 @@ import { authenticate } from "../middleware/auth.js";
 import { ObjectStorageService } from "../lib/objectStorage.js";
 import { z } from "zod";
 import { notifyUser } from "../services/notify.service.js";
+import { t } from "../locales/index.js";
 
 const router = Router();
 const storage = new ObjectStorageService();
@@ -145,7 +146,7 @@ router.post("/messages", authenticate, async (req, res) => {
 
   const { recipientId, content, mediaType, mediaUrl, fileName, fileSize } = parsed.data;
   if (!content && !mediaUrl) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Contenu ou média requis" } });
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.contentOrMediaRequired") } });
     return;
   }
 
@@ -154,27 +155,27 @@ router.post("/messages", authenticate, async (req, res) => {
     if (mediaUrl) {
       storedMediaUrl = storage.normalizeObjectEntityPath(mediaUrl);
       if (!storedMediaUrl) {
-        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: "URL média invalide" } });
+        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: t(req.locale, "errors.mediaUrlInvalid") } });
         return;
       }
       if (!storedMediaUrl.startsWith("/objects/")) {
-        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: "Le média doit être hébergé sur le stockage objet" } });
+        res.status(400).json({ error: { code: "INVALID_MEDIA_URL", message: t(req.locale, "errors.mediaMustBeObjectStorage") } });
         return;
       }
       if (mediaType === "document") {
         try {
           const meta = await storage.getObjectEntityMetadata(storedMediaUrl);
           if (meta.size > MAX_DOC_BYTES) {
-            res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "Le fichier dépasse la limite de 10 Mo." } });
+            res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: t(req.locale, "errors.fileExceeds10Mb") } });
             return;
           }
           const rawContentType = (meta.contentType ?? "").split(";")[0].trim();
           if (!rawContentType || !ALLOWED_DOC_MIMES.has(rawContentType)) {
-            res.status(415).json({ error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Format non supporté. Formats acceptés : PDF, Word, Excel, images (JPG, PNG, HEIC)." } });
+            res.status(415).json({ error: { code: "UNSUPPORTED_MEDIA_TYPE", message: t(req.locale, "errors.unsupportedDocFormat") } });
             return;
           }
         } catch {
-          res.status(400).json({ error: { code: "OBJECT_NOT_FOUND", message: "Impossible de vérifier le fichier sur le stockage objet" } });
+          res.status(400).json({ error: { code: "OBJECT_NOT_FOUND", message: t(req.locale, "errors.objectStorageVerifyFailed") } });
           return;
         }
       }
@@ -248,7 +249,7 @@ router.post("/messages/upload-audio", authenticate, async (req, res) => {
     const uploadUrl = await storage.getObjectEntityUploadURL();
     res.json({ uploadUrl });
   } catch (err) {
-    res.status(500).json({ error: "Impossible de générer l'URL d'upload audio" });
+    res.status(500).json({ error: t(req.locale, "errors.uploadUrlAudioError") });
   }
 });
 
@@ -257,7 +258,7 @@ router.post("/messages/upload-video", authenticate, async (req, res) => {
     const uploadUrl = await storage.getObjectEntityUploadURL();
     res.json({ uploadUrl });
   } catch (err) {
-    res.status(500).json({ error: "Impossible de générer l'URL d'upload vidéo" });
+    res.status(500).json({ error: t(req.locale, "errors.uploadUrlVideoError") });
   }
 });
 
@@ -266,7 +267,7 @@ router.post("/messages/upload-media", authenticate, async (req, res) => {
     const uploadUrl = await storage.getObjectEntityUploadURL();
     res.json({ uploadUrl });
   } catch (err) {
-    res.status(500).json({ error: "Impossible de générer l'URL d'upload" });
+    res.status(500).json({ error: t(req.locale, "errors.uploadUrlError") });
   }
 });
 
@@ -280,7 +281,7 @@ router.post("/messages/upload-document", authenticate, async (req, res) => {
   const parsed = uploadDocSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
-      error: { code: "VALIDATION_ERROR", message: "mimeType, fileSize et fileName sont requis" },
+      error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.mimeTypeRequired") },
     });
     return;
   }
@@ -291,7 +292,7 @@ router.post("/messages/upload-document", authenticate, async (req, res) => {
     res.status(415).json({
       error: {
         code: "UNSUPPORTED_MEDIA_TYPE",
-        message: "Format non supporté. Formats acceptés : PDF, Word, Excel, images (JPG, PNG, HEIC).",
+        message: t(req.locale, "errors.unsupportedDocFormat"),
       },
     });
     return;
@@ -301,7 +302,7 @@ router.post("/messages/upload-document", authenticate, async (req, res) => {
     res.status(413).json({
       error: {
         code: "FILE_TOO_LARGE",
-        message: "Le fichier dépasse la limite de 10 Mo.",
+        message: t(req.locale, "errors.fileExceeds10Mb"),
       },
     });
     return;
@@ -311,7 +312,7 @@ router.post("/messages/upload-document", authenticate, async (req, res) => {
     const uploadUrl = await storage.getObjectEntityUploadURL();
     res.json({ uploadUrl });
   } catch (err) {
-    res.status(500).json({ error: "Impossible de générer l'URL d'upload document" });
+    res.status(500).json({ error: t(req.locale, "errors.uploadUrlDocumentError") });
   }
 });
 

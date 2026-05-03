@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https:; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests" />
 
     <title>ADAPT System — L'entraînement intelligent</title>
     <meta name="description" content="ADAPT connecte coachs et athlètes : programmes personnalisés, check-in en 30 secondes, suivi des performances en temps réel. Disponible sur iOS." />
@@ -19,6 +22,7 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="fr_BE" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:site_name" content="ADAPT System" />
 
     <meta name="twitter:card" content="summary_large_image" />
@@ -27,9 +31,12 @@
     <meta name="twitter:description" content="Connecte coachs et athlètes via une plateforme de coaching intelligent." />
     <meta name="twitter:image" content="https://adapt-system.be/og-image.png" />
 
-    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+    <link rel="manifest" href="/site.webmanifest?v=2" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -38,21 +45,25 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "ADAPT",
-      "description": "Application de coaching sportif intelligent connectant coachs et athlètes",
-      "applicationCategory": "HealthApplication",
-      "operatingSystem": "iOS, Android",
+      "@type": "Organization",
+      "name": "ADAPT System",
       "url": "https://adapt-system.be",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "EUR"
-      },
-      "author": {
-        "@type": "Organization",
-        "name": "ADAPT System"
-      }
+      "logo": "https://adapt-system.be/android-chrome-512x512.png",
+      "email": "hello@adapt-system.be",
+      "description": "Plateforme de coaching sportif intelligent connectant coachs et athlètes.",
+      "areaServed": "BE",
+      "sameAs": []
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MobileApplication",
+      "name": "ADAPT",
+      "operatingSystem": "iOS, Android",
+      "applicationCategory": "HealthApplication",
+      "url": "https://adapt-system.be",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
     }
     </script>
   </head>

@@ -8,6 +8,7 @@ import multer from "multer";
 import sharp from "sharp";
 import { objectStorageClient } from "../lib/objectStorage.js";
 import { encryptToken } from "../lib/tokenEncryption.js";
+import { t } from "../locales/index.js";
 import {
   GetPersonalRecordsResponse,
   GetExercisePRHistoryParams,
@@ -65,7 +66,7 @@ router.get("/users/me", authenticate, async (req, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
     if (!user) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Utilisateur non trouvé" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.userNotFound") } });
       return;
     }
     let coachName: string | null = null;
@@ -78,7 +79,7 @@ router.get("/users/me", authenticate, async (req, res) => {
     }
     res.json({ ...userProfile(user), coachName });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -131,7 +132,7 @@ router.put("/users/me", authenticate, async (req, res) => {
 
     res.json(userProfile(user));
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -172,10 +173,10 @@ const webPushSubscribeSchema = z.object({
   }),
 });
 
-router.get("/users/web-push/public-key", async (_req, res) => {
+router.get("/users/web-push/public-key", async (req, res) => {
   const key = process.env.VAPID_PUBLIC_KEY ?? null;
   if (!key) {
-    res.status(503).json({ error: { code: "WEB_PUSH_UNCONFIGURED", message: "Web push n'est pas configuré sur ce serveur" } });
+    res.status(503).json({ error: { code: "WEB_PUSH_UNCONFIGURED", message: t(req.locale, "errors.webPushNotConfigured") } });
     return;
   }
   res.json({ publicKey: key });
@@ -204,7 +205,7 @@ router.post("/users/web-push/subscribe", authenticate, async (req, res) => {
       .where(eq(usersTable.id, req.user!.userId));
     res.json({ success: true, count: next.length });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -229,7 +230,7 @@ router.delete("/users/web-push/subscribe", authenticate, async (req, res) => {
       .where(eq(usersTable.id, req.user!.userId));
     res.json({ success: true, count: next.length });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -246,7 +247,7 @@ router.post("/users/push-token", authenticate, async (req, res) => {
       .where(eq(usersTable.id, req.user!.userId));
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -254,7 +255,7 @@ router.get("/users/avatar/:userId", async (req, res) => {
   const userId = String(req.params["userId"]);
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(userId)) {
-    res.status(404).json({ error: { code: "NOT_FOUND", message: "Pas d'avatar" } });
+    res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.noAvatar") } });
     return;
   }
   try {
@@ -262,7 +263,7 @@ router.get("/users/avatar/:userId", async (req, res) => {
       .from(usersTable).where(eq(usersTable.id, userId));
 
     if (!user?.avatarUrl) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Pas d'avatar" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.noAvatar") } });
       return;
     }
 
@@ -271,7 +272,7 @@ router.get("/users/avatar/:userId", async (req, res) => {
     const storageFile = bucket.file(objectName);
     const [exists] = await storageFile.exists();
     if (!exists) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Avatar introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.avatarNotFound") } });
       return;
     }
 
@@ -281,7 +282,7 @@ router.get("/users/avatar/:userId", async (req, res) => {
     stream.on("error", (streamErr) => {
       console.error("Avatar stream error:", streamErr);
       if (!res.headersSent) {
-        res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur lors du chargement de l'avatar" } });
+        res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.avatarLoadError") } });
       } else {
         res.destroy();
       }
@@ -289,14 +290,14 @@ router.get("/users/avatar/:userId", async (req, res) => {
     stream.pipe(res);
   } catch (err) {
     console.error("Avatar serve error:", err);
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
 router.post("/users/me/avatar", authenticate, (req, res, next) => {
   upload.single("avatar")(req, res, (err) => {
     if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
-      res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "L'image ne doit pas dépasser 5 MB" } });
+      res.status(413).json({ error: { code: "FILE_TOO_LARGE", message: t(req.locale, "errors.imageTooLarge5Mb") } });
       return;
     }
     if (err) {
@@ -307,7 +308,7 @@ router.post("/users/me/avatar", authenticate, (req, res, next) => {
   });
 }, async (req, res) => {
   if (!req.file) {
-    res.status(400).json({ error: { code: "NO_FILE", message: "Aucun fichier fourni" } });
+    res.status(400).json({ error: { code: "NO_FILE", message: t(req.locale, "errors.noFileProvided") } });
     return;
   }
   try {
@@ -342,7 +343,7 @@ router.post("/users/me/avatar", authenticate, (req, res, next) => {
     res.json({ avatarUrl: `/api/users/avatar/${req.user!.userId}?t=${timestamp}`, user: userProfile(updatedUser) });
   } catch (err) {
     console.error("Avatar upload error:", err);
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur lors de l'upload de la photo" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.photoUploadError") } });
   }
 });
 
@@ -352,7 +353,7 @@ router.delete("/users/me/coach", authenticate, async (req, res) => {
       .from(usersTable).where(eq(usersTable.id, req.user!.userId));
 
     if (!user || !user.coachId) {
-      res.status(400).json({ error: { code: "NO_COACH", message: "Aucun coach lié à ce compte" } });
+      res.status(400).json({ error: { code: "NO_COACH", message: t(req.locale, "errors.noCoachLinked") } });
       return;
     }
 
@@ -362,7 +363,7 @@ router.delete("/users/me/coach", authenticate, async (req, res) => {
 
     res.json({ success: true, message: "Coach délié avec succès" });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -392,7 +393,7 @@ router.get("/users/badges", authenticate, async (req, res) => {
 
     res.json({ badges, total: badges.length, unlockedCount: unlocked.length });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -429,7 +430,7 @@ router.get("/users/prs", authenticate, async (req, res) => {
 
     res.json(payload);
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -449,7 +450,7 @@ router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
       .where(eq(exercisesTable.id, exerciseId));
 
     if (!exercise) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Exercice introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.exerciseNotFound") } });
       return;
     }
 
@@ -479,7 +480,7 @@ router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
 
     res.json(payload);
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -573,7 +574,7 @@ router.get("/users/me/profile", authenticate, async (req, res) => {
     const userId = req.user!.userId;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!user) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Utilisateur non trouvé" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.userNotFound") } });
       return;
     }
 
@@ -594,7 +595,7 @@ router.get("/users/me/profile", authenticate, async (req, res) => {
 
     res.json({ ...extendedProfile(user), integrations });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -647,7 +648,7 @@ router.put("/users/me/profile", authenticate, async (req, res) => {
 
     res.json({ ...extendedProfile(user), integrations });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -656,7 +657,7 @@ const VALID_PROVIDERS = ["apple_health", "garmin", "strava", "whoop", "fitbit"] 
 router.post("/users/me/integrations/:provider/connect", authenticate, async (req, res) => {
   const provider = req.params["provider"] as string;
   if (!(VALID_PROVIDERS as readonly string[]).includes(provider)) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Fournisseur non reconnu" } });
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.providerNotRecognized") } });
     return;
   }
   try {
@@ -674,14 +675,14 @@ router.post("/users/me/integrations/:provider/connect", authenticate, async (req
     });
     res.json({ provider, isConnected: true });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
 router.delete("/users/me/integrations/:provider", authenticate, async (req, res) => {
   const provider = req.params["provider"] as string;
   if (!(VALID_PROVIDERS as readonly string[]).includes(provider)) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Fournisseur non reconnu" } });
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.providerNotRecognized") } });
     return;
   }
   try {
@@ -691,7 +692,7 @@ router.delete("/users/me/integrations/:provider", authenticate, async (req, res)
       .where(and(eq(userIntegrationsTable.userId, userId), eq(userIntegrationsTable.provider, provider)));
     res.json({ provider, isConnected: false });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -704,7 +705,7 @@ router.get("/users/me/stats-order", authenticate, async (req, res) => {
     const [user] = await db.select({ statsOrder: usersTable.statsOrder }).from(usersTable).where(eq(usersTable.id, req.user!.userId));
     return res.json({ order: user?.statsOrder ?? null });
   } catch {
-    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -717,7 +718,7 @@ router.put("/users/me/stats-order", authenticate, async (req, res) => {
     await db.update(usersTable).set({ statsOrder: parsed.data.order, updatedAt: new Date() }).where(eq(usersTable.id, req.user!.userId));
     return res.json({ order: parsed.data.order });
   } catch {
-    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -838,7 +839,7 @@ router.get("/users/weekly-recap/latest", authenticate, async (req, res) => {
       },
     });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 

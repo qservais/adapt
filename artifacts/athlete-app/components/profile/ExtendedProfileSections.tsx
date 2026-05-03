@@ -56,57 +56,57 @@ type ExtendedProfileData = {
 };
 
 const DAYS = [
-  { key: "lun", label: "L" },
-  { key: "mar", label: "M" },
-  { key: "mer", label: "Me" },
-  { key: "jeu", label: "J" },
-  { key: "ven", label: "V" },
-  { key: "sam", label: "S" },
-  { key: "dim", label: "D" },
+  { key: "lun", tKey: "day_short_lun", label: "L" },
+  { key: "mar", tKey: "day_short_mar", label: "M" },
+  { key: "mer", tKey: "day_short_mer", label: "Me" },
+  { key: "jeu", tKey: "day_short_jeu", label: "J" },
+  { key: "ven", tKey: "day_short_ven", label: "V" },
+  { key: "sam", tKey: "day_short_sam", label: "S" },
+  { key: "dim", tKey: "day_short_dim", label: "D" },
 ];
 
 const LOCATIONS = [
-  { key: "gym", label: "Salle", icon: "zap" as const },
-  { key: "home", label: "Maison", icon: "home" as const },
-  { key: "outdoor", label: "Extérieur", icon: "sun" as const },
+  { key: "gym", tKey: "loc_gym", label: "Salle", icon: "zap" as const },
+  { key: "home", tKey: "loc_home", label: "Maison", icon: "home" as const },
+  { key: "outdoor", tKey: "loc_outdoor", label: "Extérieur", icon: "sun" as const },
 ];
 
 const EQUIPMENT_OPTIONS = [
-  { key: "barbell", label: "Barre" },
-  { key: "dumbbell", label: "Haltères" },
-  { key: "kettlebell", label: "Kettlebell" },
-  { key: "machine", label: "Machines" },
-  { key: "cable", label: "Poulie" },
-  { key: "bodyweight", label: "Poids du corps" },
-  { key: "bands", label: "Élastiques" },
-  { key: "trx", label: "TRX" },
+  { key: "barbell", tKey: "equip_barbell", label: "Barre" },
+  { key: "dumbbell", tKey: "equip_dumbbell", label: "Haltères" },
+  { key: "kettlebell", tKey: "equip_kettlebell", label: "Kettlebell" },
+  { key: "machine", tKey: "equip_machine", label: "Machines" },
+  { key: "cable", tKey: "equip_cable", label: "Poulie" },
+  { key: "bodyweight", tKey: "equip_bodyweight", label: "Poids du corps" },
+  { key: "bands", tKey: "equip_bands", label: "Élastiques" },
+  { key: "trx", tKey: "equip_trx", label: "TRX" },
 ];
 
 const PRIMARY_GOALS = [
-  { key: "strength", label: "Force" },
-  { key: "muscle", label: "Prise de masse" },
-  { key: "fat_loss", label: "Perte de poids" },
-  { key: "performance", label: "Performance" },
-  { key: "health", label: "Santé" },
-  { key: "aesthetic", label: "Esthétique" },
-  { key: "fitness", label: "Forme générale" },
+  { key: "strength", tKey: "goal_strength", label: "Force" },
+  { key: "muscle", tKey: "goal_muscle", label: "Prise de masse" },
+  { key: "fat_loss", tKey: "goal_fat_loss", label: "Perte de poids" },
+  { key: "performance", tKey: "goal_performance", label: "Performance" },
+  { key: "health", tKey: "goal_health", label: "Santé" },
+  { key: "aesthetic", tKey: "goal_aesthetic", label: "Esthétique" },
+  { key: "fitness", tKey: "goal_fitness", label: "Forme générale" },
 ];
 
 const FITNESS_LEVELS = [
-  { key: "beginner", label: "Débutant" },
-  { key: "intermediate", label: "Intermédiaire" },
-  { key: "advanced", label: "Avancé" },
-  { key: "expert", label: "Expert" },
+  { key: "beginner", tKey: "level_beginner", label: "Débutant" },
+  { key: "intermediate", tKey: "level_intermediate", label: "Intermédiaire" },
+  { key: "advanced", tKey: "level_advanced", label: "Avancé" },
+  { key: "expert", tKey: "level_expert", label: "Expert" },
 ];
 
 const SECONDARY_GOALS = [
-  { key: "mobility", label: "Mobilité" },
-  { key: "endurance", label: "Endurance" },
-  { key: "flexibility", label: "Souplesse" },
-  { key: "power", label: "Explosivité" },
-  { key: "balance", label: "Équilibre" },
-  { key: "stress", label: "Bien-être" },
-  { key: "sport", label: "Sport spécifique" },
+  { key: "mobility", tKey: "sgoal_mobility", label: "Mobilité" },
+  { key: "endurance", tKey: "sgoal_endurance", label: "Endurance" },
+  { key: "flexibility", tKey: "sgoal_flexibility", label: "Souplesse" },
+  { key: "power", tKey: "sgoal_power", label: "Explosivité" },
+  { key: "balance", tKey: "sgoal_balance", label: "Équilibre" },
+  { key: "stress", tKey: "sgoal_stress", label: "Bien-être" },
+  { key: "sport", tKey: "sgoal_sport", label: "Sport spécifique" },
 ];
 
 const EXERCISE_LIBRARY = [
@@ -156,7 +156,7 @@ function CompletionBar({ percent }: { percent: number }) {
     <View style={[cStyles.completionWrap, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
       <View style={cStyles.completionRow}>
         <Text style={[cStyles.completionLabel, { fontFamily: FONTS.mono, color: colors.textMuted }]}>
-          PROFIL COMPLÉTÉ
+          {t("profile_completed", "PROFIL COMPLÉTÉ")}
         </Text>
         <Text style={[cStyles.completionPct, { fontFamily: FONTS.bodyBold, color }]}>
           {percent}%
@@ -350,7 +350,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
       setProfile(data);
       onCompletionChange?.(data.completionPercent);
     } catch {
-      Alert.alert("Erreur", "Impossible de sauvegarder les modifications");
+      Alert.alert(t("error", "Erreur"), t("save_error", "Impossible de sauvegarder les modifications"));
     } finally {
       setSaving(s => ({ ...s, [section]: false }));
     }
@@ -478,7 +478,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 cStyles.dayChipText,
                 { fontFamily: FONTS.bodyMedium, color: availableDays.includes(d.key) ? COLORS.cyan : COLORS.textMuted },
               ]}>
-                {d.label}
+                {t(d.tKey, d.label)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -503,7 +503,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
                 cStyles.locationChipText,
                 { fontFamily: FONTS.bodyMedium, color: trainingLocations.includes(loc.key) ? COLORS.violet : COLORS.textMuted },
               ]}>
-                {loc.label}
+                {t(loc.tKey, loc.label)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -514,7 +514,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {EQUIPMENT_OPTIONS.map(eq => (
             <ToggleChip
               key={eq.key}
-              label={eq.label}
+              label={t(eq.tKey, eq.label)}
               selected={equipment.includes(eq.key)}
               onPress={() => editingContext && toggleEquipment(eq.key)}
               small
@@ -571,7 +571,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           <TextInput
             value={injuries}
             onChangeText={setInjuries}
-            placeholder="Ex: douleur genou gauche, épaule fragile..."
+            placeholder={t("injuries_placeholder", "Ex: douleur genou gauche, épaule fragile...")}
             placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={3}
@@ -613,7 +613,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {PRIMARY_GOALS.map(g => (
             <ToggleChip
               key={g.key}
-              label={g.label}
+              label={t(g.tKey, g.label)}
               selected={primaryGoal === g.key}
               onPress={() => { if (!editingGoals) return; setPrimaryGoal(prev => prev === g.key ? null : g.key); }}
               color={COLORS.cyan}
@@ -627,7 +627,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {FITNESS_LEVELS.map(l => (
             <ToggleChip
               key={l.key}
-              label={l.label}
+              label={t(l.tKey, l.label)}
               selected={fitnessLevel === l.key}
               onPress={() => { if (!editingGoals) return; setFitnessLevel(prev => prev === l.key ? null : l.key); }}
               color={COLORS.amber}
@@ -641,7 +641,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {SECONDARY_GOALS.map(g => (
             <ToggleChip
               key={g.key}
-              label={g.label}
+              label={t(g.tKey, g.label)}
               selected={secondaryGoal === g.key}
               onPress={() => { if (!editingGoals) return; setSecondaryGoal(prev => prev === g.key ? null : g.key); }}
               color={COLORS.violet}
@@ -651,7 +651,7 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
         </View>
         {!editingGoals && !primaryGoal && !secondaryGoal && !fitnessLevel && (
           <Text style={[cStyles.emptyHint, { fontFamily: FONTS.body, color: colors.textMuted }]}>
-            Appuie sur l'icône crayon pour modifier
+            {t("tap_pencil_to_edit", "Appuie sur l'icône crayon pour modifier")}
           </Text>
         )}
         {editingGoals && (
@@ -890,8 +890,8 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {editingPrefs ? (
             <View style={cStyles.segRow}>
               {([
-                { key: "metric", label: "Kg / Km" },
-                { key: "imperial", label: "Lbs / Mi" },
+                { key: "metric", label: t("units_metric", "Kg / Km") },
+                { key: "imperial", label: t("units_imperial", "Lbs / Mi") },
               ] as const).map(u => (
                 <TouchableOpacity
                   key={u.key}
@@ -919,8 +919,8 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {editingPrefs ? (
             <View style={cStyles.segRow}>
               {([
-                { key: "fr", label: "Français" },
-                { key: "en", label: "English" },
+                { key: "fr", label: t("lang_fr", "Français") },
+                { key: "en", label: t("lang_en", "English") },
               ] as const).map(l => (
                 <TouchableOpacity
                   key={l.key}
@@ -948,17 +948,17 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {editingPrefs ? (
             <View style={cStyles.segRow}>
               {([
-                { key: "dark", label: "Sombre" },
-                { key: "light", label: "Clair" },
-                { key: "system", label: "Auto" },
-              ] as const).map(t => (
+                { key: "dark", label: t("theme_dark", "Sombre") },
+                { key: "light", label: t("theme_light", "Clair") },
+                { key: "system", label: t("theme_system", "Auto") },
+              ] as const).map(themeOpt => (
                 <TouchableOpacity
-                  key={t.key}
-                  onPress={() => setTheme(t.key)}
-                  style={[cStyles.segBtn, { backgroundColor: colors.bgInput, borderColor: colors.border }, theme === t.key && cStyles.segBtnActive]}
+                  key={themeOpt.key}
+                  onPress={() => setTheme(themeOpt.key)}
+                  style={[cStyles.segBtn, { backgroundColor: colors.bgInput, borderColor: colors.border }, theme === themeOpt.key && cStyles.segBtnActive]}
                 >
-                  <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: theme === t.key ? COLORS.cyan : COLORS.textSecondary }]}>
-                    {t.label}
+                  <Text style={[cStyles.segBtnText, { fontFamily: FONTS.body, color: theme === themeOpt.key ? COLORS.cyan : COLORS.textSecondary }]}>
+                    {themeOpt.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1084,14 +1084,14 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
             onToggleEdit={() => {}}
           />
           <View style={[cStyles.comingSoonBadge, { backgroundColor: `${COLORS.violet}20`, borderColor: `${COLORS.violet}60` }]}>
-            <Text style={[cStyles.comingSoonText, { fontFamily: FONTS.mono, color: COLORS.violet }]}>BIENTÔT DISPONIBLE</Text>
+            <Text style={[cStyles.comingSoonText, { fontFamily: FONTS.mono, color: COLORS.violet }]}>{t("coming_soon", "Bientôt disponible").toUpperCase()}</Text>
           </View>
         </View>
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 4, color: colors.textSecondary }]}>
           {t("sync_health_data", "Synchronise tes données de santé avec ADAPT.")}
         </Text>
         <Text style={[cStyles.privacyDesc, { fontFamily: FONTS.body, marginBottom: 12, color: COLORS.textMuted, fontSize: 12 }]}>
-          {t("health_coming_soon", "Intégration disponible prochainement.")}
+          {t("health_integration_coming", "Intégration disponible prochainement.")}
         </Text>
         {HEALTH_APPS.map(app => {
           return (
@@ -1130,11 +1130,11 @@ export default function ExtendedProfileSections({ onCompletionChange }: { onComp
           {t("privacy_data_desc", "Ces données sont transmises à ton coach sur toutes ses vues. Désactiver un interrupteur masque la donnée partout.")}
         </Text>
         {([
-          { key: "shareWeight" as const, tKey: "share_weight", label: "Poids corporel", icon: "trending-down" as const },
-          { key: "shareSleep" as const, tKey: "share_sleep", label: "Qualité du sommeil", icon: "moon" as const },
-          { key: "shareHeartRate" as const, tKey: "share_heart_rate", label: "Fréquence cardiaque", icon: "heart" as const },
-          { key: "shareBodyFat" as const, tKey: "share_body_fat", label: "Masse grasse (%)", icon: "percent" as const },
-          { key: "shareContext" as const, tKey: "share_context", label: "Contexte d'entraînement", icon: "layers" as const },
+          { key: "shareWeight" as const, tKey: "privacy_share_weight_label", label: "Poids corporel", icon: "trending-down" as const },
+          { key: "shareSleep" as const, tKey: "privacy_share_sleep_label", label: "Qualité du sommeil", icon: "moon" as const },
+          { key: "shareHeartRate" as const, tKey: "privacy_share_hr_label", label: "Fréquence cardiaque", icon: "heart" as const },
+          { key: "shareBodyFat" as const, tKey: "privacy_share_bf_label", label: "Masse grasse (%)", icon: "percent" as const },
+          { key: "shareContext" as const, tKey: "privacy_share_context_label", label: "Contexte d'entraînement", icon: "layers" as const },
         ] as const).map(({ key, tKey, label, icon }, idx, arr) => (
           <View
             key={key}

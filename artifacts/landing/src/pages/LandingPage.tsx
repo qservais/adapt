@@ -535,14 +535,39 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer style={{ borderTop: "1px solid #1E1E1E", padding: "2rem clamp(1rem, 4vw, 2rem)" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
-          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555", letterSpacing: "0.05em" }}>
-            {t("footer.rights", { year })} <a href="mailto:hello@adapt-system.be" style={{ color: "#555", textDecoration: "none" }}>hello@adapt-system.be</a>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555", letterSpacing: "0.05em", margin: 0 }}>
+            {t("footer.rights", { year })}{" "}
+            <a href="mailto:hello@adapt-system.be" style={{ color: "#555", textDecoration: "none" }}>hello@adapt-system.be</a>
+            <span style={{ margin: "0 0.5rem", color: "#333" }}>•</span>
+            <a
+              href="https://madebydone.be"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#555", textDecoration: "none", transition: "color 0.2s" }}
+              onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#888")}
+              onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#555")}
+            >
+              madebydone.be
+            </a>
           </p>
-              <Link href="/privacy" style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555", textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
-            onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#888")}
-            onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#555")}
-          >{t("footer.privacy")}</Link>
+          <nav aria-label={t("footer.legalNavAria")} style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            {[
+              { href: "/mentions-legales", label: t("footer.legal") },
+              { href: "/privacy", label: t("footer.privacy") },
+              { href: "/cookies", label: t("footer.cookies") },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                style={{ fontFamily: "'Space Mono', monospace", fontSize: "0.65rem", color: "#555", textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
+                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#888")}
+                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => ((e.currentTarget as HTMLElement).style.color = "#555")}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </footer>
     </div>

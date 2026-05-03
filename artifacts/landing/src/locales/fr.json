@@ -111,8 +111,11 @@
     "createCoach": "CRÉER COMPTE COACH →"
   },
   "footer": {
-    "rights": "© {{year}} ADAPT System ·",
-    "privacy": "Mentions légales"
+    "rights": "© {{year}} ADAPT System.",
+    "legal": "Mentions légales",
+    "privacy": "Confidentialité",
+    "cookies": "Cookies",
+    "legalNavAria": "Liens légaux"
   },
   "notFound": {
     "message": "Page introuvable",
@@ -127,6 +130,40 @@
     "back": "← Retour à l'accueil",
     "invalidTitle": "LIEN INVALIDE",
     "invalidMessage": "Ce lien est invalide ou a expiré. Demande un nouveau lien depuis l'app."
+  },
+  "legal": {
+    "navLabel": "Mentions légales",
+    "kicker": "// Légal",
+    "title1": "MENTIONS",
+    "title2": "LÉGALES",
+    "intro": "Conformément à la législation belge applicable, vous trouverez ci-dessous les informations légales relatives à l'éditeur du site adapt-system.be et à l'application mobile ADAPT.",
+    "sections": [
+      { "title": "1. Éditeur du site", "content": "Site édité par ADAPT System.\n\nContact : hello@adapt-system.be" },
+      { "title": "2. Hébergement", "content": "Ce site est hébergé sur une infrastructure cloud sécurisée.\n\nPour toute question technique, contactez l'adresse e-mail de contact du site." },
+      { "title": "3. Objet du site", "content": "Le site adapt-system.be présente la plateforme ADAPT, un service de coaching sportif intelligent connectant coachs et athlètes via une application mobile et un tableau de bord web. Il a pour objet la présentation du service, la prise de contact et la mise à disposition des informations légales relatives à l'utilisation de l'application." },
+      { "title": "4. Propriété intellectuelle", "content": "L'ensemble des éléments composant ce site (structure, textes, logos, graphismes, photographies, vidéos, illustrations, code source, marques, base de données) est protégé par les lois en vigueur relatives à la propriété intellectuelle.\n\nToute reproduction, représentation, modification, publication ou adaptation, totale ou partielle, par quelque procédé que ce soit, est interdite sans autorisation préalable et écrite de l'éditeur, à l'exception des usages autorisés par la loi.\n\nLes contenus appartenant à des tiers (logos partenaires, photographies, etc.) restent la propriété exclusive de leurs titulaires respectifs." },
+      { "title": "5. Responsabilité sur les contenus utilisateurs", "content": "Les utilisateurs qui transmettent des contenus via l'application (photos, messages, données d'entraînement) garantissent disposer des droits nécessaires sur ceux-ci et garantissent qu'ils ne portent pas atteinte aux droits de tiers.\n\nL'éditeur décline toute responsabilité pour les contenus fournis par les utilisateurs et se réserve le droit de retirer tout contenu manifestement illicite." },
+      { "title": "6. Usage autorisé du site", "content": "L'utilisateur s'engage à ne pas utiliser le site et l'application :\n\n— à des fins illégales ou contraires aux bonnes mœurs\n— pour tenter d'intrusion, de perturbation ou d'atteinte à la sécurité\n— pour envoyer des messages non sollicités (spam)\n— pour usurper l'identité d'un tiers\n— pour exploiter les contenus sans autorisation\n— pour introduire des éléments malveillants (virus, scripts)" },
+      { "title": "7. Limitation de responsabilité", "content": "Les informations diffusées sur le site sont fournies à titre indicatif. L'éditeur s'efforce d'assurer l'exactitude et la mise à jour des informations, mais ne peut garantir l'absence totale d'erreur ou d'interruption de service.\n\nL'utilisation des conseils sportifs et programmes d'entraînement se fait sous la responsabilité de l'utilisateur, qui est invité à consulter un professionnel de santé en cas de doute. Cette limitation s'applique dans les limites du droit applicable." },
+      { "title": "8. Liens externes", "content": "Le site peut contenir des liens vers des services tiers (App Store, réseaux sociaux, etc.) sur lesquels l'éditeur n'exerce aucun contrôle. Il décline toute responsabilité quant à leur contenu, leurs politiques de confidentialité ou leurs pratiques." },
+      { "title": "9. Données personnelles", "content": "Le traitement des données personnelles fait l'objet d'une politique de confidentialité dédiée, accessible depuis le pied de page du site." },
+      { "title": "10. Droit applicable", "content": "Les présentes mentions légales sont régies par le droit belge.\n\nTout litige relatif à l'utilisation du site ou de l'application sera soumis aux juridictions compétentes du siège de l'éditeur.\n\nDernière mise à jour : 3 mai 2026" }
+    ]
+  },
+  "cookies": {
+    "navLabel": "Politique de cookies",
+    "kicker": "// Légal",
+    "title1": "POLITIQUE DE",
+    "title2": "COOKIES",
+    "intro": "Cette page décrit l'usage des cookies et technologies similaires sur le site adapt-system.be. L'application mobile ADAPT n'utilise pas de cookies.",
+    "sections": [
+      { "title": "1. Qu'est-ce qu'un cookie ?", "content": "Un cookie est un petit fichier texte déposé sur votre terminal (ordinateur, tablette, smartphone) lors de la visite d'un site web. Il permet au site de mémoriser certaines informations relatives à votre navigation, comme vos préférences de langue ou votre session." },
+      { "title": "2. Cookies utilisés sur ce site", "content": "Le site adapt-system.be utilise uniquement des cookies strictement nécessaires au fonctionnement du site :\n\n— Préférence de langue (fr / en) : enregistrée localement dans votre navigateur pour mémoriser votre choix d'affichage.\n\nAucun cookie de mesure d'audience, de publicité ou de tracking tiers n'est déposé." },
+      { "title": "3. Consentement", "content": "Les cookies strictement nécessaires au fonctionnement du site ne requièrent pas votre consentement préalable, conformément à la législation applicable. Aucun autre cookie n'étant utilisé, aucune bannière de consentement n'est affichée." },
+      { "title": "4. Gérer les cookies", "content": "Vous pouvez à tout moment supprimer les cookies déposés sur votre terminal via les paramètres de votre navigateur :\n\n— Chrome : Paramètres > Confidentialité et sécurité > Cookies\n— Firefox : Paramètres > Vie privée et sécurité\n— Safari : Préférences > Confidentialité\n— Edge : Paramètres > Cookies et autorisations de site\n\nLa suppression de la préférence de langue entraînera la réinitialisation de votre choix lors de votre prochaine visite." },
+      { "title": "5. Contenus tiers", "content": "Le site charge des polices d'écriture depuis Google Fonts (fonts.googleapis.com / fonts.gstatic.com) afin d'afficher la typographie du site. Ces ressources peuvent générer des journaux de connexion côté Google. Aucun cookie n'est déposé via ces ressources." },
+      { "title": "6. Mise à jour", "content": "Cette politique peut être mise à jour pour refléter l'évolution des technologies utilisées ou de la législation. La date de dernière mise à jour est indiquée ci-dessous.\n\nDernière mise à jour : 3 mai 2026" }
+    ]
   },
   "privacy": {
     "navLabel": "Politique de confidentialité",

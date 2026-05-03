@@ -17,7 +17,7 @@ export default function MessagesList() {
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-display text-white flex items-center gap-3">
-          <MessageSquare className="w-8 h-8 text-primary" /> MESSAGES
+          <MessageSquare className="w-8 h-8 text-primary" /> {t("messages_page.title")}
         </h1>
         <p className="text-muted-foreground text-sm mt-1">{t("messages_page.subtitle")}</p>
       </div>
@@ -44,7 +44,7 @@ export default function MessagesList() {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground truncate pr-4">
-                  {thread.lastMessage || "Aucun message"}
+                  {thread.lastMessage || t("messages_page.no_message_yet")}
                 </p>
               </div>
             </div>

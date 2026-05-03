@@ -5,6 +5,7 @@ import { eq, and, desc, asc, gte, lt, inArray, isNotNull, sql } from "drizzle-or
 import { getTodayLocalDate } from "../lib/dateUtils.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
+import { t } from "../locales/index.js";
 
 const router = Router();
 
@@ -700,7 +701,7 @@ router.patch("/coach/clients/:clientId/profile", authenticate, requireRole("coac
     const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
       .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlète non trouvé ou non lié" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.athleteNotFoundOrLinked") } });
       return;
     }
     const data = parsed.data;
@@ -721,7 +722,7 @@ router.patch("/coach/clients/:clientId/profile", authenticate, requireRole("coac
     });
     res.json({ success: true, athlete: updated });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1041,7 +1042,7 @@ const coachLinkSchema = z.object({
 router.post("/coach/link", authenticate, requireRole("coach"), async (req, res) => {
   const parsed = coachLinkSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Code invalide (6 caractères requis)" } });
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.inviteCodeInvalidFormat") } });
     return;
   }
   const { inviteCode } = parsed.data;
@@ -1051,17 +1052,17 @@ router.post("/coach/link", authenticate, requireRole("coach"), async (req, res) 
       .where(and(eq(usersTable.inviteCode, inviteCode.toUpperCase()), eq(usersTable.role, "athlete")));
 
     if (!athlete) {
-      res.status(404).json({ error: { code: "INVITE_CODE_INVALID", message: "Code d'invitation invalide" } });
+      res.status(404).json({ error: { code: "INVITE_CODE_INVALID", message: t(req.locale, "errors.inviteCodeInvalid") } });
       return;
     }
     if (athlete.coachId && athlete.coachId !== req.user!.userId) {
-      res.status(409).json({ error: { code: "ATHLETE_ALREADY_LINKED", message: "Cet athlète est déjà lié à un autre coach" } });
+      res.status(409).json({ error: { code: "ATHLETE_ALREADY_LINKED", message: t(req.locale, "errors.athleteAlreadyLinked") } });
       return;
     }
     await db.update(usersTable).set({ coachId: req.user!.userId, updatedAt: new Date() }).where(eq(usersTable.id, athlete.id));
     res.json({ success: true, message: `${athlete.firstName} est maintenant dans votre équipe` });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1069,7 +1070,7 @@ router.post("/coach/unlink", authenticate, requireRole("coach"), async (req, res
   const schema = z.object({ athleteId: z.string().uuid() });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "athleteId invalide" } });
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.athleteIdInvalid") } });
     return;
   }
   const { athleteId } = parsed.data;
@@ -1079,13 +1080,13 @@ router.post("/coach/unlink", authenticate, requireRole("coach"), async (req, res
       .where(and(eq(usersTable.id, athleteId), eq(usersTable.role, "athlete")));
 
     if (!athlete || athlete.coachId !== req.user!.userId) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlète non trouvé ou non lié" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.athleteNotFoundOrLinked") } });
       return;
     }
     await db.update(usersTable).set({ coachId: null, updatedAt: new Date() }).where(eq(usersTable.id, athleteId));
     res.json({ success: true, message: `${athlete.firstName} a été retiré de votre équipe` });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1150,7 +1151,7 @@ router.get("/coach/volume-weekly", authenticate, requireRole("coach"), async (re
 
     res.json(rows);
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1172,7 +1173,7 @@ router.get("/coach/clients/:clientId/tests", authenticate, requireRole("coach"),
     const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
       .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.clientNotFoundOrLinked") } });
       return;
     }
     const tests = await db.select().from(performanceTestsTable)
@@ -1180,7 +1181,7 @@ router.get("/coach/clients/:clientId/tests", authenticate, requireRole("coach"),
       .orderBy(desc(performanceTestsTable.testedAt));
     res.json(tests.map(t => ({ ...t, value: parseFloat(String(t.value)) })));
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1190,7 +1191,7 @@ router.post("/coach/clients/:clientId/tests", authenticate, requireRole("coach")
     const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
       .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.clientNotFoundOrLinked") } });
       return;
     }
     const parsed = createTestSchema.safeParse(req.body);
@@ -1212,7 +1213,7 @@ router.post("/coach/clients/:clientId/tests", authenticate, requireRole("coach")
     }).returning();
     res.status(201).json({ ...test, value: parseFloat(String(test!.value)) });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1223,19 +1224,19 @@ router.delete("/coach/clients/:clientId/tests/:testId", authenticate, requireRol
     const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
       .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.clientNotFoundOrLinked") } });
       return;
     }
     const [test] = await db.select({ id: performanceTestsTable.id }).from(performanceTestsTable)
       .where(and(eq(performanceTestsTable.id, testId), eq(performanceTestsTable.athleteId, clientId)));
     if (!test) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Test introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.testNotFound") } });
       return;
     }
     await db.delete(performanceTestsTable).where(eq(performanceTestsTable.id, testId));
     res.json({ success: true });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1248,14 +1249,14 @@ router.get("/coach/clients/:clientId/sessions/:sessionLogId", authenticate, requ
     const [athlete] = await db.select({ id: usersTable.id }).from(usersTable)
       .where(and(eq(usersTable.id, clientId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Client non trouvé ou non lié" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.clientNotFoundOrLinked") } });
       return;
     }
 
     const [sessionLog] = await db.select().from(sessionLogsTable)
       .where(and(eq(sessionLogsTable.id, sessionLogId), eq(sessionLogsTable.athleteId, clientId)));
     if (!sessionLog) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Journal de séance introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.sessionLogNotFound") } });
       return;
     }
 
@@ -1336,7 +1337,7 @@ router.get("/coach/clients/:clientId/sessions/:sessionLogId", authenticate, requ
       exercises,
     });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1357,7 +1358,7 @@ router.get("/coaches", authenticate, async (req, res) => {
     const coaches = rawCoaches.map(c => ({ ...c, avatarUrl: resolveAvatarUrl(c) }));
     res.json(coaches);
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1378,7 +1379,7 @@ router.get("/athlete/coach-request", authenticate, requireRole("athlete"), async
       .where(eq(coachJoinRequestsTable.athleteId, athleteId));
     res.json(request ?? null);
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1396,7 +1397,7 @@ router.post("/athlete/coach-request", authenticate, requireRole("athlete"), asyn
       .from(usersTable)
       .where(and(eq(usersTable.id, parsed.data.coachId), eq(usersTable.role, "coach")));
     if (!coach) {
-      res.status(404).json({ error: { code: "COACH_NOT_FOUND", message: "Coach introuvable" } });
+      res.status(404).json({ error: { code: "COACH_NOT_FOUND", message: t(req.locale, "errors.coachNotFound") } });
       return;
     }
     await db
@@ -1408,7 +1409,7 @@ router.post("/athlete/coach-request", authenticate, requireRole("athlete"), asyn
       });
     res.json({ success: true });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1420,7 +1421,7 @@ router.delete("/athlete/coach-request", authenticate, requireRole("athlete"), as
       .where(and(eq(coachJoinRequestsTable.athleteId, athleteId), eq(coachJoinRequestsTable.status, "pending")));
     res.json({ success: true });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1452,7 +1453,7 @@ router.get("/coach/join-requests", authenticate, requireRole("coach"), async (re
     }));
     res.json(resolved);
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1465,14 +1466,14 @@ router.post("/coach/join-requests/:requestId/approve", authenticate, requireRole
       .from(coachJoinRequestsTable)
       .where(and(eq(coachJoinRequestsTable.id, requestId), eq(coachJoinRequestsTable.coachId, coachId), eq(coachJoinRequestsTable.status, "pending")));
     if (!request) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Demande introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.requestNotFound") } });
       return;
     }
     await db.update(usersTable).set({ coachId, updatedAt: new Date() }).where(eq(usersTable.id, request.athleteId));
     await db.update(coachJoinRequestsTable).set({ status: "approved", updatedAt: new Date() }).where(eq(coachJoinRequestsTable.id, requestId));
     res.json({ success: true });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1485,13 +1486,13 @@ router.post("/coach/join-requests/:requestId/reject", authenticate, requireRole(
       .from(coachJoinRequestsTable)
       .where(and(eq(coachJoinRequestsTable.id, requestId), eq(coachJoinRequestsTable.coachId, coachId), eq(coachJoinRequestsTable.status, "pending")));
     if (!request) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Demande introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.requestNotFound") } });
       return;
     }
     await db.update(coachJoinRequestsTable).set({ status: "rejected", updatedAt: new Date() }).where(eq(coachJoinRequestsTable.id, requestId));
     res.json({ success: true });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 

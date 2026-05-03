@@ -1,6 +1,8 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import LandingPage from "@/pages/LandingPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import LegalNoticePage from "@/pages/LegalNoticePage";
+import CookiesPage from "@/pages/CookiesPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/not-found";
 import { useHtmlLang } from "@/hooks/use-html-lang";
@@ -10,6 +12,8 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/mentions-legales" component={LegalNoticePage} />
+      <Route path="/cookies" component={CookiesPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route component={NotFound} />
     </Switch>

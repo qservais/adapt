@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
+Disallow: /api/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /reset-password
+
 Sitemap: https://adapt-system.be/sitemap.xml

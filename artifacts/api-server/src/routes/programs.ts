@@ -5,6 +5,7 @@ import { eq, and, inArray, count, isNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 import { notifyUser } from "../services/notify.service.js";
+import { t } from "../locales/index.js";
 
 const ALL_SESSION_TYPES = [
   "strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning",
@@ -69,7 +70,7 @@ router.put("/programs/:id/preview", authenticate, requireRole("coach"), async (r
     const [prog] = await db.select({ id: programsTable.id }).from(programsTable)
       .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
     if (!prog) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.programNotFound") } });
       return;
     }
     const isEnabled = enabled !== false;
@@ -82,7 +83,7 @@ router.put("/programs/:id/preview", authenticate, requireRole("coach"), async (r
       .where(eq(programsTable.id, programId));
     res.json({ success: true, previewEnabled: isEnabled, previewAllowStart: isEnabled ? (allowStart === true) : false });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -221,7 +222,7 @@ router.delete("/programs/templates/:id", authenticate, requireRole("coach"), asy
     const [template] = await db.select({ id: programsTable.id }).from(programsTable)
       .where(and(eq(programsTable.id, templateId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, true)));
     if (!template) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Template introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.templateNotFound") } });
       return;
     }
 
@@ -266,7 +267,7 @@ router.post("/programs/templates/:id/apply", authenticate, requireRole("coach"),
     const [template] = await db.select().from(programsTable)
       .where(and(eq(programsTable.id, templateId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, true)));
     if (!template) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Template introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.templateNotFound") } });
       return;
     }
 
@@ -279,7 +280,7 @@ router.post("/programs/templates/:id/apply", authenticate, requireRole("coach"),
     }).from(usersTable)
       .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlète non lié à ce coach" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.athleteNotLinkedCoach") } });
       return;
     }
 
@@ -414,7 +415,7 @@ router.post("/programs/:id/duplicate-for-athlete", authenticate, requireRole("co
         eq(programsTable.isTemplate, true),
       ));
     if (!sourceProgram) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Modèle introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.templateNotFound") } });
       return;
     }
 
@@ -427,7 +428,7 @@ router.post("/programs/:id/duplicate-for-athlete", authenticate, requireRole("co
     }).from(usersTable)
       .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, req.user!.userId)));
     if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlète non lié à ce coach" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.athleteNotLinkedCoach") } });
       return;
     }
 
@@ -545,7 +546,7 @@ router.post("/programs/:id/activate", authenticate, requireRole("coach"), async 
   const schema = z.object({ startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "startDate requis (YYYY-MM-DD)" } });
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.startDateRequired") } });
     return;
   }
   try {
@@ -553,7 +554,7 @@ router.post("/programs/:id/activate", authenticate, requireRole("coach"), async 
       .from(programsTable)
       .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, false)));
     if (!program) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.programNotFound") } });
       return;
     }
     if (program.athleteId) {
@@ -566,7 +567,7 @@ router.post("/programs/:id/activate", authenticate, requireRole("coach"), async 
       .where(eq(programsTable.id, programId));
     res.json({ success: true });
   } catch {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -577,7 +578,7 @@ router.post("/programs/:id/save-as-template", authenticate, requireRole("coach")
     const [program] = await db.select().from(programsTable)
       .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, false)));
     if (!program) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Programme introuvable" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.programNotFound") } });
       return;
     }
 
@@ -676,7 +677,7 @@ router.post("/programs/:id/save-as-template", authenticate, requireRole("coach")
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
@@ -1245,7 +1246,7 @@ router.patch("/programs/:programId/sessions/:sessionId/position", authenticate, 
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "weekNumber et dayNumber sont requis" } });
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.weekDayRequired") } });
       return;
     }
     const { weekNumber, dayNumber } = parsed.data;
@@ -1254,18 +1255,18 @@ router.patch("/programs/:programId/sessions/:sessionId/position", authenticate, 
       .from(programsTable)
       .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
     if (!program) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Programme introuvable ou non autorisé" } });
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.programNotFoundOrUnauthorized") } });
       return;
     }
     if (weekNumber > program.durationWeeks) {
-      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Semaine hors limites du programme" } });
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.weekOutOfBounds") } });
       return;
     }
 
     const [session] = await db.select({ id: sessionsTable.id }).from(sessionsTable)
       .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.programId, programId)));
     if (!session) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Séance introuvable dans ce programme" } });
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.sessionNotFoundInProgram") } });
       return;
     }
 
@@ -1275,7 +1276,7 @@ router.patch("/programs/:programId/sessions/:sessionId/position", authenticate, 
 
     res.json({ success: true, weekNumber, dayNumber });
   } catch (err) {
-    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Erreur serveur" } });
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });
 
