@@ -338,7 +338,7 @@ export default function ExerciseScreen() {
   const isAbovePR = currentPR != null && currentLoad > currentPR;
 
   const effectiveSets = setOverrides[exercise.id] ?? exercise.sets ?? 1;
-  const canDeleteSet = effectiveSets > 1 && effectiveSets > currentSet;
+  const canDeleteSet = effectiveSets > 1;
 
   const handleRemoveSet = () => {
     if (!canDeleteSet) return;
@@ -351,8 +351,12 @@ export default function ExerciseScreen() {
           text: "Supprimer",
           style: "destructive",
           onPress: () => {
-            setSetOverrides((prev) => ({ ...prev, [exercise.id]: effectiveSets - 1 }));
+            const next = effectiveSets - 1;
+            setSetOverrides((prev) => ({ ...prev, [exercise.id]: next }));
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            if (currentSet > next) {
+              handleExerciseDone();
+            }
           },
         },
       ],
