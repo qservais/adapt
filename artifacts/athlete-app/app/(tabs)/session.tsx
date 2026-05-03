@@ -275,6 +275,19 @@ export default function SessionTab() {
     }
   };
 
+  const handlePickSessionMode = (sessionId: string, sessionName: string) => {
+    if (startingSessionId) return;
+    Alert.alert(
+      sessionName,
+      "Comment veux-tu lancer cette séance ?",
+      [
+        { text: "Mode Guidé", onPress: () => handleStartFreeSession(sessionId, sessionName) },
+        { text: "Mode Tableau", onPress: () => handleStartBoardSession(sessionId) },
+        { text: "Annuler", style: "cancel" },
+      ],
+    );
+  };
+
   const handleStartBoardSession = async (sessionId: string) => {
     if (startingSessionId) return;
     setStartingSessionId(sessionId);
@@ -889,9 +902,14 @@ export default function SessionTab() {
                           month: "short",
                         });
                         const typeLabel = SESSION_TYPE_FR[s.sessionType] ?? s.sessionType;
+                        const isActionable = !s.isCompleted && !s.isPreview && !s.isAppointment;
+                        const RowComp = (isActionable ? TouchableOpacity : View) as React.ComponentType<any>;
                         return (
-                          <View
+                          <RowComp
                             key={s.sessionId}
+                            onPress={isActionable ? () => handlePickSessionMode(s.sessionId, s.sessionName) : undefined}
+                            activeOpacity={isActionable ? 0.7 : 1}
+                            disabled={isActionable ? !!startingSessionId : undefined}
                             style={[
                               styles.upcomingRow,
                               i === futureSessions.length - 1 && styles.upcomingRowLast,
@@ -940,23 +958,20 @@ export default function SessionTab() {
                                 <Feather name="lock" size={16} color={COLORS.cyan} />
                               </View>
                             ) : !s.isAppointment ? (
-                              <TouchableOpacity
-                                onPress={() => handleStartFreeSession(s.sessionId, s.sessionName)}
-                                disabled={!!startingSessionId}
+                              <View
                                 style={[
                                   styles.upcomingStartBtn,
                                   { opacity: startingSessionId ? 0.5 : 1 },
                                 ]}
-                                activeOpacity={0.8}
                               >
                                 {startingSessionId === s.sessionId ? (
                                   <ActivityIndicator size="small" color={COLORS.bg} />
                                 ) : (
                                   <Feather name="play" size={13} color={COLORS.bg} />
                                 )}
-                              </TouchableOpacity>
+                              </View>
                             ) : null}
-                          </View>
+                          </RowComp>
                         );
                       })}
                     </GlowCard>

@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useT } from "@/context/PreferencesContext";
 
 interface Guide {
   id: string;
@@ -127,6 +128,7 @@ function inlineFormat(text: string): string {
 
 export default function GuideDetailScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const params = useLocalSearchParams<{ id: string }>();
 
@@ -149,7 +151,7 @@ export default function GuideDetailScreen() {
     >
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
         <Feather name="arrow-left" size={22} color={COLORS.textPrimary} />
-        <Text style={[styles.backText, { fontFamily: FONTS.body }]}>Guides</Text>
+        <Text style={[styles.backText, { fontFamily: FONTS.body }]}>{t("guides_title", "Guides")}</Text>
       </TouchableOpacity>
 
       {isLoading && (
@@ -160,7 +162,7 @@ export default function GuideDetailScreen() {
 
       {error != null && (
         <View style={styles.errorBox}>
-          <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>Guide introuvable.</Text>
+          <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{t("guide_not_found", "Guide introuvable.")}</Text>
         </View>
       )}
 

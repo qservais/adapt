@@ -240,7 +240,32 @@ function StateNoPending({
           </TouchableOpacity>
         </View>
       </GlowCard>
+
+      <FreeSessionCTA />
     </View>
+  );
+}
+
+function FreeSessionCTA() {
+  return (
+    <TouchableOpacity
+      onPress={() => router.push("/library/custom-session" as any)}
+      style={styles.freeSessionCTA}
+      activeOpacity={0.85}
+    >
+      <View style={styles.freeSessionCTAIcon}>
+        <Feather name="zap" size={20} color={COLORS.cyan} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.freeSessionCTATitle, { fontFamily: FONTS.bodyBold }]}>
+          Séance libre
+        </Text>
+        <Text style={[styles.freeSessionCTADesc, { fontFamily: FONTS.body }]}>
+          Crée ta propre séance avec tes exercices
+        </Text>
+      </View>
+      <Feather name="arrow-right" size={18} color={COLORS.cyan} />
+    </TouchableOpacity>
   );
 }
 
@@ -427,6 +452,8 @@ function StateCheckedIn({
           </Text>
         </View>
       )}
+
+      <FreeSessionCTA />
     </View>
   );
 }
@@ -649,6 +676,28 @@ const styles = StyleSheet.create({
   lockedTitle: { fontSize: 15, color: COLORS.textSecondary, marginBottom: 2 },
   lockedDesc: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18, marginBottom: 8 },
   libraryHint: { flexDirection: "row", alignItems: "center", gap: 5 },
+  freeSessionCTA: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: `${COLORS.cyan}40`,
+    padding: 16,
+  },
+  freeSessionCTAIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: `${COLORS.cyan}15`,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: `${COLORS.cyan}30`,
+  },
+  freeSessionCTATitle: { fontSize: 14, color: COLORS.white },
+  freeSessionCTADesc: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   libraryHintText: { fontSize: 12, color: COLORS.cyan, flex: 1 },
   checkedContainer: { gap: 16 },
   weekCalendarCard: {

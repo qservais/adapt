@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -66,6 +67,9 @@ export default function FreeSessionCompleteScreen() {
   const [notes, setNotes] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [routineName, setRoutineName] = useState("");
+  const [savingRoutine, setSavingRoutine] = useState(false);
+  const [routineSaved, setRoutineSaved] = useState(false);
 
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
@@ -100,6 +104,35 @@ export default function FreeSessionCompleteScreen() {
       }).catch(() => {});
     }
   }, []);
+
+  const handleSaveRoutine = async () => {
+    if (!session || routineSaved || savingRoutine) return;
+    const name = routineName.trim() || session.name || "Ma routine";
+    if (session.exercises.length === 0) return;
+    setSavingRoutine(true);
+    try {
+      const exercisesPayload = session.exercises.map((e) => ({
+        exerciseId: e.exerciseId,
+        exerciseName: e.exerciseName,
+        sets: Math.max(1, e.sets ?? 1),
+        reps: (e.reps ?? "8").toString().slice(0, 20),
+        loadKg: e.adaptedLoadKg ?? e.nominalLoadKg ?? null,
+        restSeconds: e.restSeconds ?? null,
+      }));
+      await customFetch(`/api/user-routines`, {
+        method: "POST",
+        body: JSON.stringify({ name, exercises: exercisesPayload }),
+        headers: { "Content-Type": "application/json" },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user-routines"] });
+      setRoutineSaved(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      Alert.alert("Erreur", "Impossible d'enregistrer la routine. Réessaie.");
+    } finally {
+      setSavingRoutine(false);
+    }
+  };
 
   const handleFeedback = async () => {
     if (!session?.sessionLogId || feedbackSubmitted) {
@@ -281,6 +314,45 @@ export default function FreeSessionCompleteScreen() {
           />
         </Animated.View>
 
+        <Animated.View style={[styles.section, statsStyle]}>
+          <View style={styles.sectionHeader}>
+            <Feather name="bookmark" size={16} color={COLORS.amber} />
+            <Text style={[styles.sectionTitle, { fontFamily: FONTS.bodyBold, color: COLORS.amber }]}>
+              SAUVEGARDER COMME ROUTINE
+            </Text>
+          </View>
+          {routineSaved ? (
+            <View style={styles.routineSavedRow}>
+              <Feather name="check-circle" size={18} color={COLORS.green} />
+              <Text style={[styles.routineSavedText, { fontFamily: FONTS.body }]}>
+                Routine enregistrée ! Retrouve-la dans la Bibliothèque.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={[styles.notesInput, { fontFamily: FONTS.body, minHeight: 40 }]}
+                placeholder={`Nom (par défaut : ${session.name})`}
+                placeholderTextColor={COLORS.textMuted}
+                value={routineName}
+                onChangeText={setRoutineName}
+                maxLength={100}
+              />
+              <TouchableOpacity
+                onPress={handleSaveRoutine}
+                disabled={savingRoutine}
+                style={[styles.saveRoutineBtn, savingRoutine && { opacity: 0.6 }]}
+                activeOpacity={0.85}
+              >
+                <Feather name="bookmark" size={15} color={COLORS.amber} />
+                <Text style={[styles.saveRoutineText, { fontFamily: FONTS.bodyBold }]}>
+                  {savingRoutine ? "Enregistrement..." : "Sauvegarder cette séance"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </Animated.View>
+
         <Animated.View style={[styles.actions, statsStyle]}>
           <GradientButton
             label={isSubmitting ? "Enregistrement..." : "Enregistrer mon ressenti"}
@@ -360,4 +432,18 @@ const styles = StyleSheet.create({
   actions: { width: "100%", gap: 12 },
   homeBtn: { alignItems: "center", paddingVertical: 14 },
   homeBtnText: { fontSize: 15, color: COLORS.textSecondary },
+  saveRoutineBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: `${COLORS.amber}50`,
+    backgroundColor: `${COLORS.amber}10`,
+  },
+  saveRoutineText: { fontSize: 14, color: COLORS.amber },
+  routineSavedRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
+  routineSavedText: { fontSize: 13, color: COLORS.green, flex: 1 },
 });

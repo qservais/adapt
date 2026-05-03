@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { useT } from "@/context/PreferencesContext";
 
 const FEATURES = [
   {
@@ -39,6 +40,7 @@ const FEATURES = [
 
 export default function OnboardingSplashScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
 
   return (
     <View
@@ -50,7 +52,7 @@ export default function OnboardingSplashScreen() {
       <View style={styles.header}>
         <Text style={[styles.logo, { fontFamily: FONTS.title }]}>ADAPT</Text>
         <Text style={[styles.tagline, { fontFamily: FONTS.body }]}>
-          Entraîne-toi intelligemment. Récupère mieux. Performe davantage.
+          {t("auth_tagline", "Entraîne-toi intelligemment. Récupère mieux. Performe davantage.")}
         </Text>
       </View>
 
@@ -74,7 +76,7 @@ export default function OnboardingSplashScreen() {
 
       <View style={styles.actions}>
         <GradientButton
-          label="Configurer mon profil"
+          label={t("setup_profile", "Configurer mon profil")}
           onPress={() => router.push("/onboarding/profile")}
         />
         <Text style={[styles.steps, { fontFamily: FONTS.mono }]}>

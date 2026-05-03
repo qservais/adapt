@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useGetChallenge, useUpdateChallengeProgress } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useT } from "@/context/PreferencesContext";
 
 const METRIC_FR: Record<string, string> = {
   reps: "répétitions",
@@ -39,6 +40,7 @@ function progressPercent(progress: number, target: number) {
 export default function ChallengeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const challengeQuery = useGetChallenge(id ?? "");
   const updateMutation = useUpdateChallengeProgress();
   const [inputValue, setInputValue] = useState("");
@@ -81,7 +83,7 @@ export default function ChallengeDetailScreen() {
     return (
       <View style={[styles.center, { backgroundColor: COLORS.bg }]}>
         <Feather name="alert-circle" size={40} color={COLORS.textMuted} />
-        <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>Challenge introuvable</Text>
+        <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>{t("challenge_not_found", "Challenge introuvable")}</Text>
       </View>
     );
   }
@@ -126,7 +128,7 @@ export default function ChallengeDetailScreen() {
           </View>
 
           <Text style={[styles.statusLabel, { fontFamily: FONTS.mono, color: accentColor }]}>
-            {isCompleted ? "CHALLENGE COMPLÉTÉ" : "CHALLENGE EN COURS"}
+            {isCompleted ? t("challenge_completed_uc", "CHALLENGE COMPLÉTÉ") : t("challenge_ongoing_uc", "CHALLENGE EN COURS")}
           </Text>
 
           <Text style={[styles.title, { fontFamily: FONTS.title, color: COLORS.white }]}>
@@ -157,7 +159,7 @@ export default function ChallengeDetailScreen() {
         </View>
 
         <View style={styles.progressCard}>
-          <Text style={[styles.sectionLabel, { fontFamily: FONTS.mono }]}>PROGRESSION</Text>
+          <Text style={[styles.sectionLabel, { fontFamily: FONTS.mono }]}>{t("progress_uc", "PROGRESSION")}</Text>
           <View style={styles.progressNumbers}>
             <Text style={[styles.progressCurrent, { fontFamily: FONTS.monoBold, color: accentColor }]}>
               {challenge.progress}
@@ -178,7 +180,7 @@ export default function ChallengeDetailScreen() {
 
         <View style={styles.updateCard}>
             <Text style={[styles.sectionLabel, { fontFamily: FONTS.mono }]}>
-              {isCompleted ? "CORRIGER MA PROGRESSION" : "METTRE À JOUR"}
+              {isCompleted ? t("fix_progress_uc", "CORRIGER MA PROGRESSION") : t("update_uc", "METTRE À JOUR")}
             </Text>
             <Text style={[styles.updateDesc, { fontFamily: FONTS.body }]}>
               {isCompleted
@@ -203,7 +205,7 @@ export default function ChallengeDetailScreen() {
                 {isUpdating ? (
                   <ActivityIndicator size="small" color={COLORS.bg} />
                 ) : (
-                  <Text style={[styles.updateBtnText, { fontFamily: FONTS.bodyBold }]}>Sauvegarder</Text>
+                  <Text style={[styles.updateBtnText, { fontFamily: FONTS.bodyBold }]}>{t("save", "Sauvegarder")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -214,7 +216,7 @@ export default function ChallengeDetailScreen() {
             <Feather name="award" size={22} color={COLORS.green} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.completedTitle, { fontFamily: FONTS.bodyBold, color: COLORS.green }]}>
-                Défi relevé !
+                {t("challenge_done", "Défi relevé !")}
               </Text>
               <Text style={[styles.completedDesc, { fontFamily: FONTS.body }]}>
                 Bravo, tu as complété ce challenge avec succès.

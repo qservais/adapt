@@ -1,6 +1,7 @@
 import React from "react";
 import { getGenericErrorMessage } from "@/lib/errors";
 import {
+  Alert as RNAlert,
   Animated,
   ActivityIndicator,
   Modal,
@@ -316,11 +317,20 @@ export default function SessionIntroScreen() {
     }));
   };
 
-  const removeLastSet = (exId: string, originalSets: number) => {
+  const removeLastSet = (exId: string) => {
     setValidatedSets((prev) => {
       const arr = prev[exId] ?? [];
-      if (arr.length <= originalSets) return prev;
+      if (arr.length <= 1) return prev;
       return { ...prev, [exId]: arr.slice(0, -1) };
+    });
+  };
+
+  const removeSetAt = (exId: string, idx: number) => {
+    setValidatedSets((prev) => {
+      const arr = prev[exId] ?? [];
+      if (arr.length <= 1) return prev;
+      const next = arr.filter((_, i) => i !== idx);
+      return { ...prev, [exId]: next };
     });
   };
 
@@ -632,8 +642,7 @@ export default function SessionIntroScreen() {
             const renderValidationRow = (ex: typeof exercises[0]) => {
               const setsArr = validatedSets[ex.id] ?? Array(ex.sets ?? 1).fill(false);
               const allDone = setsArr.every(Boolean);
-              const originalSets = ex.sets ?? 1;
-              const canRemoveLast = setsArr.length > originalSets && !setsArr[setsArr.length - 1];
+              const canRemoveLast = setsArr.length > 1 && !setsArr[setsArr.length - 1];
               return (
                 <View key={`val-${ex.id}`} style={valStyles.row}>
                   <View style={{ flex: 1 }}>
@@ -647,6 +656,18 @@ export default function SessionIntroScreen() {
                         <TouchableOpacity
                           key={idx}
                           onPress={() => toggleSet(ex.id, idx)}
+                          onLongPress={() => {
+                            if (setsArr.length > 1 && !checked) {
+                              RNAlert.alert(
+                                "Supprimer cette série ?",
+                                `Série S${idx + 1}`,
+                                [
+                                  { text: "Annuler", style: "cancel" },
+                                  { text: "Supprimer", style: "destructive", onPress: () => removeSetAt(ex.id, idx) },
+                                ],
+                              );
+                            }
+                          }}
                           style={[
                             valStyles.setChip,
                             checked && valStyles.setChipChecked,
@@ -661,7 +682,7 @@ export default function SessionIntroScreen() {
                       ))}
                       {canRemoveLast && (
                         <TouchableOpacity
-                          onPress={() => removeLastSet(ex.id, originalSets)}
+                          onPress={() => removeLastSet(ex.id)}
                           style={valStyles.removeSetBtn}
                         >
                           <Feather name="minus" size={13} color={COLORS.textMuted} />

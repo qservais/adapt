@@ -20,6 +20,7 @@ import { useSubmitCheckin, useGetMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { useT } from "@/context/PreferencesContext";
 
 type IconName = "sun" | "zap" | "activity" | "thermometer" | "target" | "alert-triangle";
 
@@ -149,6 +150,7 @@ const WELCOME_ITEMS = [
 
 export default function CheckinScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const meQuery = useGetMe();
   const submitMutation = useSubmitCheckin();
 
@@ -519,8 +521,8 @@ export default function CheckinScreen() {
       <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
         <GradientButton
           label={isLastStep
-            ? (isEditMode ? "Mettre à jour mon check-in" : "Valider mon check-in")
-            : "Suivant"}
+            ? (isEditMode ? t("update_my_checkin", "Mettre à jour mon check-in") : t("submit_checkin", "Valider mon check-in"))
+            : t("next_label", "Suivant")}
           onPress={handleNext}
           loading={submitMutation.isPending}
         />

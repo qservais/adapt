@@ -16,6 +16,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Swipeable } from "react-native-gesture-handler";
 import {
   useGetTodaySession,
   useCompleteSession,
@@ -190,6 +191,21 @@ export default function BoardScreen() {
 
   const skipTimer = useCallback((key: string) => {
     setRestTimers((t) => ({ ...t, [key]: 0 }));
+  }, []);
+
+  const deleteSet = useCallback((exId: string, setIdx: number) => {
+    setExState((prev) => {
+      const arr = prev[exId] ?? [];
+      if (arr.length <= 1) return prev;
+      const next = arr.filter((_, i) => i !== setIdx);
+      return { ...prev, [exId]: next };
+    });
+    setRestTimers((prev) => {
+      const next = { ...prev };
+      delete next[`${exId}:${setIdx}`];
+      return next;
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, []);
 
   const addSet = useCallback((ex: SessionExerciseItem) => {
@@ -384,9 +400,27 @@ export default function BoardScreen() {
                           const showTimer = st.done && remaining > 0;
                           const mins = Math.floor(remaining / 60);
                           const secs = remaining % 60;
-                          return (
-                            <View key={idx}>
-                              <View style={[s.setRow, st.done && { backgroundColor: `${cfg.color}08` }]}>
+                          const canDelete = (sets as SetState[]).length > 1;
+                          const renderRightActions = () => (
+                            <TouchableOpacity
+                              onPress={() => {
+                                Alert.alert(
+                                  "Supprimer la série ?",
+                                  `Série S${idx + 1}`,
+                                  [
+                                    { text: "Annuler", style: "cancel" },
+                                    { text: "Supprimer", style: "destructive", onPress: () => deleteSet(ex.id, idx) },
+                                  ],
+                                );
+                              }}
+                              style={s.swipeDeleteAction}
+                              activeOpacity={0.85}
+                            >
+                              <Feather name="trash-2" size={18} color={COLORS.white} />
+                            </TouchableOpacity>
+                          );
+                          const rowContent = (
+                            <View style={[s.setRow, st.done && { backgroundColor: `${cfg.color}08` }]}>
                                 <Text style={[s.colSerie, s.setLabel, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.textMuted }]}>
                                   S{idx + 1}
                                 </Text>
@@ -443,8 +477,15 @@ export default function BoardScreen() {
                                     color={st.done ? cfg.color : COLORS.border}
                                   />
                                 </TouchableOpacity>
-                              </View>
-
+                            </View>
+                          );
+                          return (
+                            <View key={idx}>
+                              {canDelete ? (
+                                <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
+                                  {rowContent}
+                                </Swipeable>
+                              ) : rowContent}
                               {showTimer && (
                                 <View style={[s.restRow, { backgroundColor: `${cfg.color}08`, borderColor: `${cfg.color}20` }]}>
                                   <Feather name="clock" size={12} color={cfg.color} />
@@ -659,6 +700,14 @@ const s = StyleSheet.create({
     paddingVertical: 18,
   },
   completeBtnText: { fontSize: 15, letterSpacing: 0.5 },
+  swipeDeleteAction: {
+    backgroundColor: COLORS.red,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 64,
+    marginVertical: 4,
+    borderRadius: 8,
+  },
   errorText: { color: COLORS.red, fontSize: 13, textAlign: "center" },
   quitBtn: {
     backgroundColor: COLORS.bgCard,

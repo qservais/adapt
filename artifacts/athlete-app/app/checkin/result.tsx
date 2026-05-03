@@ -23,11 +23,13 @@ import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { BadgeToast } from "@/components/ui/BadgeToast";
 import { useGetTodaySession } from "@workspace/api-client-react";
+import { useT } from "@/context/PreferencesContext";
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 export default function CheckinResultScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const params = useLocalSearchParams<{
     score: string;
     mode: string;
@@ -138,7 +140,7 @@ export default function CheckinResultScreen() {
 
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
         <Animated.View style={[styles.topSection, topStyle]}>
-          <Text style={[styles.topLabel, { fontFamily: FONTS.mono }]}>CHECK-IN TERMINÉ</Text>
+          <Text style={[styles.topLabel, { fontFamily: FONTS.mono }]}>{t("checkin_done_uppercase", "CHECK-IN TERMINÉ")}</Text>
           <ModeBadge mode={modeKey} size="md" glow />
         </Animated.View>
 
@@ -156,19 +158,19 @@ export default function CheckinResultScreen() {
         <Animated.View style={[styles.actions, actionsStyle]}>
           {!sessionLoaded ? (
             <GradientButton
-              label="Chargement..."
+              label={t("loading_label", "Chargement...")}
               onPress={() => {}}
               icon={<ActivityIndicator size="small" color={COLORS.textInverse} />}
             />
           ) : hasSession ? (
             <GradientButton
-              label="Voir ma séance"
+              label={t("see_my_session", "Voir ma séance")}
               onPress={() => router.replace("/session")}
               icon={<Feather name="zap" size={18} color={COLORS.textInverse} />}
             />
           ) : (
             <GradientButton
-              label="Accéder à l'app"
+              label={t("open_app", "Accéder à l'app")}
               onPress={() => router.replace("/")}
               icon={<Feather name="home" size={18} color={COLORS.textInverse} />}
             />
@@ -177,14 +179,14 @@ export default function CheckinResultScreen() {
             <TouchableOpacity onPress={handleEditCheckin} style={styles.editCheckinBtn}>
               <Feather name="edit-2" size={13} color={COLORS.textMuted} />
               <Text style={[styles.editCheckinText, { fontFamily: FONTS.body }]}>
-                Modifier mon check-in
+                {t("edit_my_checkin", "Modifier mon check-in")}
               </Text>
             </TouchableOpacity>
           )}
           {hasSession && (
             <TouchableOpacity onPress={() => router.replace("/")} style={styles.secondaryBtn}>
               <Text style={[styles.secondaryBtnText, { fontFamily: FONTS.body }]}>
-                Retour à l'accueil
+                {t("back_to_home", "Retour à l'accueil")}
               </Text>
             </TouchableOpacity>
           )}

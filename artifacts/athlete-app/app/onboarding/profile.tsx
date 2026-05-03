@@ -15,9 +15,11 @@ import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { InputField } from "@/components/ui/InputField";
 import { getGenericErrorMessage } from "@/lib/errors";
+import { useT } from "@/context/PreferencesContext";
 
 export default function ProfileSetupScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const updateMutation = useUpdateMe();
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
@@ -63,28 +65,28 @@ export default function ProfileSetupScreen() {
         <View style={styles.stepIndicator}>
           <Text style={[styles.step, { fontFamily: FONTS.mono }]}>01 / 05</Text>
         </View>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>TON PROFIL</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("profile_title", "TON PROFIL")}</Text>
         <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          Ces informations nous permettent de personnaliser ton expérience.
+          {t("profile_subtitle", "Ces informations nous permettent de personnaliser ton expérience.")}
         </Text>
 
         <View style={styles.form}>
           <InputField
-            label="Âge"
+            label={t("age_label", "Âge")}
             value={age}
             onChangeText={setAge}
             placeholder="25"
             keyboardType="number-pad"
           />
           <InputField
-            label="Poids (kg)"
+            label={t("weight_kg_label", "Poids (kg)")}
             value={weight}
             onChangeText={setWeight}
             placeholder="70"
             keyboardType="decimal-pad"
           />
           <InputField
-            label="Taille (cm)"
+            label={t("height_cm_label", "Taille (cm)")}
             value={height}
             onChangeText={setHeight}
             placeholder="175"
@@ -96,12 +98,12 @@ export default function ProfileSetupScreen() {
         </View>
 
         <View style={styles.actions}>
-          <GradientButton label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
+          <GradientButton label={t("onboarding_continue", "Continuer")} onPress={handleNext} loading={updateMutation.isPending} />
           <TouchableOpacity
             onPress={() => router.push("/onboarding/fitness")}
             style={styles.skipBtn}
           >
-            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>{t("skip_for_now", "Passer pour l'instant")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

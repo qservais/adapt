@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useT } from "@/context/PreferencesContext";
 
 interface GuideItem {
   id: string;
@@ -46,6 +47,7 @@ const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Feather>["name"
 
 export default function GuidesScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const { data: guides, isLoading, error } = useQuery<GuideItem[]>({
@@ -68,11 +70,11 @@ export default function GuidesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>GUIDES</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("guides_uc", "GUIDES")}</Text>
       </View>
 
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        Comprends les principes qui font progresser.
+        {t("guides_subtitle", "Comprends les principes qui font progresser.")}
       </Text>
 
       {isLoading && (
@@ -84,7 +86,7 @@ export default function GuidesScreen() {
       {error != null && (
         <View style={styles.errorBox}>
           <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>
-            Impossible de charger les guides.
+            {t("guides_load_error", "Impossible de charger les guides.")}
           </Text>
         </View>
       )}

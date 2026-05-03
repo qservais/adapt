@@ -52,6 +52,25 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – web_push_subscriptions column failed");
     throw err;
   }
+
+  // User session templates (task #211 — Mes routines)
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS user_session_templates (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        athlete_id uuid NOT NULL REFERENCES users(id),
+        name varchar(100) NOT NULL,
+        exercises jsonb NOT NULL DEFAULT '[]'::jsonb,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS user_session_templates_athlete_idx ON user_session_templates(athlete_id)`);
+    logger.info("runSchemaMigrations: user_session_templates OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – user_session_templates creation failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

@@ -12,11 +12,12 @@ import {
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import type { LibrarySession, FreeSessionStartResponse } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { setFreeSession } from "@/lib/freeSessionStore";
+import { useT } from "@/context/PreferencesContext";
 
 interface AthleteExercise {
   id: string;
@@ -52,6 +53,23 @@ interface Routine {
   exercises: { name: string; sets?: string; notes?: string }[];
 }
 
+interface UserRoutineExercise {
+  exerciseId: string;
+  exerciseName: string;
+  sets: number;
+  reps: string;
+  loadKg?: number | null;
+  restSeconds?: number | null;
+}
+
+interface UserRoutine {
+  id: string;
+  name: string;
+  exercises: UserRoutineExercise[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 const CATEGORIES: { key: string; label: string; icon: React.ComponentProps<typeof Feather>["name"]; color: string; emoji: string }[] = [
   { key: "warmup", label: "Échauffements", icon: "zap", color: COLORS.amber, emoji: "🔥" },
   { key: "mobility", label: "Mobilité", icon: "rotate-cw", color: "#00D4FF", emoji: "🔄" },
@@ -64,11 +82,69 @@ const CATEGORIES: { key: string; label: string; icon: React.ComponentProps<typeo
 
 export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
+  const queryClient = useQueryClient();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const [activeCategory, setActiveCategory] = useState<string>("warmup");
   const [startingRoutineId, setStartingRoutineId] = useState<string | null>(null);
   const [startingSessionId, setStartingSessionId] = useState<string | null>(null);
+  const [startingUserRoutineId, setStartingUserRoutineId] = useState<string | null>(null);
   const [showAllExercises, setShowAllExercises] = useState(false);
+
+  const { data: userRoutines = [] } = useQuery<UserRoutine[]>({
+    queryKey: ["/api/user-routines"],
+    queryFn: () => customFetch("/api/user-routines") as Promise<UserRoutine[]>,
+  });
+
+  const handleStartUserRoutine = async (r: UserRoutine) => {
+    if (startingUserRoutineId) return;
+    setStartingUserRoutineId(r.id);
+    try {
+      const data = await customFetch(`/api/user-routines/${r.id}/start-free`, {
+        method: "POST",
+      }) as FreeSessionStartResponse;
+      setFreeSession({
+        sessionLogId: data.sessionLogId,
+        name: data.name,
+        mode: data.mode,
+        isFreeSession: true,
+        isRoutine: false,
+        routineId: null,
+        adaptScore: data.adaptScore ?? 50,
+        coachNotes: data.coachNotes ?? null,
+        estimatedDurationMin: data.estimatedDurationMin ?? null,
+        exercises: data.exercises ?? [],
+        athletePRs: data.athletePRs ?? {},
+      });
+      router.push("/session/free");
+    } catch {
+      Alert.alert("Erreur", "Impossible de démarrer cette routine. Réessaie.");
+    } finally {
+      setStartingUserRoutineId(null);
+    }
+  };
+
+  const handleDeleteUserRoutine = (r: UserRoutine) => {
+    Alert.alert(
+      "Supprimer la routine ?",
+      `« ${r.name} » sera définitivement supprimée.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await customFetch(`/api/user-routines/${r.id}`, { method: "DELETE" });
+              await queryClient.invalidateQueries({ queryKey: ["/api/user-routines"] });
+            } catch {
+              Alert.alert("Erreur", "Impossible de supprimer la routine.");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const { data: routines, isLoading, error } = useQuery<Routine[]>({
     queryKey: ["/api/content-routines"],
@@ -165,11 +241,11 @@ export default function LibraryScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>BIBLIOTHÈQUE</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("library_uc", "BIBLIOTHÈQUE")}</Text>
       </View>
 
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        Exercices et routines à consulter ou démarrer librement.
+        {t("library_subtitle", "Exercices et routines à consulter ou démarrer librement.")}
       </Text>
 
       <TouchableOpacity
@@ -182,10 +258,10 @@ export default function LibraryScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.createSessionTitle, { fontFamily: FONTS.bodyBold }]}>
-            Créer une séance libre
+            {t("create_free_session", "Créer une séance libre")}
           </Text>
           <Text style={[styles.createSessionSubtitle, { fontFamily: FONTS.body }]}>
-            Choisis tes exercices, sets, reps et charge
+            {t("create_free_session_sub", "Choisis tes exercices, sets, reps et charge")}
           </Text>
         </View>
         <Feather name="arrow-right" size={18} color={COLORS.cyan} />
@@ -196,7 +272,7 @@ export default function LibraryScreen() {
           <View style={styles.sectionHeaderRow}>
             <Feather name="zap" size={13} color={COLORS.cyan} />
             <Text style={[styles.sectionLabel, { fontFamily: FONTS.bodyBold, color: COLORS.cyan }]}>
-              MES EXERCICES
+              {t("my_exercises_uc", "MES EXERCICES")}
             </Text>
           </View>
           {visibleExercises.map((ex) => (
@@ -233,17 +309,65 @@ export default function LibraryScreen() {
             >
               <Feather name={showAllExercises ? "chevron-up" : "chevron-down"} size={14} color={COLORS.cyan} />
               <Text style={[styles.showMoreText, { fontFamily: FONTS.body, color: COLORS.cyan }]}>
-                {showAllExercises ? "Voir moins" : `Voir les ${athleteExercises.length - 5} autres`}
+                {showAllExercises ? t("see_less", "Voir moins") : t("see_others", "Voir les {0} autres").replace("{0}", String(athleteExercises.length - 5))}
               </Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
+      {userRoutines.length > 0 && (
+        <View style={styles.userRoutineSection}>
+          <View style={styles.sectionHeaderRow}>
+            <Feather name="bookmark" size={13} color={COLORS.amber} />
+            <Text style={[styles.sectionLabel, { fontFamily: FONTS.bodyBold, color: COLORS.amber }]}>
+              MES ROUTINES
+            </Text>
+          </View>
+          {userRoutines.map((r) => {
+            const isStarting = startingUserRoutineId === r.id;
+            return (
+              <View key={r.id} style={styles.userRoutineCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.programCardName, { fontFamily: FONTS.bodyBold }]} numberOfLines={1}>
+                    {r.name}
+                  </Text>
+                  <Text style={[styles.programCardMeta, { fontFamily: FONTS.mono }]}>
+                    {r.exercises.length} exercice{r.exercises.length !== 1 ? "s" : ""}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDeleteUserRoutine(r)}
+                  style={styles.userRoutineDeleteBtn}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="trash-2" size={15} color={COLORS.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleStartUserRoutine(r)}
+                  disabled={!!startingUserRoutineId}
+                  style={[styles.startBtn, { backgroundColor: COLORS.amber, opacity: startingUserRoutineId ? 0.6 : 1 }]}
+                  activeOpacity={0.8}
+                >
+                  {isStarting ? (
+                    <ActivityIndicator size="small" color={COLORS.bg} />
+                  ) : (
+                    <Feather name="play" size={13} color={COLORS.bg} />
+                  )}
+                  <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
+                    {isStarting ? "..." : "Démarrer"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       {programSessions.length > 0 && (
         <View style={styles.programSection}>
           <Text style={[styles.sectionLabel, { fontFamily: FONTS.bodyBold }]}>
-            ⚡ SÉANCES DU PROGRAMME
+            ⚡ {t("program_sessions_uc", "SÉANCES DU PROGRAMME")}
           </Text>
           {programSessions.map((s) => {
             const isStarting = startingSessionId === s.sessionId;
@@ -271,7 +395,7 @@ export default function LibraryScreen() {
                     <Feather name="play" size={13} color={COLORS.bg} />
                   )}
                   <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                    {isStarting ? "..." : "Démarrer"}
+                    {isStarting ? "..." : t("start_btn", "Démarrer")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -319,7 +443,7 @@ export default function LibraryScreen() {
       {error != null && (
         <View style={styles.errorBox}>
           <Text style={[styles.errorText, { fontFamily: FONTS.body }]}>
-            Impossible de charger la bibliothèque.
+            {t("library_load_error", "Impossible de charger la bibliothèque.")}
           </Text>
         </View>
       )}
@@ -376,7 +500,7 @@ export default function LibraryScreen() {
                   <Feather name="play" size={13} color={COLORS.bg} />
                 )}
                 <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                  {isStarting ? "..." : "Démarrer"}
+                  {isStarting ? "..." : t("start_btn", "Démarrer")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -387,7 +511,7 @@ export default function LibraryScreen() {
       {!isLoading && filtered.length === 0 && (
         <View style={styles.emptyBox}>
           <Text style={[styles.emptyText, { fontFamily: FONTS.body }]}>
-            Aucune routine disponible dans cette catégorie.
+            {t("no_routine_in_category", "Aucune routine disponible dans cette catégorie.")}
           </Text>
         </View>
       )}
@@ -530,4 +654,24 @@ const styles = StyleSheet.create({
   },
   createSessionTitle: { fontSize: 14, color: COLORS.white },
   createSessionSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  userRoutineSection: { gap: 10 },
+  userRoutineCard: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${COLORS.amber}40`,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  userRoutineDeleteBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
 });

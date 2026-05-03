@@ -16,9 +16,11 @@ import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useGetCoaches, useRequestCoach } from "@workspace/api-client-react";
 import type { CoachSummary } from "@workspace/api-client-react";
+import { useT } from "@/context/PreferencesContext";
 
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { data: coaches, isLoading } = useGetCoaches();
   const requestMutation = useRequestCoach();
   const [selectedCoachId, setSelectedCoachId] = React.useState<string | null>(null);
@@ -54,7 +56,7 @@ export default function InviteScreen() {
               <Feather name="send" size={36} color={COLORS.cyan} />
             </View>
             <Text style={[styles.successTitle, { fontFamily: FONTS.bodyBold }]}>
-              Demande envoyée !
+              {t("invite_sent", "Demande envoyée !")}
             </Text>
             <Text style={[styles.successDesc, { fontFamily: FONTS.body }]}>
               Ta demande a été envoyée à{" "}
@@ -63,7 +65,7 @@ export default function InviteScreen() {
               </Text>
               . Tu seras connecté(e) dès que ton coach aura accepté.
             </Text>
-            <GradientButton label="Continuer" onPress={() => router.push("/onboarding/tutorial")} />
+            <GradientButton label={t("onboarding_continue", "Continuer")} onPress={() => router.push("/onboarding/tutorial")} />
           </View>
         </ScrollView>
       </View>
@@ -79,9 +81,9 @@ export default function InviteScreen() {
         <View style={styles.stepIndicator}>
           <Text style={[styles.step, { fontFamily: FONTS.mono }]}>04 / 05</Text>
         </View>
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>CHOISIR UN COACH</Text>
+        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("choose_coach", "CHOISIR UN COACH")}</Text>
         <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-          Sélectionne ton coach ci-dessous pour envoyer une demande de connexion.
+          {t("choose_coach_subtitle", "Sélectionne ton coach ci-dessous pour envoyer une demande de connexion.")}
         </Text>
 
         {isLoading ? (
@@ -135,7 +137,7 @@ export default function InviteScreen() {
 
         <View style={styles.actions}>
           <GradientButton
-            label="Envoyer la demande"
+            label={t("send_request", "Envoyer la demande")}
             onPress={handleRequest}
             loading={requestMutation.isPending}
             disabled={!selectedCoachId}
@@ -144,7 +146,7 @@ export default function InviteScreen() {
             onPress={() => router.push("/onboarding/tutorial")}
             style={styles.skipBtn}
           >
-            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>{t("skip_for_now", "Passer pour l'instant")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

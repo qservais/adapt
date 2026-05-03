@@ -7,6 +7,7 @@ import { useUpdateMe } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { getGenericErrorMessage } from "@/lib/errors";
+import { useT } from "@/context/PreferencesContext";
 
 const FITNESS_LEVELS = [
   {
@@ -31,6 +32,7 @@ const FITNESS_LEVELS = [
 
 export default function FitnessLevelScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const updateMutation = useUpdateMe();
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -59,9 +61,9 @@ export default function FitnessLevelScreen() {
       <View style={styles.stepIndicator}>
         <Text style={[styles.step, { fontFamily: FONTS.mono }]}>02 / 05</Text>
       </View>
-      <Text style={[styles.title, { fontFamily: FONTS.title }]}>NIVEAU</Text>
+      <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("select_level", "NIVEAU")}</Text>
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        Choisis ce qui te correspond le mieux.
+        {t("level_subtitle", "Choisis ce qui te correspond le mieux.")}
       </Text>
 
       <View style={styles.cards}>
@@ -117,12 +119,12 @@ export default function FitnessLevelScreen() {
         <Text style={[styles.error, { fontFamily: FONTS.body }]}>{error}</Text>
       ) : null}
       <View style={styles.actions}>
-        <GradientButton label="Continuer" onPress={handleNext} loading={updateMutation.isPending} />
+        <GradientButton label={t("onboarding_continue", "Continuer")} onPress={handleNext} loading={updateMutation.isPending} />
         <TouchableOpacity
           onPress={() => router.push("/onboarding/goal")}
           style={styles.skipBtn}
         >
-          <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer pour l'instant</Text>
+          <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>{t("skip_for_now", "Passer pour l'instant")}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

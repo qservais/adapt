@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS, MODE_CONFIG } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { useT } from "@/context/PreferencesContext";
 
 const { width } = Dimensions.get("window");
 
@@ -51,6 +52,7 @@ const SLIDES: Slide[] = [
 
 export default function TutorialScreen() {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const [index, setIndex] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
 
@@ -118,7 +120,7 @@ export default function TutorialScreen() {
           ))}
         </View>
         <GradientButton
-          label={index < SLIDES.length - 1 ? "Suivant" : "C'est parti !"}
+          label={index < SLIDES.length - 1 ? t("next_label", "Suivant") : t("lets_go", "C'est parti !")}
           onPress={goNext}
         />
         {index < SLIDES.length - 1 && (
@@ -126,7 +128,7 @@ export default function TutorialScreen() {
             onPress={() => router.replace("/checkin")}
             style={styles.skip}
           >
-            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>Passer</Text>
+            <Text style={[styles.skipText, { fontFamily: FONTS.body }]}>{t("skip_label", "Passer")}</Text>
           </TouchableOpacity>
         )}
       </View>
