@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useParams, useLocation } from "wouter";
 import { 
   useGetClientDetail, 
@@ -140,6 +141,7 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
 type Tab = "apercu" | "programme" | "tests" | "nutrition";
 
 export default function ClientDetail() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
@@ -253,12 +255,12 @@ export default function ClientDetail() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast({ title: "Test ajouté" });
+      toast({ title: t("clients.detail.toast_test_added") });
       setAddTestOpen(false);
       setSelectedTestType(effectiveType);
       await fetchTests();
     } catch {
-      toast({ title: "Erreur lors de l'ajout", variant: "destructive" });
+      toast({ title: t("clients.detail.toast_test_add_error"), variant: "destructive" });
     } finally {
       setTestSaving(false);
     }
@@ -273,11 +275,11 @@ export default function ClientDetail() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();
-      toast({ title: "Test supprimé" });
+      toast({ title: t("clients.detail.toast_test_deleted") });
       setDeleteTestId(null);
       await fetchTests();
     } catch {
-      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
+      toast({ title: t("clients.detail.toast_test_delete_error"), variant: "destructive" });
     } finally {
       setTestDeleting(false);
     }
@@ -333,11 +335,11 @@ export default function ClientDetail() {
         body: JSON.stringify({ startDate: activateStartDate }),
       });
       if (!res.ok) throw new Error();
-      toast({ title: "Programme activé" });
+      toast({ title: t("clients.detail.toast_program_activated") });
       setActivateDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     } catch {
-      toast({ title: "Erreur lors de l'activation", variant: "destructive" });
+      toast({ title: t("clients.detail.toast_program_activate_error"), variant: "destructive" });
     } finally {
       setActivating(false);
     }
@@ -346,30 +348,30 @@ export default function ClientDetail() {
   const handleOverride = async (mode: 'performance' | 'normal' | 'adapt' | 'recovery') => {
     try {
       await overrideMutation.mutateAsync({ clientId: id, data: { mode } });
-      toast({ title: "Séance modifiée", description: `Définie sur ${mode.toUpperCase()}` });
+      toast({ title: t("clients.detail.toast_session_modified"), description: t("clients.detail.toast_session_set_to", { mode: mode.toUpperCase() }) });
       refetch();
     } catch {
-      toast({ title: "Échec de la modification", variant: "destructive" });
+      toast({ title: t("clients.detail.toast_modify_failed"), variant: "destructive" });
     }
   };
 
   const handleUnlink = async () => {
     try {
       await unlinkMutation.mutateAsync({ data: { athleteId: id } });
-      toast({ title: "Athlète délié", description: `${client?.firstName} a été retiré de votre équipe.` });
+      toast({ title: t("clients.detail.toast_unlinked"), description: t("clients.detail.toast_unlink_desc", { name: client?.firstName ?? "" }) });
       navigate("/clients");
     } catch {
-      toast({ title: "Échec de la déconnexion", variant: "destructive" });
+      toast({ title: t("clients.detail.toast_unlink_failed"), variant: "destructive" });
     }
   };
 
   const handleResolveAlert = async (alertId: string) => {
     try {
-      await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: "Résolu via dashboard" } });
-      toast({ title: "Alerte résolue" });
+      await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: t("clients.detail.alert_resolved_via_dashboard") } });
+      toast({ title: t("clients.detail.toast_alert_resolved") });
       refetch();
     } catch {
-      toast({ title: "Échec de la résolution", variant: "destructive" });
+      toast({ title: t("clients.detail.toast_alert_resolution_failed"), variant: "destructive" });
     }
   };
 
@@ -394,11 +396,11 @@ export default function ClientDetail() {
 
     try {
       await updateProfileMutation.mutateAsync({ clientId: id, data });
-      toast({ title: "Profil mis à jour" });
+      toast({ title: t("clients.detail.toast_profile_updated") });
       setProfileDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${id}`] });
     } catch {
-      toast({ title: "Échec de la mise à jour", variant: "destructive" });
+      toast({ title: t("clients.detail.toast_profile_update_failed"), variant: "destructive" });
     }
   };
 
@@ -419,25 +421,33 @@ export default function ClientDetail() {
     }));
 
   const metrics = [
-    { name: "Sommeil", value: client.todayCheckin?.sleep },
-    { name: "Énergie", value: client.todayCheckin?.energy },
-    { name: "Stress", value: client.todayCheckin?.stress },
-    { name: "Courbatures", value: client.todayCheckin?.soreness },
-    { name: "Motivation", value: client.todayCheckin?.motivation },
+    { name: t("clients.detail.metric_sleep"), value: client.todayCheckin?.sleep },
+    { name: t("clients.detail.metric_energy"), value: client.todayCheckin?.energy },
+    { name: t("clients.detail.metric_stress"), value: client.todayCheckin?.stress },
+    { name: t("clients.detail.metric_soreness"), value: client.todayCheckin?.soreness },
+    { name: t("clients.detail.metric_motivation"), value: client.todayCheckin?.motivation },
   ];
 
   const tabs: { id: Tab; label: string; icon: typeof Calendar }[] = [
-    { id: "apercu", label: "Aperçu", icon: CheckCircle2 },
-    { id: "programme", label: "Programme", icon: Dumbbell },
-    { id: "tests", label: "Tests", icon: TrendingUp },
-    { id: "nutrition", label: "Nutrition", icon: Apple },
+    { id: "apercu", label: t("clients.detail.tab_overview"), icon: CheckCircle2 },
+    { id: "programme", label: t("clients.detail.tab_program"), icon: Dumbbell },
+    { id: "tests", label: t("clients.detail.tab_tests"), icon: TrendingUp },
+    { id: "nutrition", label: t("clients.detail.tab_nutrition"), icon: Apple },
   ];
+
+  const levelLabel = (lvl: string) => t(`clients.detail.level_${lvl}`, { defaultValue: lvl });
+  const goalLabel = (g: string) => t(`clients.detail.goal_${g}`, { defaultValue: g });
+  const sessionTypeLabel = (s: string) => t(`clients.detail.session_type_${s}`, { defaultValue: s });
+  const testTypeLabel = (value: string) => {
+    const p = PREDEFINED_TEST_TYPES.find(pt => pt.value === value);
+    return t(`clients.detail.test_type_${value}`, { defaultValue: p?.label ?? value.replace(/_/g, " ") });
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <Link href="/clients" className="hover:text-white flex items-center gap-1 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Retour aux athlètes
+          <ArrowLeft className="w-4 h-4" /> {t("clients.detail.back_to_athletes")}
         </Link>
       </div>
 
@@ -457,23 +467,23 @@ export default function ClientDetail() {
             <h1 className="text-4xl font-display text-white tracking-wide">{client.firstName} {client.lastName}</h1>
             <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
               <span className="font-mono">{client.email}</span>
-              {client.fitnessLevel && <span>• Niveau : <span className="text-white capitalize">{LEVEL_LABELS[client.fitnessLevel] ?? client.fitnessLevel}</span></span>}
-              {client.primaryGoal && <span>• Objectif : <span className="text-white capitalize">{GOAL_LABELS[client.primaryGoal] ?? client.primaryGoal}</span></span>}
+              {client.fitnessLevel && <span>• {t("clients.detail.level_label")} : <span className="text-white capitalize">{levelLabel(client.fitnessLevel)}</span></span>}
+              {client.primaryGoal && <span>• {t("clients.detail.goal_label")} : <span className="text-white capitalize">{goalLabel(client.primaryGoal)}</span></span>}
             </div>
             <div className="flex flex-wrap gap-4 mt-3 text-sm">
               {client.heightCm && (
-                <span className="text-muted-foreground">Taille : <span className="text-white font-medium">{client.heightCm} cm</span></span>
+                <span className="text-muted-foreground">{t("clients.detail.height_label")} : <span className="text-white font-medium">{client.heightCm} cm</span></span>
               )}
               {client.weightKg && (
-                <span className="text-muted-foreground">Poids : <span className="text-white font-medium">{parseFloat(String(client.weightKg)).toFixed(1)} kg</span></span>
+                <span className="text-muted-foreground">{t("clients.detail.weight_label")} : <span className="text-white font-medium">{parseFloat(String(client.weightKg)).toFixed(1)} kg</span></span>
               )}
               {client.inviteCode && (
                 <button
                   onClick={handleCopyCode}
                   className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors group"
-                  title="Copier le code d'invitation"
+                  title={t("clients.detail.copy_invite_title")}
                 >
-                  Code : <span className="font-mono text-primary font-semibold tracking-widest">{client.inviteCode}</span>
+                  {t("clients.detail.code_label")} : <span className="font-mono text-primary font-semibold tracking-widest">{client.inviteCode}</span>
                   {codeCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />}
                 </button>
               )}
@@ -483,24 +493,24 @@ export default function ClientDetail() {
 
         <div className="flex flex-col gap-3 shrink-0">
           <Button variant="outline" onClick={openProfileDialog} className="w-full justify-start hover-elevate border-border">
-            <Pencil className="w-4 h-4 mr-2" /> Modifier le profil
+            <Pencil className="w-4 h-4 mr-2" /> {t("clients.detail.btn_edit_profile")}
           </Button>
           <Link href={`/messages/${client.id}`}>
             <Button variant="outline" className="w-full justify-start hover-elevate">
-              <MessageSquare className="w-4 h-4 mr-2" /> Envoyer un message
+              <MessageSquare className="w-4 h-4 mr-2" /> {t("clients.detail.btn_send_message")}
             </Button>
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="w-full justify-start bg-white/5 hover:bg-white/10 text-white border border-white/10 hover-elevate" disabled={overrideMutation.isPending}>
-                Forcer la séance du jour
+                {t("clients.detail.btn_force_today")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-card border-border">
-              <DropdownMenuItem onClick={() => handleOverride('performance')} className="text-[#00F5A0] focus:bg-[#00F5A0]/10">Forcer PERFORMANCE</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOverride('normal')} className="text-[#00D9FF] focus:bg-[#00D9FF]/10">Forcer NORMAL</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOverride('adapt')} className="text-[#FFB800] focus:bg-[#FFB800]/10">Forcer ADAPT</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleOverride('recovery')} className="text-[#7B61FF] focus:bg-[#7B61FF]/10">Forcer RÉCUPÉRATION</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('performance')} className="text-[#00F5A0] focus:bg-[#00F5A0]/10">{t("clients.detail.force_performance")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('normal')} className="text-[#00D9FF] focus:bg-[#00D9FF]/10">{t("clients.detail.force_normal")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('adapt')} className="text-[#FFB800] focus:bg-[#FFB800]/10">{t("clients.detail.force_adapt")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOverride('recovery')} className="text-[#7B61FF] focus:bg-[#7B61FF]/10">{t("clients.detail.force_recovery")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
@@ -508,7 +518,7 @@ export default function ClientDetail() {
             onClick={() => setUnlinkDialogOpen(true)}
             className="w-full justify-start border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
-            <UserMinus className="w-4 h-4 mr-2" /> Délier l'athlète
+            <UserMinus className="w-4 h-4 mr-2" /> {t("clients.detail.btn_unlink")}
           </Button>
         </div>
       </div>
@@ -536,12 +546,12 @@ export default function ClientDetail() {
       <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
         <DialogContent className="bg-card border-border max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white font-display text-xl">MODIFIER LE PROFIL</DialogTitle>
+            <DialogTitle className="text-white font-display text-xl">{t("clients.detail.dialog_edit_profile")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Taille (cm)</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("clients.detail.label_height_cm")}</Label>
                 <Input
                   type="number"
                   value={profileForm.heightCm}
@@ -553,7 +563,7 @@ export default function ClientDetail() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Poids (kg)</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("clients.detail.label_weight_kg")}</Label>
                 <Input
                   type="number"
                   value={profileForm.weightKg}
@@ -567,39 +577,39 @@ export default function ClientDetail() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Niveau de forme</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("clients.detail.label_fitness_level")}</Label>
               <select
                 value={profileForm.fitnessLevel}
                 onChange={e => setProfileForm(p => ({ ...p, fitnessLevel: e.target.value }))}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-white text-sm"
               >
-                <option value="">-- Sélectionner --</option>
-                <option value="beginner">Débutant</option>
-                <option value="intermediate">Intermédiaire</option>
-                <option value="advanced">Avancé</option>
+                <option value="">{t("clients.detail.placeholder_select")}</option>
+                <option value="beginner">{t("clients.detail.level_beginner")}</option>
+                <option value="intermediate">{t("clients.detail.level_intermediate")}</option>
+                <option value="advanced">{t("clients.detail.level_advanced")}</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Objectif principal</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("clients.detail.label_primary_goal")}</Label>
               <select
                 value={profileForm.primaryGoal}
                 onChange={e => setProfileForm(p => ({ ...p, primaryGoal: e.target.value }))}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-white text-sm"
               >
-                <option value="">-- Sélectionner --</option>
-                <option value="strength">Force</option>
-                <option value="muscle">Prise de masse</option>
-                <option value="fat_loss">Perte de poids</option>
-                <option value="performance">Performance</option>
-                <option value="health">Santé</option>
-                <option value="aesthetic">Esthétique</option>
-                <option value="fitness">Forme générale</option>
+                <option value="">{t("clients.detail.placeholder_select")}</option>
+                <option value="strength">{t("clients.detail.goal_strength")}</option>
+                <option value="muscle">{t("clients.detail.goal_muscle")}</option>
+                <option value="fat_loss">{t("clients.detail.goal_fat_loss")}</option>
+                <option value="performance">{t("clients.detail.goal_performance")}</option>
+                <option value="health">{t("clients.detail.goal_health")}</option>
+                <option value="aesthetic">{t("clients.detail.goal_aesthetic")}</option>
+                <option value="fitness">{t("clients.detail.goal_fitness")}</option>
               </select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setProfileDialogOpen(false)} className="border-border">
-              Annuler
+              {t("clients.detail.btn_cancel")}
             </Button>
             <Button
               onClick={handleSaveProfile}
@@ -607,7 +617,7 @@ export default function ClientDetail() {
               className="bg-primary hover:bg-primary/90"
             >
               {updateProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Sauvegarder
+              {t("clients.detail.btn_save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -616,20 +626,20 @@ export default function ClientDetail() {
       <AlertDialog open={unlinkDialogOpen} onOpenChange={setUnlinkDialogOpen}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white font-display">Délier {client.firstName} ?</AlertDialogTitle>
+            <AlertDialogTitle className="text-white font-display">{t("clients.detail.unlink_dialog_title", { name: client.firstName })}</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              Cette action retirera {client.firstName} {client.lastName} de votre roster. L'athlète conservera son compte et son historique de données.
+              {t("clients.detail.unlink_dialog_desc", { fullName: `${client.firstName} ${client.lastName ?? ""}`.trim() })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">{t("clients.detail.btn_cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleUnlink}
               className="bg-destructive hover:bg-destructive/90 text-white"
               disabled={unlinkMutation.isPending}
             >
               {unlinkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Oui, délier
+              {t("clients.detail.btn_unlink_confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -641,7 +651,7 @@ export default function ClientDetail() {
           {client.activeAlerts.length > 0 && (
             <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-destructive font-bold uppercase tracking-wider">
-                <AlertTriangle className="w-5 h-5" /> Alertes actives
+                <AlertTriangle className="w-5 h-5" /> {t("clients.detail.active_alerts_title")}
               </div>
               <div className="grid gap-2">
                 {client.activeAlerts.map(alert => (
@@ -651,7 +661,7 @@ export default function ClientDetail() {
                       <span className="text-sm text-white">{alert.message}</span>
                     </div>
                     <Button size="sm" variant="ghost" className="text-xs text-muted-foreground hover:text-white" onClick={() => handleResolveAlert(alert.id)}>
-                      Résoudre <CheckCircle2 className="w-3 h-3 ml-1" />
+                      {t("clients.detail.btn_resolve")} <CheckCircle2 className="w-3 h-3 ml-1" />
                     </Button>
                   </div>
                 ))}
@@ -663,19 +673,19 @@ export default function ClientDetail() {
             <div className="lg:col-span-2 space-y-6">
               <Card className="bg-card border-border shadow-lg">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xl font-display tracking-widest text-white">ÉVOLUTION ADAPT SCORE</CardTitle>
+                  <CardTitle className="text-xl font-display tracking-widest text-white">{t("clients.detail.card_title_score_evolution")}</CardTitle>
                   <div className="flex items-center gap-1 bg-background p-1 rounded-md border border-border">
                     <button 
                       onClick={() => setChartRange(7)} 
                       className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 7 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
                     >
-                      7J
+                      {t("clients.detail.range_7d")}
                     </button>
                     <button 
                       onClick={() => setChartRange(30)} 
                       className={cn("px-3 py-1 text-xs font-medium rounded transition-colors", chartRange === 30 ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white")}
                     >
-                      30J
+                      {t("clients.detail.range_30d")}
                     </button>
                   </div>
                 </CardHeader>
@@ -698,13 +708,13 @@ export default function ClientDetail() {
                       </ResponsiveContainer>
                     </div>
                   ) : (
-                    <div className="h-[250px] flex items-center justify-center text-muted-foreground">Pas encore assez de données</div>
+                    <div className="h-[250px] flex items-center justify-center text-muted-foreground">{t("clients.detail.not_enough_data")}</div>
                   )}
                 </CardContent>
               </Card>
 
               <div>
-                <h3 className="text-sm font-display text-muted-foreground tracking-widest mb-3 uppercase">Forme du jour</h3>
+                <h3 className="text-sm font-display text-muted-foreground tracking-widest mb-3 uppercase">{t("clients.detail.form_today")}</h3>
                 {client.todayCheckin ? (
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {metrics.map(m => {
@@ -723,7 +733,7 @@ export default function ClientDetail() {
                   </div>
                 ) : (
                   <div className="bg-background border border-border p-6 rounded-xl text-center text-muted-foreground italic text-sm">
-                    Aucun check-in soumis aujourd'hui.
+                    {t("clients.detail.no_checkin_today")}
                   </div>
                 )}
               </div>
@@ -734,33 +744,33 @@ export default function ClientDetail() {
               {client.cycleTracking && (
                 <Card className="bg-card border border-[#A855F7]/30 shadow-lg">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-display tracking-widest text-[#A855F7]">CYCLE MENSTRUEL</CardTitle>
+                    <CardTitle className="text-base font-display tracking-widest text-[#A855F7]">{t("clients.detail.cycle_title")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     {client.lastPeriodDate ? (
                       <>
                         <div className="flex justify-between text-muted-foreground">
-                          <span>Dernières règles</span>
+                          <span>{t("clients.detail.cycle_last_period")}</span>
                           <span className="text-white font-mono">
                             {format(new Date(client.lastPeriodDate + "T12:00:00"), 'd MMM yyyy', { locale: fr })}
                           </span>
                         </div>
                         <div className="flex justify-between text-muted-foreground">
-                          <span>Durée du cycle</span>
+                          <span>{t("clients.detail.cycle_duration")}</span>
                           <span className="text-white font-mono">{client.avgCycleDays ?? 28} j</span>
                         </div>
                         {(() => {
                           const daysSince = Math.floor((Date.now() - new Date(client.lastPeriodDate + "T12:00:00").getTime()) / 86400000);
                           const cycle = client.avgCycleDays ?? 28;
                           const dayInCycle = ((daysSince % cycle) + cycle) % cycle + 1;
-                          let phase = "Lutéale";
+                          let phase = t("clients.detail.cycle_phase_luteal");
                           let phaseColor = "#F59E0B";
-                          if (dayInCycle <= 5) { phase = "Menstruelle"; phaseColor = "#EF4444"; }
-                          else if (dayInCycle <= 13) { phase = "Folliculaire"; phaseColor = "#22C55E"; }
-                          else if (dayInCycle <= 16) { phase = "Ovulatoire"; phaseColor = "#00F0FF"; }
+                          if (dayInCycle <= 5) { phase = t("clients.detail.cycle_phase_menstrual"); phaseColor = "#EF4444"; }
+                          else if (dayInCycle <= 13) { phase = t("clients.detail.cycle_phase_follicular"); phaseColor = "#22C55E"; }
+                          else if (dayInCycle <= 16) { phase = t("clients.detail.cycle_phase_ovulatory"); phaseColor = "#00F0FF"; }
                           return (
                             <div className="flex justify-between items-center pt-1">
-                              <span className="text-muted-foreground">Phase actuelle</span>
+                              <span className="text-muted-foreground">{t("clients.detail.cycle_phase")}</span>
                               <span className="font-semibold text-xs px-2 py-0.5 rounded-full" style={{ color: phaseColor, backgroundColor: `${phaseColor}20` }}>
                                 {phase} (J{dayInCycle})
                               </span>
@@ -769,7 +779,7 @@ export default function ClientDetail() {
                         })()}
                       </>
                     ) : (
-                      <p className="text-muted-foreground italic text-xs">Aucune date renseignée par l'athlète.</p>
+                      <p className="text-muted-foreground italic text-xs">{t("clients.detail.cycle_no_date")}</p>
                     )}
                   </CardContent>
                 </Card>
@@ -781,7 +791,7 @@ export default function ClientDetail() {
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-primary" />
-                      PLANNING
+                      {t("clients.detail.planning_title")}
                     </CardTitle>
                     <div className="flex items-center gap-2 flex-wrap">
                       {activeProgram && (
@@ -795,7 +805,7 @@ export default function ClientDetail() {
                           }}
                         >
                           <Plus className="w-3 h-3" />
-                          Ajouter une séance
+                          {t("clients.detail.btn_add_session")}
                         </Button>
                       )}
                       <button
@@ -859,7 +869,7 @@ export default function ClientDetail() {
                       }
 
                       const todayStr = new Date().toISOString().split("T")[0];
-                      const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+                      const DAY_HEADERS = t("clients.detail.day_headers", { returnObjects: true }) as string[];
 
                       const handleDayClick = (day: Date) => {
                         if (!activeProgram?.startDate) return;
@@ -926,12 +936,12 @@ export default function ClientDetail() {
                                               dateStr === todayStr ? "bg-primary/30 text-primary" :
                                               "bg-white/10 text-white"
                                             )}
-                                            title={`${s.sessionName}${s.sessionType ? ` · ${SESSION_TYPE_LABELS[s.sessionType] ?? s.sessionType}` : ""}`}
+                                            title={`${s.sessionName}${s.sessionType ? ` · ${sessionTypeLabel(s.sessionType)}` : ""}`}
                                           >
                                             <div className="truncate">{s.isCompleted ? "✓ " : ""}{s.sessionName}</div>
                                             {s.sessionType && (
                                               <div className="text-[8px] opacity-60 font-mono truncate">
-                                                {SESSION_TYPE_LABELS[s.sessionType] ?? s.sessionType}
+                                                {sessionTypeLabel(s.sessionType)}
                                               </div>
                                             )}
                                           </div>
@@ -951,12 +961,12 @@ export default function ClientDetail() {
                           </div>
                           {!activeProgram && (
                             <p className="text-xs text-muted-foreground text-center mt-3 italic">
-                              Aucun programme actif — créez un programme pour planifier des séances.
+                              {t("clients.detail.no_active_program_calendar")}
                             </p>
                           )}
                           {activeProgram && !activeProgram.startDate && (
                             <p className="text-xs text-muted-foreground text-center mt-3 italic">
-                              Le programme n'a pas de date de début définie.
+                              {t("clients.detail.program_no_start_date")}
                             </p>
                           )}
                         </div>
@@ -996,15 +1006,15 @@ export default function ClientDetail() {
                       return (
                         <div className="mt-4 pt-4 border-t border-border">
                           <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">
-                            Volume hebdomadaire
+                            {t("clients.detail.weekly_volume_title")}
                           </div>
                           <div className="flex items-center gap-4 mb-2">
                             <div className="text-xs text-muted-foreground">
-                              Ce mois : <span className="text-white font-medium">{thisMonthCount}</span> séances
+                              {t("clients.detail.this_month_sessions", { count: thisMonthCount })}
                             </div>
                             <div className={`flex items-center gap-1 text-xs ${trend === "up" ? "text-green-400" : trend === "down" ? "text-red-400" : "text-muted-foreground"}`}>
                               {trend === "up" ? <TrendingUp className="w-3 h-3" /> : trend === "down" ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                              <span>vs mois précédent ({lastMonthCount})</span>
+                              <span>{t("clients.detail.vs_last_month", { count: lastMonthCount })}</span>
                             </div>
                           </div>
                           {weekData.length >= 2 && (
@@ -1015,7 +1025,7 @@ export default function ClientDetail() {
                                   <YAxis tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
                                   <RechartsTooltip
                                     contentStyle={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
-                                    formatter={(v: number | string) => [`${v} séance${Number(v) > 1 ? "s" : ""}`, "Volume"]}
+                                    formatter={(v: number | string) => [t("clients.detail.session_count", { count: Number(v) }), t("clients.detail.volume_label")]}
                                     labelStyle={{ color: "#94a3b8" }}
                                   />
                                   <Bar dataKey="count" radius={[3, 3, 0, 0]}>
@@ -1066,7 +1076,7 @@ export default function ClientDetail() {
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                               <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                                RPE — Effort perçu
+                                {t("clients.detail.rpe_title")}
                               </div>
                               {avgRpe !== null && (
                                 <div className={cn(
@@ -1075,14 +1085,14 @@ export default function ClientDetail() {
                                   avgRpe > 6 ? "text-amber-400 border-amber-400/30 bg-amber-400/10" :
                                   "text-green-400 border-green-400/30 bg-green-400/10"
                                 )}>
-                                  moy. {avgRpe}/10
+                                  {t("clients.detail.rpe_avg", { value: avgRpe })}
                                 </div>
                               )}
                             </div>
                             {consecutiveHighRpe >= 3 && (
                               <div className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/30 px-2.5 py-1 rounded-full">
                                 <AlertTriangle className="w-3 h-3" />
-                                {consecutiveHighRpe} séances RPE &gt; 8 consécutives
+                                {t("clients.detail.rpe_consecutive_alert", { count: consecutiveHighRpe })}
                               </div>
                             )}
                           </div>
@@ -1094,7 +1104,7 @@ export default function ClientDetail() {
                                 <YAxis tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} domain={[0, 10]} ticks={[0, 5, 8, 10]} />
                                 <RechartsTooltip
                                   contentStyle={{ background: "#1A1A1A", border: "1px solid #333", borderRadius: 6, fontSize: 11 }}
-                                  formatter={(v: number | string) => [`${v}/10`, "RPE"]}
+                                  formatter={(v: number | string) => [`${v}/10`, t("clients.detail.tooltip_rpe_label")]}
                                   labelStyle={{ color: "#94a3b8" }}
                                 />
                                 <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="4 2" opacity={0.5} />
@@ -1122,7 +1132,7 @@ export default function ClientDetail() {
                     {client.recentSessions.length > 0 && (
                       <div className="mt-5 pt-4 border-t border-border">
                         <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
-                          Séances récentes — Charges réelles vs prescrites
+                          {t("clients.detail.recent_sessions_title")}
                         </div>
                         <div className="space-y-2">
                           {client.recentSessions.slice(0, 5).map(session => {
@@ -1139,11 +1149,11 @@ export default function ClientDetail() {
                                     <div>
                                       <div className="flex items-center gap-2">
                                         <div className="text-xs font-medium text-white">
-                                          {session.completedAt ? format(new Date(session.completedAt), 'd MMM yyyy', { locale: fr }) : 'Incomplète'}
+                                          {session.completedAt ? format(new Date(session.completedAt), 'd MMM yyyy', { locale: fr }) : t("clients.detail.session_incomplete")}
                                         </div>
                                         {session.isFreeSession && (
                                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium tracking-wider border bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
-                                            ⚡ LIBRE
+                                            {t("clients.detail.free_session_label")}
                                           </span>
                                         )}
                                       </div>
@@ -1182,33 +1192,33 @@ export default function ClientDetail() {
                                       </div>
                                     )}
                                     {detail === "error" && (
-                                      <p className="text-xs text-destructive py-3">Impossible de charger les détails.</p>
+                                      <p className="text-xs text-destructive py-3">{t("clients.detail.session_load_error")}</p>
                                     )}
                                     {detail && detail !== "loading" && detail !== "error" && (
                                       <div className="pt-3 space-y-3">
                                         {detail.durationMin && (
                                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                             <Clock className="w-3 h-3" />
-                                            Durée réelle : <span className="text-white font-medium">{detail.durationMin} min</span>
+                                            {t("clients.detail.real_duration")} <span className="text-white font-medium">{detail.durationMin} min</span>
                                           </div>
                                         )}
                                         {detail.athleteNotes && (
                                           <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
                                             <span className="mt-0.5">📝</span>
-                                            <span>Notes athlète : <span className="text-white/80 italic">"{detail.athleteNotes}"</span></span>
+                                            <span>{t("clients.detail.athlete_notes_label")} <span className="text-white/80 italic">"{detail.athleteNotes}"</span></span>
                                           </div>
                                         )}
                                         {detail.exercises.length === 0 ? (
-                                          <p className="text-xs text-muted-foreground italic">Aucun exercice enregistré.</p>
+                                          <p className="text-xs text-muted-foreground italic">{t("clients.detail.no_exercise_recorded")}</p>
                                         ) : (
                                           <div className="overflow-x-auto">
                                             <table className="w-full text-xs">
                                               <thead>
                                                 <tr className="text-muted-foreground font-mono uppercase text-[10px]">
-                                                  <th className="text-left pb-2 pr-3">Exercice</th>
-                                                  <th className="text-center pb-2 pr-2">Prescrit</th>
-                                                  <th className="text-center pb-2 pr-2">Réel</th>
-                                                  <th className="text-center pb-2">Écart</th>
+                                                  <th className="text-left pb-2 pr-3">{t("clients.detail.col_exercise")}</th>
+                                                  <th className="text-center pb-2 pr-2">{t("clients.detail.col_prescribed")}</th>
+                                                  <th className="text-center pb-2 pr-2">{t("clients.detail.col_actual")}</th>
+                                                  <th className="text-center pb-2">{t("clients.detail.col_diff")}</th>
                                                 </tr>
                                               </thead>
                                               <tbody className="divide-y divide-border/30">
@@ -1305,7 +1315,7 @@ export default function ClientDetail() {
                       {selectedCalSession.estimatedDurationMin && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="w-4 h-4" />
-                          Durée estimée : <span className="text-white font-medium">{selectedCalSession.estimatedDurationMin} min</span>
+                          {t("clients.detail.duration_estimated")} <span className="text-white font-medium">{selectedCalSession.estimatedDurationMin} min</span>
                         </div>
                       )}
                       <div className={cn(
@@ -1316,9 +1326,9 @@ export default function ClientDetail() {
                           ? "text-destructive border-destructive/30 bg-destructive/10"
                           : "text-accent border-accent/30 bg-accent/10"
                       )}>
-                        {selectedCalSession.isCompleted ? "✓ Séance réalisée" :
-                         selectedCalSession.scheduledDate < new Date().toISOString().split("T")[0] ? "✗ Séance manquée" :
-                         "⏳ À venir"}
+                        {selectedCalSession.isCompleted ? t("clients.detail.session_done") :
+                         selectedCalSession.scheduledDate < new Date().toISOString().split("T")[0] ? t("clients.detail.session_missed") :
+                         t("clients.detail.session_upcoming")}
                       </div>
                     </div>
                   )}
@@ -1327,12 +1337,12 @@ export default function ClientDetail() {
                       <Link href={`/programs/${activeProgram.id}`} onClick={() => setSelectedCalSession(null)}>
                         <Button size="sm" variant="outline" className="border-border gap-1.5 text-muted-foreground hover:text-white">
                           <ExternalLink className="w-3.5 h-3.5" />
-                          Modifier dans le programme
+                          {t("clients.detail.edit_in_program")}
                         </Button>
                       </Link>
                     )}
                     <Button size="sm" onClick={() => setSelectedCalSession(null)} className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20">
-                      Fermer
+                      {t("clients.detail.close")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1344,12 +1354,12 @@ export default function ClientDetail() {
                   <DialogHeader>
                     <DialogTitle className="text-white font-display text-lg flex items-center gap-2">
                       <Plus className="w-5 h-5 text-primary" />
-                      Ajouter une séance
+                      {t("clients.detail.btn_add_session")}
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
                     <div className="space-y-1.5">
-                      <Label className="text-sm text-muted-foreground">Date de la séance</Label>
+                      <Label className="text-sm text-muted-foreground">{t("clients.detail.session_date_label")}</Label>
                       <Input
                         type="date"
                         value={addDateValue}
@@ -1366,17 +1376,17 @@ export default function ClientDetail() {
                           const target = new Date(addDateValue + "T12:00:00");
                           target.setHours(0, 0, 0, 0);
                           const diff = Math.floor((target.getTime() - progStart.getTime()) / 86400000);
-                          if (diff < 0) return "Date antérieure au début du programme";
+                          if (diff < 0) return t("clients.detail.date_before_program_start");
                           const weekNumber = Math.floor(diff / 7) + 1;
                           const dayNumber = (diff % 7) + 1;
-                          return `Semaine ${weekNumber}, Jour ${dayNumber} du programme`;
+                          return t("clients.detail.week_day_program", { week: weekNumber, day: dayNumber });
                         })()}
                       </p>
                     )}
                   </div>
                   <DialogFooter>
                     <Button size="sm" variant="ghost" onClick={() => setAddDateOpen(false)}>
-                      Annuler
+                      {t("clients.detail.btn_cancel")}
                     </Button>
                     <Button
                       size="sm"
@@ -1396,7 +1406,7 @@ export default function ClientDetail() {
                         setAddSessionSlot({ weekNumber, dayNumber });
                       }}
                     >
-                      Continuer
+                      {t("clients.detail.continue")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1424,31 +1434,31 @@ export default function ClientDetail() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-display tracking-widest text-white flex items-center gap-2">
                     <Dumbbell className="w-4 h-4 text-primary" />
-                    CONTEXTE D'ENTRAÎNEMENT
+                    {t("clients.detail.training_context_title")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   {extClient?.trainingContext !== null && client.fitnessLevel && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
-                      <span className="text-muted-foreground">Niveau</span>
-                      <span className="text-white font-medium capitalize">{LEVEL_LABELS[client.fitnessLevel] ?? client.fitnessLevel}</span>
+                      <span className="text-muted-foreground">{t("clients.detail.ctx_level")}</span>
+                      <span className="text-white font-medium capitalize">{levelLabel(client.fitnessLevel)}</span>
                     </div>
                   )}
                   {extClient?.trainingContext !== null && client.primaryGoal && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
-                      <span className="text-muted-foreground">Objectif principal</span>
-                      <span className="text-white font-medium">{GOAL_LABELS[client.primaryGoal] ?? client.primaryGoal}</span>
+                      <span className="text-muted-foreground">{t("clients.detail.ctx_primary_goal")}</span>
+                      <span className="text-white font-medium">{goalLabel(client.primaryGoal)}</span>
                     </div>
                   )}
                   {extClient?.trainingContext !== null && extClient?.secondaryGoal && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
-                      <span className="text-muted-foreground">Objectif secondaire</span>
+                      <span className="text-muted-foreground">{t("clients.detail.ctx_secondary_goal")}</span>
                       <span className="text-white font-medium capitalize">{extClient.secondaryGoal.replace(/_/g, " ")}</span>
                     </div>
                   )}
                   {(extClient?.trainingContext?.availableDays?.length ?? 0) > 0 && (
                     <div className="py-1.5 border-b border-border/60">
-                      <div className="text-muted-foreground mb-1.5">Jours disponibles</div>
+                      <div className="text-muted-foreground mb-1.5">{t("clients.detail.ctx_available_days")}</div>
                       <div className="flex flex-wrap gap-1">
                         {(["lun","mar","mer","jeu","ven","sam","dim"] as const).map(d => {
                           const isActive = extClient?.trainingContext?.availableDays.includes(d) ?? false;
@@ -1464,10 +1474,10 @@ export default function ClientDetail() {
                   )}
                   {(extClient?.trainingContext?.trainingLocations?.length ?? 0) > 0 && (
                     <div className="py-1.5 border-b border-border/60">
-                      <div className="text-muted-foreground mb-1.5">Lieu</div>
+                      <div className="text-muted-foreground mb-1.5">{t("clients.detail.ctx_location")}</div>
                       <div className="flex flex-wrap gap-1">
                         {(extClient?.trainingContext?.trainingLocations ?? []).map((loc) => {
-                          const label = loc === "gym" ? "Salle" : loc === "home" ? "Maison" : loc === "outdoor" ? "Extérieur" : loc;
+                          const label = t(`clients.detail.location_${loc}`, { defaultValue: loc });
                           return (
                             <span key={loc} className="px-2 py-0.5 rounded text-[11px] font-medium bg-accent/10 text-accent border border-accent/20">{label}</span>
                           );
@@ -1477,10 +1487,10 @@ export default function ClientDetail() {
                   )}
                   {(extClient?.trainingContext?.equipment?.length ?? 0) > 0 && (
                     <div className="py-1.5 border-b border-border/60">
-                      <div className="text-muted-foreground mb-1.5">Équipement</div>
+                      <div className="text-muted-foreground mb-1.5">{t("clients.detail.ctx_equipment")}</div>
                       <div className="flex flex-wrap gap-1">
                         {(extClient?.trainingContext?.equipment ?? []).map((eq) => {
-                          const label = ({ barbell:"Barre", dumbbell:"Haltères", kettlebell:"Kettlebell", machine:"Machines", cable:"Poulie", bodyweight:"Poids du corps", bands:"Élastiques", trx:"TRX" } as Record<string,string>)[eq] ?? eq;
+                          const label = t(`clients.detail.equipment_${eq}`, { defaultValue: eq });
                           return (
                             <span key={eq} className="px-2 py-0.5 rounded text-[11px] font-medium bg-white/5 text-muted-foreground border border-border/40">{label}</span>
                           );
@@ -1490,7 +1500,7 @@ export default function ClientDetail() {
                   )}
                   {(extClient?.trainingContext?.sessionDurationMin || extClient?.trainingContext?.sessionDurationMax) && (
                     <div className="flex justify-between items-center py-1.5 border-b border-border/60">
-                      <span className="text-muted-foreground">Durée séance</span>
+                      <span className="text-muted-foreground">{t("clients.detail.ctx_session_duration")}</span>
                       <span className="text-white font-medium">
                         {extClient?.trainingContext?.sessionDurationMin && extClient?.trainingContext?.sessionDurationMax
                           ? `${extClient.trainingContext.sessionDurationMin}–${extClient.trainingContext.sessionDurationMax} min`
@@ -1502,7 +1512,7 @@ export default function ClientDetail() {
                   )}
                   {extClient?.trainingContext?.injuries && (
                     <div className="py-1.5">
-                      <div className="text-muted-foreground mb-1">Blessures / Restrictions</div>
+                      <div className="text-muted-foreground mb-1">{t("clients.detail.ctx_injuries")}</div>
                       <p className="text-white/80 text-xs italic leading-relaxed">
                         {extClient.trainingContext.injuries}
                       </p>
@@ -1510,7 +1520,7 @@ export default function ClientDetail() {
                   )}
                   {!client?.fitnessLevel && !client?.primaryGoal && !(extClient?.trainingContext?.availableDays?.length) && (
                     <p className="text-muted-foreground text-xs italic text-center py-2">
-                      L'athlète n'a pas encore renseigné son contexte d'entraînement.
+                      {t("clients.detail.ctx_no_data")}
                     </p>
                   )}
                 </CardContent>
@@ -1524,7 +1534,7 @@ export default function ClientDetail() {
       {activeTab === "tests" && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-display text-white">TESTS DE PERFORMANCE</h2>
+            <h2 className="text-xl font-display text-white">{t("clients.detail.tests_title")}</h2>
             <Button
               onClick={() => {
                 setTestForm({ testType: "1rm_squat", customType: "", exerciseName: "", value: "", unit: "kg", testedAt: new Date().toISOString().split("T")[0], notes: "" });
@@ -1533,7 +1543,7 @@ export default function ClientDetail() {
               className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 gap-1.5"
               size="sm"
             >
-              <Plus className="w-4 h-4" /> Nouveau test
+              <Plus className="w-4 h-4" /> {t("clients.detail.btn_new_test")}
             </Button>
           </div>
 
@@ -1544,8 +1554,8 @@ export default function ClientDetail() {
           ) : tests !== null && tests.length === 0 ? (
             <div className="bg-card border border-border rounded-xl p-12 text-center">
               <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
-              <p className="text-white font-medium mb-1">Aucun test enregistré</p>
-              <p className="text-muted-foreground text-sm">Ajoutez le premier test de performance pour commencer le suivi.</p>
+              <p className="text-white font-medium mb-1">{t("clients.detail.no_tests_recorded")}</p>
+              <p className="text-muted-foreground text-sm">{t("clients.detail.no_tests_hint")}</p>
             </div>
           ) : tests !== null && tests.length > 0 ? (() => {
             const testTypes = Array.from(new Set(tests.map(t => t.testType)));
@@ -1567,10 +1577,9 @@ export default function ClientDetail() {
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Type selector sidebar */}
                 <div className="lg:col-span-1 space-y-1">
-                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Type de test</p>
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">{t("clients.detail.test_type_sidebar")}</p>
                   {testTypes.map(type => {
-                    const p = PREDEFINED_TEST_TYPES.find(pp => pp.value === type);
-                    const label = p?.label ?? type.replace(/_/g, " ");
+                    const label = testTypeLabel(type);
                     const typeRecords = tests.filter(t => t.testType === type);
                     const lastRecord = typeRecords.sort((a, b) => b.testedAt.localeCompare(a.testedAt))[0];
                     return (
@@ -1608,7 +1617,7 @@ export default function ClientDetail() {
                             {delta !== null && (
                               <div className={cn("text-xs flex items-center justify-end gap-0.5 font-mono", delta > 0 ? "text-primary" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
                                 {delta > 0 ? <TrendingUp className="w-3 h-3" /> : delta < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                                {delta > 0 ? "+" : ""}{delta.toFixed(1)} vs précédent
+                                {delta > 0 ? "+" : ""}{delta.toFixed(1)} {t("clients.detail.delta_vs_prev")}
                               </div>
                             )}
                           </div>
@@ -1633,7 +1642,7 @@ export default function ClientDetail() {
                         </div>
                       ) : (
                         <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground italic">
-                          2 mesures minimum pour afficher le graphique
+                          {t("clients.detail.chart_min_2")}
                         </div>
                       )}
                     </CardContent>
@@ -1642,7 +1651,7 @@ export default function ClientDetail() {
                   {/* History table */}
                   <Card className="bg-card border-border">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-mono text-muted-foreground uppercase tracking-wider">Historique</CardTitle>
+                      <CardTitle className="text-sm font-mono text-muted-foreground uppercase tracking-wider">{t("clients.detail.history_title")}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                       {/* Mobile: cards */}
@@ -1671,7 +1680,7 @@ export default function ClientDetail() {
                               <button
                                 onClick={() => setDeleteTestId(test.id)}
                                 className="p-2 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                                aria-label="Supprimer le test"
+                                aria-label={t("clients.detail.delete_test_aria")}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1684,9 +1693,9 @@ export default function ClientDetail() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b border-border">
-                              <th className="text-left py-2 px-4 text-xs font-mono text-muted-foreground uppercase">Date</th>
-                              <th className="text-right py-2 px-4 text-xs font-mono text-muted-foreground uppercase">Résultat</th>
-                              <th className="text-right py-2 px-4 text-xs font-mono text-muted-foreground uppercase">Variation</th>
+                              <th className="text-left py-2 px-4 text-xs font-mono text-muted-foreground uppercase">{t("clients.detail.col_date")}</th>
+                              <th className="text-right py-2 px-4 text-xs font-mono text-muted-foreground uppercase">{t("clients.detail.col_result")}</th>
+                              <th className="text-right py-2 px-4 text-xs font-mono text-muted-foreground uppercase">{t("clients.detail.col_variation")}</th>
                               <th className="py-2 px-4" />
                             </tr>
                           </thead>
@@ -1738,11 +1747,11 @@ export default function ClientDetail() {
           <Dialog open={addTestOpen} onOpenChange={o => !o && setAddTestOpen(false)}>
             <DialogContent className="bg-card border-border max-w-md">
               <DialogHeader>
-                <DialogTitle className="font-display text-xl text-white tracking-widest">NOUVEAU TEST</DialogTitle>
+                <DialogTitle className="font-display text-xl text-white tracking-widest">{t("clients.detail.dialog_new_test")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Type de test</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t("clients.detail.label_test_type")}</Label>
                   <select
                     value={testForm.testType}
                     onChange={e => {
@@ -1752,24 +1761,24 @@ export default function ClientDetail() {
                     className="w-full bg-background border border-border rounded-md px-3 py-2 text-white text-sm"
                   >
                     {PREDEFINED_TEST_TYPES.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
+                      <option key={p.value} value={p.value}>{testTypeLabel(p.value)}</option>
                     ))}
                   </select>
                 </div>
                 {testForm.testType === "custom" && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">Nom du test</Label>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t("clients.detail.label_test_name")}</Label>
                     <Input
                       value={testForm.customType}
                       onChange={e => setTestForm(f => ({ ...f, customType: e.target.value }))}
-                      placeholder="Ex: Test Yo-Yo"
+                      placeholder={t("clients.detail.placeholder_test_name")}
                       className="bg-background border-border text-white"
                     />
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">Résultat</Label>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t("clients.detail.label_result")}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -1780,17 +1789,17 @@ export default function ClientDetail() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">Unité</Label>
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t("clients.detail.label_unit")}</Label>
                     <Input
                       value={testForm.unit}
                       onChange={e => setTestForm(f => ({ ...f, unit: e.target.value }))}
-                      placeholder="kg / reps / s / m"
+                      placeholder={t("clients.detail.placeholder_unit")}
                       className="bg-background border-border text-white"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Date du test</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t("clients.detail.label_test_date")}</Label>
                   <Input
                     type="date"
                     value={testForm.testedAt}
@@ -1799,24 +1808,24 @@ export default function ClientDetail() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Notes (optionnel)</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">{t("clients.detail.label_notes_optional")}</Label>
                   <Input
                     value={testForm.notes}
                     onChange={e => setTestForm(f => ({ ...f, notes: e.target.value }))}
-                    placeholder="Conditions, observations…"
+                    placeholder={t("clients.detail.placeholder_notes")}
                     className="bg-background border-border text-white"
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setAddTestOpen(false)} className="border-border">Annuler</Button>
+                <Button variant="outline" onClick={() => setAddTestOpen(false)} className="border-border">{t("clients.detail.btn_cancel")}</Button>
                 <Button
                   onClick={handleAddTest}
                   disabled={testSaving || !testForm.value || !testForm.unit}
                   className="bg-primary text-black hover:bg-primary/90"
                 >
                   {testSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Enregistrer
+                  {t("clients.detail.btn_save_record")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1826,18 +1835,18 @@ export default function ClientDetail() {
           <AlertDialog open={!!deleteTestId} onOpenChange={o => !o && setDeleteTestId(null)}>
             <AlertDialogContent className="bg-card border-border">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-white font-display">Supprimer ce test ?</AlertDialogTitle>
-                <AlertDialogDescription>Cette mesure sera définitivement supprimée.</AlertDialogDescription>
+                <AlertDialogTitle className="text-white font-display">{t("clients.detail.delete_test_title")}</AlertDialogTitle>
+                <AlertDialogDescription>{t("clients.detail.delete_test_desc")}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+                <AlertDialogCancel className="border-border">{t("clients.detail.btn_cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-white hover:bg-destructive/90"
                   onClick={() => deleteTestId && handleDeleteTest(deleteTestId)}
                   disabled={testDeleting}
                 >
                   {testDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Supprimer
+                  {t("clients.detail.btn_delete")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1859,17 +1868,17 @@ export default function ClientDetail() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-display text-white">{activeProgram.name}</h2>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary uppercase tracking-wider">Actif</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary uppercase tracking-wider">{t("clients.detail.program_active")}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {activeProgram.durationWeeks} semaine{activeProgram.durationWeeks !== 1 ? "s" : ""}
-                    {activeProgram.startDate && ` · Démarré le ${format(new Date(activeProgram.startDate + "T12:00:00"), 'd MMMM yyyy', { locale: fr })}`}
+                    {t("clients.detail.program_weeks", { count: activeProgram.durationWeeks })}
+                    {activeProgram.startDate && ` · ${t("clients.detail.program_started_on", { date: format(new Date(activeProgram.startDate + "T12:00:00"), 'd MMMM yyyy', { locale: fr }) })}`}
                   </p>
                 </div>
                 <Link href={`/programs/${activeProgram.id}`}>
                   <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:text-white gap-1.5">
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Vue complète
+                    {t("clients.detail.program_full_view")}
                   </Button>
                 </Link>
               </div>
@@ -1878,11 +1887,11 @@ export default function ClientDetail() {
           ) : (
             <div className="bg-card border border-border rounded-xl p-8 text-center">
               <Dumbbell className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
-              <p className="text-white font-medium mb-1">Aucun programme actif</p>
-              <p className="text-muted-foreground text-sm mb-4">Activez un programme ci-dessous ou créez-en un nouveau.</p>
+              <p className="text-white font-medium mb-1">{t("clients.detail.program_no_active")}</p>
+              <p className="text-muted-foreground text-sm mb-4">{t("clients.detail.program_no_active_hint")}</p>
               <Link href="/programs">
                 <Button className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20">
-                  Créer un programme
+                  {t("clients.detail.btn_create_program")}
                 </Button>
               </Link>
             </div>
@@ -1890,16 +1899,16 @@ export default function ClientDetail() {
 
           {inactivePrograms.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-display text-muted-foreground tracking-widest uppercase">Autres programmes</h3>
+              <h3 className="text-sm font-display text-muted-foreground tracking-widest uppercase">{t("clients.detail.other_programs")}</h3>
               <div className="grid gap-3">
                 {inactivePrograms.map(prog => (
                   <div key={prog.id} className="flex items-center justify-between bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-colors">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-white truncate">{prog.name}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {prog.durationWeeks} sem.
-                        {prog.startDate ? ` · Démarré le ${format(new Date(prog.startDate + "T12:00:00"), 'd MMM yyyy', { locale: fr })}` : " · Pas encore démarré"}
-                        {(prog.sessionCount ?? 0) > 0 && ` · ${prog.sessionCount} séance${(prog.sessionCount ?? 0) > 1 ? "s" : ""}`}
+                        {t("clients.detail.program_short_weeks", { count: prog.durationWeeks })}
+                        {prog.startDate ? ` · ${t("clients.detail.program_started_on", { date: format(new Date(prog.startDate + "T12:00:00"), 'd MMM yyyy', { locale: fr }) })}` : ` · ${t("clients.detail.program_not_started")}`}
+                        {(prog.sessionCount ?? 0) > 0 && ` · ${t("clients.detail.session_count", { count: prog.sessionCount ?? 0 })}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
@@ -1913,7 +1922,7 @@ export default function ClientDetail() {
                         onClick={() => openActivateDialog(prog.id)}
                         className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 h-8 text-xs"
                       >
-                        Activer
+                        {t("clients.detail.btn_activate")}
                       </Button>
                     </div>
                   </div>
@@ -1927,11 +1936,11 @@ export default function ClientDetail() {
       <Dialog open={activateDialogOpen} onOpenChange={setActivateDialogOpen}>
         <DialogContent className="bg-card border-border max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white font-display text-xl">ACTIVER LE PROGRAMME</DialogTitle>
+            <DialogTitle className="text-white font-display text-xl">{t("clients.detail.dialog_activate_title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Date de début</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("clients.detail.label_start_date")}</Label>
               <Input
                 type="date"
                 value={activateStartDate}
@@ -1939,11 +1948,11 @@ export default function ClientDetail() {
                 className="bg-background border-border text-white"
               />
             </div>
-            <p className="text-xs text-muted-foreground">Le programme actif actuel sera désactivé automatiquement.</p>
+            <p className="text-xs text-muted-foreground">{t("clients.detail.dialog_activate_desc")}</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActivateDialogOpen(false)} className="border-border">
-              Annuler
+              {t("clients.detail.btn_cancel")}
             </Button>
             <Button
               onClick={handleActivateProgram}
@@ -1951,7 +1960,7 @@ export default function ClientDetail() {
               className="bg-primary hover:bg-primary/90"
             >
               {activating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Activer
+              {t("clients.detail.btn_activate")}
             </Button>
           </DialogFooter>
         </DialogContent>

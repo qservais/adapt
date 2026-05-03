@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useParams, Link, useLocation } from "wouter";
@@ -146,6 +147,7 @@ function DuplicateDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [targetWeek, setTargetWeek] = useState(session.weekNumber);
   const [targetDay, setTargetDay] = useState(session.dayNumber);
   const addMutation = useAddProgramSession();
@@ -175,7 +177,7 @@ function DuplicateDialog({
       toast({ title: `« ${session.name} » → S${targetWeek} / ${DAY_NAMES[targetDay - 1]}` });
       onSaved();
     } catch {
-      toast({ title: "Échec de la duplication", variant: "destructive" });
+      toast({ title: t("programs.duplicate_failed"), variant: "destructive" });
     }
   };
 
@@ -184,21 +186,21 @@ function DuplicateDialog({
       <DialogContent className="bg-card border-border max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl tracking-widest text-white">
-            DUPLIQUER LA SÉANCE
+            {t("programs.duplicate_session_title")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="p-3 rounded-lg bg-white/5 border border-border">
             <p className="text-sm font-semibold text-white">{session.name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Source : S{session.weekNumber} / {DAY_NAMES[session.dayNumber - 1]}
+              {t("programs.source_label")} S{session.weekNumber} / {DAY_NAMES[session.dayNumber - 1]}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                Semaine cible
+                {t("programs.label_target_week")}
               </label>
               <Input
                 type="number"
@@ -211,7 +213,7 @@ function DuplicateDialog({
             </div>
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                Jour cible
+                {t("programs.label_target_day")}
               </label>
               <Select value={String(targetDay)} onValueChange={(v) => setTargetDay(+v)}>
                 <SelectTrigger className="bg-background border-border">
@@ -230,7 +232,7 @@ function DuplicateDialog({
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="border-border flex-1" onClick={onClose}>
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
@@ -242,7 +244,7 @@ function DuplicateDialog({
               ) : (
                 <>
                   <Copy className="w-4 h-4 mr-2" />
-                  Dupliquer
+                  {t("programs.btn_duplicate")}
                 </>
               )}
             </Button>
@@ -270,6 +272,7 @@ function EditorSessionCard({
   onRefetch: () => void;
   onCopy?: (session: SessionWithVariants) => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
@@ -288,10 +291,10 @@ function EditorSessionCard({
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync({ programId, sessionId: session.id });
-      toast({ title: "Séance supprimée" });
+      toast({ title: t("programs.session_deleted_toast") });
       onRefetch();
     } catch {
-      toast({ title: "Échec de la suppression", variant: "destructive" });
+      toast({ title: t("programs.delete_failed"), variant: "destructive" });
     }
   };
 
@@ -313,7 +316,7 @@ function EditorSessionCard({
                   type="button"
                   onClick={() => onCopy(session)}
                   className="p-1 rounded hover:bg-accent/20 transition-colors"
-                  title="Copier dans le presse-papier"
+                  title={t("programs.title_copy_clipboard")}
                 >
                   <ClipboardPaste className="w-3 h-3 text-accent" />
                 </button>
@@ -322,7 +325,7 @@ function EditorSessionCard({
                 type="button"
                 onClick={() => setDupOpen(true)}
                 className="p-1 rounded hover:bg-primary/20 transition-colors"
-                title="Dupliquer"
+                title={t("programs.btn_duplicate")}
               >
                 <Copy className="w-3 h-3 text-primary" />
               </button>
@@ -330,7 +333,7 @@ function EditorSessionCard({
                 type="button"
                 onClick={() => setEditOpen(true)}
                 className="p-1 rounded hover:bg-white/10 transition-colors"
-                title="Modifier"
+                title={t("common.edit")}
               >
                 <Pencil className="w-3 h-3 text-white" />
               </button>
@@ -338,7 +341,7 @@ function EditorSessionCard({
                 type="button"
                 onClick={() => setDeleteOpen(true)}
                 className="p-1 rounded hover:bg-destructive/20 transition-colors"
-                title="Supprimer"
+                title={t("common.delete")}
               >
                 <Trash2 className="w-3 h-3 text-destructive" />
               </button>
@@ -372,7 +375,7 @@ function EditorSessionCard({
                   type="button"
                   onClick={() => setExpanded((e) => !e)}
                   className="p-0.5 rounded hover:bg-white/10 transition-colors"
-                  title={expanded ? "Réduire" : "Voir les exercices"}
+                  title={expanded ? t("programs.title_collapse") : t("programs.title_view_exercises")}
                 >
                   {expanded ? (
                     <ChevronUp className="w-3 h-3 text-muted-foreground" />
@@ -432,14 +435,14 @@ function EditorSessionCard({
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-xl text-white">
-              Supprimer la séance ?
+              {t("programs.delete_session_title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action supprimera définitivement « {session.name} » du programme.
+              {t("programs.delete_session_desc", { name: session.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDelete}
@@ -448,7 +451,7 @@ function EditorSessionCard({
               {deleteMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Supprimer"
+                t("common.delete")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -473,6 +476,7 @@ function AddSessionButton({
   copiedSession?: SessionWithVariants | null;
   onPaste?: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [pasting, setPasting] = useState(false);
 
@@ -495,7 +499,7 @@ function AddSessionButton({
             onClick={handlePaste}
             disabled={pasting}
             className="w-full h-8 rounded-lg border border-dashed border-accent/40 hover:border-accent hover:bg-accent/10 transition-all group flex items-center justify-center gap-1"
-            title={`Coller « ${copiedSession.name} »`}
+            title={t("programs.title_paste_session", { name: copiedSession.name })}
           >
             {pasting ? (
               <Loader2 className="w-3 h-3 animate-spin text-accent" />
@@ -573,6 +577,7 @@ function isTodayCell(isToday?: boolean): string {
 }
 
 export default function ProgramDetail() {
+  const { t } = useTranslation();
   const { id: programId } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { data: program, isLoading, refetch } = useGetProgram(programId!, {
@@ -603,11 +608,11 @@ export default function ProgramDetail() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
         body: JSON.stringify({ enabled: newEnabled }),
       });
-      if (!res.ok) throw new Error("Erreur serveur");
-      toast({ title: newEnabled ? "Programme envoyé en aperçu à l'athlète" : "Aperçu désactivé" });
+      if (!res.ok) throw new Error("Server error");
+      toast({ title: newEnabled ? t("programs.preview_sent_toast") : t("programs.preview_disabled_toast") });
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     } catch {
-      toast({ title: "Erreur lors du changement d'aperçu", variant: "destructive" });
+      toast({ title: t("programs.preview_change_error"), variant: "destructive" });
     } finally {
       setTogglingPreview(false);
     }
@@ -680,21 +685,21 @@ export default function ProgramDetail() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
         body: JSON.stringify({ weekNumber, dayNumber }),
       });
-      if (!res.ok) throw new Error("Erreur serveur");
-      toast({ title: `Séance déplacée → S${weekNumber} / ${DAY_NAMES[dayNumber - 1]}` });
+      if (!res.ok) throw new Error("Server error");
+      toast({ title: t("programs.session_moved_toast", { week: weekNumber, day: DAY_NAMES[dayNumber - 1] }) });
       refetch();
     } catch {
-      toast({ title: "Échec du déplacement", variant: "destructive" });
+      toast({ title: t("programs.move_failed"), variant: "destructive" });
     }
   }, [programId, program, refetch, toast]);
 
   const handleDeleteProgram = async () => {
     try {
       await deleteProgramMutation.mutateAsync({ programId: programId! });
-      toast({ title: "Programme supprimé" });
+      toast({ title: t("programs.program_deleted_toast") });
       navigate("/programs");
     } catch {
-      toast({ title: "Échec de la suppression", variant: "destructive" });
+      toast({ title: t("programs.delete_failed"), variant: "destructive" });
     }
   };
 
@@ -703,10 +708,10 @@ export default function ProgramDetail() {
     setSavingAsTemplate(true);
     try {
       const tmpl = await saveAsTemplate(programId);
-      toast({ title: `Modèle « ${tmpl.name} » créé`, description: "Disponible dans l'onglet Mes modèles." });
+      toast({ title: t("programs.template_saved_toast", { name: tmpl.name }), description: t("programs.template_saved_desc") });
       queryClient.invalidateQueries({ queryKey: ["/api/programs/templates"] });
     } catch {
-      toast({ title: "Échec de la création du modèle", variant: "destructive" });
+      toast({ title: t("programs.template_save_failed"), variant: "destructive" });
     } finally {
       setSavingAsTemplate(false);
     }
@@ -722,11 +727,11 @@ export default function ProgramDetail() {
         durationWeeks: nextWeek,
         startDate: program.startDate || undefined,
       });
-      toast({ title: `Semaine ${nextWeek} ajoutée` });
+      toast({ title: t("programs.week_added_toast", { week: nextWeek }) });
       setCurrentWeek(nextWeek);
       refetch();
     } catch {
-      toast({ title: "Échec", variant: "destructive" });
+      toast({ title: t("library.delete_error_generic"), variant: "destructive" });
     }
   }, [program, programId, totalWeeks, refetch, toast]);
 
@@ -752,18 +757,18 @@ export default function ProgramDetail() {
           blocks: sessionToBlocksPayload(s),
         });
       }
-      toast({ title: `Semaine ${safeCurrentWeek} → S${nextWeek}` });
+      toast({ title: `${t("programs.label_week")} ${safeCurrentWeek} → S${nextWeek}` });
       setCurrentWeek(nextWeek);
       refetch();
     } catch {
-      toast({ title: "Échec de la duplication", variant: "destructive" });
+      toast({ title: t("programs.duplicate_failed"), variant: "destructive" });
     }
   }, [program, programId, safeCurrentWeek, totalWeeks, refetch, toast]);
 
   const handleCopySession = useCallback((session: SessionWithVariants) => {
     setCopiedSession(session);
-    toast({ title: `« ${session.name} » copié`, description: "Cliquez sur une case vide pour coller." });
-  }, [toast]);
+    toast({ title: t("programs.session_copied_toast", { name: session.name }), description: t("programs.session_copied_desc") });
+  }, [toast, t]);
 
   const makePasteHandler = useCallback((weekNumber: number, dayNumber: number) => async () => {
     if (!copiedSession || !programId) return;
@@ -784,12 +789,12 @@ export default function ProgramDetail() {
         coachNotes: copiedSession.coachNotes ?? undefined,
         blocks: sessionToBlocksPayload(copiedSession),
       });
-      toast({ title: `« ${copiedSession.name} » collé → S${weekNumber} / ${DAY_NAMES[dayNumber - 1]}` });
+      toast({ title: t("programs.session_pasted_toast", { name: copiedSession.name, week: weekNumber, day: DAY_NAMES[dayNumber - 1] }) });
       refetch();
     } catch {
-      toast({ title: "Échec du collage", variant: "destructive" });
+      toast({ title: t("programs.paste_failed"), variant: "destructive" });
     }
-  }, [copiedSession, programId, program, totalWeeks, refetch, toast]);
+  }, [copiedSession, programId, program, totalWeeks, refetch, toast, t]);
 
   if (isLoading) {
     return (
@@ -802,10 +807,10 @@ export default function ProgramDetail() {
   if (!program) {
     return (
       <div className="text-center py-20">
-        <p className="text-muted-foreground">Programme introuvable.</p>
+        <p className="text-muted-foreground">{t("programs.program_not_found")}</p>
         <Link href="/programs">
           <Button variant="ghost" className="mt-4">
-            Retour aux programmes
+            {t("programs.btn_back_to_programs")}
           </Button>
         </Link>
       </div>
@@ -828,12 +833,12 @@ export default function ProgramDetail() {
               <h1 className="text-3xl font-display text-white">{program.name}</h1>
               {program.isTemplate && (
                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-accent/30 text-accent bg-accent/10 mt-1">
-                  MODÈLE
+                  {t("programs.card_template_label")}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground font-mono">
-              <span>{totalWeeks} semaines</span>
+              <span>{t("programs.weeks_long_count", { count: totalWeeks })}</span>
               {!program.isTemplate && program.athleteId && (
                 <>
                   <span>•</span>
@@ -841,14 +846,14 @@ export default function ProgramDetail() {
                     href={`/clients/${program.athleteId}`}
                     className="hover:text-primary transition-colors"
                   >
-                    {athleteName ?? "Voir l'athlète"}
+                    {athleteName ?? t("programs.view_athlete")}
                   </Link>
                 </>
               )}
               {!program.isTemplate && program.isActive && (
                 <span className="text-primary flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
-                  Actif
+                  {t("programs.active_status")}
                 </span>
               )}
             </div>
@@ -864,8 +869,8 @@ export default function ProgramDetail() {
               onClick={handlePreviewToggle}
               title={
                 programSummary?.previewEnabled
-                  ? "Désactiver — l'athlète ne verra plus ce programme dans son app"
-                  : "Activer — l'athlète pourra voir le programme dans son app avant son démarrage"
+                  ? t("programs.title_preview_off")
+                  : t("programs.title_preview_on")
               }
               className={
                 programSummary?.previewEnabled
@@ -880,12 +885,12 @@ export default function ProgramDetail() {
               ) : (
                 <Eye className="w-4 h-4 mr-2" />
               )}
-              {programSummary?.previewEnabled ? "Retirer l'aperçu" : "Envoyer en aperçu"}
+              {programSummary?.previewEnabled ? t("programs.btn_remove_preview_long") : t("programs.btn_send_preview")}
             </Button>
             <p className="text-[10px] text-muted-foreground">
               {programSummary?.previewEnabled
-                ? "L'athlète peut voir ce programme dans son app"
-                : "Visible uniquement du coach pour l'instant"}
+                ? t("programs.preview_visible_athlete")
+                : t("programs.preview_visible_coach")}
             </p>
           </div>
           {!program.isTemplate && (
@@ -894,7 +899,7 @@ export default function ProgramDetail() {
               size="sm"
               disabled={savingAsTemplate}
               onClick={handleSaveAsTemplate}
-              title="Sauvegarder ce programme comme modèle réutilisable"
+              title={t("programs.title_save_as_template")}
               className="border-accent/50 text-accent hover:bg-accent/10"
             >
               {savingAsTemplate ? (
@@ -902,7 +907,7 @@ export default function ProgramDetail() {
               ) : (
                 <BookmarkPlus className="w-4 h-4 mr-2" />
               )}
-              Sauvegarder comme modèle
+              {t("programs.btn_save_as_template")}
             </Button>
           )}
           <Button
@@ -911,7 +916,7 @@ export default function ProgramDetail() {
             className="border-destructive/50 text-destructive hover:bg-destructive/10"
             onClick={() => setDeleteOpen(true)}
           >
-            <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+            <Trash2 className="w-4 h-4 mr-2" /> {t("common.delete")}
           </Button>
         </div>
       </div>
@@ -930,7 +935,7 @@ export default function ProgramDetail() {
           );
         })}
         <p className="text-xs text-muted-foreground self-center ml-2">
-          Plusieurs séances possibles par jour — cliquer ▿ pour voir les exercices
+          {t("programs.legend_multiple_sessions_hint")}
         </p>
       </div>
 
@@ -939,7 +944,7 @@ export default function ProgramDetail() {
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-accent/10 border border-accent/30 text-sm">
           <ClipboardPaste className="w-4 h-4 text-accent shrink-0" />
           <span className="text-accent font-medium flex-1">
-            « {copiedSession.name} » dans le presse-papier — cliquez sur <ClipboardPaste className="w-3 h-3 inline" /> d'une case vide pour coller
+            {t("programs.clipboard_indicator_prefix", { name: copiedSession.name })} <ClipboardPaste className="w-3 h-3 inline" /> {t("programs.clipboard_indicator_suffix")}
           </span>
           <button onClick={() => setCopiedSession(null)} className="text-muted-foreground hover:text-white transition-colors">
             <X className="w-4 h-4" />
@@ -972,7 +977,7 @@ export default function ProgramDetail() {
                   <SelectContent className="bg-card border-border max-h-56 overflow-y-auto">
                     {weeks.map((w) => (
                       <SelectItem key={w} value={String(w)}>
-                        SEMAINE {w}
+                        {t("programs.week_label_upper", { week: w })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -991,7 +996,7 @@ export default function ProgramDetail() {
             )}
             {viewMode === "month" && (
               <span className="font-display tracking-wider text-white text-sm h-8 flex items-center px-2">
-                VUE MENSUELLE — {totalWeeks} semaines
+                {t("programs.month_view_label", { count: totalWeeks })}
               </span>
             )}
           </div>
@@ -1004,18 +1009,18 @@ export default function ProgramDetail() {
                   size="sm"
                   className="text-muted-foreground hover:text-white gap-1.5 text-xs h-7"
                   onClick={duplicateWeek}
-                  title="Copier cette semaine à la fin du programme"
+                  title={t("programs.title_duplicate_week")}
                 >
-                  <Copy className="w-3.5 h-3.5" /> Dupliquer S{safeCurrentWeek}
+                  <Copy className="w-3.5 h-3.5" /> {t("programs.btn_duplicate_week", { week: safeCurrentWeek })}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-muted-foreground hover:text-primary gap-1.5 text-xs h-7"
                   onClick={handleAddWeek}
-                  title="Ajouter une semaine vide à la fin"
+                  title={t("programs.title_add_empty_week")}
                 >
-                  <Plus className="w-3.5 h-3.5" /> Semaine vide
+                  <Plus className="w-3.5 h-3.5" /> {t("programs.btn_empty_week")}
                 </Button>
                 {todayInfo && (
                   <Button
@@ -1023,9 +1028,9 @@ export default function ProgramDetail() {
                     size="sm"
                     className="text-cyan-400/80 hover:text-cyan-400 gap-1.5 text-xs h-7"
                     onClick={() => setCurrentWeek(todayInfo.week)}
-                    title="Aller à la semaine courante"
+                    title={t("programs.title_go_current_week")}
                   >
-                    Aujourd'hui
+                    {t("programs.btn_today")}
                   </Button>
                 )}
                 {program?.startDate && (
@@ -1036,7 +1041,7 @@ export default function ProgramDetail() {
                       min={program.startDate}
                       className="bg-transparent text-xs border-none outline-none w-[7rem] text-muted-foreground cursor-pointer"
                       onChange={(e) => handleGoToDate(e.target.value)}
-                      title="Aller à une date"
+                      title={t("programs.title_go_date")}
                     />
                   </label>
                 )}
@@ -1047,14 +1052,14 @@ export default function ProgramDetail() {
               <button
                 onClick={() => setViewMode("week")}
                 className={`p-1.5 rounded transition-colors ${viewMode === "week" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
-                title="Vue semaine"
+                title={t("programs.title_week_view")}
               >
                 <CalendarDays className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setViewMode("month")}
                 className={`p-1.5 rounded transition-colors ${viewMode === "month" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-white"}`}
-                title="Vue mensuelle"
+                title={t("programs.title_month_view")}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
               </button>
@@ -1113,7 +1118,7 @@ export default function ProgramDetail() {
               <div className="min-w-[700px]">
                 {/* Header */}
                 <div className="grid grid-cols-8 border-b border-border bg-white/[0.02]">
-                  <div className="px-3 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">Sem.</div>
+                  <div className="px-3 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">{t("programs.week_short_header")}</div>
                   {DAY_NAMES.map(d => (
                     <div key={d} className="px-1 py-2 text-[10px] font-mono text-muted-foreground uppercase text-center">{d}</div>
                   ))}
@@ -1128,7 +1133,7 @@ export default function ProgramDetail() {
                         <div
                           className="px-3 py-2 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
                           onClick={() => { setCurrentWeek(week); setViewMode("week"); }}
-                          title="Passer à cette semaine"
+                          title={t("programs.title_switch_week")}
                         >
                           <span className={`text-xs font-display transition-colors ${isCurrentWeekRow ? "text-cyan-400" : "text-muted-foreground hover:text-primary"}`}>
                             S{week}{isCurrentWeekRow ? " •" : ""}
@@ -1157,7 +1162,7 @@ export default function ProgramDetail() {
                                   type="button"
                                   onClick={makePasteHandler(week, dayNumber)}
                                   className="w-full h-6 rounded border border-dashed border-accent/30 hover:border-accent hover:bg-accent/10 transition-all flex items-center justify-center"
-                                  title={`Coller « ${copiedSession.name} »`}
+                                  title={t("programs.title_paste_session", { name: copiedSession.name })}
                                 >
                                   <ClipboardPaste className="w-2.5 h-2.5 text-accent/60 hover:text-accent" />
                                 </button>
@@ -1187,15 +1192,14 @@ export default function ProgramDetail() {
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-xl text-white">
-              Supprimer « {program.name} » ?
+              {t("programs.delete_program_title", { name: program.name })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action supprimera définitivement le programme et toutes ses séances.
-              Cette opération est irréversible.
+              {t("programs.delete_program_desc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDeleteProgram}
@@ -1204,7 +1208,7 @@ export default function ProgramDetail() {
               {deleteProgramMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Supprimer le programme"
+                t("programs.btn_delete_program")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

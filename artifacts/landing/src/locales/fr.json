@@ -114,6 +114,10 @@
     "rights": "© {{year}} ADAPT System ·",
     "privacy": "Mentions légales"
   },
+  "notFound": {
+    "message": "Page introuvable",
+    "back": "← Retour à l'accueil"
+  },
   "reset": {
     "brand": "ADAPT",
     "title": "RÉINITIALISER MON MOT DE PASSE",

@@ -48,7 +48,7 @@ export default function ClientsOverview() {
     navigator.clipboard.writeText(myCode);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
-    toast({ title: "Copié !", description: "Code d'invitation copié dans le presse-papier." });
+    toast({ title: t("clients.code_copied_title"), description: t("clients.code_copied_desc") });
   };
 
   const handleLink = async () => {
@@ -56,18 +56,18 @@ export default function ClientsOverview() {
     setLinkSuccess("");
     const code = inviteCode.trim().toUpperCase();
     if (code.length !== 6) {
-      setLinkError("Entrez les 6 caractères du code d'invitation de l'athlète.");
+      setLinkError(t("clients.link_error_length"));
       return;
     }
     try {
       const res = await linkMutation.mutateAsync({ data: { inviteCode: code } });
-      setLinkSuccess(res.message ?? "Athlète lié avec succès !");
+      setLinkSuccess(res.message ?? t("clients.link_success_default"));
       setInviteCode("");
       queryClient.invalidateQueries({ queryKey: ["/api/coach/clients"] });
     } catch (err: unknown) {
       const serverMsg =
         (err as { data?: { error?: { message?: string } } })?.data?.error?.message;
-      setLinkError(serverMsg || "Code invalide ou athlète introuvable.");
+      setLinkError(serverMsg || t("clients.link_error_invalid"));
     }
   };
 
@@ -82,12 +82,12 @@ export default function ClientsOverview() {
 
   const handleApprove = async (requestId: string, name: string) => {
     await approveMutation.mutateAsync(requestId);
-    toast({ title: "Demande acceptée", description: `${name} a été ajouté(e) à votre liste d'athlètes.` });
+    toast({ title: t("clients.request_approved_title"), description: t("clients.request_approved_desc", { name }) });
   };
 
   const handleReject = async (requestId: string, name: string) => {
     await rejectMutation.mutateAsync(requestId);
-    toast({ title: "Demande refusée", description: `La demande de ${name} a été refusée.`, variant: "destructive" });
+    toast({ title: t("clients.request_rejected_title"), description: t("clients.request_rejected_desc", { name }), variant: "destructive" });
   };
 
   if (isLoading) {
@@ -124,8 +124,8 @@ export default function ClientsOverview() {
       {myCode && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-5 rounded-xl bg-primary/10 border border-primary/30">
           <div className="flex-1">
-            <p className="text-xs font-mono uppercase tracking-widest text-primary mb-1">Votre code d'invitation</p>
-            <p className="text-sm text-muted-foreground">Partagez ce code avec vos athlètes pour qu'ils puissent rejoindre votre espace coaching.</p>
+            <p className="text-xs font-mono uppercase tracking-widest text-primary mb-1">{t("clients.invite_code_label")}</p>
+            <p className="text-sm text-muted-foreground">{t("clients.invite_code_hint")}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="px-6 py-3 rounded-lg bg-background border border-primary/40 font-mono text-3xl font-bold text-primary tracking-[0.3em] select-all">
@@ -150,7 +150,7 @@ export default function ClientsOverview() {
           <div className="flex items-center gap-2 px-5 py-3 bg-amber-500/10 border-b border-amber-500/20">
             <Bell className="w-4 h-4 text-amber-400" />
             <span className="text-sm font-mono uppercase tracking-wider text-amber-400">
-              Demandes d'accès ({pendingRequests.length})
+              {t("clients.join_requests_title", { count: pendingRequests.length })}
             </span>
           </div>
           <div className="divide-y divide-border/50">
@@ -186,7 +186,7 @@ export default function ClientsOverview() {
                     variant="outline"
                   >
                     {approveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserCheck className="w-3 h-3 mr-1" />}
-                    Accepter
+                    {t("clients.btn_approve")}
                   </Button>
                   <Button
                     size="sm"
@@ -196,7 +196,7 @@ export default function ClientsOverview() {
                     variant="ghost"
                   >
                     <X className="w-3 h-3 mr-1" />
-                    Refuser
+                    {t("clients.btn_reject")}
                   </Button>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function ClientsOverview() {
           >
             <UserPlus className="w-4 h-4" />
             <span className="hidden sm:inline">{t("clients.btn_link_code")}</span>
-            <span className="sm:hidden">Lier</span>
+            <span className="sm:hidden">{t("clients.btn_link_short")}</span>
           </Button>
         </div>
       </div>
@@ -285,7 +285,7 @@ export default function ClientsOverview() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="bg-background/40 rounded-lg p-2">
-                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">Score</div>
+                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">{t("clients.label_score")}</div>
                       {hasCheckin ? (
                         <div className="flex items-baseline gap-1">
                           <span className={cn("text-lg font-display leading-none",
@@ -298,7 +298,7 @@ export default function ClientsOverview() {
                       )}
                     </div>
                     <div className="bg-background/40 rounded-lg p-2">
-                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">Mode</div>
+                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">{t("clients.label_mode")}</div>
                       {client.todayCheckin?.sessionMode ? (
                         <ModeBadge mode={client.todayCheckin.sessionMode} />
                       ) : (
@@ -306,7 +306,7 @@ export default function ClientsOverview() {
                       )}
                     </div>
                     <div className="bg-background/40 rounded-lg p-2">
-                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">Check-in</div>
+                      <div className="text-[10px] uppercase font-mono text-muted-foreground mb-0.5">{t("clients.label_checkin")}</div>
                       {hasCheckin ? (
                         <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
                           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -340,7 +340,7 @@ export default function ClientsOverview() {
                 <th className="px-6 py-4 font-semibold">{t("clients.table_col_score")}</th>
                 <th className="px-6 py-4 font-semibold">{t("clients.table_col_mode")}</th>
                 <th className="px-6 py-4 font-semibold">{t("clients.table_col_status")}</th>
-                <th className="px-6 py-4 font-semibold text-right">Alertes actives</th>
+                <th className="px-6 py-4 font-semibold text-right">{t("clients.table_col_alerts_active")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -398,19 +398,19 @@ export default function ClientsOverview() {
                       {client.todayCheckin?.sessionMode ? (
                         <ModeBadge mode={client.todayCheckin.sessionMode} />
                       ) : (
-                        <span className="text-muted-foreground italic text-xs">En attente</span>
+                        <span className="text-muted-foreground italic text-xs">{t("clients.status_pending")}</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
                       {hasCheckin ? (
                         <span className="inline-flex items-center gap-1.5 text-xs text-primary font-medium">
                           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          Soumis
+                          {t("clients.status_submitted")}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                           <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                          Manqué
+                          {t("clients.status_missed")}
                         </span>
                       )}
                     </td>
@@ -471,12 +471,12 @@ export default function ClientsOverview() {
           <DialogFooter>
             {linkSuccess ? (
               <Button onClick={() => handleDialogClose(false)} className="w-full">
-                Fermer
+                {t("common.close")}
               </Button>
             ) : (
               <>
                 <Button variant="outline" onClick={() => handleDialogClose(false)} className="border-border">
-                  Annuler
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   onClick={handleLink}
@@ -484,7 +484,7 @@ export default function ClientsOverview() {
                   className="bg-primary hover:bg-primary/90"
                 >
                   {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Connecter l'athlète
+                  {t("clients.dialog_btn_connect")}
                 </Button>
               </>
             )}

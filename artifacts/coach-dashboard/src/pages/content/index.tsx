@@ -44,20 +44,8 @@ interface Routine {
   exercises: { name: string; sets?: string; notes?: string }[];
 }
 
-const GUIDE_CATEGORIES = [
-  { value: "", label: "Aucune" },
-  { value: "training", label: "Entraînement" },
-  { value: "nutrition", label: "Nutrition" },
-  { value: "recovery", label: "Récupération" },
-  { value: "mindset", label: "Mental" },
-];
-
-const ROUTINE_CATEGORIES = [
-  { value: "warmup", label: "Échauffement" },
-  { value: "reathletisation", label: "Réathlétisation" },
-  { value: "relaxation", label: "Relaxation" },
-  { value: "breathing", label: "Respiration" },
-];
+const GUIDE_CATEGORY_VALUES = ["", "training", "nutrition", "recovery", "mindset"] as const;
+const ROUTINE_CATEGORY_VALUES = ["warmup", "reathletisation", "relaxation", "breathing"] as const;
 
 const CATEGORY_COLORS: Record<string, string> = {
   training: "text-[#00F0FF]",
@@ -110,9 +98,9 @@ export default function ContentPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
       setGuideDialog({ open: false });
-      toast({ title: "Guide sauvegardé" });
+      toast({ title: t("content.guide_saved") });
     },
-    onError: () => toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" }),
+    onError: () => toast({ title: t("content.error_save"), variant: "destructive" }),
   });
 
   const deleteGuideMutation = useMutation({
@@ -120,9 +108,9 @@ export default function ContentPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
       setDeleteGuideId(null);
-      toast({ title: "Guide supprimé" });
+      toast({ title: t("content.guide_deleted") });
     },
-    onError: () => toast({ title: "Erreur lors de la suppression", variant: "destructive" }),
+    onError: () => toast({ title: t("content.error_delete"), variant: "destructive" }),
   });
 
   const saveRoutineMutation = useMutation({
@@ -133,9 +121,9 @@ export default function ContentPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/content-routines"] });
       setRoutineDialog({ open: false });
-      toast({ title: "Routine sauvegardée" });
+      toast({ title: t("content.routine_saved") });
     },
-    onError: () => toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" }),
+    onError: () => toast({ title: t("content.error_save"), variant: "destructive" }),
   });
 
   const deleteRoutineMutation = useMutation({
@@ -143,9 +131,9 @@ export default function ContentPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/content-routines"] });
       setDeleteRoutineId(null);
-      toast({ title: "Routine supprimée" });
+      toast({ title: t("content.routine_deleted") });
     },
-    onError: () => toast({ title: "Erreur lors de la suppression", variant: "destructive" }),
+    onError: () => toast({ title: t("content.error_delete"), variant: "destructive" }),
   });
 
   function openNewGuide() {
@@ -259,7 +247,7 @@ export default function ContentPage() {
         <div className="space-y-3">
           {guidesQuery.isLoading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
           {guides.map(guide => {
-            const catLabel = GUIDE_CATEGORIES.find(c => c.value === guide.category)?.label;
+            const catLabel = guide.category ? t(`content.cat_${guide.category}` as const) : undefined;
             const catColor = CATEGORY_COLORS[guide.category ?? ""] ?? "text-muted-foreground";
             return (
               <Card key={guide.id} className="bg-card border-border">
@@ -297,7 +285,7 @@ export default function ContentPage() {
         <div className="space-y-3">
           {routinesQuery.isLoading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
           {routines.map(routine => {
-            const catLabel = ROUTINE_CATEGORIES.find(c => c.value === routine.category)?.label ?? routine.category;
+            const catLabel = t(`content.cat_${routine.category}` as const, routine.category);
             const catColor = CATEGORY_COLORS[routine.category] ?? "text-muted-foreground";
             return (
               <Card key={routine.id} className="bg-card border-border">
@@ -346,19 +334,19 @@ export default function ContentPage() {
               <Input value={guideTitle} onChange={e => setGuideTitle(e.target.value)} placeholder="Comprendre le RPE…" className="mt-1" />
             </div>
             <div>
-              <Label>Catégorie</Label>
+              <Label>{t("content.label_category_short")}</Label>
               <select
                 value={guideCategory}
                 onChange={e => setGuideCategory(e.target.value)}
                 className="mt-1 w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground"
               >
-                {GUIDE_CATEGORIES.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
+                {GUIDE_CATEGORY_VALUES.map(v => (
+                  <option key={v} value={v}>{v === "" ? t("content.cat_none") : t(`content.cat_${v}` as const)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <Label>Ordre d'affichage</Label>
+              <Label>{t("content.label_sort_display")}</Label>
               <Input value={guideSortOrder} onChange={e => setGuideSortOrder(e.target.value)} type="number" className="mt-1 w-24" />
             </div>
             <div>
@@ -389,37 +377,37 @@ export default function ContentPage() {
           <div className="space-y-4 py-2">
             <div>
               <Label>Titre</Label>
-              <Input value={routineTitle} onChange={e => setRoutineTitle(e.target.value)} placeholder="Échauffement général…" className="mt-1" />
+              <Input value={routineTitle} onChange={e => setRoutineTitle(e.target.value)} placeholder={t("content.placeholder_routine_title")} className="mt-1" />
             </div>
             <div>
               <Label>Description</Label>
-              <Textarea value={routineDesc} onChange={e => setRoutineDesc(e.target.value)} placeholder="Brève description de la routine…" className="mt-1" rows={2} />
+              <Textarea value={routineDesc} onChange={e => setRoutineDesc(e.target.value)} placeholder={t("content.placeholder_routine_desc")} className="mt-1" rows={2} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Catégorie</Label>
+                <Label>{t("content.label_category_short")}</Label>
                 <select
                   value={routineCategory}
                   onChange={e => setRoutineCategory(e.target.value)}
                   className="mt-1 w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground"
                 >
-                  {ROUTINE_CATEGORIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
+                  {ROUTINE_CATEGORY_VALUES.map(v => (
+                    <option key={v} value={v}>{t(`content.cat_${v}` as const)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <Label>Durée (min)</Label>
+                <Label>{t("content.label_duration_short")}</Label>
                 <Input value={routineDuration} onChange={e => setRoutineDuration(e.target.value)} type="number" placeholder="10" className="mt-1" />
               </div>
             </div>
             <div>
-              <Label>Exercices (un par ligne)</Label>
-              <p className="text-xs text-muted-foreground mb-1">Format : Nom | Séries | Notes</p>
+              <Label>{t("content.label_exercises_one_per_line")}</Label>
+              <p className="text-xs text-muted-foreground mb-1">{t("content.exercises_format_hint")}</p>
               <Textarea
                 value={routineExercisesRaw}
                 onChange={e => setRoutineExercisesRaw(e.target.value)}
-                placeholder="Cercles d'épaules | 2×10 | Ampleur maximale&#10;Jumping jacks | 2×20"
+                placeholder={t("content.placeholder_exercises")}
                 className="mt-1 font-mono text-sm min-h-[180px]"
               />
             </div>
@@ -438,7 +426,7 @@ export default function ContentPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer ce guide ?</AlertDialogTitle>
-            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+            <AlertDialogDescription>{t("content.delete_irreversible")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
@@ -456,7 +444,7 @@ export default function ContentPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer cette routine ?</AlertDialogTitle>
-            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+            <AlertDialogDescription>{t("content.delete_irreversible")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>

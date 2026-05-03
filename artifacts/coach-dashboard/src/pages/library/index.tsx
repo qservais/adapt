@@ -151,10 +151,10 @@ export default function LibraryPage() {
     mutationFn: ({ clientId, exerciseId, dateStr }: { clientId: string; exerciseId: string; dateStr: string }) =>
       addToCalendar(clientId, exerciseId, dateStr),
     onSuccess: () => {
-      toast({ title: "Séance ajoutée au calendrier" });
+      toast({ title: t("library.added_to_calendar") });
       setQuickAddExercise(null);
     },
-    onError: () => toast({ title: "Échec de l'ajout", variant: "destructive" }),
+    onError: () => toast({ title: t("library.add_failed"), variant: "destructive" }),
   });
 
   const { data: exercises, isLoading } = useQuery<ExerciseItem[]>({
@@ -182,11 +182,11 @@ export default function LibraryPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Exercice créé" });
+      toast({ title: t("library.exercise_created") });
       queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
       closeDialog();
     },
-    onError: () => toast({ title: "Erreur lors de la création", variant: "destructive" }),
+    onError: () => toast({ title: t("library.create_error"), variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
@@ -208,11 +208,11 @@ export default function LibraryPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Exercice mis à jour" });
+      toast({ title: t("library.exercise_updated") });
       queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
       closeDialog();
     },
-    onError: () => toast({ title: "Erreur lors de la mise à jour", variant: "destructive" }),
+    onError: () => toast({ title: t("library.update_error"), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -224,15 +224,15 @@ export default function LibraryPage() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error?.message ?? "Erreur");
+        throw new Error(json?.error?.message ?? t("library.delete_error_generic"));
       }
     },
     onSuccess: () => {
-      toast({ title: "Exercice supprimé" });
+      toast({ title: t("library.exercise_deleted") });
       queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
       setDeleteTarget(null);
     },
-    onError: (err: Error) => toast({ title: err.message || "Erreur lors de la suppression", variant: "destructive" }),
+    onError: (err: Error) => toast({ title: err.message || t("library.delete_error"), variant: "destructive" }),
   });
 
   const openCreate = () => {
@@ -272,7 +272,7 @@ export default function LibraryPage() {
 
   const handleSave = () => {
     if (!form.name.trim()) {
-      toast({ title: "Le nom est requis", variant: "destructive" });
+      toast({ title: t("library.name_required"), variant: "destructive" });
       return;
     }
     if (editExercise) {
@@ -296,12 +296,12 @@ export default function LibraryPage() {
         <div>
           <h1 className="text-3xl font-display text-white">{t("library.title")}</h1>
           <p className="text-muted-foreground text-sm">
-            {exercises ? `${exercises.length} exercice${exercises.length !== 1 ? "s" : ""}` : "..."} · Créez et organisez vos exercices
+            {exercises ? t("library.exercises_count", { count: exercises.length }) : "..."} · {t("library.subtitle_create_organize")}
           </p>
         </div>
         <Button onClick={openCreate} className="bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary">
           <Plus className="w-4 h-4 mr-2" />
-          Nouvel exercice
+          {t("library.btn_new_exercise")}
         </Button>
       </div>
 
@@ -326,7 +326,7 @@ export default function LibraryPage() {
                 : "text-muted-foreground border-border hover:text-white hover:bg-white/5"
             )}
           >
-            Tous
+            {t("library.filter_label_all")}
           </button>
           {CATEGORIES.map(c => (
             <button
@@ -347,7 +347,7 @@ export default function LibraryPage() {
 
       {/* Muscle group quick-filter */}
       <div className="flex gap-1.5 flex-wrap items-center">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono shrink-0">Muscle :</span>
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono shrink-0">{t("library.muscle_label")}</span>
         {["", ...MUSCLE_GROUPS].map(mg => (
           <button
             key={mg}
@@ -359,7 +359,7 @@ export default function LibraryPage() {
                 : "text-muted-foreground border-border hover:text-white hover:bg-white/5"
             )}
           >
-            {mg === "" ? "Tous" : mg}
+            {mg === "" ? t("library.filter_label_all") : mg}
           </button>
         ))}
       </div>
@@ -397,7 +397,7 @@ export default function LibraryPage() {
                       <button
                         onClick={() => { setQuickAddExercise(ex); setQuickAddAthleteId(""); setQuickAddDate(new Date().toISOString().slice(0, 10)); }}
                         className="p-1 rounded hover:bg-accent/20 transition-colors"
-                        title="Ajouter au calendrier d'un athlète"
+                        title={t("library.title_add_to_athlete_calendar")}
                       >
                         <CalendarPlus className="w-3.5 h-3.5 text-accent" />
                       </button>
@@ -406,21 +406,21 @@ export default function LibraryPage() {
                           <button
                             onClick={() => openEdit(ex)}
                             className="p-1 rounded hover:bg-white/10 transition-colors"
-                            title="Modifier"
+                            title={t("library.title_modify")}
                           >
                             <Pencil className="w-3.5 h-3.5 text-white" />
                           </button>
                           <button
                             onClick={() => setDeleteTarget(ex)}
                             className="p-1 rounded hover:bg-destructive/20 transition-colors"
-                            title="Supprimer"
+                            title={t("library.title_delete")}
                           >
                             <Trash2 className="w-3.5 h-3.5 text-destructive" />
                           </button>
                         </>
                       ) : (
                         <span className="text-[9px] font-mono text-muted-foreground/50 px-1 self-center">
-                          Global
+                          {t("library.label_global")}
                         </span>
                       )}
                     </div>
@@ -466,7 +466,7 @@ export default function LibraryPage() {
                       className="inline-flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 mt-2 transition-colors"
                     >
                       <ExternalLink className="w-3 h-3" />
-                      Vidéo démo
+                      {t("library.demo_video")}
                     </a>
                   )}
                 </CardContent>
@@ -481,7 +481,7 @@ export default function LibraryPage() {
         <DialogContent className="bg-card border-border max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display text-xl tracking-widest text-white">
-              {editExercise ? "MODIFIER L'EXERCICE" : "NOUVEL EXERCICE"}
+              {editExercise ? t("library.dialog_edit_title") : t("library.dialog_create_title")}
             </DialogTitle>
           </DialogHeader>
 
@@ -492,7 +492,7 @@ export default function LibraryPage() {
                 autoFocus
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Ex : Squat barre"
+                placeholder={t("library.name_placeholder")}
                 className="bg-background border-border text-white"
               />
             </div>
@@ -575,7 +575,7 @@ export default function LibraryPage() {
               </div>
               {form.equipment.filter(e => !EQUIPMENT_CATALOG.some(c => c.key === e)).length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="text-[10px] text-muted-foreground self-center">Personnalisé :</span>
+                  <span className="text-[10px] text-muted-foreground self-center">{t("library.custom_label")}</span>
                   {form.equipment.filter(e => !EQUIPMENT_CATALOG.some(c => c.key === e)).map(e => (
                     <span key={e} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs border bg-accent/15 border-accent/40 text-accent">
                       {e}
@@ -597,7 +597,7 @@ export default function LibraryPage() {
                   value={customEquipmentInput}
                   onChange={e => setCustomEquipmentInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomEquipment())}
-                  placeholder="Matériel personnalisé…"
+                  placeholder={t("library.custom_equipment_placeholder")}
                   className="flex-1 bg-background border border-border rounded-md px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
                 />
                 <button
@@ -606,24 +606,24 @@ export default function LibraryPage() {
                   disabled={!customEquipmentInput.trim()}
                   className="px-3 py-1.5 rounded-md text-xs border border-accent/40 text-accent hover:bg-accent/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Ajouter
+                  {t("library.btn_add")}
                 </button>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Description (optionnel)</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.label_description_optional")}</Label>
               <textarea
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Technique d'exécution, points d'attention..."
+                placeholder={t("library.description_placeholder")}
                 rows={3}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Lien vidéo (YouTube, etc.)</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.label_video_link")}</Label>
               <Input
                 value={form.demoUrl}
                 onChange={e => setForm(f => ({ ...f, demoUrl: e.target.value }))}
@@ -635,11 +635,11 @@ export default function LibraryPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog} className="border-border">
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSave} disabled={isSaving} className="bg-primary hover:bg-primary/90">
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {editExercise ? "Mettre à jour" : "Créer"}
+              {editExercise ? t("library.btn_update") : t("library.btn_create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -650,21 +650,21 @@ export default function LibraryPage() {
         <DialogContent className="bg-card border-border sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-white flex items-center gap-2">
-              <CalendarPlus className="w-5 h-5 text-accent" /> Ajouter au calendrier
+              <CalendarPlus className="w-5 h-5 text-accent" /> {t("library.btn_add_to_calendar")}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Crée une séance « {quickAddExercise?.name} » dans le programme libre de l'athlète.
+              {t("library.quick_add_dialog_desc", { name: quickAddExercise?.name ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Athlète</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.quick_add_athlete")}</Label>
               <select
                 value={quickAddAthleteId}
                 onChange={e => setQuickAddAthleteId(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent"
               >
-                <option value="">Sélectionner un athlète…</option>
+                <option value="">{t("library.select_athlete_dots")}</option>
                 {(athletes || []).map(a => (
                   <option key={a.id} value={a.id}>
                     {a.firstName} {a.lastName ?? ""}
@@ -673,7 +673,7 @@ export default function LibraryPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Date de séance</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("library.label_session_date")}</Label>
               <Input
                 type="date"
                 value={quickAddDate}
@@ -684,7 +684,7 @@ export default function LibraryPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setQuickAddExercise(null)} className="border-border">
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -695,7 +695,7 @@ export default function LibraryPage() {
               className="bg-accent hover:bg-accent/90 text-white"
             >
               {quickAddMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Ajouter
+              {t("library.btn_add")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -705,20 +705,20 @@ export default function LibraryPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white font-display">Supprimer l'exercice ?</AlertDialogTitle>
+            <AlertDialogTitle className="text-white font-display">{t("library.delete_dialog_title")}</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              « {deleteTarget?.name} » sera définitivement supprimé. Si cet exercice est utilisé dans des séances, la suppression sera bloquée.
+              {t("library.delete_dialog_desc", { name: deleteTarget?.name ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
               disabled={deleteMutation.isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Supprimer
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

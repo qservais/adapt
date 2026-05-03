@@ -143,7 +143,7 @@ function NewProgramDialog({
       <DialogContent className="bg-card border-border sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-display tracking-widest text-white">
-            CRÉER UN PROGRAMME
+            {t("programs.dialog_create_title")}
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
@@ -156,7 +156,7 @@ function NewProgramDialog({
                   <FormLabel className="text-muted-foreground">{t("programs.label_program_name")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Préparation hors-saison..."
+                      placeholder={t("programs.name_placeholder")}
                       className="bg-background border-border"
                       {...field}
                     />
@@ -174,7 +174,7 @@ function NewProgramDialog({
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="bg-background border-border">
-                        <SelectValue placeholder="Choisir un athlète" />
+                        <SelectValue placeholder={t("programs.athlete_placeholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-card border-border">
@@ -221,7 +221,7 @@ function NewProgramDialog({
               {createMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Créer le programme"
+                t("programs.btn_create")
               )}
             </Button>
           </form>
@@ -238,10 +238,11 @@ async function toggleProgramPreview(programId: string, enabled: boolean, allowSt
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ enabled, allowStart }),
   });
-  if (!res.ok) throw new Error("Erreur serveur");
+  if (!res.ok) throw new Error("Server error");
 }
 
 function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [togglingPreview, setTogglingPreview] = useState(false);
@@ -254,10 +255,10 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
     try {
       const newEnabled = !prog.previewEnabled;
       await toggleProgramPreview(prog.id, newEnabled, newEnabled ? (prog.previewAllowStart ?? false) : false);
-      toast({ title: prog.previewEnabled ? "Aperçu désactivé" : "Programme envoyé en aperçu à l'athlète" });
+      toast({ title: prog.previewEnabled ? t("programs.preview_disabled_toast") : t("programs.preview_sent_toast") });
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: t("library.delete_error_generic"), variant: "destructive" });
     } finally {
       setTogglingPreview(false);
     }
@@ -270,10 +271,10 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
     try {
       const newAllowStart = !(prog.previewAllowStart ?? false);
       await toggleProgramPreview(prog.id, true, newAllowStart);
-      toast({ title: newAllowStart ? "L'athlète peut maintenant démarrer le programme" : "Démarrage anticipé désactivé" });
+      toast({ title: newAllowStart ? t("programs.athlete_can_start_toast") : t("programs.early_start_disabled_toast") });
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
     } catch {
-      toast({ title: "Erreur", variant: "destructive" });
+      toast({ title: t("library.delete_error_generic"), variant: "destructive" });
     } finally {
       setTogglingAllowStart(false);
     }
@@ -289,7 +290,7 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {prog.durationWeeks} sem.
+              {prog.durationWeeks} {t("programs.weeks_short")}
             </span>
             {prog.startDate && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -300,12 +301,12 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
             {typeof prog.sessionCount === "number" && prog.sessionCount === 0 ? (
               <span className="text-[10px] font-semibold text-yellow-400 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
-                0 séance
+                {t("programs.no_sessions_warning")}
               </span>
             ) : typeof prog.sessionCount === "number" ? (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Dumbbell className="w-3 h-3" />
-                {prog.sessionCount} séance{prog.sessionCount > 1 ? "s" : ""}
+                {t("programs.sessions_count", { count: prog.sessionCount })}
               </span>
             ) : (
               <span className="text-xs text-muted-foreground/60 flex items-center gap-1">
@@ -316,19 +317,19 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
             {prog.isActive && (
               <span className="text-[10px] font-bold text-primary flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
-                ACTIF
+                {t("programs.card_status_active")}
               </span>
             )}
             {prog.startsInFuture && (
               <span className="text-[10px] font-bold text-accent flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
-                À VENIR
+                {t("programs.card_status_future")}
               </span>
             )}
             {prog.previewEnabled && (
               <span className="text-[10px] text-primary flex items-center gap-1">
                 <Eye className="w-2.5 h-2.5" />
-                APERÇU ACTIF
+                {t("programs.card_status_preview")}
               </span>
             )}
           </div>
@@ -343,13 +344,13 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
                   ? "border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/20"
                   : "border-muted/30 text-muted-foreground bg-muted/10 hover:bg-muted/20"
               }`}
-              title={prog.previewAllowStart ? "Retirer la permission de démarrer" : "Autoriser l'athlète à démarrer maintenant"}
+              title={prog.previewAllowStart ? t("programs.title_remove_start_permission") : t("programs.title_allow_athlete_start")}
             >
               {togglingAllowStart
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : prog.previewAllowStart
-                  ? <><PlayCircle className="w-3 h-3" /> Démarrage OK</>
-                  : <><PlayCircle className="w-3 h-3" /> Autoriser</>
+                  ? <><PlayCircle className="w-3 h-3" /> {t("programs.btn_start_ok")}</>
+                  : <><PlayCircle className="w-3 h-3" /> {t("programs.btn_authorize")}</>
               }
             </button>
           )}
@@ -361,13 +362,13 @@ function ProgramMiniCard({ prog }: { prog: ProgramSummary }) {
                 ? "border-primary/30 text-primary bg-primary/10 hover:bg-primary/20"
                 : "border-muted/30 text-muted-foreground bg-muted/10 hover:bg-muted/20"
             }`}
-            title={prog.previewEnabled ? "Désactiver l'aperçu" : "Envoyer en aperçu à l'athlète"}
+            title={prog.previewEnabled ? t("programs.title_disable_preview") : t("programs.title_send_preview")}
           >
             {togglingPreview
               ? <Loader2 className="w-3 h-3 animate-spin" />
               : prog.previewEnabled
-                ? <><EyeOff className="w-3 h-3" /> Retirer</>
-                : <><Eye className="w-3 h-3" /> Aperçu</>
+                ? <><EyeOff className="w-3 h-3" /> {t("programs.btn_remove_preview")}</>
+                : <><Eye className="w-3 h-3" /> {t("programs.btn_preview")}</>
             }
           </button>
         </div>
@@ -388,6 +389,7 @@ function AthleteSection({
   programs: ProgramSummary[];
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const initials = athleteName
     .split(" ")
@@ -409,7 +411,7 @@ function AthleteSection({
           <div>
             <p className="text-sm font-semibold text-white">{athleteName}</p>
             <p className="text-xs text-muted-foreground">
-              {programs.length} programme{programs.length > 1 ? "s" : ""}
+              {t("programs.programs_count", { count: programs.length })}
             </p>
           </div>
         </div>
@@ -425,7 +427,7 @@ function AthleteSection({
                 onClick={(e) => e.stopPropagation()}
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
-                Programme
+                {t("programs.btn_program_short")}
               </Button>
             }
           />
@@ -465,6 +467,7 @@ function ReutiliserModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [targetProgramId, setTargetProgramId] = useState("");
   const [weekNumber, setWeekNumber] = useState(1);
   const [dayNumber, setDayNumber] = useState(1);
@@ -527,10 +530,10 @@ function ReutiliserModal({
           blocks: blocksPayload,
         },
       });
-      toast({ title: `Bloc copié dans « ${targetProgram?.name} »` });
+      toast({ title: t("programs.block_copied_toast", { program: targetProgram?.name ?? "" }) });
       onClose();
     } catch {
-      toast({ title: "Échec de la copie", variant: "destructive" });
+      toast({ title: t("programs.copy_failed"), variant: "destructive" });
     }
   };
 
@@ -539,24 +542,24 @@ function ReutiliserModal({
       <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-xl tracking-widest text-white">
-            RÉUTILISER CE BLOC
+            {t("programs.reuse_dialog_title")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="p-3 rounded-lg bg-white/5 border border-border">
             <p className="text-sm font-semibold text-white">{block.name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Source : {block.athleteName} — {block.programName}
+              {t("programs.reuse_source", { athlete: block.athleteName, program: block.programName })}
             </p>
           </div>
 
           <div>
             <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Programme cible
+              {t("programs.label_target_program")}
             </label>
             <Select value={targetProgramId} onValueChange={setTargetProgramId}>
               <SelectTrigger className="bg-background border-border">
-                <SelectValue placeholder="Choisir un programme..." />
+                <SelectValue placeholder={t("programs.select_program_placeholder")} />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 {programs.map((p) => (
@@ -571,7 +574,7 @@ function ReutiliserModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                Semaine
+                {t("programs.label_week")}
               </label>
               <Input
                 type="number"
@@ -584,7 +587,7 @@ function ReutiliserModal({
             </div>
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">
-                Jour
+                {t("programs.label_day")}
               </label>
               <Select value={String(dayNumber)} onValueChange={(v) => setDayNumber(+v)}>
                 <SelectTrigger className="bg-background border-border">
@@ -603,7 +606,7 @@ function ReutiliserModal({
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="border-border flex-1" onClick={onClose}>
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               className="flex-1 bg-primary text-black hover:bg-primary/90"
@@ -615,7 +618,7 @@ function ReutiliserModal({
               ) : (
                 <>
                   <Copy className="w-4 h-4 mr-2" />
-                  Copier
+                  {t("programs.btn_copy")}
                 </>
               )}
             </Button>
@@ -633,6 +636,7 @@ function BlockCard({
   block: BlockSession;
   programs: ProgramSummary[];
 }) {
+  const { t } = useTranslation();
   const [reutiliserOpen, setReutiliserOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const normalVariant = block.variants.find((v) => v.mode === "normal");
@@ -666,7 +670,7 @@ function BlockCard({
         >
           <span className="flex items-center gap-1">
             <Dumbbell className="w-3 h-3" />
-            {exerciseCount} exercice{exerciseCount > 1 ? "s" : ""}
+            {t("programs.exercises_count", { count: exerciseCount })}
           </span>
           {block.estimatedDurationMin && (
             <span className="flex items-center gap-1">
@@ -709,7 +713,7 @@ function BlockCard({
           className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 text-xs text-muted-foreground hover:text-primary transition-all"
         >
           <Copy className="w-3.5 h-3.5" />
-          Réutiliser
+          {t("programs.btn_reuse")}
         </button>
       </div>
 
@@ -726,6 +730,7 @@ function BlockCard({
 }
 
 function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
@@ -776,7 +781,7 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un bloc..."
+            placeholder={t("programs.search_block_placeholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-card border-border"
@@ -795,7 +800,7 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
-            <SelectItem value="all">Tous les types</SelectItem>
+            <SelectItem value="all">{t("programs.filter_all_types")}</SelectItem>
             {SESSION_TYPES.map((t) => (
               <SelectItem key={t} value={t}>
                 {TYPE_LABELS[t]}
@@ -808,7 +813,7 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
       {filtered.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground bg-card/50 rounded-xl border border-dashed border-border">
           <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Aucun bloc trouvé</p>
+          <p className="text-sm">{t("programs.no_block_found")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -819,10 +824,10 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
       )}
 
       <p className="text-xs text-muted-foreground text-center pt-2">
-        {filtered.length} bloc{filtered.length > 1 ? "s" : ""} —{" "}
-        {uniqueBlocks.length} total
+        {t("programs.blocks_count", { count: filtered.length })} —{" "}
+        {t("programs.blocks_total_suffix", { count: uniqueBlocks.length })}
         {uniqueBlocks.length !== allBlocks.length && (
-          <> ({allBlocks.length - uniqueBlocks.length} doublons masqués)</>
+          <> {t("programs.duplicates_hidden", { count: allBlocks.length - uniqueBlocks.length })}</>
         )}
       </p>
     </div>
@@ -832,7 +837,7 @@ function BibliothequeTab({ programs }: { programs: ProgramSummary[] }) {
 // ─── NEW TEMPLATE SCHEMA & COMPONENTS ────────────────────────────────────────
 
 const createTemplateFormSchema = z.object({
-  name: z.string().min(1, "Le nom est requis"),
+  name: z.string().min(1, "Name is required"),
   durationWeeks: z.coerce.number().min(1).max(52),
   description: z.string().optional(),
 });
@@ -866,9 +871,9 @@ function NewTemplateDialog({
       await createMutation.mutateAsync({ name: data.name, durationWeeks: data.durationWeeks, description: data.description || undefined });
       setOpen(false);
       form.reset();
-      toast({ title: "Modèle créé" });
+      toast({ title: t("programs.template_created_toast") });
     } catch {
-      toast({ title: "Erreur lors de la création", variant: "destructive" });
+      toast({ title: t("programs.template_create_error"), variant: "destructive" });
     }
   };
 
@@ -878,7 +883,7 @@ function NewTemplateDialog({
       <DialogContent className="bg-card border-border sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-display tracking-widest text-white">
-            NOUVEAU MODÈLE
+            {t("programs.dialog_new_template_title")}
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
@@ -888,9 +893,9 @@ function NewTemplateDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-muted-foreground">Nom du modèle</FormLabel>
+                  <FormLabel className="text-muted-foreground">{t("programs.label_template_name")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Prépa hors-saison — Force..." className="bg-background border-border" {...field} />
+                    <Input placeholder={t("programs.template_name_placeholder")} className="bg-background border-border" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -901,9 +906,9 @@ function NewTemplateDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-muted-foreground">Description (optionnel)</FormLabel>
+                  <FormLabel className="text-muted-foreground">{t("programs.label_description_optional")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Pour débutants, focus force..." className="bg-background border-border" {...field} />
+                    <Input placeholder={t("programs.template_description_placeholder")} className="bg-background border-border" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -923,7 +928,7 @@ function NewTemplateDialog({
               )}
             />
             <Button type="submit" className="w-full mt-4" disabled={createMutation.isPending}>
-              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Créer le modèle"}
+              {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("programs.btn_create_template")}
             </Button>
           </form>
         </Form>
@@ -959,10 +964,10 @@ function ApplyTemplateModal({
     if (!athleteId) return;
     try {
       const result = await applyMutation.mutateAsync({ templateId: template.id, data: { athleteId, startDate } });
-      toast({ title: `Programme « ${result.name} » créé pour ${result.athleteName}` });
+      toast({ title: t("programs.template_program_created_toast", { name: result.name, athlete: result.athleteName }) });
       onClose();
     } catch {
-      toast({ title: "Erreur lors de l'application du modèle", variant: "destructive" });
+      toast({ title: t("programs.apply_template_error"), variant: "destructive" });
     }
   };
 
@@ -971,18 +976,18 @@ function ApplyTemplateModal({
       <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-xl tracking-widest text-white">
-            UTILISER CE MODÈLE
+            {t("programs.apply_template_title")}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground text-sm">
-            Modèle : <span className="text-white font-medium">{template.name}</span> — {template.durationWeeks} sem., {template.sessionCount} séance{template.sessionCount > 1 ? "s" : ""}
+            {t("programs.apply_template_meta", { name: template.name, weeks: template.durationWeeks, sessions: template.sessionCount })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div>
-            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Athlète</label>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">{t("programs.label_athlete")}</label>
             <Select value={athleteId} onValueChange={setAthleteId}>
               <SelectTrigger className="bg-background border-border">
-                <SelectValue placeholder="Choisir un athlète..." />
+                <SelectValue placeholder={t("programs.athlete_placeholder_dots")} />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
                 {clients?.map((c) => (
@@ -1003,13 +1008,13 @@ function ApplyTemplateModal({
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" className="border-border flex-1" onClick={onClose}>Annuler</Button>
+            <Button variant="outline" className="border-border flex-1" onClick={onClose}>{t("common.cancel")}</Button>
             <Button
               className="flex-1 bg-primary text-black hover:bg-primary/90"
               onClick={handleApply}
               disabled={!athleteId || applyMutation.isPending}
             >
-              {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserCheck className="w-4 h-4 mr-2" />Appliquer</>}
+              {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserCheck className="w-4 h-4 mr-2" />{t("programs.btn_apply")}</>}
             </Button>
           </div>
         </div>
@@ -1019,6 +1024,7 @@ function ApplyTemplateModal({
 }
 
 function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDeleted: () => void }) {
+  const { t } = useTranslation();
   const [applyOpen, setApplyOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const queryClient = useQueryClient();
@@ -1034,10 +1040,10 @@ function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDe
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync();
-      toast({ title: "Modèle supprimé" });
+      toast({ title: t("programs.template_deleted_toast") });
       setConfirmDelete(false);
     } catch {
-      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
+      toast({ title: t("programs.template_delete_error"), variant: "destructive" });
     }
   };
 
@@ -1056,18 +1062,18 @@ function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDe
             )}
           </div>
           <span className="shrink-0 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-accent/30 text-accent bg-accent/10">
-            MODÈLE
+            {t("programs.card_template_label")}
           </span>
         </div>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {template.durationWeeks} sem.
+            {template.durationWeeks} {t("programs.weeks_short")}
           </span>
           <span className="flex items-center gap-1">
             <Dumbbell className="w-3 h-3" />
-            {template.sessionCount} séance{template.sessionCount > 1 ? "s" : ""}
+            {t("programs.sessions_count", { count: template.sessionCount })}
           </span>
         </div>
 
@@ -1078,7 +1084,7 @@ function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDe
             onClick={() => setApplyOpen(true)}
           >
             <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-            Utiliser ce modèle
+            {t("programs.btn_use_template")}
           </Button>
           <button
             onClick={() => setConfirmDelete(true)}
@@ -1097,15 +1103,15 @@ function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDe
         <Dialog open={confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(false)}>
           <DialogContent className="bg-card border-border max-w-sm">
             <DialogHeader>
-              <DialogTitle className="text-white">Supprimer ce modèle ?</DialogTitle>
+              <DialogTitle className="text-white">{t("programs.delete_template_title")}</DialogTitle>
               <DialogDescription className="text-muted-foreground text-sm">
-                Le modèle « {template.name} » sera définitivement supprimé. Cette action est irréversible.
+                {t("programs.delete_template_desc", { name: template.name })}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 pt-2">
-              <Button variant="outline" className="border-border" onClick={() => setConfirmDelete(false)}>Annuler</Button>
+              <Button variant="outline" className="border-border" onClick={() => setConfirmDelete(false)}>{t("common.cancel")}</Button>
               <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
-                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Supprimer"}
+                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("common.delete")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1116,6 +1122,7 @@ function TemplateCard({ template, onDeleted }: { template: ProgramTemplate; onDe
 }
 
 function ModelesTab() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: templates, isLoading, refetch } = useQuery({
     queryKey: ["/api/programs/templates"],
@@ -1136,14 +1143,14 @@ function ModelesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {allTemplates.length} modèle{allTemplates.length > 1 ? "s" : ""} enregistré{allTemplates.length > 1 ? "s" : ""}
+          {t("programs.templates_count", { count: allTemplates.length })}
         </p>
         <NewTemplateDialog
           onCreated={() => refetch()}
           trigger={
             <Button size="sm" className="bg-primary text-black hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-1.5" />
-              Nouveau modèle
+              {t("programs.btn_new_template")}
             </Button>
           }
         />
@@ -1152,8 +1159,8 @@ function ModelesTab() {
       {allTemplates.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground bg-card/50 rounded-xl border border-dashed border-border">
           <LayoutTemplate className="w-8 h-8 mx-auto mb-2 opacity-30" />
-          <p className="text-sm font-medium">Aucun modèle</p>
-          <p className="text-xs mt-1 opacity-70">Créez des modèles réutilisables pour les appliquer rapidement à vos athlètes.</p>
+          <p className="text-sm font-medium">{t("programs.no_templates_title")}</p>
+          <p className="text-xs mt-1 opacity-70">{t("programs.no_templates_hint")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -1169,6 +1176,7 @@ function ModelesTab() {
 // ─── END TEMPLATE COMPONENTS ──────────────────────────────────────────────────
 
 export default function ProgramsList() {
+  const { t } = useTranslation();
   const { data: programs, isLoading, refetch } = useGetPrograms();
   const linkMutation = useCoachLink();
   const queryClient = useQueryClient();
@@ -1183,19 +1191,19 @@ export default function ProgramsList() {
     setLinkSuccess("");
     const code = inviteCode.trim().toUpperCase();
     if (code.length !== 6) {
-      setLinkError("Entrez les 6 caractères du code d'invitation de l'athlète.");
+      setLinkError(t("programs.link_error_length"));
       return;
     }
     try {
       const res = await linkMutation.mutateAsync({ data: { inviteCode: code } });
-      setLinkSuccess(res.message ?? "Athlète lié avec succès !");
+      setLinkSuccess(res.message ?? t("programs.link_success_default"));
       setInviteCode("");
       queryClient.invalidateQueries({ queryKey: ["/api/coach/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
       refetch();
     } catch (err: unknown) {
       const serverMsg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message;
-      setLinkError(serverMsg || "Code invalide ou athlète introuvable.");
+      setLinkError(serverMsg || t("programs.link_error_invalid"));
     }
   };
 
@@ -1223,9 +1231,9 @@ export default function ProgramsList() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-display text-white">PROGRAMMES D'ENTRAÎNEMENT</h1>
+          <h1 className="text-2xl md:text-3xl font-display text-white">{t("programs.page_title_main")}</h1>
           <p className="text-muted-foreground text-sm truncate">
-            Gérez les protocoles par athlète et votre bibliothèque de blocs.
+            {t("programs.page_subtitle_main")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1240,13 +1248,13 @@ export default function ProgramsList() {
             }}
           >
             <UserPlus className="w-4 h-4" />
-            Ajouter un athlète
+            {t("programs.btn_add_athlete")}
           </Button>
           <NewProgramDialog
             onCreated={refetch}
             trigger={
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20">
-                <Plus className="w-4 h-4 mr-2" /> Nouveau programme
+                <Plus className="w-4 h-4 mr-2" /> {t("programs.btn_new_program")}
               </Button>
             }
           />
@@ -1259,10 +1267,10 @@ export default function ProgramsList() {
           <DialogHeader>
             <DialogTitle className="text-white font-display text-lg flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
-              Ajouter un athlète
+              {t("programs.btn_add_athlete")}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-sm">
-              Entrez le code d'invitation de l'athlète (6 caractères) pour le lier à votre espace coach.
+              {t("programs.dialog_add_athlete_desc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-1">
@@ -1284,7 +1292,7 @@ export default function ProgramsList() {
           </div>
           <DialogFooter>
             <Button size="sm" variant="ghost" onClick={() => setLinkDialogOpen(false)}>
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               size="sm"
@@ -1292,7 +1300,7 @@ export default function ProgramsList() {
               disabled={linkMutation.isPending || inviteCode.trim().length !== 6}
               onClick={handleLink}
             >
-              {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Lier l'athlète"}
+              {linkMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("programs.btn_link_athlete")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1308,7 +1316,7 @@ export default function ProgramsList() {
           }`}
         >
           <Users className="w-4 h-4" />
-          Par athlète
+          {t("programs.tab_by_athlete")}
         </button>
         <button
           onClick={() => setTab("bibliotheque")}
@@ -1319,7 +1327,7 @@ export default function ProgramsList() {
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          Bibliothèque de blocs
+          {t("programs.tab_blocks_library")}
         </button>
         <button
           onClick={() => setTab("modeles")}
@@ -1330,7 +1338,7 @@ export default function ProgramsList() {
           }`}
         >
           <LayoutTemplate className="w-4 h-4" />
-          Bibliothèque
+          {t("programs.tab_library")}
         </button>
       </div>
 
@@ -1347,7 +1355,7 @@ export default function ProgramsList() {
           ))}
           {allPrograms.length === 0 && (
             <div className="py-12 text-center text-muted-foreground bg-card/50 rounded-xl border border-dashed border-border">
-              Aucun programme créé. Créez-en un pour commencer.
+              {t("programs.no_program_created")}
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, Link } from "wouter";
 import { useGetThreadMessages, useSendMessage, useGetClientDetail } from "@workspace/api-client-react";
 import { Loader2, ArrowLeft, Send, Paperclip, FileText, Grid, Download } from "lucide-react";
@@ -65,6 +66,7 @@ function DocumentBubble({ msg, isMine }: { msg: MessageData; isMine: boolean }) 
 }
 
 export default function ChatView() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [content, setContent] = useState("");
@@ -104,13 +106,13 @@ export default function ChatView() {
     if (!file) return;
 
     if (file.size > MAX_DOC_SIZE) {
-      alert("Fichier trop lourd. La taille maximale est de 10 Mo.");
+      alert(t("chat.file_too_large"));
       e.target.value = "";
       return;
     }
 
     if (!ACCEPTED_MIME.split(",").includes(file.type)) {
-      alert("Format non supporté. Formats acceptés : PDF, Word, Excel, images.");
+      alert(t("chat.format_unsupported"));
       e.target.value = "";
       return;
     }
@@ -129,7 +131,7 @@ export default function ChatView() {
       });
       if (!uploadRes.ok) {
         const errBody = await uploadRes.json().catch(() => ({})) as { error?: { message?: string } };
-        alert(errBody?.error?.message ?? "Format ou taille non supportés");
+        alert(errBody?.error?.message ?? t("chat.format_or_size_unsupported"));
         return;
       }
       const { uploadUrl } = await uploadRes.json() as { uploadUrl: string };
@@ -161,7 +163,7 @@ export default function ChatView() {
       });
       refetch();
     } catch {
-      alert("Impossible d'envoyer le document. Réessaie.");
+      alert(t("chat.send_failed"));
     } finally {
       setDocumentUploading(false);
       setDocUploadProgress(0);
@@ -181,7 +183,7 @@ export default function ChatView() {
           </div>
           <div>
             <div className="font-semibold text-white">{client?.firstName} {client?.lastName}</div>
-            <div className="text-xs text-muted-foreground">Athlète</div>
+            <div className="text-xs text-muted-foreground">{t("chat.athlete")}</div>
           </div>
         </div>
       </div>
@@ -210,11 +212,11 @@ export default function ChatView() {
                     <div className="px-4 py-2.5">
                       {msg.mediaType === "audio" ? (
                         <div className="flex items-center gap-2 text-sm opacity-80">
-                          🎤 <span>Message vocal</span>
+                          🎤 <span>{t("chat.voice_message")}</span>
                         </div>
                       ) : msg.mediaType === "video" ? (
                         <div className="flex items-center gap-2 text-sm opacity-80">
-                          🎬 <span>Vidéo</span>
+                          🎬 <span>{t("chat.video")}</span>
                         </div>
                       ) : (
                         <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
@@ -239,8 +241,8 @@ export default function ChatView() {
               <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
               <span>
                 {docUploadProgress > 0 && docUploadProgress < 100
-                  ? `Envoi du document… ${docUploadProgress}%`
-                  : "Envoi du document…"}
+                  ? `${t("chat.uploading_document")} ${docUploadProgress}%`
+                  : t("chat.uploading_document")}
               </span>
             </div>
             {docUploadProgress > 0 && docUploadProgress < 100 && (
@@ -268,14 +270,14 @@ export default function ChatView() {
             className="h-12 w-12 rounded-full shrink-0 text-muted-foreground hover:text-white"
             disabled={documentUploading}
             onClick={() => fileInputRef.current?.click()}
-            title="Joindre un document (PDF, Word, Excel, image — max 10 Mo)"
+            title={t("chat.attach_document_title")}
           >
             {documentUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
           </Button>
           <Input
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Écrire un message..."
+            placeholder={t("chat.message_placeholder")}
             className="flex-1 bg-background border-border h-12 rounded-full px-6"
           />
           <Button

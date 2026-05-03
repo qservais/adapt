@@ -20,11 +20,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGetClients } from "@workspace/api-client-react";
 
-const METRIC_LABELS: Record<string, { label: string; defaultUnit: string }> = {
-  reps: { label: "Répétitions", defaultUnit: "répétitions" },
-  distance: { label: "Distance", defaultUnit: "km" },
-  time: { label: "Durée", defaultUnit: "minutes" },
-  sessions: { label: "Séances", defaultUnit: "séances" },
+const METRIC_KEYS = ["reps", "distance", "time", "sessions"] as const;
+const METRIC_DEFAULT_UNITS: Record<string, string> = {
+  reps: "répétitions",
+  distance: "km",
+  time: "minutes",
+  sessions: "séances",
 };
 
 function progressPercent(progress: number, target: number) {
@@ -58,7 +59,7 @@ export default function ChallengesPage() {
 
   const handleCreate = async () => {
     if (!form.title || !form.metric || !form.target || !form.startDate || !form.endDate || !form.athleteIds?.length) {
-      toast({ title: "Champs manquants", description: "Remplis tous les champs obligatoires.", variant: "destructive" });
+      toast({ title: t("challenges.missing_fields_title"), description: t("challenges.missing_fields_desc"), variant: "destructive" });
       return;
     }
     try {
@@ -67,28 +68,28 @@ export default function ChallengesPage() {
         description: form.description,
         metric: form.metric as CreateChallengeRequest["metric"],
         target: Number(form.target),
-        unit: form.unit ?? METRIC_LABELS[form.metric!]?.defaultUnit,
+        unit: form.unit ?? METRIC_DEFAULT_UNITS[form.metric!],
         startDate: form.startDate!,
         endDate: form.endDate!,
         athleteIds: form.athleteIds!,
       }});
-      toast({ title: "Challenge créé" });
+      toast({ title: t("challenges.challenge_created") });
       setShowCreate(false);
       setForm({ metric: "reps", athleteIds: [] });
       refetch();
     } catch {
-      toast({ title: "Échec de la création", variant: "destructive" });
+      toast({ title: t("challenges.create_failed"), variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await deleteMutation.mutateAsync({ id });
-      toast({ title: "Challenge supprimé" });
+      toast({ title: t("challenges.challenge_deleted") });
       setDeleteId(null);
       refetch();
     } catch {
-      toast({ title: "Échec de la suppression", variant: "destructive" });
+      toast({ title: t("challenges.delete_failed"), variant: "destructive" });
     }
   };
 
@@ -117,14 +118,14 @@ export default function ChallengesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-display text-white flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-accent" /> CHALLENGES
+            <Trophy className="w-8 h-8 text-accent" /> {t("challenges.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {t("challenges.subtitle")}
           </p>
         </div>
         <Button onClick={() => setShowCreate(true)} className="gap-2">
-          <Plus className="w-4 h-4" /> Créer un challenge
+          <Plus className="w-4 h-4" /> {t("challenges.btn_new_challenge")}
         </Button>
       </div>
 
@@ -132,7 +133,7 @@ export default function ChallengesPage() {
         <div className="text-center py-20 bg-card rounded-xl border border-border">
           <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground text-lg">{t("challenges.no_challenge_active")}</p>
-          <p className="text-muted-foreground text-sm mt-1">Créez le premier défi pour motiver vos athlètes.</p>
+          <p className="text-muted-foreground text-sm mt-1">{t("challenges.no_challenge_hint")}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -155,7 +156,7 @@ export default function ChallengesPage() {
             <div className="space-y-1">
               <Label>{t("challenges.label_title")}</Label>
               <Input
-                placeholder="Ex. : 100 pompes en 30 jours"
+                placeholder={t("challenges.title_placeholder")}
                 value={form.title ?? ""}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               />
@@ -163,7 +164,7 @@ export default function ChallengesPage() {
             <div className="space-y-1">
               <Label>{t("challenges.label_description")}</Label>
               <Textarea
-                placeholder="Détails du défi (optionnel)"
+                placeholder={t("challenges.description_placeholder")}
                 value={form.description ?? ""}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 rows={2}
@@ -172,13 +173,13 @@ export default function ChallengesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>{t("challenges.label_metric")}</Label>
-                <Select value={form.metric} onValueChange={v => setForm(f => ({ ...f, metric: v as CreateChallengeRequest["metric"], unit: METRIC_LABELS[v]?.defaultUnit }))}>
+                <Select value={form.metric} onValueChange={v => setForm(f => ({ ...f, metric: v as CreateChallengeRequest["metric"], unit: METRIC_DEFAULT_UNITS[v] }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(METRIC_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    {METRIC_KEYS.map((k) => (
+                      <SelectItem key={k} value={k}>{t(`challenges.metric_${k}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -187,23 +188,23 @@ export default function ChallengesPage() {
                 <Label>{t("challenges.label_target")}</Label>
                 <Input
                   type="number"
-                  placeholder="Ex. : 100"
+                  placeholder={t("challenges.target_placeholder")}
                   value={form.target ?? ""}
                   onChange={e => setForm(f => ({ ...f, target: Number(e.target.value) }))}
                 />
               </div>
             </div>
             <div className="space-y-1">
-              <Label>Unité</Label>
+              <Label>{t("challenges.label_unit")}</Label>
               <Input
-                placeholder={METRIC_LABELS[form.metric ?? "reps"]?.defaultUnit ?? ""}
+                placeholder={t(`challenges.metric_unit_${form.metric ?? "reps"}`)}
                 value={form.unit ?? ""}
                 onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Date de début *</Label>
+                <Label>{t("challenges.label_start_date")}</Label>
                 <Input
                   type="date"
                   value={form.startDate ?? ""}
@@ -211,7 +212,7 @@ export default function ChallengesPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label>Date de fin *</Label>
+                <Label>{t("challenges.label_end_date")}</Label>
                 <Input
                   type="date"
                   value={form.endDate ?? ""}
@@ -220,9 +221,9 @@ export default function ChallengesPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Athlètes assignés *</Label>
+              <Label>{t("challenges.label_athletes")}</Label>
               {!clients?.length ? (
-                <p className="text-sm text-muted-foreground">Aucun athlète disponible</p>
+                <p className="text-sm text-muted-foreground">{t("challenges.no_athletes_available")}</p>
               ) : (
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                   {clients.map(client => (
@@ -255,10 +256,10 @@ export default function ChallengesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
               {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Créer
+              {t("common.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -267,18 +268,18 @@ export default function ChallengesPage() {
       <Dialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Supprimer le challenge ?</DialogTitle>
+            <DialogTitle>{t("challenges.delete_confirm_title")}</DialogTitle>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">Cette action est irréversible. La progression des athlètes sera perdue.</p>
+          <p className="text-muted-foreground text-sm">{t("challenges.delete_confirm_desc")}</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>{t("common.cancel")}</Button>
             <Button
               variant="destructive"
               onClick={() => deleteId && handleDelete(deleteId)}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Supprimer
+              {t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -288,7 +289,8 @@ export default function ChallengesPage() {
 }
 
 function ChallengeCard({ challenge, onDelete }: { challenge: CoachChallenge; onDelete: () => void }) {
-  const metricInfo = METRIC_LABELS[challenge.metric] ?? { label: challenge.metric, defaultUnit: "" };
+  const { t } = useTranslation();
+  const metricLabel = t(`challenges.metric_${challenge.metric}`, { defaultValue: challenge.metric });
   const days = daysRemaining(challenge.endDate);
   const isExpired = days < 0;
 
@@ -299,9 +301,9 @@ function ChallengeCard({ challenge, onDelete }: { challenge: CoachChallenge; onD
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-lg font-bold text-white">{challenge.title}</h3>
             {isExpired ? (
-              <span className="text-[10px] font-mono tracking-widest px-2 py-0.5 rounded-sm bg-muted text-muted-foreground">TERMINÉ</span>
+              <span className="text-[10px] font-mono tracking-widest px-2 py-0.5 rounded-sm bg-muted text-muted-foreground">{t("challenges.status_done")}</span>
             ) : (
-              <span className="text-[10px] font-mono tracking-widest px-2 py-0.5 rounded-sm bg-primary/20 text-primary">EN COURS</span>
+              <span className="text-[10px] font-mono tracking-widest px-2 py-0.5 rounded-sm bg-primary/20 text-primary">{t("challenges.status_in_progress")}</span>
             )}
           </div>
           {challenge.description && (
@@ -321,15 +323,15 @@ function ChallengeCard({ challenge, onDelete }: { challenge: CoachChallenge; onD
       <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono flex-wrap">
         <span className="flex items-center gap-1">
           <Target className="w-3.5 h-3.5" />
-          {metricInfo.label} · {challenge.target} {challenge.unit}
+          {metricLabel} · {challenge.target} {challenge.unit}
         </span>
         <span className="flex items-center gap-1">
           <CalendarDays className="w-3.5 h-3.5" />
-          {isExpired ? "Expiré" : `${days} j. restant${days > 1 ? "s" : ""}`}
+          {isExpired ? t("challenges.expired") : t("challenges.days_remaining", { count: days })}
         </span>
         <span className="flex items-center gap-1">
           <Users className="w-3.5 h-3.5" />
-          {challenge.assignments.length} athlète{challenge.assignments.length > 1 ? "s" : ""}
+          {t("challenges.athletes_count", { count: challenge.assignments.length })}
         </span>
       </div>
 

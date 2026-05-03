@@ -35,23 +35,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const RECURRENCE_LABELS: Record<string, string> = {
-  daily: "Tous les jours",
-  weekly: "Hebdomadaire",
-  custom: "Personnalisé",
-};
-
-const DAY_LABELS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function formatHour(h: number) {
   return `${String(h).padStart(2, "0")}:00`;
 }
 
-function athleteName(n: ScheduledNotification) {
+function athleteName(n: ScheduledNotification, fallback: string) {
   const first = n.athleteFirstName ?? "";
   const last = n.athleteLastName ?? "";
-  return `${first} ${last}`.trim() || "Athlète";
+  return `${first} ${last}`.trim() || fallback;
 }
 
 export default function NotificationsPage() {
@@ -91,9 +84,9 @@ export default function NotificationsPage() {
       await updateHourMutation.mutateAsync({ data: { hour } });
       setMorningHour(hour);
       refetchMorning();
-      toast({ title: "Heure matinale mise à jour" });
+      toast({ title: t("notifications_page.morning_hour_updated") });
     } catch {
-      toast({ title: "Échec de la mise à jour", variant: "destructive" });
+      toast({ title: t("notifications_page.update_failed"), variant: "destructive" });
     } finally {
       setSavingHour(false);
     }
@@ -126,11 +119,11 @@ export default function NotificationsPage() {
 
   const handleSubmit = async () => {
     if (!form.message?.trim()) {
-      toast({ title: "Message requis", variant: "destructive" });
+      toast({ title: t("notifications_page.msg_required"), variant: "destructive" });
       return;
     }
     if (!editItem && !form.athleteId) {
-      toast({ title: "Athlète requis", variant: "destructive" });
+      toast({ title: t("notifications_page.athlete_required"), variant: "destructive" });
       return;
     }
     const config: Record<string, unknown> =
@@ -147,7 +140,7 @@ export default function NotificationsPage() {
             sendHour: form.sendHour,
           },
         });
-        toast({ title: "Rappel mis à jour" });
+        toast({ title: t("notifications_page.reminder_updated") });
       } else {
         await createMutation.mutateAsync({
           data: {
@@ -158,13 +151,13 @@ export default function NotificationsPage() {
             sendHour: form.sendHour ?? 8,
           },
         });
-        toast({ title: "Rappel créé" });
+        toast({ title: t("notifications_page.reminder_created") });
       }
       setShowCreate(false);
       resetForm();
       refetch();
     } catch {
-      toast({ title: "Échec de l'opération", variant: "destructive" });
+      toast({ title: t("notifications_page.operation_failed"), variant: "destructive" });
     }
   };
 
@@ -173,18 +166,18 @@ export default function NotificationsPage() {
       await updateMutation.mutateAsync({ id: n.id, data: { active: !n.active } });
       refetch();
     } catch {
-      toast({ title: "Échec", variant: "destructive" });
+      toast({ title: t("notifications_page.operation_failed"), variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await deleteMutation.mutateAsync({ id });
-      toast({ title: "Rappel supprimé" });
+      toast({ title: t("notifications_page.reminder_deleted") });
       setDeleteId(null);
       refetch();
     } catch {
-      toast({ title: "Échec de la suppression", variant: "destructive" });
+      toast({ title: t("notifications_page.delete_failed"), variant: "destructive" });
     }
   };
 
@@ -201,7 +194,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-display text-white flex items-center gap-3">
-            <Bell className="w-8 h-8 text-primary" /> NOTIFICATIONS
+            <Bell className="w-8 h-8 text-primary" /> {t("notifications_page.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {t("notifications_page.subtitle")}
@@ -211,7 +204,7 @@ export default function NotificationsPage() {
           onClick={() => { resetForm(); setShowCreate(true); }}
           className="gap-2 bg-primary text-black hover:bg-primary/90 font-bold"
         >
-          <Plus className="w-4 h-4" /> Nouveau rappel
+          <Plus className="w-4 h-4" /> {t("notifications_page.btn_new_reminder")}
         </Button>
       </div>
 
@@ -221,8 +214,7 @@ export default function NotificationsPage() {
           <h2 className="text-lg font-display text-white">{t("notifications_page.morning_phrase_title")}</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Chaque matin, vos athlètes reçoivent une phrase de motivation + le résumé de leur séance du jour.
-          Choisissez l'heure d'envoi ci-dessous.
+          {t("notifications_page.morning_phrase_desc")}
         </p>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -232,7 +224,7 @@ export default function NotificationsPage() {
               onValueChange={(v) => handleSaveMorningHour(Number(v))}
             >
               <SelectTrigger className="w-32 bg-background border-border">
-                <SelectValue placeholder="Heure" />
+                <SelectValue placeholder={t("notifications_page.morning_hour_placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {HOURS.map((h) => (
@@ -245,21 +237,21 @@ export default function NotificationsPage() {
           </div>
           {savingHour && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
           <span className="text-xs text-muted-foreground">
-            Envoi quotidien à {formatHour(currentMorningHour)} pour tous vos athlètes.
+            {t("notifications_page.morning_send_at", { hour: formatHour(currentMorningHour) })}
           </span>
         </div>
       </div>
 
       <div className="space-y-3">
         <h2 className="text-lg font-display text-white flex items-center gap-2">
-          <Bell className="w-5 h-5 text-primary" /> Rappels personnalisés
+          <Bell className="w-5 h-5 text-primary" /> {t("notifications_page.custom_reminders_title")}
         </h2>
         {(!notifications || notifications.length === 0) ? (
           <div className="bg-card border border-dashed border-border rounded-xl p-8 text-center">
             <Bell className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
             <p className="text-muted-foreground text-sm">{t("notifications_page.no_reminders")}</p>
             <p className="text-muted-foreground text-xs mt-1">
-              Créez des rappels personnalisés pour motiver vos athlètes.
+              {t("notifications_page.no_reminders_hint")}
             </p>
           </div>
         ) : (
@@ -279,16 +271,16 @@ export default function NotificationsPage() {
         <DialogContent className="bg-card border-border max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display text-white">
-              {editItem ? "Modifier le rappel" : "Nouveau rappel"}
+              {editItem ? t("notifications_page.dialog_edit") : t("notifications_page.dialog_new")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {!editItem && (
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Athlète</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("notifications_page.label_athlete")}</Label>
                 <Select value={form.athleteId ?? ""} onValueChange={(v) => setForm(f => ({ ...f, athleteId: v }))}>
                   <SelectTrigger className="bg-background border-border">
-                    <SelectValue placeholder="Sélectionner un athlète" />
+                    <SelectValue placeholder={t("notifications_page.select_athlete_placeholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(clients ?? []).map((c) => (
@@ -301,18 +293,18 @@ export default function NotificationsPage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Message</Label>
+              <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("notifications_page.label_message")}</Label>
               <Textarea
                 value={form.message ?? ""}
                 onChange={(e) => setForm(f => ({ ...f, message: e.target.value }))}
-                placeholder="Bois au moins 2L d'eau aujourd'hui !"
+                placeholder={t("notifications_page.message_placeholder")}
                 className="bg-background border-border resize-none"
                 rows={3}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Récurrence</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("notifications_page.label_recurrence")}</Label>
                 <Select
                   value={form.recurrenceType ?? "daily"}
                   onValueChange={(v) => setForm(f => ({ ...f, recurrenceType: v as CreateScheduledNotificationRequest["recurrenceType"] }))}
@@ -321,14 +313,14 @@ export default function NotificationsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="daily">Tous les jours</SelectItem>
-                    <SelectItem value="weekly">Hebdomadaire</SelectItem>
-                    <SelectItem value="custom">Personnalisé</SelectItem>
+                    <SelectItem value="daily">{t("notifications_page.recurrence_daily")}</SelectItem>
+                    <SelectItem value="weekly">{t("notifications_page.recurrence_weekly")}</SelectItem>
+                    <SelectItem value="custom">{t("notifications_page.recurrence_custom")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Heure d'envoi</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("notifications_page.label_send_hour")}</Label>
                 <Select
                   value={String(form.sendHour ?? 8)}
                   onValueChange={(v) => setForm(f => ({ ...f, sendHour: Number(v) }))}
@@ -346,9 +338,9 @@ export default function NotificationsPage() {
             </div>
             {(form.recurrenceType === "weekly" || form.recurrenceType === "custom") && (
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Jours</Label>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("notifications_page.label_days")}</Label>
                 <div className="flex flex-wrap gap-2">
-                  {DAY_LABELS.map((label, idx) => (
+                  {(t("notifications_page.day_labels", { returnObjects: true }) as string[]).map((label, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -368,7 +360,7 @@ export default function NotificationsPage() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => { setShowCreate(false); resetForm(); }}>
-              Annuler
+              {t("common.cancel", { defaultValue: "Annuler" })}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -377,7 +369,7 @@ export default function NotificationsPage() {
             >
               {(createMutation.isPending || updateMutation.isPending) ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-              ) : editItem ? "Enregistrer" : "Créer"}
+              ) : editItem ? t("common.save", { defaultValue: "Enregistrer" }) : t("common.create", { defaultValue: "Créer" })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -386,17 +378,17 @@ export default function NotificationsPage() {
       <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
         <DialogContent className="bg-card border-border max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display text-white">Supprimer le rappel ?</DialogTitle>
+            <DialogTitle className="font-display text-white">{t("notifications_page.delete_confirm")}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Cette action est irréversible.</p>
+          <p className="text-sm text-muted-foreground">{t("notifications_page.irreversible")}</p>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteId(null)}>Annuler</Button>
+            <Button variant="ghost" onClick={() => setDeleteId(null)}>{t("common.cancel", { defaultValue: "Annuler" })}</Button>
             <Button
               variant="destructive"
               onClick={() => deleteId && handleDelete(deleteId)}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Supprimer"}
+              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("common.delete", { defaultValue: "Supprimer" })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -416,12 +408,19 @@ function NotificationCard({
   onDelete: () => void;
   onToggleActive: () => void;
 }) {
+  const { t } = useTranslation();
+  const dayLabels = t("notifications_page.day_labels", { returnObjects: true }) as string[];
+  const recurrenceLabels: Record<string, string> = {
+    daily: t("notifications_page.recurrence_daily"),
+    weekly: t("notifications_page.recurrence_weekly"),
+    custom: t("notifications_page.recurrence_custom"),
+  };
   const days = (n.recurrenceConfig?.["days"] as number[] | undefined) ?? [];
   const dayStr = n.recurrenceType === "daily"
-    ? "Tous les jours"
+    ? t("notifications_page.recurrence_daily")
     : days.length > 0
-    ? days.map((d) => DAY_LABELS[d]).join(", ")
-    : RECURRENCE_LABELS[n.recurrenceType] ?? n.recurrenceType;
+    ? days.map((d) => dayLabels[d]).join(", ")
+    : recurrenceLabels[n.recurrenceType] ?? n.recurrenceType;
 
   return (
     <div className={`bg-card border rounded-xl p-4 transition-all ${n.active ? "border-border" : "border-border/40 opacity-60"}`}>
@@ -429,10 +428,10 @@ function NotificationCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-mono font-bold text-primary uppercase">
-              {athleteName(n)}
+              {athleteName(n, t("notifications_page.default_athlete_label"))}
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${n.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-              {n.active ? "ACTIF" : "INACTIF"}
+              {n.active ? t("notifications_page.active") : t("notifications_page.inactive")}
             </span>
           </div>
           <p className="text-sm text-white leading-snug">{n.message}</p>
@@ -449,7 +448,7 @@ function NotificationCard({
             size="icon"
             className="text-muted-foreground hover:text-primary"
             onClick={onToggleActive}
-            title={n.active ? "Désactiver" : "Activer"}
+            title={n.active ? t("notifications_page.deactivate") : t("notifications_page.activate")}
           >
             {n.active ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
           </Button>

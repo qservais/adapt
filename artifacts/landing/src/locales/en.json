@@ -114,6 +114,10 @@
     "rights": "© {{year}} ADAPT System ·",
     "privacy": "Legal & Privacy"
   },
+  "notFound": {
+    "message": "Page not found",
+    "back": "← Back to home"
+  },
   "reset": {
     "brand": "ADAPT",
     "title": "RESET MY PASSWORD",

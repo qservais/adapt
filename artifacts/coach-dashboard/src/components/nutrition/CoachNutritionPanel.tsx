@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Apple, FileText, Upload, Trash2, Loader2, Settings2, ChevronDown, ChevronUp 
@@ -80,6 +81,7 @@ interface Props {
 }
 
 export function CoachNutritionPanel({ athleteId }: Props) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -118,7 +120,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/goals`] });
       setGoalsOpen(false);
-      toast({ title: "Objectifs mis à jour" });
+      toast({ title: t("components.nutrition_panel.toast_goals_updated") });
     },
   });
 
@@ -128,7 +130,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/coach/clients/${athleteId}/nutrition/pdfs`] });
       setDeletePdfId(null);
-      toast({ title: "Plan supprimé" });
+      toast({ title: t("components.nutrition_panel.toast_plan_deleted") });
     },
   });
 
@@ -156,7 +158,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
         headers: { "Content-Type": "application/pdf" },
         body: uploadFile,
       });
-      if (!putRes.ok) throw new Error("Erreur lors du transfert du fichier");
+      if (!putRes.ok) throw new Error(t("components.nutrition_panel.error_upload_transfer"));
 
       await customFetch(metadataEndpoint, {
         method: "POST",
@@ -167,9 +169,9 @@ export function CoachNutritionPanel({ athleteId }: Props) {
       setUploadOpen(false);
       setUploadTitle("");
       setUploadFile(null);
-      toast({ title: "Plan nutritionnel envoyé" });
+      toast({ title: t("components.nutrition_panel.toast_plan_uploaded") });
     } catch {
-      toast({ title: "Erreur d'upload", variant: "destructive" });
+      toast({ title: t("components.nutrition_panel.toast_upload_error"), variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -191,7 +193,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Apple className="w-4 h-4 text-green-400" />
-          <h2 className="text-lg font-display text-white">Nutrition</h2>
+          <h2 className="text-lg font-display text-white">{t("components.nutrition_panel.title")}</h2>
         </div>
         <div className="flex gap-2">
           <Button
@@ -201,7 +203,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
             onClick={openGoals}
           >
             <Settings2 className="w-3.5 h-3.5" />
-            Objectifs
+            {t("components.nutrition_panel.goals")}
           </Button>
           <Button
             variant="outline"
@@ -210,7 +212,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
             onClick={() => setUploadOpen(true)}
           >
             <Upload className="w-3.5 h-3.5" />
-            Envoyer un plan
+            {t("components.nutrition_panel.send_plan")}
           </Button>
         </div>
       </div>
@@ -219,7 +221,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
         <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-muted-foreground tracking-wider">
-              SUIVI DU JOUR
+              {t("components.nutrition_panel.today_tracking")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -227,9 +229,9 @@ export function CoachNutritionPanel({ athleteId }: Props) {
               <span className="text-2xl font-mono font-bold text-green-400">{todayKcal}</span>
               <span className="text-muted-foreground text-sm">/ {goals.kcal} kcal</span>
             </div>
-            <MacroProgress label="Protéines" value={todayProtein} goal={goals.proteinG} color="#00F0FF" />
-            <MacroProgress label="Glucides" value={todayCarbs} goal={goals.carbsG} color="#F59E0B" />
-            <MacroProgress label="Lipides" value={todayFat} goal={goals.fatG} color="#A855F7" />
+            <MacroProgress label={t("components.nutrition_panel.macro_protein")} value={todayProtein} goal={goals.proteinG} color="#00F0FF" />
+            <MacroProgress label={t("components.nutrition_panel.macro_carbs")} value={todayCarbs} goal={goals.carbsG} color="#F59E0B" />
+            <MacroProgress label={t("components.nutrition_panel.macro_fat")} value={todayFat} goal={goals.fatG} color="#A855F7" />
           </CardContent>
         </Card>
       )}
@@ -238,7 +240,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
         <CardHeader className="pb-3 cursor-pointer" onClick={() => setMealsExpanded(v => !v)}>
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-mono text-muted-foreground tracking-wider">
-              REPAS RÉCENTS
+              {t("components.nutrition_panel.recent_meals")}
             </CardTitle>
             {mealsExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </div>
@@ -247,7 +249,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
           <CardContent className="space-y-2 pt-0">
             {mealsQuery.isLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
             {meals.length === 0 && !mealsQuery.isLoading && (
-              <p className="text-sm text-muted-foreground">Aucun repas enregistré.</p>
+              <p className="text-sm text-muted-foreground">{t("components.nutrition_panel.no_meals")}</p>
             )}
             {meals.slice(0, 10).map(meal => (
               <div key={meal.id} className="flex items-start justify-between gap-2 py-2 border-b border-border last:border-0">
@@ -280,7 +282,7 @@ export function CoachNutritionPanel({ athleteId }: Props) {
         <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-muted-foreground tracking-wider">
-              PLANS NUTRITIONNELS
+              {t("components.nutrition_panel.nutrition_plans")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 pt-0">
@@ -314,13 +316,18 @@ export function CoachNutritionPanel({ athleteId }: Props) {
       <Dialog open={goalsOpen} onOpenChange={setGoalsOpen}>
         <DialogContent className="bg-card border-border max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white font-display">Objectifs nutritionnels</DialogTitle>
+            <DialogTitle className="text-white font-display">{t("components.nutrition_panel.goals_dialog_title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {(["proteinG", "carbsG", "fatG", "kcal"] as (keyof NutritionGoals)[]).map(key => (
               <div key={key} className="space-y-1">
                 <Label className="text-muted-foreground text-sm">
-                  {{ proteinG: "Protéines (g)", carbsG: "Glucides (g)", fatG: "Lipides (g)", kcal: "Calories (kcal)" }[key]}
+                  {{
+                    proteinG: t("components.nutrition_panel.field_protein"),
+                    carbsG: t("components.nutrition_panel.field_carbs"),
+                    fatG: t("components.nutrition_panel.field_fat"),
+                    kcal: t("components.nutrition_panel.field_kcal"),
+                  }[key]}
                 </Label>
                 <Input
                   type="number"
@@ -332,14 +339,14 @@ export function CoachNutritionPanel({ athleteId }: Props) {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGoalsOpen(false)} className="border-border">Annuler</Button>
+            <Button variant="outline" onClick={() => setGoalsOpen(false)} className="border-border">{t("components.nutrition_panel.cancel")}</Button>
             <Button
               onClick={() => setGoalsMutation.mutate(goalForm)}
               disabled={setGoalsMutation.isPending}
               className="bg-green-500 text-black hover:bg-green-400"
             >
               {setGoalsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Enregistrer
+              {t("components.nutrition_panel.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -348,20 +355,20 @@ export function CoachNutritionPanel({ athleteId }: Props) {
       <Dialog open={uploadOpen} onOpenChange={open => { setUploadOpen(open); if (!open) { setUploadTitle(""); setUploadFile(null); } }}>
         <DialogContent className="bg-card border-border max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white font-display">Envoyer un plan nutritionnel</DialogTitle>
+            <DialogTitle className="text-white font-display">{t("components.nutrition_panel.upload_dialog_title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1">
-              <Label className="text-muted-foreground text-sm">Titre du plan</Label>
+              <Label className="text-muted-foreground text-sm">{t("components.nutrition_panel.plan_title_label")}</Label>
               <Input
                 value={uploadTitle}
                 onChange={e => setUploadTitle(e.target.value)}
-                placeholder="Ex : Plan masse, Phase sèche…"
+                placeholder={t("components.nutrition_panel.plan_title_placeholder")}
                 className="bg-background border-border text-white"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-muted-foreground text-sm">Fichier PDF</Label>
+              <Label className="text-muted-foreground text-sm">{t("components.nutrition_panel.pdf_file_label")}</Label>
               <input
                 ref={fileRef}
                 type="file"
@@ -375,19 +382,19 @@ export function CoachNutritionPanel({ athleteId }: Props) {
                 onClick={() => fileRef.current?.click()}
               >
                 <Upload className="w-4 h-4" />
-                {uploadFile ? uploadFile.name : "Choisir un fichier…"}
+                {uploadFile ? uploadFile.name : t("components.nutrition_panel.choose_file")}
               </Button>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadOpen(false)} className="border-border">Annuler</Button>
+            <Button variant="outline" onClick={() => setUploadOpen(false)} className="border-border">{t("components.nutrition_panel.cancel")}</Button>
             <Button
               onClick={handleUpload}
               disabled={uploading || !uploadTitle.trim() || !uploadFile}
               className="bg-primary text-black hover:bg-primary/90"
             >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Envoyer
+              {t("components.nutrition_panel.send")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -396,18 +403,18 @@ export function CoachNutritionPanel({ athleteId }: Props) {
       <AlertDialog open={!!deletePdfId} onOpenChange={o => !o && setDeletePdfId(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white font-display">Supprimer ce plan ?</AlertDialogTitle>
-            <AlertDialogDescription>Ce plan nutritionnel sera définitivement supprimé.</AlertDialogDescription>
+            <AlertDialogTitle className="text-white font-display">{t("components.nutrition_panel.delete_plan_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("components.nutrition_panel.delete_plan_desc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">{t("components.nutrition_panel.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={() => deletePdfId && deletePdfMutation.mutate(deletePdfId)}
               disabled={deletePdfMutation.isPending}
             >
               {deletePdfMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Supprimer
+              {t("components.nutrition_panel.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

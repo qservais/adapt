@@ -255,7 +255,7 @@ export default function Dashboard() {
   if (error || !data) {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground text-sm italic">
-        Impossible de charger le tableau de bord.
+        {t("dashboard.load_error")}
       </div>
     );
   }
@@ -318,7 +318,7 @@ export default function Dashboard() {
 
   const selectedDaySessions = selectedDate ? (calSessionsByDate.get(selectedDate) ?? []) : [];
 
-  const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const DAY_HEADERS = t("dashboard.day_headers", { returnObjects: true }) as string[];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -332,7 +332,7 @@ export default function Dashboard() {
         <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 space-y-2">
           <div className="flex items-center gap-2 text-destructive font-bold text-xs uppercase tracking-wider">
             <AlertTriangle className="w-4 h-4" />
-            {activeAlerts.length} alerte{activeAlerts.length > 1 ? "s" : ""} active{activeAlerts.length > 1 ? "s" : ""}
+            {t("dashboard.alerts_active", { count: activeAlerts.length })}
           </div>
           <div className="space-y-1">
             {activeAlerts.map(alert => (
@@ -355,7 +355,7 @@ export default function Dashboard() {
             ))}
             {activeAlerts.length > 0 && (
               <Link href="/alerts" className="text-xs text-primary hover:underline">
-                Voir toutes les alertes →
+                {t("dashboard.view_all_alerts")}
               </Link>
             )}
           </div>
@@ -370,7 +370,7 @@ export default function Dashboard() {
               <Users className="w-3.5 h-3.5" /> {t("dashboard.kpi_active_athletes")}
             </div>
             <div className="text-3xl font-display text-white">{todayAthletes.length}</div>
-            <div className="text-xs text-muted-foreground">{totalCheckins} check-in{totalCheckins !== 1 ? "s" : ""} aujourd'hui</div>
+            <div className="text-xs text-muted-foreground">{t("dashboard.kpi_checkins_today", { count: totalCheckins })}</div>
           </CardContent>
         </Card>
 
@@ -382,7 +382,7 @@ export default function Dashboard() {
             <div className={cn("text-3xl font-display", avgScore !== null ? (avgScore >= 60 ? "text-primary" : avgScore >= 40 ? "text-accent" : "text-destructive") : "text-muted-foreground")}>
               {avgScore !== null ? avgScore : "--"}
             </div>
-            <div className="text-xs text-muted-foreground">Score du jour (sur 100)</div>
+            <div className="text-xs text-muted-foreground">{t("dashboard.kpi_score_today")}</div>
           </CardContent>
         </Card>
 
@@ -394,7 +394,7 @@ export default function Dashboard() {
             <div className={cn("text-3xl font-display", completionRate !== null ? (completionRate >= 70 ? "text-primary" : completionRate >= 40 ? "text-accent" : "text-destructive") : "text-muted-foreground")}>
               {completionRate !== null ? `${completionRate}%` : "--"}
             </div>
-            <div className="text-xs text-muted-foreground">séances (7 jours)</div>
+            <div className="text-xs text-muted-foreground">{t("dashboard.kpi_sessions_7d")}</div>
           </CardContent>
         </Card>
 
@@ -404,7 +404,7 @@ export default function Dashboard() {
               <Zap className="w-3.5 h-3.5" /> {t("dashboard.kpi_adapt_mode")}
             </div>
             <div className="text-3xl font-display text-accent">{adaptCount}</div>
-            <div className="text-xs text-muted-foreground">athlète{adaptCount !== 1 ? "s" : ""} en mode adapté</div>
+            <div className="text-xs text-muted-foreground">{t("dashboard.kpi_athletes_adapt", { count: adaptCount })}</div>
           </CardContent>
         </Card>
       </div>
@@ -416,7 +416,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                AUJOURD'HUI
+                {t("dashboard.today_title")}
               </CardTitle>
               <div className="flex items-center gap-1">
                 {(["tous", "actif", "inactif"] as AthleteFilter[]).map(f => (
@@ -464,7 +464,7 @@ export default function Dashboard() {
                           ) : athlete.daysSinceCheckin !== null && athlete.daysSinceCheckin >= 3 ? (
                             <div className="flex items-center gap-1.5 text-xs text-destructive">
                               <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                              Inactif depuis {athlete.daysSinceCheckin}j
+                              {t("dashboard.status_inactive_days", { days: athlete.daysSinceCheckin })}
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -483,7 +483,7 @@ export default function Dashboard() {
                         {athlete.sessionMode ? (
                           <ModeBadge mode={athlete.sessionMode} />
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">En attente</span>
+                          <span className="text-xs text-muted-foreground italic">{t("dashboard.status_pending")}</span>
                         )}
                       </div>
                     </div>
@@ -500,8 +500,8 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
-                SÉANCES À VENIR
-                <span className="text-xs font-mono text-muted-foreground font-normal ml-1">7 jours</span>
+                {t("dashboard.upcoming_sessions_title")}
+                <span className="text-xs font-mono text-muted-foreground font-normal ml-1">{t("dashboard.upcoming_sessions_window")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -524,8 +524,8 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
                 <Clock className="w-5 h-5 text-muted-foreground" />
-                SÉANCES PASSÉES
-                <span className="text-xs font-mono text-muted-foreground font-normal ml-1">7 derniers jours</span>
+                {t("dashboard.past_sessions_title")}
+                <span className="text-xs font-mono text-muted-foreground font-normal ml-1">{t("dashboard.past_sessions_window")}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -551,7 +551,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
               <Calendar className="w-5 h-5 text-accent" />
-              CALENDRIER MENSUEL
+              {t("dashboard.calendar_title")}
             </CardTitle>
             <div className="flex items-center gap-2">
               <button
@@ -559,7 +559,7 @@ export default function Dashboard() {
                 className="flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors"
               >
                 <Plus className="w-3 h-3" />
-                RDV
+                {t("dashboard.btn_add_appt")}
               </button>
               <button
                 onClick={() => setCalendarMonth(m => {
@@ -664,7 +664,7 @@ export default function Dashboard() {
                     onClick={() => openNewApptDialog(selectedDate)}
                     className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors"
                   >
-                    <Plus className="w-3 h-3" />RDV
+                    <Plus className="w-3 h-3" />{t("dashboard.btn_add_appt_short")}
                   </button>
                   <button onClick={() => setSelectedDate(null)} className="text-muted-foreground hover:text-white">
                     <X className="w-4 h-4" />
@@ -672,7 +672,7 @@ export default function Dashboard() {
                 </div>
               </div>
               {selectedDaySessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucune séance ce jour.</p>
+                <p className="text-sm text-muted-foreground italic">{t("dashboard.no_sessions_day")}</p>
               ) : (
                 <div className="space-y-2">
                   {selectedDaySessions.map(s => (
@@ -698,7 +698,7 @@ export default function Dashboard() {
                             <Pencil className="w-3 h-3" />
                           </button>
                           <button
-                            onClick={() => { if (window.confirm("Supprimer ce RDV ?")) deleteAppt({ id: s.sessionId }); }}
+                            onClick={() => { if (window.confirm(t("dashboard.appt_confirm_delete"))) deleteAppt({ id: s.sessionId }); }}
                             className="p-1.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -730,7 +730,7 @@ export default function Dashboard() {
                               s.isMissed ? "text-destructive border-destructive/30 bg-destructive/10" :
                               "text-muted-foreground border-border bg-white/5"
                             )}>
-                              {s.isCompleted ? "✓ Réalisée" : s.isMissed ? "✗ Manquée" : "À venir"}
+                              {s.isCompleted ? t("dashboard.session_done") : s.isMissed ? t("dashboard.session_missed") : t("dashboard.session_upcoming")}
                             </span>
                           </div>
                         </div>
@@ -749,13 +749,13 @@ export default function Dashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
             <BarChart2 className="w-5 h-5 text-[#A855F7]" />
-            VOLUME HEBDOMADAIRE
+            {t("dashboard.weekly_volume_title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {weeklyVolumeData.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground text-sm italic">
-              Aucune séance complétée ces 8 dernières semaines.
+              {t("dashboard.weekly_volume_empty")}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={180}>
@@ -767,7 +767,7 @@ export default function Dashboard() {
                   contentStyle={{ backgroundColor: "#1A1A1A", border: "1px solid #333", borderRadius: 8 }}
                   labelStyle={{ color: "#fff", fontSize: 12 }}
                   itemStyle={{ color: "#A855F7" }}
-                  formatter={(v: number) => [`${v} séance${v > 1 ? "s" : ""}`, "Volume"]}
+                  formatter={(v: number) => [t("dashboard.weekly_volume_unit", { count: v }), t("dashboard.weekly_volume_label")]}
                 />
                 <Bar dataKey="séances" fill="#A855F7" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
@@ -781,13 +781,13 @@ export default function Dashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="text-xl font-display tracking-widest text-white flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-[#00F5A0]" />
-            DERNIÈRES SÉANCES TERMINÉES
+            {t("dashboard.recent_completed_title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {recentCompleted.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground text-sm italic">
-              Aucune séance complétée ces 7 derniers jours.
+              {t("dashboard.recent_completed_empty")}
             </div>
           ) : (
             <>
@@ -832,11 +832,11 @@ export default function Dashboard() {
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs text-muted-foreground uppercase font-mono border-b border-border">
                     <tr>
-                      <th className="py-2 pr-4">Athlète</th>
-                      <th className="py-2 pr-4">Séance</th>
-                      <th className="py-2 pr-4">Mode</th>
-                      <th className="py-2 pr-4 text-center">RPE</th>
-                      <th className="py-2 text-right">Date</th>
+                      <th className="py-2 pr-4">{t("dashboard.tbl_athlete")}</th>
+                      <th className="py-2 pr-4">{t("dashboard.tbl_session")}</th>
+                      <th className="py-2 pr-4">{t("dashboard.tbl_mode")}</th>
+                      <th className="py-2 pr-4 text-center">{t("dashboard.tbl_rpe")}</th>
+                      <th className="py-2 text-right">{t("dashboard.tbl_date")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40">
@@ -886,7 +886,7 @@ export default function Dashboard() {
           <div className="bg-[#1A1A1A] border border-border rounded-xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h2 className="text-sm font-display tracking-widest text-white">
-                {apptDialog.editing ? "MODIFIER LE RDV" : "NOUVEAU RDV PRÉSENTIEL"}
+                {apptDialog.editing ? t("dashboard.appt_dialog_edit") : t("dashboard.appt_dialog_new")}
               </h2>
               <button onClick={() => setApptDialog(d => ({ ...d, open: false }))} className="text-muted-foreground hover:text-white">
                 <X className="w-4 h-4" />
@@ -895,13 +895,13 @@ export default function Dashboard() {
             <div className="p-5 space-y-4">
               {!apptDialog.editing && (
                 <div>
-                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Athlète</label>
+                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">{t("dashboard.appt_label_athlete")}</label>
                   <select
                     value={apptDialog.athleteId}
                     onChange={e => setApptDialog(d => ({ ...d, athleteId: e.target.value }))}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
                   >
-                    <option value="">— Sélectionner —</option>
+                    <option value="">{t("dashboard.appt_select_placeholder")}</option>
                     {todayAthletes.map(a => (
                       <option key={a.id} value={a.id}>{a.firstName} {a.lastName ?? ""}</option>
                     ))}
@@ -910,7 +910,7 @@ export default function Dashboard() {
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Date</label>
+                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">{t("dashboard.appt_label_date")}</label>
                   <input
                     type="date"
                     value={apptDialog.date}
@@ -919,7 +919,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Heure</label>
+                  <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">{t("dashboard.appt_label_time")}</label>
                   <input
                     type="time"
                     value={apptDialog.time}
@@ -929,7 +929,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Durée (min)</label>
+                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">{t("dashboard.appt_label_duration")}</label>
                 <input
                   type="number"
                   min={5}
@@ -940,20 +940,20 @@ export default function Dashboard() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Lieu (optionnel)</label>
+                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">{t("dashboard.appt_label_location")}</label>
                 <input
                   type="text"
-                  placeholder="Ex : Salle de sport, Domicile..."
+                  placeholder={t("dashboard.appt_location_placeholder")}
                   value={apptDialog.location}
                   onChange={e => setApptDialog(d => ({ ...d, location: e.target.value }))}
                   className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-amber-500/50"
                 />
               </div>
               <div>
-                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">Notes (optionnel)</label>
+                <label className="block text-xs font-mono text-muted-foreground mb-1.5 uppercase tracking-wider">{t("dashboard.appt_label_notes")}</label>
                 <textarea
                   rows={2}
-                  placeholder="Notes pour ce RDV..."
+                  placeholder={t("dashboard.appt_notes_placeholder")}
                   value={apptDialog.notes}
                   onChange={e => setApptDialog(d => ({ ...d, notes: e.target.value }))}
                   className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-amber-500/50 resize-none"
@@ -965,7 +965,7 @@ export default function Dashboard() {
                 onClick={() => setApptDialog(d => ({ ...d, open: false }))}
                 className="text-sm text-muted-foreground hover:text-white transition-colors"
               >
-                Annuler
+                {t("common.cancel")}
               </button>
               <button
                 onClick={submitApptDialog}
@@ -973,7 +973,7 @@ export default function Dashboard() {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-black text-sm font-bold hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {(creatingAppt || updatingAppt) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                {apptDialog.editing ? "Modifier" : "Créer le RDV"}
+                {apptDialog.editing ? t("dashboard.appt_btn_update") : t("dashboard.appt_btn_create")}
               </button>
             </div>
           </div>
@@ -1020,6 +1020,7 @@ function SessionRow({ session, todayStr }: { session: SessionEntry; todayStr: st
 }
 
 function PastSessionRow({ session }: { session: SessionEntry }) {
+  const { t } = useTranslation();
   return (
     <Link href={`/clients/${session.athleteId}`}>
       <div className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group">
@@ -1040,7 +1041,7 @@ function PastSessionRow({ session }: { session: SessionEntry }) {
             ? "text-primary border-primary/30 bg-primary/10"
             : "text-destructive border-destructive/30 bg-destructive/10"
         )}>
-          {session.isCompleted ? "✓ Réalisée" : "✗ Manquée"}
+          {session.isCompleted ? t("dashboard.session_done") : t("dashboard.session_missed")}
         </span>
       </div>
     </Link>

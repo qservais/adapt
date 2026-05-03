@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor,
   useSensor, useSensors, DragEndEvent,
@@ -289,6 +290,7 @@ interface ExercisePickerProps {
 }
 
 export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState<string>("");
   const [creating, setCreating] = useState(false);
@@ -314,13 +316,13 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
       });
       if (!res.ok) throw new Error();
       const created: ExerciseData = await res.json();
-      toast({ title: `Exercice « ${created.name} » créé` });
+      toast({ title: t("components.exercise_picker.exercise_created_toast", { name: created.name }) });
       onAdd(created);
       setCreating(false);
       setNewName("");
       refetch();
     } catch {
-      toast({ title: "Échec de la création", variant: "destructive" });
+      toast({ title: t("components.exercise_picker.create_failed_toast"), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -331,7 +333,7 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Rechercher un exercice..."
+          placeholder={t("components.exercise_picker.search_placeholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="pl-9 bg-background border-border h-8 text-xs"
@@ -339,7 +341,7 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
       </div>
       <div className="flex gap-1 flex-wrap">
         {["", ...EXERCISE_CATEGORIES.map(c => c.value)].map((cat) => {
-          const label = cat === "" ? "Tous" : EXERCISE_CATEGORIES.find(c => c.value === cat)?.label ?? cat;
+          const label = cat === "" ? t("components.exercise_picker.filter_all") : EXERCISE_CATEGORIES.find(c => c.value === cat)?.label ?? cat;
           return (
             <button
               key={cat}
@@ -373,7 +375,7 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
           </button>
         ))}
         {filtered.length === 0 && !creating && (
-          <p className="text-center py-2 text-xs text-muted-foreground">Aucun exercice trouvé</p>
+          <p className="text-center py-2 text-xs text-muted-foreground">{t("components.exercise_picker.no_exercise_found")}</p>
         )}
       </div>
 
@@ -384,14 +386,14 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
           className="w-full flex items-center justify-center gap-1.5 py-1 text-[11px] text-primary hover:text-primary/80 border border-dashed border-primary/30 hover:border-primary/60 rounded transition-colors"
         >
           <Plus className="w-3 h-3" />
-          Créer un nouvel exercice
+          {t("components.exercise_picker.create_new")}
         </button>
       ) : (
         <div className="border border-primary/30 rounded p-2 space-y-1.5 bg-primary/5">
-          <p className="text-[10px] font-mono text-primary uppercase tracking-wider">Nouvel exercice</p>
+          <p className="text-[10px] font-mono text-primary uppercase tracking-wider">{t("components.exercise_picker.new_exercise")}</p>
           <Input
             autoFocus
-            placeholder="Nom..."
+            placeholder={t("components.exercise_picker.name_placeholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -412,7 +414,7 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
               onClick={() => setCreating(false)}
               className="flex-1 text-xs py-1 rounded border border-border text-muted-foreground hover:text-white transition-colors"
             >
-              Annuler
+              {t("components.exercise_picker.cancel")}
             </button>
             <button
               type="button"
@@ -420,7 +422,7 @@ export function ExercisePicker({ onAdd, compact }: ExercisePickerProps) {
               disabled={!newName.trim() || isSaving}
               className="flex-1 text-xs py-1 rounded bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-50"
             >
-              {isSaving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : "Créer"}
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : t("components.exercise_picker.create")}
             </button>
           </div>
         </div>
@@ -512,6 +514,7 @@ function TempoInput({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove, onDuplicate, canSuperset, onLinkSuperset, onUnlinkSuperset }: ExerciseRowCardProps) {
+  const { t } = useTranslation();
   const isInSuperset = !!ex.supersetGroup;
   const label = ex.supersetLabel || "";
   const isSimple = blockType === "warm_up" || blockType === "cool_down" || blockType === "mobility";
@@ -537,15 +540,15 @@ function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove
         <span className="font-medium text-white truncate flex-1">{ex.exerciseName}</span>
         <div className="flex items-center gap-0.5 shrink-0">
           {isInSuperset ? (
-            <button type="button" onClick={onUnlinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title="Dissocier superset">
+            <button type="button" onClick={onUnlinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title={t("components.program_editor.superset_unlink")}>
               <LinkIcon className="w-3 h-3 text-[#A855F7]/60" />
             </button>
           ) : (canSuperset && (
-            <button type="button" onClick={onLinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title="Créer superset avec suivant">
+            <button type="button" onClick={onLinkSuperset} className="p-0.5 rounded hover:bg-[#A855F7]/20 transition-colors" title={t("components.program_editor.superset_create")}>
               <LinkIcon className="w-3 h-3 text-[#A855F7]" />
             </button>
           ))}
-          <button type="button" onClick={onDuplicate} className="p-0.5 rounded hover:bg-primary/20 transition-colors" title="Dupliquer cet exercice">
+          <button type="button" onClick={onDuplicate} className="p-0.5 rounded hover:bg-primary/20 transition-colors" title={t("components.program_editor.duplicate_exercise")}>
             <Copy className="w-3 h-3 text-primary/60" />
           </button>
           <button type="button" onClick={() => onMove(-1)} disabled={idx === 0} className="p-0.5 rounded hover:bg-white/10 disabled:opacity-30">
@@ -563,85 +566,85 @@ function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove
       {isSimple ? (
         <div className="grid grid-cols-2 gap-1.5">
           <div>
-            <label className={labelCls}>Durée (s)</label>
+            <label className={labelCls}>{t("components.program_editor.label_duration_s")}</label>
             <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })}
               className={fieldCls} />
           </div>
           <div>
-            <label className={labelCls}>Indication</label>
+            <label className={labelCls}>{t("components.program_editor.label_indication")}</label>
             <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
-              placeholder="Respiration, amplitude..." className={fieldCls} />
+              placeholder={t("components.program_editor.placeholder_breathing")} className={fieldCls} />
           </div>
         </div>
       ) : isCore ? (
         <>
           <div className="grid grid-cols-3 gap-1.5">
             <div>
-              <label className={labelCls}>Sets</label>
+              <label className={labelCls}>{t("components.program_editor.label_sets")}</label>
               <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Durée / Reps</label>
-              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="30s / 15" className={fieldCls} />
+              <label className={labelCls}>{t("components.program_editor.label_duration_reps")}</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder={t("components.program_editor.placeholder_reps_30")} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Repos (s)</label>
+              <label className={labelCls}>{t("components.program_editor.label_rest_s")}</label>
               <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Indication coach</label>
+            <label className={labelCls}>{t("components.program_editor.label_indication_coach")}</label>
             <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
-              placeholder="Gainage serré, respiration..." className={fieldCls} />
+              placeholder={t("components.program_editor.placeholder_core_cue")} className={fieldCls} />
           </div>
         </>
       ) : isConditioning ? (
         <>
           <div className="grid grid-cols-3 gap-1.5">
             <div>
-              <label className={labelCls}>Rds / Sets</label>
+              <label className={labelCls}>{t("components.program_editor.label_rounds_sets")}</label>
               <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Dose / Reps</label>
-              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="10 / 30s" className={fieldCls} />
+              <label className={labelCls}>{t("components.program_editor.label_dose_reps")}</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder={t("components.program_editor.placeholder_reps_10_30")} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Repos (s)</label>
+              <label className={labelCls}>{t("components.program_editor.label_rest_s")}</label>
               <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Indication coach</label>
+            <label className={labelCls}>{t("components.program_editor.label_indication_coach")}</label>
             <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
-              placeholder="Intensité, technique..." className={fieldCls} />
+              placeholder={t("components.program_editor.placeholder_intensity")} className={fieldCls} />
           </div>
         </>
       ) : isTechnique ? (
         <>
           <div className="grid grid-cols-3 gap-1.5">
             <div>
-              <label className={labelCls}>Sets</label>
+              <label className={labelCls}>{t("components.program_editor.label_sets")}</label>
               <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Reps / Durée</label>
-              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="5 / 30s" className={fieldCls} />
+              <label className={labelCls}>{t("components.program_editor.label_reps_duration")}</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder={t("components.program_editor.placeholder_reps_5_30")} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Repos (s)</label>
+              <label className={labelCls}>{t("components.program_editor.label_rest_s")}</label>
               <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <div>
-              <label className={labelCls}>Tempo</label>
+              <label className={labelCls}>{t("components.program_editor.label_tempo")}</label>
               <TempoInput value={ex.tempo} onChange={v => onChange({ tempo: v })} />
             </div>
             <div>
-              <label className={labelCls}>Point technique clé</label>
+              <label className={labelCls}>{t("components.program_editor.label_technique_key")}</label>
               <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
-                placeholder="Alignement, trajectoire..." className={fieldCls} />
+                placeholder={t("components.program_editor.placeholder_alignment")} className={fieldCls} />
             </div>
           </div>
         </>
@@ -649,31 +652,31 @@ function ExerciseRowCard({ ex, idx, total, blockType, onChange, onRemove, onMove
         <>
           <div className="grid grid-cols-4 gap-1.5">
             <div>
-              <label className={labelCls}>Sets</label>
+              <label className={labelCls}>{t("components.program_editor.label_sets")}</label>
               <Input type="number" min={1} value={ex.sets} onChange={e => onChange({ sets: +e.target.value })} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Reps</label>
-              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder="8-10" className={fieldCls} />
+              <label className={labelCls}>{t("components.program_editor.label_reps")}</label>
+              <Input value={ex.reps} onChange={e => onChange({ reps: e.target.value })} placeholder={t("components.program_editor.placeholder_reps_default")} className={fieldCls} />
             </div>
             <div>
-              <label className={labelCls}>Charge (kg / %1RM)</label>
-              <Input type="number" min={0} value={ex.loadKg} onChange={e => onChange({ loadKg: +e.target.value })} className={fieldCls} placeholder="80" />
+              <label className={labelCls}>{t("components.program_editor.label_load")}</label>
+              <Input type="number" min={0} value={ex.loadKg} onChange={e => onChange({ loadKg: +e.target.value })} className={fieldCls} placeholder={t("components.program_editor.placeholder_load_default")} />
             </div>
             <div>
-              <label className={labelCls}>Repos (s)</label>
+              <label className={labelCls}>{t("components.program_editor.label_rest_s")}</label>
               <Input type="number" min={0} value={ex.restSeconds} onChange={e => onChange({ restSeconds: +e.target.value })} className={fieldCls} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <div>
-              <label className={labelCls}>Tempo (exc·bas·con·haut)</label>
+              <label className={labelCls}>{t("components.program_editor.label_tempo_full")}</label>
               <TempoInput value={ex.tempo} onChange={v => onChange({ tempo: v })} />
             </div>
             <div>
-              <label className={labelCls}>Indication coach</label>
+              <label className={labelCls}>{t("components.program_editor.label_indication_coach")}</label>
               <Input value={ex.coachCue} onChange={e => onChange({ coachCue: e.target.value })}
-                placeholder="Serré en bas..." className={fieldCls} />
+                placeholder={t("components.program_editor.placeholder_default_cue")} className={fieldCls} />
             </div>
           </div>
         </>
@@ -702,6 +705,7 @@ interface BlockEditorProps {
 }
 
 export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
+  const { t } = useTranslation();
   const [pickerOpenIdx, setPickerOpenIdx] = useState<number | null>(null);
 
   const sensors = useSensors(
@@ -854,7 +858,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                 {(dragHandleProps) => (
                   <div className={cn("rounded-xl border overflow-hidden transition-colors", meta.border, meta.bg)}>
                     <div className="flex items-center gap-2 px-3 py-2">
-                      <div {...dragHandleProps} className="cursor-grab touch-none p-0.5" title="Glisser pour réordonner">
+                      <div {...dragHandleProps} className="cursor-grab touch-none p-0.5" title={t("components.program_editor.drag_block")}>
                         <GripVertical className={cn("w-4 h-4 shrink-0", meta.color, "opacity-60")} />
                       </div>
                       <Icon className={cn("w-4 h-4 shrink-0", meta.color)} />
@@ -870,7 +874,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                       <Input
                         value={block.name}
                         onChange={e => updateBlock(bIdx, { name: e.target.value })}
-                        placeholder="Nom du bloc..."
+                        placeholder={t("components.program_editor.block_name_placeholder")}
                         className="h-6 text-xs bg-transparent border-transparent hover:border-border focus:border-border focus:bg-background/80 px-2 flex-1 min-w-0 transition-colors"
                       />
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -891,12 +895,12 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                             onChange={e => updateBlock(bIdx, { conditioningFormat: e.target.value || undefined })}
                             className="h-6 bg-background/60 border border-border rounded text-[10px] text-white px-1"
                           >
-                            <option value="">Format</option>
+                            <option value="">{t("components.program_editor.format_select_placeholder")}</option>
                             {CONDITIONING_FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                           </select>
                         )}
                         <button type="button" onClick={() => duplicateBlock(bIdx)}
-                          className="p-0.5 rounded hover:bg-primary/20 transition-colors" title="Dupliquer ce bloc">
+                          className="p-0.5 rounded hover:bg-primary/20 transition-colors" title={t("components.program_editor.duplicate_block")}>
                           <Copy className="w-3 h-3 text-primary/60" />
                         </button>
                         <button type="button" onClick={() => updateBlock(bIdx, { collapsed: isOpen })}
@@ -938,7 +942,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                         {pickerOpenIdx === bIdx ? (
                           <div className="border border-dashed border-border rounded-lg p-2.5 space-y-2">
                             <div className="flex items-center justify-between">
-                              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Ajouter un exercice</p>
+                              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{t("components.program_editor.add_exercise")}</p>
                               <button type="button" onClick={() => setPickerOpenIdx(null)} className="p-0.5 rounded hover:bg-white/10">
                                 <X className="w-3 h-3 text-muted-foreground" />
                               </button>
@@ -960,7 +964,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
                             )}
                           >
                             <Plus className="w-3.5 h-3.5" />
-                            Ajouter un exercice
+                            {t("components.program_editor.add_exercise")}
                           </button>
                         )}
                       </div>
@@ -977,7 +981,7 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-border text-muted-foreground hover:text-white hover:border-white/20 text-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Ajouter un bloc
+            {t("components.program_editor.add_block")}
           </button>
         </div>
       </SortableContext>
@@ -996,6 +1000,7 @@ interface SessionModalProps {
 }
 
 export function SessionModal({ programId, weekNumber, dayNumber, session, open, onClose, onSaved }: SessionModalProps) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<SessionDraft>(() =>
     session ? sessionToDraft(session) : emptySession()
   );
@@ -1005,7 +1010,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
   const { toast } = useToast();
 
   const isEdit = !!session;
-  const dayName = DAY_NAMES[dayNumber - 1] || `Jour ${dayNumber}`;
+  const dayName = DAY_NAMES[dayNumber - 1] || t("components.program_editor.day_label", { n: dayNumber });
 
   const autoDurationMin = useMemo(() => {
     const allExercises = draft.blocks.flatMap(b => b.exercises);
@@ -1018,7 +1023,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
 
   const handleSave = async () => {
     if (!draft.name.trim()) {
-      toast({ title: "Nom de séance requis", variant: "destructive" });
+      toast({ title: t("components.program_editor.toast_name_required"), variant: "destructive" });
       return;
     }
     setIsSaving(true);
@@ -1063,10 +1068,10 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
       } else {
         await addMutation.mutateAsync({ programId, data: payload });
       }
-      toast({ title: isEdit ? "Séance mise à jour" : "Séance ajoutée" });
+      toast({ title: isEdit ? t("components.program_editor.toast_session_updated") : t("components.program_editor.toast_session_added") });
       onSaved();
     } catch {
-      toast({ title: "Échec de l'enregistrement", variant: "destructive" });
+      toast({ title: t("components.program_editor.toast_save_failed"), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -1077,7 +1082,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
       <DialogContent className="bg-card border-border w-[95vw] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="font-display text-2xl tracking-widest text-white">
-            {isEdit ? "MODIFIER" : "NOUVELLE"} SÉANCE — S{weekNumber} {dayName}
+            {t(isEdit ? "components.program_editor.modal_title_edit" : "components.program_editor.modal_title_new", { week: weekNumber, day: dayName })}
           </DialogTitle>
         </DialogHeader>
 
@@ -1085,16 +1090,16 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
           {/* Session metadata */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Nom de la séance</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">{t("components.program_editor.label_session_name")}</label>
               <Input
                 value={draft.name}
                 onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                placeholder="Ex : Force haut du corps"
+                placeholder={t("components.program_editor.placeholder_session_name")}
                 className="bg-background border-border"
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Type</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">{t("components.program_editor.label_type")}</label>
               <Select
                 value={draft.type}
                 onValueChange={(v) => setDraft((d) => ({ ...d, type: v as typeof SESSION_TYPES[number] }))}
@@ -1103,8 +1108,8 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
-                  {SESSION_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{SESSION_TYPE_LABELS[t] ?? t}</SelectItem>
+                  {SESSION_TYPES.map((st) => (
+                    <SelectItem key={st} value={st}>{SESSION_TYPE_LABELS[st] ?? st}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1113,7 +1118,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Format</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">{t("components.program_editor.label_format")}</label>
               <div className="flex gap-2">
                 {(["online", "presentiel"] as const).map((loc) => (
                   <button
@@ -1127,14 +1132,14 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
                         : "bg-background border-border text-muted-foreground hover:border-muted-foreground"
                     )}
                   >
-                    {loc === "online" ? "🎥 En ligne" : "🏋️ Présentiel"}
+                    {loc === "online" ? t("components.program_editor.format_online") : t("components.program_editor.format_in_person")}
                   </button>
                 ))}
               </div>
             </div>
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">
-                Heure prévue
+                {t("components.program_editor.label_scheduled_time")}
               </label>
               <Input
                 type="time"
@@ -1148,7 +1153,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
           {draft.sessionType === "online" && (
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">
-                Lien visio <span className="normal-case opacity-60">(optionnel)</span>
+                {t("components.program_editor.label_visio_link")} <span className="normal-case opacity-60">{t("components.program_editor.optional")}</span>
               </label>
               <Input
                 value={draft.visioLink}
@@ -1160,17 +1165,17 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
           )}
 
           <div>
-            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Notes coach</label>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">{t("components.program_editor.label_coach_notes")}</label>
             <Input
               value={draft.coachNotes}
               onChange={(e) => setDraft((d) => ({ ...d, coachNotes: e.target.value }))}
-              placeholder="Notes optionnelles..."
+              placeholder={t("components.program_editor.placeholder_optional_notes")}
               className="bg-background border-border"
             />
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">Durée estimée</label>
+            <label className="text-xs text-muted-foreground uppercase tracking-wider mb-1 block">{t("components.program_editor.label_estimated_duration")}</label>
             <div className="relative max-w-[200px]">
               <Input
                 type="number"
@@ -1192,16 +1197,21 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
           <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
             <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              <span className="text-primary font-medium">Variantes auto-générées</span> — Les variantes{" "}
-              <span className="text-white">Performance</span> (×1.05),{" "}
-              <span className="text-accent">Adapt</span> (×0.75) et{" "}
-              <span className="text-violet-400">Récupération</span> (×0.30) seront créées automatiquement.
+              <Trans
+                i18nKey="components.program_editor.auto_variants"
+                components={{
+                  0: <span className="text-primary font-medium" />,
+                  1: <span className="text-white" />,
+                  2: <span className="text-accent" />,
+                  3: <span className="text-violet-400" />,
+                }}
+              />
             </p>
           </div>
 
           {/* Block editor */}
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Structure de la séance</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">{t("components.program_editor.session_structure")}</p>
             <BlockEditor
               blocks={draft.blocks}
               onChange={(blocks) => setDraft((d) => ({ ...d, blocks }))}
@@ -1211,14 +1221,14 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
 
         <div className="shrink-0 flex gap-3 pt-4 border-t border-border">
           <Button variant="outline" className="border-border" onClick={onClose}>
-            Annuler
+            {t("components.program_editor.cancel")}
           </Button>
           <Button
             className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? "Mettre à jour" : "Ajouter la séance"}
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? t("components.program_editor.update") : t("components.program_editor.add_session")}
           </Button>
         </div>
       </DialogContent>
@@ -1235,6 +1245,7 @@ interface SessionCellProps {
 }
 
 export function SessionCell({ session, weekNumber, dayNumber, programId, onRefetch }: SessionCellProps) {
+  const { t } = useTranslation();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -1245,10 +1256,10 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
     if (!session) return;
     try {
       await deleteMutation.mutateAsync({ programId, sessionId: session.id });
-      toast({ title: "Séance supprimée" });
+      toast({ title: t("components.program_editor.toast_session_deleted") });
       onRefetch();
     } catch {
-      toast({ title: "Échec de la suppression", variant: "destructive" });
+      toast({ title: t("components.program_editor.toast_delete_failed"), variant: "destructive" });
     }
   };
 
@@ -1344,7 +1355,7 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
                   {ex.restSeconds != null && ex.restSeconds > 0 && (
                     <span className="text-[9px] text-muted-foreground font-mono">
                       <Clock className="w-2 h-2 inline mr-0.5" />
-                      {ex.restSeconds}s repos
+                      {t("components.program_editor.rest_seconds_short", { n: ex.restSeconds })}
                     </span>
                   )}
                   {ex.coachCue && (
@@ -1378,19 +1389,19 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-xl text-white">Supprimer la séance ?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-xl text-white">{t("components.program_editor.delete_session_title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action supprimera définitivement « {session.name} » du programme.
+              {t("components.program_editor.delete_session_desc", { name: session.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="border-border">{t("components.program_editor.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Supprimer"}
+              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("components.program_editor.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1404,6 +1415,7 @@ interface ProgramGridProps {
 }
 
 export function ProgramGrid({ programId }: ProgramGridProps) {
+  const { t } = useTranslation();
   const { data: program, isLoading, refetch } = useGetProgram(programId, {
     query: { queryKey: ["/api/programs", programId], enabled: !!programId },
   });
@@ -1419,7 +1431,7 @@ export function ProgramGrid({ programId }: ProgramGridProps) {
   if (!program) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm italic">
-        Programme introuvable.
+        {t("components.program_editor.program_not_found")}
       </div>
     );
   }
@@ -1439,7 +1451,7 @@ export function ProgramGrid({ programId }: ProgramGridProps) {
       {weeks.map((week) => (
         <div key={week} className="bg-background border border-border rounded-xl overflow-hidden">
           <div className="px-4 py-2.5 bg-white/[0.02] border-b border-border">
-            <h3 className="font-display text-sm text-white tracking-wider">SEMAINE {week}</h3>
+            <h3 className="font-display text-sm text-white tracking-wider">{t("components.program_editor.week_label", { n: week })}</h3>
           </div>
           <div className="p-3">
             <div className="grid grid-cols-7 gap-1.5">

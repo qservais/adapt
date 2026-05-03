@@ -12,21 +12,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const PRIORITY_WEIGHT: Record<string, number> = { p1: 3, p2: 2, p3: 1 };
 
-const PRIORITY_STYLE: Record<string, { card: string; badge: string; label: string }> = {
+const PRIORITY_STYLE: Record<string, { card: string; badge: string; labelKey: string }> = {
   p1: {
     card: "border-destructive bg-destructive/5 shadow-[0_0_15px_rgba(255,59,92,0.1)]",
     badge: "bg-destructive text-white",
-    label: "P1 CRITIQUE",
+    labelKey: "alerts.priority_p1_label",
   },
   p2: {
     card: "border-accent bg-accent/5",
     badge: "bg-accent text-accent-foreground",
-    label: "P2 ATTENTION",
+    labelKey: "alerts.priority_p2_label",
   },
   p3: {
     card: "border-border bg-card",
     badge: "bg-muted text-muted-foreground",
-    label: "P3 INFO",
+    labelKey: "alerts.priority_p3_label",
   },
 };
 
@@ -81,20 +81,20 @@ export default function AlertsFeed() {
   const handleResolve = async (alertId: string, note: string) => {
     try {
       await resolveMutation.mutateAsync({ alertId, data: { resolutionNote: note } });
-      toast({ title: "Alerte résolue" });
+      toast({ title: t("alerts.alert_resolved_toast") });
       queryClient.invalidateQueries({ queryKey: ["/api/coach/alerts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/coach/dashboard"] });
     } catch {
-      toast({ title: "Échec de la résolution", variant: "destructive" });
+      toast({ title: t("alerts.resolution_failed"), variant: "destructive" });
     }
   };
 
   const handleReopen = async (alertId: string) => {
     try {
       await reopenMutation.mutateAsync(alertId);
-      toast({ title: "Alerte réouverte" });
+      toast({ title: t("alerts.alert_reopened_toast") });
     } catch {
-      toast({ title: "Échec de la réouverture", variant: "destructive" });
+      toast({ title: t("alerts.reopen_failed"), variant: "destructive" });
     }
   };
 
@@ -129,7 +129,7 @@ export default function AlertsFeed() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-display text-white flex items-center gap-3">
-            <AlertTriangle className="w-8 h-8 text-destructive" /> FLUX D'ALERTES
+            <AlertTriangle className="w-8 h-8 text-destructive" /> {t("alerts.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             {t("alerts.subtitle")}
@@ -141,7 +141,7 @@ export default function AlertsFeed() {
         <Tabs value={filter} onValueChange={setFilter}>
           <TabsList className="bg-transparent">
             <TabsTrigger value="unresolved" className="data-[state=active]:bg-background">
-              Non résolues
+              {t("alerts.tab_unresolved")}
               {unresolvedCount > 0 && (
                 <span className="ml-1.5 bg-destructive text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full font-mono">
                   {unresolvedCount}
@@ -149,10 +149,10 @@ export default function AlertsFeed() {
               )}
             </TabsTrigger>
             <TabsTrigger value="resolved" className="data-[state=active]:bg-background">
-              Résolues
+              {t("alerts.tab_resolved")}
             </TabsTrigger>
             <TabsTrigger value="all" className="data-[state=active]:bg-background">
-              Toutes
+              {t("alerts.tab_all")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -182,7 +182,7 @@ export default function AlertsFeed() {
                     <span
                       className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm ${badgeStyle}`}
                     >
-                      {style.label}
+                      {t(style.labelKey)}
                     </span>
                     <span className="text-sm font-mono text-muted-foreground">
                       {alert.createdAt
@@ -194,7 +194,7 @@ export default function AlertsFeed() {
                     </span>
                     {alert.isResolved && (
                       <span className="text-xs text-primary flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Résolu
+                        <CheckCircle2 className="w-3 h-3" /> {t("alerts.resolved")}
                       </span>
                     )}
                   </div>
@@ -219,7 +219,7 @@ export default function AlertsFeed() {
                       {alert.resolvedAt && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                           <Clock className="w-3 h-3 text-primary/60" />
-                          Résolu le {format(new Date(alert.resolvedAt), "d MMM yyyy 'à' HH:mm", { locale: fr })}
+                          {t("alerts.resolved_on", { date: format(new Date(alert.resolvedAt), "d MMM yyyy 'à' HH:mm", { locale: fr }) })}
                         </p>
                       )}
                       {alert.resolutionNote && (
@@ -239,21 +239,21 @@ export default function AlertsFeed() {
                           size="sm"
                           className="bg-destructive hover:bg-destructive/90 text-white"
                           onClick={() =>
-                            handleResolve(alert.id, "Récupération validée")
+                            handleResolve(alert.id, t("alerts.recovery_resolution_note"))
                           }
                           disabled={resolveMutation.isPending}
                         >
-                          Valider la récupération
+                          {t("alerts.btn_validate_recovery")}
                         </Button>
                       )}
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-white/10 hover:bg-white/5"
-                        onClick={() => handleResolve(alert.id, "Vérifié")}
+                        onClick={() => handleResolve(alert.id, t("alerts.default_resolution_note"))}
                         disabled={resolveMutation.isPending}
                       >
-                        Marquer résolu
+                        {t("alerts.btn_mark_resolved")}
                       </Button>
                       <Link href={`/messages/${alert.athleteId}`}>
                         <Button
@@ -261,7 +261,7 @@ export default function AlertsFeed() {
                           variant="ghost"
                           className="w-full text-muted-foreground hover:text-white"
                         >
-                          <MessageSquare className="w-4 h-4 mr-2" /> Message
+                          <MessageSquare className="w-4 h-4 mr-2" /> {t("alerts.btn_message")}
                         </Button>
                       </Link>
                     </>
@@ -274,7 +274,7 @@ export default function AlertsFeed() {
                       disabled={reopenMutation.isPending}
                     >
                       <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                      Rouvrir
+                      {t("alerts.btn_reopen")}
                     </Button>
                   )}
                 </div>
@@ -291,8 +291,8 @@ export default function AlertsFeed() {
             </p>
             <p className="text-sm">
               {filter === "resolved"
-                ? "Les alertes résolues apparaîtront ici avec la date et la note de résolution."
-                : "Aucune alerte ne nécessite votre attention pour le moment."}
+                ? t("alerts.no_alerts_subtext_resolved")
+                : t("alerts.no_alerts_subtext_default")}
             </p>
           </div>
         )}
