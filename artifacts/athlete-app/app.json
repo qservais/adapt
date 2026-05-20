@@ -16,8 +16,8 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.adaptsystem.athlete",
-      "buildNumber": "1",
+      "bundleIdentifier": "app.replit.adaptbylmj",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
