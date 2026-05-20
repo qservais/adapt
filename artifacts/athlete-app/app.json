@@ -71,11 +71,6 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {
-      "eas": {
-        "projectId": "3b88da43-2ff9-4fc1-8bb3-f54ca63b3201"
-      }
-    },
-    "owner": "done-agency"
+    "extra": {}
   }
 }
