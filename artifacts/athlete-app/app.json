@@ -73,9 +73,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+        "projectId": "5ceb3330-41ea-44db-af14-7e2fa0949efe"
       }
     },
-    "owner": "REPLACE_WITH_EXPO_USERNAME"
+    "owner": "replit-private-971cbe58-3054-4fc7-a517-57cfa262a1f9"
   }
 }
