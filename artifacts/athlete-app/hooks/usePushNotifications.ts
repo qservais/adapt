@@ -103,7 +103,13 @@ export function usePushNotifications(userId: string | null): void {
   const prevUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      if (prevUserId.current) {
+        clearSyncedToken(prevUserId.current).catch(() => {});
+        prevUserId.current = null;
+      }
+      return;
+    }
 
     if (prevUserId.current && prevUserId.current !== userId) {
       clearSyncedToken(prevUserId.current).catch(() => {});
