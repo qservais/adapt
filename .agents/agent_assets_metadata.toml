@@ -66,3 +66,9 @@ id = "AljHFlDTkZPf-HuzpNUi2"
 uri = "file://appstore-submission/screen5-nutrition.jpg"
 type = "image"
 title = "Capture 5 — Nutrition"
+
+[[outputs]]
+id = "1LCDJPY8XtGsoB3Rxts13"
+uri = "file://push-notifications-setup.md"
+type = "text"
+title = "Récapitulatif Push Notifications iOS"
