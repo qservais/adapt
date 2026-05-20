@@ -13,7 +13,7 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "REPLACE_WITH_PROD_API_DOMAIN"
+        "EXPO_PUBLIC_DOMAIN": "adapt-system.be"
       },
       "ios": {
         "simulator": false
@@ -26,7 +26,7 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "REPLACE_WITH_PROD_API_DOMAIN"
+        "EXPO_PUBLIC_DOMAIN": "adapt-system.be"
       },
       "android": {
         "buildType": "app-bundle"
