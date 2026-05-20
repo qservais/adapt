@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "ADAPT",
-    "slug": "athlete-app",
+    "slug": "adapt",
+    "owner": "done-agency",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -71,6 +72,10 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {}
+    "extra": {
+      "eas": {
+        "projectId": "3b88da43-2ff9-4fc1-8bb3-f54ca63b3201"
+      }
+    }
   }
 }
