@@ -118,6 +118,21 @@ Les tokens sont des `ExponentPushToken[...]` — ils passent obligatoirement par
 
 ---
 
+## État du build 24 (TestFlight)
+
+Confirmation depuis App Store Connect — métadonnées du build 24 :
+
+| Champ | Valeur |
+|-------|--------|
+| Identifiant de lot | `app.replit.adaptbylmj` |
+| aps-environment | **production** ✅ |
+| application-identifier | `43DC8SQ9ZJ.app.replit.adaptbylmj` |
+| Team Identifier | `43DC8SQ9ZJ` |
+
+**Le build est déjà compilé avec l'entitlement push notifications en production.** L'app est prête — il manque uniquement les credentials APNs côté Expo.
+
+---
+
 ## Ce qu'il faut faire pour débloquer
 
 ### Solution prioritaire — Contacter Replit Support
