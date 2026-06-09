@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { Swipeable } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -158,6 +159,7 @@ export default function FreeExerciseScreen() {
   const [currentSet, setCurrentSet] = useState(1);
   const [showRest, setShowRest] = useState(false);
   const [loadAdjustments, setLoadAdjustments] = useState<Record<string, number>>({});
+  const [setsOverrides, setSetsOverrides] = useState<Record<string, number>>({});
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [timerCompleted, setTimerCompleted] = useState(false);
   const [workTimerStarted, setWorkTimerStarted] = useState(false);
@@ -188,8 +190,16 @@ export default function FreeExerciseScreen() {
   const isLast = exerciseIndex === totalExercises - 1;
   const nextExercise = !isLast ? exercises[exerciseIndex + 1] : null;
 
+  const effectiveSets = exercise ? (setsOverrides[exercise.id] ?? exercise.sets) : 0;
   const hasDurationTimer = (exercise?.durationSeconds ?? 0) > 0;
   const isAtStart = history.length === 0 && currentSet === 1;
+
+  const handleDeletePendingSet = () => {
+    if (!exercise) return;
+    if (effectiveSets <= currentSet) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSetsOverrides((prev) => ({ ...prev, [exercise.id]: effectiveSets - 1 }));
+  };
 
   const adjustLoad = useCallback((exId: string, next: number) => {
     setLoadAdjustments((prev) => ({ ...prev, [exId]: next }));
@@ -228,7 +238,7 @@ export default function FreeExerciseScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     pushHistory();
 
-    if (currentSet < (exercise?.sets ?? 1)) {
+    if (currentSet < effectiveSets) {
       resetTimerState();
       if ((exercise?.restSeconds ?? 0) > 0) {
         setShowRest(true);
@@ -251,7 +261,7 @@ export default function FreeExerciseScreen() {
       const finalLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? exercise.lastUsedLoadKg ?? null;
       addCompletedExercise({
         exerciseId: exercise.exerciseId,
-        setsCompleted: exercise.sets,
+        setsCompleted: effectiveSets,
         loadKgUsed: finalLoad && finalLoad > 0 ? finalLoad : null,
       });
     }
@@ -312,7 +322,7 @@ export default function FreeExerciseScreen() {
   const isAbovePR = currentPR != null && currentLoad > currentPR;
 
   const setDoneLabel = () => {
-    if (currentSet < (exercise.sets ?? 1)) return `Série ${currentSet} terminée`;
+    if (currentSet < effectiveSets) return `Série ${currentSet} terminée`;
     if (isLast) return "Terminer la séance";
     return "Exercice suivant";
   };
@@ -385,7 +395,7 @@ export default function FreeExerciseScreen() {
 
       <View style={styles.identityBlock}>
         <Text style={[styles.setLabel, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
-          SÉRIE {currentSet}/{exercise.sets}
+          SÉRIE {currentSet}/{effectiveSets}
         </Text>
         <Text style={[styles.exerciseName, { fontFamily: FONTS.title, color: cfg.color }]}>
           {exercise.exerciseName}
@@ -400,6 +410,49 @@ export default function FreeExerciseScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        {effectiveSets > currentSet && (
+          <View style={styles.pendingSetsBox}>
+            <Text style={[styles.pendingSetsLabel, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
+              SÉRIES À VENIR
+            </Text>
+            {Array.from({ length: effectiveSets - currentSet }, (_, i) => {
+              const setNum = currentSet + 1 + i;
+              const isLast = effectiveSets - currentSet === 1;
+              const rowContent = (
+                <View style={styles.pendingSetRow}>
+                  <Text style={[styles.pendingSetNum, { fontFamily: FONTS.mono, color: COLORS.textSecondary }]}>
+                    Série {setNum}
+                  </Text>
+                  {!isLast && (
+                    <Text style={[styles.pendingSetHint, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
+                      ← glisser pour supprimer
+                    </Text>
+                  )}
+                </View>
+              );
+              if (isLast) return <View key={setNum}>{rowContent}</View>;
+              return (
+                <Swipeable
+                  key={setNum}
+                  overshootRight={false}
+                  renderRightActions={() => (
+                    <TouchableOpacity
+                      style={styles.pendingSetDeleteAction}
+                      onPress={handleDeletePendingSet}
+                      activeOpacity={0.8}
+                    >
+                      <Feather name="trash-2" size={16} color={COLORS.white} />
+                      <Text style={[styles.pendingSetDeleteText, { fontFamily: FONTS.mono }]}>RETIRER</Text>
+                    </TouchableOpacity>
+                  )}
+                >
+                  {rowContent}
+                </Swipeable>
+              );
+            })}
+          </View>
+        )}
+
         {((exercise.equipment as string[] | null | undefined) ?? []).filter(e => e !== "Aucun" && e !== "aucun").length > 0 && (
           <View style={styles.equipmentRow}>
             <Feather name="package" size={12} color={COLORS.textMuted} />
@@ -612,4 +665,11 @@ const styles = StyleSheet.create({
   modalTitle: { flex: 1, fontSize: 13, color: COLORS.textSecondary, letterSpacing: 1 },
   modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.bgElevated, alignItems: "center", justifyContent: "center" },
   webView: { flex: 1 },
+  pendingSetsBox: { width: "100%", borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.bgCard, overflow: "hidden" },
+  pendingSetsLabel: { fontSize: 9, letterSpacing: 2, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 6 },
+  pendingSetRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: COLORS.border },
+  pendingSetNum: { fontSize: 13, letterSpacing: 0.5 },
+  pendingSetHint: { fontSize: 11, opacity: 0.5 },
+  pendingSetDeleteAction: { backgroundColor: COLORS.red, justifyContent: "center", alignItems: "center", flexDirection: "row", gap: 6, width: 96, marginLeft: 0 },
+  pendingSetDeleteText: { fontSize: 11, color: COLORS.white, letterSpacing: 1 },
 });

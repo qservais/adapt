@@ -1,0 +1,47 @@
+Salut,
+
+La priorité sur laquelle je veux qu'on avance, c'est l'import par texte. L'objectif concret : je crée mes séances dans un chat IA (texte structuré), je copie, je colle dans « Importer par texte » d'ADAPT, et l'app reconstruit la séance complète toute seule — blocs + exercices + tous les champs — sans que j'aie à corriger ligne par ligne. Aujourd'hui c'est là que ça coince (sur un test : 6 reconnus / 14 à corriger).
+
+LE WORKFLOW CIBLE
+1. Je génère une séance en texte, dans un format qu'on aura fixé ensemble.
+2. Je la colle dans l'import.
+3. ADAPT crée les blocs (Échauffement, Force, etc.), place chaque exercice dans le bon bloc, et remplit les bons champs (durée, reps, charge, tempo, repos, indication).
+4. Je valide en un clic, sans retouche.
+
+CE QUI MANQUE AUJOURD'HUI
+L'import est « plat » : il lit Séries / Reps / Charge sur chaque ligne, sans notion de bloc et sans gérer le temps. Du coup :
+- Les titres de bloc sont pris pour des exercices (« aucun exercice trouvé »).
+- Le temps casse : « 1x30sec » devient 1 série / 30 reps avec « sec » collé au nom.
+- Le matching de nom est trop strict : « Montées de genoux » ne trouve pas « Montées de genoux sur place ».
+
+Il faut donc que l'import comprenne la notion de bloc et adapte les champs au type de bloc (comme l'éditeur le fait déjà : Échauffement = durée + indication ; Force = sets/reps/charge/repos/tempo ; Gainage/Core = sets/durée-reps/repos/indication).
+
+FORMAT QUE JE COLLERAI
+
+[BLOC] Échauffement | 6min
+Montées de genoux sur place | 30s | Respiration ample
+Talons-fesses | 30s
+
+[BLOC] Force | 18min
+Squat | 4x8 | 80kg | repos 90s | tempo 3-1-1-0
+Fente bulgare | 3x10 | PDC | repos 60s
+
+[BLOC] Gainage/Core | 6min
+Planche | 3x45s | repos 60s | Gainage serré
+
+RÈGLES DE PARSING
+- « [BLOC] <Catégorie> | <durée>min » ouvre un bloc. La catégorie matche un des 11 types existants. Cette ligne n'est jamais un exercice.
+- Exercice = « Nom | dosage | [charge] | [repos] | [tempo] | [indication] ». Champs non pertinents au bloc = ignorés.
+- Dosage : « NxM » = N séries × M reps ; « NxMs » = N séries × M secondes ; « Ms / Msec / M reps » seul = 1 série. Toujours retirer l'unité (s, sec) du nom et du chiffre.
+- Charge : « 80kg », « 60% », ou « PDC / poids de corps » = 0 kg.
+- Matching de nom : normaliser accents + casse, matcher sur tokens, garder la suggestion en fallback.
+
+CRITÈRES D'ACCEPTATION
+- Une séance échauffement + force + gainage collée d'un coup ressort 100 % reconnue, chaque exercice dans le bon bloc.
+- Les lignes [BLOC] créent les blocs sans générer d'exercice fantôme.
+- « Planche | 3x45s » → sets=3, durée=45s (pas reps=45 avec « s » dans le nom).
+- « Squat | 4x8 | 80kg | repos 90s | tempo 3-1-1-0 » remplit les 5 champs correctement.
+
+Deux questions pour toi :
+1. Le format « [BLOC] » te va, ou tu préfères un parser plus permissif sur du texte libre ?
+2. Combien de temps tu estimes pour la gestion des blocs + du temps + le matching amélioré ?

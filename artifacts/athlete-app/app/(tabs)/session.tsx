@@ -267,7 +267,8 @@ export default function SessionTab() {
         blocks: data.blocks ?? [],
         athletePRs: data.athletePRs ?? {},
       });
-      router.push("/session/free");
+      await customFetch(`/api/sessions/${data.sessionLogId}/start`, { method: "PUT" });
+      router.push("/session/free-exercise");
     } catch {
       Alert.alert("Erreur", "Impossible de démarrer cette séance. Réessaie.");
     } finally {
