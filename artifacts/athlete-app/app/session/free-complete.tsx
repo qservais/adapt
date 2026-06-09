@@ -209,14 +209,18 @@ export default function FreeSessionCompleteScreen() {
         <Animated.View style={[styles.textWrap, celebrateStyle]}>
           <View style={styles.freeBadge}>
             <Feather name="zap" size={12} color={COLORS.cyan} />
-            <Text style={[styles.freeBadgeText, { fontFamily: FONTS.mono }]}>SÉANCE LIBRE</Text>
+            <Text style={[styles.freeBadgeText, { fontFamily: FONTS.mono }]}>
+              {session.isFreeSession ? "SÉANCE LIBRE" : "SÉANCE PROGRAMMÉE"}
+            </Text>
           </View>
           <Text style={[styles.congrats, { fontFamily: FONTS.title, color: COLORS.cyan }]}>
             TERMINÉE !
           </Text>
           <Text style={[styles.sessionName, { fontFamily: FONTS.body }]}>{session.name}</Text>
           <Text style={[styles.desc, { fontFamily: FONTS.body }]}>
-            Excellent effort. Ta séance libre est enregistrée.
+            {session.isFreeSession
+              ? "Excellent effort. Ta séance libre est enregistrée."
+              : "Excellent effort. Ta séance est enregistrée."}
           </Text>
         </Animated.View>
 

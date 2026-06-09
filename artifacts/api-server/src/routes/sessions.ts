@@ -1029,6 +1029,93 @@ router.get("/sessions/history", authenticate, requireRole("athlete"), async (req
   }
 });
 
+router.post("/sessions/:sessionId/start-coached", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const sessionId = String(req.params["sessionId"]);
+    const athleteId = req.user!.userId;
+    const today = getTodayLocalDate();
+
+    const [session] = await db
+      .select({ id: sessionsTable.id, name: sessionsTable.name, programId: sessionsTable.programId })
+      .from(sessionsTable)
+      .where(eq(sessionsTable.id, sessionId));
+
+    if (!session) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "Séance introuvable" } });
+      return;
+    }
+
+    const [athleteProgram] = await db
+      .select({ id: programsTable.id })
+      .from(programsTable)
+      .where(and(
+        eq(programsTable.id, session.programId),
+        eq(programsTable.athleteId, athleteId)
+      ));
+
+    if (!athleteProgram) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Vous n'avez pas accès à cette séance" } });
+      return;
+    }
+
+    const [todayCheckin] = await db.select().from(checkinsTable)
+      .where(and(eq(checkinsTable.athleteId, athleteId), eq(checkinsTable.date, today)));
+
+    const painAlerts = todayCheckin ? await db.select({ id: alertsTable.id }).from(alertsTable)
+      .where(and(
+        eq(alertsTable.athleteId, athleteId),
+        eq(alertsTable.type, "pain"),
+        eq(alertsTable.isResolved, false)
+      )) : [];
+
+    const variantMode = todayCheckin
+      ? (painAlerts.length > 0 ? "recovery" : todayCheckin.sessionMode)
+      : "normal";
+
+    const [newLog] = await db.insert(sessionLogsTable).values({
+      athleteId,
+      sessionId: session.id,
+      variantMode,
+      checkinId: todayCheckin?.id ?? null,
+      isFreeSession: false,
+      freeSessionName: null,
+    }).returning();
+
+    const athletePRs = await getAthleteCurrentPRs(athleteId);
+
+    const fakeCheckin = todayCheckin ?? {
+      id: "",
+      athleteId,
+      date: today,
+      adaptScore: 50,
+      sessionMode: "normal",
+      sleep: null,
+      energy: null,
+      stress: null,
+      soreness: null,
+      motivation: null,
+      hasPain: false,
+      painNotes: null,
+      cyclePhase: null,
+      createdAt: new Date(),
+    };
+
+    const detail = await buildSessionDetail(newLog!, fakeCheckin);
+
+    res.status(201).json({
+      ...detail,
+      athletePRs,
+      isFreeSession: false,
+      overriddenByCoach: false,
+      sessionsToday: 1,
+      sessionsTodayCompleted: 0,
+      sessionIndex: 1,
+    });
+  } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 router.post("/sessions/:sessionId/start-free", authenticate, requireRole("athlete"), async (req, res) => {
   try {
     const sessionId = String(req.params["sessionId"]);

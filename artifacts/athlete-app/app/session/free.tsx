@@ -94,7 +94,9 @@ export default function FreeSessionIntroScreen() {
           </TouchableOpacity>
           <View style={styles.freeBadge}>
             <Feather name="zap" size={12} color={COLORS.cyan} />
-            <Text style={[styles.freeBadgeText, { fontFamily: FONTS.mono }]}>SÉANCE LIBRE</Text>
+            <Text style={[styles.freeBadgeText, { fontFamily: FONTS.mono }]}>
+              {session.isFreeSession ? "SÉANCE LIBRE" : "SÉANCE PROGRAMMÉE"}
+            </Text>
           </View>
         </View>
 

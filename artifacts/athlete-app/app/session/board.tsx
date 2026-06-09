@@ -251,7 +251,7 @@ export default function BoardScreen() {
         data: { rpe: 5, exercises: exercisePayload },
       });
 
-      if (isFromFreeStore) {
+      if (isFromFreeStore && freeSessionSnapshot!.isFreeSession) {
         router.replace("/session/free-complete");
       } else {
         const totalBonus = exercises.reduce((sum, ex) => {

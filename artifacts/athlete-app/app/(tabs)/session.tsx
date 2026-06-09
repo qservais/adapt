@@ -250,16 +250,16 @@ export default function SessionTab() {
 
   const completedLogs = historyQuery.data?.filter((l) => l.completedAt != null) ?? [];
 
-  const handleStartFreeSession = async (sessionId: string, sessionName: string) => {
+  const handleStartCoachedGuided = async (sessionId: string, sessionName: string) => {
     if (startingSessionId) return;
     setStartingSessionId(sessionId);
     try {
-      const data = await customFetch(`/api/sessions/${sessionId}/start-free`, { method: "POST" }) as FreeSessionStartResponse;
+      const data = await customFetch(`/api/sessions/${sessionId}/start-coached`, { method: "POST" }) as FreeSessionStartResponse;
       setFreeSession({
         sessionLogId: data.sessionLogId,
         name: data.name,
         mode: data.mode,
-        isFreeSession: true,
+        isFreeSession: false,
         adaptScore: data.adaptScore ?? 50,
         coachNotes: data.coachNotes ?? null,
         estimatedDurationMin: data.estimatedDurationMin ?? null,
@@ -281,14 +281,39 @@ export default function SessionTab() {
       sessionName,
       "Comment veux-tu lancer cette séance ?",
       [
-        { text: "Mode Guidé", onPress: () => handleStartFreeSession(sessionId, sessionName) },
-        { text: "Mode Tableau", onPress: () => handleStartBoardSession(sessionId) },
+        { text: "Mode Guidé", onPress: () => handleStartCoachedGuided(sessionId, sessionName) },
+        { text: "Mode Tableau", onPress: () => handleStartCoachedBoard(sessionId) },
         { text: "Annuler", style: "cancel" },
       ],
     );
   };
 
-  const handleStartBoardSession = async (sessionId: string) => {
+  const handleStartCoachedBoard = async (sessionId: string) => {
+    if (startingSessionId) return;
+    setStartingSessionId(sessionId);
+    try {
+      const data = await customFetch(`/api/sessions/${sessionId}/start-coached`, { method: "POST" }) as FreeSessionStartResponse;
+      setFreeSession({
+        sessionLogId: data.sessionLogId,
+        name: data.name,
+        mode: data.mode,
+        isFreeSession: false,
+        adaptScore: data.adaptScore ?? 50,
+        coachNotes: data.coachNotes ?? null,
+        estimatedDurationMin: data.estimatedDurationMin ?? null,
+        exercises: data.exercises ?? [],
+        blocks: data.blocks ?? [],
+        athletePRs: data.athletePRs ?? {},
+      });
+      router.push("/session/board");
+    } catch {
+      Alert.alert("Erreur", "Impossible de démarrer cette séance. Réessaie.");
+    } finally {
+      setStartingSessionId(null);
+    }
+  };
+
+  const handleStartFreeSession = async (sessionId: string, sessionName: string) => {
     if (startingSessionId) return;
     setStartingSessionId(sessionId);
     try {
@@ -305,7 +330,7 @@ export default function SessionTab() {
         blocks: data.blocks ?? [],
         athletePRs: data.athletePRs ?? {},
       });
-      router.push("/session/board");
+      router.push("/session/free");
     } catch {
       Alert.alert("Erreur", "Impossible de démarrer cette séance. Réessaie.");
     } finally {
@@ -704,7 +729,7 @@ export default function SessionTab() {
                                       </Text>
                                     </View>
                                     <TouchableOpacity
-                                      onPress={() => handleStartBoardSession(s.sessionId)}
+                                      onPress={() => handleStartCoachedBoard(s.sessionId)}
                                       disabled={!!startingSessionId}
                                       style={[styles.libLaunchBtn, { opacity: startingSessionId ? 0.5 : 1 }]}
                                       activeOpacity={0.8}
