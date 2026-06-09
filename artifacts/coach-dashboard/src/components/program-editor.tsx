@@ -25,8 +25,9 @@ import {
   ChevronDown, ChevronUp, Clock, Flame, Zap, Activity,
   Shield, Wind, GripVertical, Link as LinkIcon,
   Heart, Timer, PersonStanding, Radius, Crosshair, Layers,
-  Gauge, BarChart2, Copy,
+  Gauge, BarChart2, Copy, FileText,
 } from "lucide-react";
+import { SessionImportModal } from "./session-import-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -1005,6 +1006,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
     session ? sessionToDraft(session) : emptySession()
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const addMutation = useAddProgramSession();
   const updateMutation = useUpdateProgramSession();
   const { toast } = useToast();
@@ -1211,7 +1213,17 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
 
           {/* Block editor */}
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">{t("components.program_editor.session_structure")}</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("components.program_editor.session_structure")}</p>
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-dashed border-primary/40 text-primary hover:border-primary hover:bg-primary/5 text-xs transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Importer par texte
+              </button>
+            </div>
             <BlockEditor
               blocks={draft.blocks}
               onChange={(blocks) => setDraft((d) => ({ ...d, blocks }))}
@@ -1232,6 +1244,14 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
           </Button>
         </div>
       </DialogContent>
+      <SessionImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={(blocks) => {
+          setDraft(d => ({ ...d, blocks }));
+          setImportOpen(false);
+        }}
+      />
     </Dialog>
   );
 }
@@ -1249,6 +1269,7 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [quickImportOpen, setQuickImportOpen] = useState(false);
   const deleteMutation = useDeleteProgramSession();
   const { toast } = useToast();
 
@@ -1266,13 +1287,23 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
   if (!session) {
     return (
       <>
-        <button
-          type="button"
-          onClick={() => setEditOpen(true)}
-          className="w-full h-full min-h-[60px] rounded-lg border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all group flex items-center justify-center"
-        >
-          <Plus className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-        </button>
+        <div className="w-full h-full min-h-[60px] rounded-lg border border-dashed border-border hover:border-primary/30 transition-all group flex flex-col items-center justify-center gap-1">
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="flex items-center justify-center w-full flex-1 hover:text-primary transition-colors"
+          >
+            <Plus className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickImportOpen(true)}
+            className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] text-muted-foreground hover:text-primary transition-colors border-t border-border w-full justify-center"
+          >
+            <FileText className="w-2.5 h-2.5" />
+            Importer
+          </button>
+        </div>
         <SessionModal
           programId={programId}
           weekNumber={weekNumber}
@@ -1280,6 +1311,14 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
           open={editOpen}
           onClose={() => setEditOpen(false)}
           onSaved={() => { setEditOpen(false); onRefetch(); }}
+        />
+        <QuickImportSession
+          programId={programId}
+          weekNumber={weekNumber}
+          dayNumber={dayNumber}
+          open={quickImportOpen}
+          onClose={() => setQuickImportOpen(false)}
+          onSaved={() => { setQuickImportOpen(false); onRefetch(); }}
         />
       </>
     );
@@ -1485,5 +1524,129 @@ export function ProgramGrid({ programId }: ProgramGridProps) {
         </div>
       ))}
     </div>
+  );
+}
+
+interface QuickImportSessionProps {
+  programId: string;
+  weekNumber: number;
+  dayNumber: number;
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function QuickImportSession({ programId, weekNumber, dayNumber, open, onClose, onSaved }: QuickImportSessionProps) {
+  const [step, setStep] = useState<"import" | "name">("import");
+  const [blocks, setBlocks] = useState<BlockDraft[]>([]);
+  const [name, setName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const addMutation = useAddProgramSession();
+  const { toast } = useToast();
+
+  const handleImport = (importedBlocks: BlockDraft[]) => {
+    setBlocks(importedBlocks);
+    setStep("name");
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setIsSaving(true);
+    try {
+      const blocksPayload: CreateSessionRequestBlocksItem[] = blocks.map((b, bIdx) => ({
+        type: b.type,
+        orderIndex: bIdx,
+        name: b.name,
+        estimatedDurationMin: b.estimatedDurationMin,
+        conditioningFormat: b.conditioningFormat || undefined,
+        exercises: b.exercises.map((ex, eIdx) => ({
+          exerciseId: ex.exerciseId,
+          orderIndex: eIdx,
+          sets: ex.sets,
+          reps: ex.reps,
+          loadKg: ex.loadKg,
+          restSeconds: ex.restSeconds,
+          coachCue: ex.coachCue,
+          tempo: ex.tempo || undefined,
+        })),
+      }));
+      await addMutation.mutateAsync({
+        programId,
+        data: {
+          weekNumber,
+          dayNumber,
+          name: name.trim(),
+          type: "strength",
+          sessionType: "online",
+          scheduledTime: null,
+          visioLink: null,
+          estimatedDurationMin: 60,
+          coachNotes: "",
+          blocks: blocksPayload,
+        },
+      });
+      toast({ title: "Séance importée ✓" });
+      onSaved();
+    } catch {
+      toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    setStep("import");
+    setBlocks([]);
+    setName("");
+    onClose();
+  };
+
+  if (step === "import") {
+    return (
+      <SessionImportModal
+        open={open}
+        onClose={handleClose}
+        onImport={handleImport}
+      />
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={o => !o && handleClose()}>
+      <DialogContent className="bg-card border-border w-[95vw] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl tracking-widest text-white">
+            Nommer la séance
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs text-muted-foreground mb-3">
+              {blocks[0]?.exercises.length ?? 0} exercice(s) importé(s) — donne un nom à cette séance.
+            </p>
+            <Input
+              autoFocus
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Ex: Force Bas du corps, Push Day…"
+              className="bg-background border-border"
+              onKeyDown={e => e.key === "Enter" && handleSave()}
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="border-border" onClick={() => setStep("import")}>
+              Retour
+            </Button>
+            <Button
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={handleSave}
+              disabled={!name.trim() || isSaving}
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sauvegarder la séance"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
