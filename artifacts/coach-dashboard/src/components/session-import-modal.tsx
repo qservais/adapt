@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import {
   FileText, Loader2, CheckCircle2, AlertCircle,
   ChevronRight, X, Search, RotateCcw, ClipboardPaste,
-  Layers,
+  Layers, Plus,
 } from "lucide-react";
 import { cn } from "@/components/ui/mode-badge";
 import { useGetExercises, ExerciseData } from "@workspace/api-client-react";
@@ -347,11 +347,68 @@ interface ExerciseMatchRowProps {
   globalIndex: number;
   allExercises: ExerciseData[];
   onChange: (globalIndex: number, patch: Partial<ParsedExercise>) => void;
+  onExerciseCreated: (exercise: ExerciseData) => void;
 }
 
-function ExerciseMatchRow({ item, blockType, globalIndex, allExercises, onChange }: ExerciseMatchRowProps) {
+const EXERCISE_CATEGORIES = [
+  { value: "compound", label: "Compound" },
+  { value: "isolation", label: "Isolation" },
+  { value: "cardio", label: "Cardio" },
+  { value: "core", label: "Gainage / Core" },
+  { value: "mobility", label: "Mobilité" },
+  { value: "power", label: "Puissance" },
+  { value: "plyometric", label: "Pliométrie" },
+  { value: "force", label: "Force" },
+] as const;
+
+function ExerciseMatchRow({ item, blockType, globalIndex, allExercises, onChange, onExerciseCreated }: ExerciseMatchRowProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createCategory, setCreateCategory] = useState<string>("compound");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const handleOpenCreateForm = () => {
+    setCreateName(searchQuery);
+    setCreateCategory("compound");
+    setCreateError(null);
+    setShowCreateForm(true);
+  };
+
+  const handleCancelCreate = () => {
+    setShowCreateForm(false);
+    setCreateError(null);
+  };
+
+  const handleCreateExercise = async () => {
+    if (!createName.trim()) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const token = localStorage.getItem("adapt_coach_access");
+      const res = await fetch("/api/exercises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: createName.trim(), category: createCategory }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: { message?: string } }).error?.message ?? "Erreur lors de la création");
+      }
+      const newExercise: ExerciseData = await res.json();
+      onExerciseCreated(newExercise);
+      onChange(globalIndex, { matchedExercise: newExercise, status: "matched" });
+      setShowCreateForm(false);
+      setShowSearch(false);
+      setSearchQuery("");
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Erreur lors de la création");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const profile = blockProfile(blockType);
 
@@ -479,22 +536,80 @@ function ExerciseMatchRow({ item, blockType, globalIndex, allExercises, onChange
 
           {showSearch && (
             <div className="space-y-1">
-              <Input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Rechercher un exercice…"
-                className="h-7 text-xs bg-background border-border" />
-              <div className="space-y-0.5 max-h-32 overflow-y-auto">
-                {filtered.map(ex => (
-                  <button key={ex.id} type="button" onClick={() => selectExercise(ex)}
-                    className="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-xs text-white flex items-center gap-2">
-                    <ChevronRight className="w-3 h-3 text-primary shrink-0" />
-                    {ex.name}
-                    {ex.category && <span className="ml-auto text-muted-foreground text-[10px]">{ex.category}</span>}
-                  </button>
-                ))}
-                {filtered.length === 0 && searchQuery.length > 1 && (
-                  <p className="text-center py-2 text-xs text-muted-foreground">Aucun résultat</p>
-                )}
-              </div>
+              {!showCreateForm && (
+                <Input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher un exercice…"
+                  className="h-7 text-xs bg-background border-border" />
+              )}
+              {!showCreateForm && (
+                <div className="space-y-0.5 max-h-32 overflow-y-auto">
+                  {filtered.map(ex => (
+                    <button key={ex.id} type="button" onClick={() => selectExercise(ex)}
+                      className="w-full text-left px-2.5 py-1.5 rounded hover:bg-white/10 text-xs text-white flex items-center gap-2">
+                      <ChevronRight className="w-3 h-3 text-primary shrink-0" />
+                      {ex.name}
+                      {ex.category && <span className="ml-auto text-muted-foreground text-[10px]">{ex.category}</span>}
+                    </button>
+                  ))}
+                  {filtered.length === 0 && searchQuery.length > 1 && (
+                    <div className="py-1.5 space-y-1.5">
+                      <p className="text-center text-xs text-muted-foreground">Aucun résultat</p>
+                      <button
+                        type="button"
+                        onClick={handleOpenCreateForm}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors text-xs text-primary"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Créer «{searchQuery}»
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {showCreateForm && (
+                <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5">
+                  <p className="text-[10px] text-primary uppercase tracking-wider font-medium">Nouvel exercice</p>
+                  <Input
+                    autoFocus
+                    value={createName}
+                    onChange={e => setCreateName(e.target.value)}
+                    placeholder="Nom de l'exercice…"
+                    className="h-7 text-xs bg-background border-border"
+                  />
+                  <select
+                    value={createCategory}
+                    onChange={e => setCreateCategory(e.target.value)}
+                    className="w-full h-7 rounded-md border border-border bg-background text-xs text-white px-2 outline-none focus:border-primary/50"
+                  >
+                    {EXERCISE_CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                  {createError && (
+                    <p className="text-[10px] text-destructive">{createError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelCreate}
+                      disabled={creating}
+                      className="flex-1 h-7 rounded text-xs text-muted-foreground hover:text-white border border-border hover:border-white/30 transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateExercise}
+                      disabled={creating || !createName.trim()}
+                      className="flex-1 h-7 rounded text-xs bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                    >
+                      {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                      Créer
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -544,7 +659,12 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
     {},
     { query: { queryKey: ["/api/exercises", "import"], enabled: open } }
   );
-  const allExercises = exercises || [];
+  const [extraExercises, setExtraExercises] = useState<ExerciseData[]>([]);
+  const allExercises = [...(exercises || []), ...extraExercises];
+
+  const handleExerciseCreated = useCallback((exercise: ExerciseData) => {
+    setExtraExercises(prev => [...prev, exercise]);
+  }, []);
 
   // Flat index helpers — we store a flat list for easy onChange
   const flatExercises = parsedBlocks.flatMap(b => b.exercises);
@@ -587,6 +707,7 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
     setStep("input");
     setText("");
     setParsedBlocks([]);
+    setExtraExercises([]);
     onClose();
   };
 
@@ -713,6 +834,7 @@ Planche | 3x45s | repos 60s | Gainage serré`}</pre>
                           globalIndex={blockOffset + eIdx}
                           allExercises={allExercises}
                           onChange={handleChange}
+                          onExerciseCreated={handleExerciseCreated}
                         />
                       ))}
                     </div>
