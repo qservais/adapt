@@ -338,6 +338,7 @@ export default function ClientDetail() {
       toast({ title: t("clients.detail.toast_program_activated") });
       setActivateDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      refetch();
     } catch {
       toast({ title: t("clients.detail.toast_program_activate_error"), variant: "destructive" });
     } finally {
@@ -965,9 +966,18 @@ export default function ClientDetail() {
                             </p>
                           )}
                           {activeProgram && !activeProgram.startDate && (
-                            <p className="text-xs text-muted-foreground text-center mt-3 italic">
-                              {t("clients.detail.program_no_start_date")}
-                            </p>
+                            <div className="flex flex-col items-center gap-2 mt-3">
+                              <p className="text-xs text-muted-foreground italic">
+                                {t("clients.detail.program_no_start_date")}
+                              </p>
+                              <Button
+                                size="sm"
+                                onClick={() => openActivateDialog(activeProgram.id)}
+                                className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 h-7 text-xs"
+                              >
+                                {t("clients.detail.btn_activate")}
+                              </Button>
+                            </div>
                           )}
                         </div>
                       );
@@ -1875,12 +1885,24 @@ export default function ClientDetail() {
                     {activeProgram.startDate && ` · ${t("clients.detail.program_started_on", { date: format(new Date(activeProgram.startDate + "T12:00:00"), 'd MMMM yyyy', { locale: fr }) })}`}
                   </p>
                 </div>
-                <Link href={`/programs/${activeProgram.id}`}>
-                  <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:text-white gap-1.5">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    {t("clients.detail.program_full_view")}
-                  </Button>
-                </Link>
+                <div className="flex items-center gap-2">
+                  {!activeProgram.startDate && (
+                    <Button
+                      size="sm"
+                      onClick={() => openActivateDialog(activeProgram.id)}
+                      className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 h-8 text-xs gap-1.5"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      {t("clients.detail.btn_activate")}
+                    </Button>
+                  )}
+                  <Link href={`/programs/${activeProgram.id}`}>
+                    <Button variant="outline" size="sm" className="border-border text-muted-foreground hover:text-white gap-1.5">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      {t("clients.detail.program_full_view")}
+                    </Button>
+                  </Link>
+                </div>
               </div>
               <ProgramGrid programId={activeProgram.id} />
             </div>
