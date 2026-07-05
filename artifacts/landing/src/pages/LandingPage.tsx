@@ -320,7 +320,7 @@ export default function LandingPage() {
               >{l.label}</a>
             ))}
             <LanguageSwitcher compact />
-            <a href="https://app.adapt-system.be" style={{
+            <a href="https://adapt-system.be/coach-dashboard/" style={{
               background: "#00F5A0", color: "#0A0A0A", fontFamily: "'Space Mono', monospace",
               fontWeight: 700, fontSize: "0.7rem", letterSpacing: "0.05em",
               padding: "0.5rem 1.25rem", textDecoration: "none", transition: "all 0.2s",
@@ -381,7 +381,7 @@ export default function LandingPage() {
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "4rem" }}>
             <AppStoreBadge />
-            <a href="https://app.adapt-system.be" style={{
+            <a href="https://adapt-system.be/coach-dashboard/" style={{
               background: "transparent", color: "#888", fontFamily: "'Space Mono', monospace",
               fontWeight: 700, fontSize: "0.75rem", letterSpacing: "0.05em",
               padding: "0 1.5rem", border: "1px solid #1E1E1E", textDecoration: "none",
@@ -519,7 +519,7 @@ export default function LandingPage() {
           </p>
           <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
             <AppStoreBadge />
-            <a href="https://app.adapt-system.be" style={{
+            <a href="https://adapt-system.be/coach-dashboard/" style={{
               background: "transparent", color: "#888", fontFamily: "'Space Mono', monospace",
               fontWeight: 700, fontSize: "0.75rem", letterSpacing: "0.05em",
               padding: "0 1.5rem", border: "1px solid #1E1E1E", textDecoration: "none",
