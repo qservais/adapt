@@ -31,7 +31,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       athleteLastName: usersTable.lastName,
     })
       .from(programsTable)
-      .innerJoin(usersTable, eq(programsTable.athleteId, usersTable.id))
+      .leftJoin(usersTable, eq(programsTable.athleteId, usersTable.id))
       .where(and(eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, false)));
 
     const programIds = programs.map(p => p.id);
@@ -48,7 +48,7 @@ router.get("/programs", authenticate, requireRole("coach"), async (req, res) => 
       id: p.id,
       name: p.name,
       athleteId: p.athleteId,
-      athleteName: `${p.athleteFirstName} ${p.athleteLastName ?? ""}`.trim(),
+      athleteName: p.athleteFirstName ? `${p.athleteFirstName} ${p.athleteLastName ?? ""}`.trim() : null,
       durationWeeks: p.durationWeeks,
       startDate: p.startDate,
       isActive: p.isActive,
@@ -90,7 +90,7 @@ router.put("/programs/:id/preview", authenticate, requireRole("coach"), async (r
 const createProgramSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  athleteId: z.string().uuid(),
+  athleteId: z.string().uuid().optional().nullable(),
   durationWeeks: z.number().int().min(1),
   startDate: z.string().optional(),
 });
@@ -103,46 +103,48 @@ router.post("/programs", authenticate, requireRole("coach"), async (req, res) =>
   }
 
   try {
-    const [athlete] = await db
-      .select({
-        id: usersTable.id,
-        firstName: usersTable.firstName,
-        lastName: usersTable.lastName,
-        pushToken: usersTable.pushToken,
-        notificationPrefs: usersTable.notificationPrefs,
-      })
-      .from(usersTable)
-      .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, req.user!.userId)));
-    if (!athlete) {
-      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlete not linked to you" } });
-      return;
+    let athlete: { id: string; firstName: string; lastName: string | null } | null = null;
+
+    if (parsed.data.athleteId) {
+      const [found] = await db
+        .select({
+          id: usersTable.id,
+          firstName: usersTable.firstName,
+          lastName: usersTable.lastName,
+        })
+        .from(usersTable)
+        .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, req.user!.userId)));
+      if (!found) {
+        res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: "Athlete not linked to you" } });
+        return;
+      }
+      athlete = found;
     }
 
     const [program] = await db.insert(programsTable).values({
       coachId: req.user!.userId,
-      athleteId: parsed.data.athleteId,
+      athleteId: parsed.data.athleteId ?? null,
       name: parsed.data.name,
       description: parsed.data.description,
       durationWeeks: parsed.data.durationWeeks,
       startDate: parsed.data.startDate,
     }).returning();
 
-    const notifTitle = "Nouveau programme disponible 🏋️";
-    const notifBody = `Ton coach t'a attribué un nouveau programme : ${program.name}`;
-
-    await notifyUser({
-      userId: parsed.data.athleteId,
-      type: "new_program",
-      title: notifTitle,
-      body: notifBody,
-      link: "/(tabs)/session",
-    });
+    if (athlete && parsed.data.athleteId) {
+      await notifyUser({
+        userId: parsed.data.athleteId,
+        type: "new_program",
+        title: "Nouveau programme disponible 🏋️",
+        body: `Ton coach t'a attribué un nouveau programme : ${program.name}`,
+        link: "/(tabs)/session",
+      });
+    }
 
     res.status(201).json({
       id: program.id,
       name: program.name,
       athleteId: program.athleteId,
-      athleteName: `${athlete.firstName} ${athlete.lastName ?? ""}`.trim(),
+      athleteName: athlete ? `${athlete.firstName} ${athlete.lastName ?? ""}`.trim() : null,
       durationWeeks: program.durationWeeks,
       startDate: program.startDate,
       isActive: program.isActive,

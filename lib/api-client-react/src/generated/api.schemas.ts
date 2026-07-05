@@ -414,8 +414,8 @@ export interface FreeCustomSessionRequest {
 export interface ProgramSummary {
   id: string;
   name: string;
-  athleteId: string;
-  athleteName: string;
+  athleteId?: string | null;
+  athleteName?: string | null;
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
@@ -471,7 +471,7 @@ export interface StartProgramNowResult {
 export interface CreateProgramRequest {
   name: string;
   description?: string;
-  athleteId: string;
+  athleteId?: string | null;
   durationWeeks: number;
   startDate?: string;
 }

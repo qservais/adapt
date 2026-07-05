@@ -97,7 +97,7 @@ const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const createSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
-  athleteId: z.string().min(1, "L'athlète est requis"),
+  athleteId: z.string().optional(),
   durationWeeks: z.coerce.number().min(1).max(52),
   startDate: z.string().optional(),
 });
@@ -120,7 +120,7 @@ function NewProgramDialog({
     resolver: zodResolver(createSchema),
     defaultValues: {
       name: "",
-      athleteId: defaultAthleteId || "",
+      athleteId: defaultAthleteId || undefined,
       durationWeeks: 4,
       startDate: new Date().toISOString().split("T")[0],
     },
@@ -171,13 +171,19 @@ function NewProgramDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-muted-foreground">{t("programs.label_assign_athlete")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)}
+                    defaultValue={field.value || "__none__"}
+                  >
                     <FormControl>
                       <SelectTrigger className="bg-background border-border">
                         <SelectValue placeholder={t("programs.athlete_placeholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-card border-border">
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground italic">{t("programs.no_athlete")}</span>
+                      </SelectItem>
                       {clients?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.firstName} {c.lastName}
@@ -453,7 +459,7 @@ function AthleteSection({
 interface BlockSession extends SessionWithVariants {
   programId: string;
   programName: string;
-  athleteName: string;
+  athleteName?: string | null;
 }
 
 function ReutiliserModal({
@@ -1220,10 +1226,11 @@ export default function ProgramsList() {
   const byAthlete = allPrograms.reduce<
     Record<string, { athleteName: string; programs: ProgramSummary[] }>
   >((acc, prog) => {
-    if (!acc[prog.athleteId]) {
-      acc[prog.athleteId] = { athleteName: prog.athleteName, programs: [] };
+    const key = prog.athleteId ?? "__no_athlete__";
+    if (!acc[key]) {
+      acc[key] = { athleteName: prog.athleteName ?? t("programs.no_athlete"), programs: [] };
     }
-    acc[prog.athleteId]!.programs.push(prog);
+    acc[key]!.programs.push(prog);
     return acc;
   }, {});
 
