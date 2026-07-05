@@ -83,7 +83,6 @@ const LUNA_HASH =
 const TEST_EMAILS = [
   "dylandecoster7@outlook.com",
   "julien@adapt.demo",
-  "lmj-trainer@hotmail.com",
   "marie@adapt.demo",
   "sara@adapt.demo",
 ];
@@ -175,6 +174,12 @@ export async function fixProdData(): Promise<void> {
   } catch (err) {
     logger.error({ err }, "fixProdData: erreur création coaches");
   }
+
+  try {
+    await fixLmjTrainerRole();
+  } catch (err) {
+    logger.error({ err }, "fixProdData: erreur correction rôle lmj-trainer");
+  }
 }
 
 async function deactivateTestAccounts(): Promise<void> {
@@ -220,5 +225,22 @@ async function ensureCoaches(): Promise<void> {
       lastName: "Biot",
     });
     logger.info("fixProdData: compte coach Luna Biot créé");
+  }
+}
+
+async function fixLmjTrainerRole(): Promise<void> {
+  const [user] = await db
+    .select({ id: usersTable.id, role: usersTable.role, isActive: usersTable.isActive })
+    .from(usersTable)
+    .where(eq(usersTable.email, "lmj-trainer@hotmail.com"))
+    .limit(1);
+
+  if (!user) return;
+
+  if (user.role !== "coach" || !user.isActive) {
+    await db.update(usersTable)
+      .set({ role: "coach", isActive: true, coachId: null })
+      .where(eq(usersTable.email, "lmj-trainer@hotmail.com"));
+    logger.info("fixProdData: lmj-trainer@hotmail.com → role=coach, isActive=true");
   }
 }
