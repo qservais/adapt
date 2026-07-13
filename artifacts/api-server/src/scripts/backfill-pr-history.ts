@@ -43,8 +43,12 @@ export async function backfillPrHistory(): Promise<{ inserted: number; skipped: 
       .from(prHistoryTable),
   ]);
 
+  // Same load-only scope as the records loop below — non-load history rows
+  // (bodyweight/time/distance) can't collide with a load-type key anyway.
   const existingKeys = new Set(
-    existingHistory.map((h) => makeKey(h.userId, h.exerciseId, h.loadKg, h.reps, h.achievedAt))
+    existingHistory
+      .filter((h): h is typeof h & { loadKg: string; reps: number } => h.loadKg != null && h.reps != null)
+      .map((h) => makeKey(h.userId, h.exerciseId, h.loadKg, h.reps, h.achievedAt))
   );
 
   const toInsert: HistoryRow[] = [];
@@ -52,6 +56,10 @@ export async function backfillPrHistory(): Promise<{ inserted: number; skipped: 
 
   for (const record of records) {
     const { userId, exerciseId, loadKg, reps, achievedAt, sessionLogId, previousLoadKg } = record;
+    // This backfill predates generalized PR types and only ever seeded
+    // load-based PRs — skip anything without a load value (bodyweight/time/
+    // distance records, which never have loadKg set).
+    if (loadKg == null || reps == null) continue;
 
     // --- Entry 1: the current PR ---
     const currentKey = makeKey(userId, exerciseId, loadKg, reps, achievedAt);

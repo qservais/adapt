@@ -30,6 +30,7 @@ const exerciseResponseFields = {
   demoUrl: exercisesTable.demoUrl,
   level: exercisesTable.level,
   createdBy: exercisesTable.createdBy,
+  trackingType: exercisesTable.trackingType,
 } as const;
 
 router.get("/exercises", authenticate, async (req, res) => {
@@ -72,6 +73,7 @@ const createExerciseSchema = z.object({
   description: z.string().optional(),
   demoUrl: z.string().url().optional().or(z.literal("")),
   level: z.enum(["débutant", "intermédiaire", "avancé"]).optional(),
+  trackingType: z.enum(["load", "bodyweight", "time", "distance"]).optional(),
 });
 
 router.post("/exercises", authenticate, requireRole("coach"), async (req, res) => {
@@ -90,6 +92,7 @@ router.post("/exercises", authenticate, requireRole("coach"), async (req, res) =
       description: parsed.data.description ?? null,
       demoUrl: parsed.data.demoUrl || null,
       level: parsed.data.level ?? null,
+      trackingType: parsed.data.trackingType ?? "load",
       createdBy: req.user!.userId,
     }).returning(exerciseResponseFields);
 
@@ -132,6 +135,10 @@ router.put("/exercises/:exerciseId", authenticate, requireRole("coach"), async (
         description: parsed.data.description ?? null,
         demoUrl: parsed.data.demoUrl || null,
         level: parsed.data.level ?? null,
+        // Only touched when explicitly sent — the edit form doesn't surface
+        // this field yet, so omitting it here would otherwise silently
+        // reset any exercise back to "load" on every unrelated edit.
+        ...(parsed.data.trackingType !== undefined ? { trackingType: parsed.data.trackingType } : {}),
       })
       .where(and(eq(exercisesTable.id, exerciseId), eq(exercisesTable.createdBy, coachId)))
       .returning(exerciseResponseFields);

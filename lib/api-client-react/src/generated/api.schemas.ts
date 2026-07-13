@@ -607,7 +607,21 @@ export interface SessionBlockItem {
   conditioningFormat?: string | null;
 }
 
-export type SessionDetailAthletePRs = { [key: string]: number };
+export type RecordType = (typeof RecordType)[keyof typeof RecordType];
+
+export const RecordType = {
+  load: "load",
+  reps: "reps",
+  time: "time",
+  distance: "distance",
+} as const;
+
+export interface AthletePRItem {
+  recordType: RecordType;
+  value: number;
+}
+
+export type SessionDetailAthletePRs = { [key: string]: AthletePRItem };
 
 export interface SessionDetail {
   sessionLogId: string;
@@ -637,8 +651,9 @@ export interface SessionDetail {
 export interface CompleteSessionNewPR {
   exerciseId: string;
   exerciseName: string;
-  loadKg: number;
-  previousLoadKg?: number | null;
+  recordType: RecordType;
+  value: number;
+  previousValue?: number | null;
 }
 
 export interface CompleteSessionResult {
@@ -680,9 +695,10 @@ export interface BadgesResponse {
 export interface PersonalRecord {
   exerciseId: string;
   exerciseName: string;
-  loadKg: number;
-  reps: number;
-  previousLoadKg?: number | null;
+  recordType: RecordType;
+  value: number;
+  reps?: number | null;
+  previousValue?: number | null;
   achievedAt?: string;
   isRecent?: boolean;
 }
@@ -768,6 +784,8 @@ export type CompleteSessionRequestExercisesItem = {
   setsCompleted?: number;
   repsPerSet?: number[];
   loadKgUsed?: number;
+  durationSecondsUsed?: number;
+  distanceMetersUsed?: number;
 };
 
 export interface CompleteSessionRequest {
@@ -1140,6 +1158,16 @@ export interface CreatePerformanceTestRequest {
   notes?: string;
 }
 
+export type ExerciseDataTrackingType =
+  (typeof ExerciseDataTrackingType)[keyof typeof ExerciseDataTrackingType];
+
+export const ExerciseDataTrackingType = {
+  load: "load",
+  bodyweight: "bodyweight",
+  time: "time",
+  distance: "distance",
+} as const;
+
 export interface ExerciseData {
   id: string;
   name: string;
@@ -1147,6 +1175,7 @@ export interface ExerciseData {
   muscleGroups?: string[] | null;
   equipment?: string[] | null;
   demoUrl?: string | null;
+  trackingType?: ExerciseDataTrackingType;
 }
 
 export type CreateExerciseRequestCategory =
@@ -1159,12 +1188,23 @@ export const CreateExerciseRequestCategory = {
   mobility: "mobility",
 } as const;
 
+export type CreateExerciseRequestTrackingType =
+  (typeof CreateExerciseRequestTrackingType)[keyof typeof CreateExerciseRequestTrackingType];
+
+export const CreateExerciseRequestTrackingType = {
+  load: "load",
+  bodyweight: "bodyweight",
+  time: "time",
+  distance: "distance",
+} as const;
+
 export interface CreateExerciseRequest {
   name: string;
   category?: CreateExerciseRequestCategory;
   muscleGroups?: string[];
   equipment?: string[];
   demoUrl?: string;
+  trackingType?: CreateExerciseRequestTrackingType;
 }
 
 export interface MessageThread {
@@ -1283,14 +1323,15 @@ export interface UpdateNotificationPreferencesRequest {
 
 export interface PRHistoryEntry {
   id: string;
-  loadKg: number;
-  reps: number;
+  value: number;
+  reps?: number | null;
   achievedAt: string;
 }
 
 export interface PRHistoryResponse {
   exerciseId: string;
   exerciseName: string;
+  recordType: RecordType;
   history: PRHistoryEntry[];
 }
 

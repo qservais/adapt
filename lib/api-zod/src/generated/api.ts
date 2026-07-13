@@ -858,9 +858,10 @@ export const GetPersonalRecordsResponse = zod.object({
     zod.object({
       exerciseId: zod.string(),
       exerciseName: zod.string(),
-      loadKg: zod.number(),
-      reps: zod.number(),
-      previousLoadKg: zod.number().nullish(),
+      recordType: zod.enum(["load", "reps", "time", "distance"]),
+      value: zod.number(),
+      reps: zod.number().nullish(),
+      previousValue: zod.number().nullish(),
       achievedAt: zod.string().optional(),
       isRecent: zod.boolean().optional(),
     }),
@@ -878,11 +879,12 @@ export const GetExercisePRHistoryParams = zod.object({
 export const GetExercisePRHistoryResponse = zod.object({
   exerciseId: zod.string(),
   exerciseName: zod.string(),
+  recordType: zod.enum(["load", "reps", "time", "distance"]),
   history: zod.array(
     zod.object({
       id: zod.string(),
-      loadKg: zod.number(),
-      reps: zod.number(),
+      value: zod.number(),
+      reps: zod.number().nullish(),
       achievedAt: zod.string(),
     }),
   ),
@@ -1033,7 +1035,15 @@ export const GetTodaySessionResponse = zod.object({
     .optional(),
   adaptScore: zod.number(),
   overriddenByCoach: zod.boolean().optional(),
-  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  athletePRs: zod
+    .record(
+      zod.string(),
+      zod.object({
+        recordType: zod.enum(["load", "reps", "time", "distance"]),
+        value: zod.number(),
+      }),
+    )
+    .optional(),
   completedAt: zod.string().nullish(),
   durationMin: zod.number().nullish(),
   rpe: zod.number().nullish(),
@@ -1101,7 +1111,15 @@ export const GetTodaySessionAllResponseItem = zod.object({
     .optional(),
   adaptScore: zod.number(),
   overriddenByCoach: zod.boolean().optional(),
-  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  athletePRs: zod
+    .record(
+      zod.string(),
+      zod.object({
+        recordType: zod.enum(["load", "reps", "time", "distance"]),
+        value: zod.number(),
+      }),
+    )
+    .optional(),
   completedAt: zod.string().nullish(),
   durationMin: zod.number().nullish(),
   rpe: zod.number().nullish(),
@@ -1214,6 +1232,8 @@ export const CompleteSessionBody = zod.object({
       setsCompleted: zod.number().optional(),
       repsPerSet: zod.array(zod.number()).optional(),
       loadKgUsed: zod.number().optional(),
+      durationSecondsUsed: zod.number().optional(),
+      distanceMetersUsed: zod.number().optional(),
     }),
   ),
 });
@@ -1225,8 +1245,9 @@ export const CompleteSessionResponse = zod.object({
     zod.object({
       exerciseId: zod.string(),
       exerciseName: zod.string(),
-      loadKg: zod.number(),
-      previousLoadKg: zod.number().nullish(),
+      recordType: zod.enum(["load", "reps", "time", "distance"]),
+      value: zod.number(),
+      previousValue: zod.number().nullish(),
     }),
   ),
   newBadges: zod.array(
@@ -2235,7 +2256,15 @@ export const GetClientSessionDetailResponse = zod.object({
     .optional(),
   adaptScore: zod.number(),
   overriddenByCoach: zod.boolean().optional(),
-  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  athletePRs: zod
+    .record(
+      zod.string(),
+      zod.object({
+        recordType: zod.enum(["load", "reps", "time", "distance"]),
+        value: zod.number(),
+      }),
+    )
+    .optional(),
   completedAt: zod.string().nullish(),
   durationMin: zod.number().nullish(),
   rpe: zod.number().nullish(),
@@ -2796,6 +2825,7 @@ export const GetExercisesResponseItem = zod.object({
   muscleGroups: zod.array(zod.string()).nullish(),
   equipment: zod.array(zod.string()).nullish(),
   demoUrl: zod.string().nullish(),
+  trackingType: zod.enum(["load", "bodyweight", "time", "distance"]).optional(),
 });
 export const GetExercisesResponse = zod.array(GetExercisesResponseItem);
 
@@ -2810,6 +2840,7 @@ export const CreateExerciseBody = zod.object({
   muscleGroups: zod.array(zod.string()).optional(),
   equipment: zod.array(zod.string()).optional(),
   demoUrl: zod.string().optional(),
+  trackingType: zod.enum(["load", "bodyweight", "time", "distance"]).optional(),
 });
 
 /**

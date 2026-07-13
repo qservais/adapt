@@ -386,6 +386,35 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – sessions.is_test column failed");
     throw err;
   }
+
+  // Mouv'Up Phase 7 — generalized PR detection (load/reps/time/distance
+  // instead of load-only). exercises.tracking_type defaults to 'load' so
+  // every pre-existing exercise keeps behaving exactly as before.
+  try {
+    await db.execute(sql`ALTER TABLE exercises ADD COLUMN IF NOT EXISTS tracking_type varchar(20) NOT NULL DEFAULT 'load'`);
+    await db.execute(sql`ALTER TABLE exercise_logs ADD COLUMN IF NOT EXISTS duration_seconds_used integer`);
+    await db.execute(sql`ALTER TABLE exercise_logs ADD COLUMN IF NOT EXISTS distance_meters_used numeric(8,2)`);
+
+    await db.execute(sql`ALTER TABLE personal_records ADD COLUMN IF NOT EXISTS record_type varchar(20) NOT NULL DEFAULT 'load'`);
+    await db.execute(sql`ALTER TABLE personal_records ADD COLUMN IF NOT EXISTS duration_seconds integer`);
+    await db.execute(sql`ALTER TABLE personal_records ADD COLUMN IF NOT EXISTS distance_meters numeric(8,2)`);
+    await db.execute(sql`ALTER TABLE personal_records ADD COLUMN IF NOT EXISTS previous_reps integer`);
+    await db.execute(sql`ALTER TABLE personal_records ADD COLUMN IF NOT EXISTS previous_duration_seconds integer`);
+    await db.execute(sql`ALTER TABLE personal_records ADD COLUMN IF NOT EXISTS previous_distance_meters numeric(8,2)`);
+    await db.execute(sql`ALTER TABLE personal_records ALTER COLUMN load_kg DROP NOT NULL`);
+    await db.execute(sql`ALTER TABLE personal_records ALTER COLUMN reps DROP NOT NULL`);
+
+    await db.execute(sql`ALTER TABLE pr_history ADD COLUMN IF NOT EXISTS record_type varchar(20) NOT NULL DEFAULT 'load'`);
+    await db.execute(sql`ALTER TABLE pr_history ADD COLUMN IF NOT EXISTS duration_seconds integer`);
+    await db.execute(sql`ALTER TABLE pr_history ADD COLUMN IF NOT EXISTS distance_meters numeric(8,2)`);
+    await db.execute(sql`ALTER TABLE pr_history ALTER COLUMN load_kg DROP NOT NULL`);
+    await db.execute(sql`ALTER TABLE pr_history ALTER COLUMN reps DROP NOT NULL`);
+
+    logger.info("runSchemaMigrations: generalized PR columns (exercises.tracking_type, personal_records/pr_history extensions) OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – generalized PR columns failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

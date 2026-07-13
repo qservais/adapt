@@ -5,10 +5,9 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { RecordType } from "./recordType";
 
-export interface PRHistoryEntry {
-  id: string;
+export interface AthletePRItem {
+  recordType: RecordType;
   value: number;
-  reps?: number | null;
-  achievedAt: string;
 }

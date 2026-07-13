@@ -3914,7 +3914,7 @@ components:
         athletePRs:
           type: object
           additionalProperties:
-            type: number
+            $ref: "#/components/schemas/AthletePRItem"
         completedAt:
           type: string
           nullable: true
@@ -3939,6 +3939,21 @@ components:
         - exercises
         - adaptScore
 
+    RecordType:
+      type: string
+      enum: [load, reps, time, distance]
+
+    AthletePRItem:
+      type: object
+      properties:
+        recordType:
+          $ref: "#/components/schemas/RecordType"
+        value:
+          type: number
+      required:
+        - recordType
+        - value
+
     CompleteSessionNewPR:
       type: object
       properties:
@@ -3946,15 +3961,18 @@ components:
           type: string
         exerciseName:
           type: string
-        loadKg:
+        recordType:
+          $ref: "#/components/schemas/RecordType"
+        value:
           type: number
-        previousLoadKg:
+        previousValue:
           type: number
           nullable: true
       required:
         - exerciseId
         - exerciseName
-        - loadKg
+        - recordType
+        - value
 
     CompleteSessionResult:
       type: object
@@ -4058,11 +4076,14 @@ components:
           type: string
         exerciseName:
           type: string
-        loadKg:
+        recordType:
+          $ref: "#/components/schemas/RecordType"
+        value:
           type: number
         reps:
           type: integer
-        previousLoadKg:
+          nullable: true
+        previousValue:
           type: number
           nullable: true
         achievedAt:
@@ -4072,8 +4093,8 @@ components:
       required:
         - exerciseId
         - exerciseName
-        - loadKg
-        - reps
+        - recordType
+        - value
 
     PersonalRecordsResponse:
       type: object
@@ -4272,6 +4293,10 @@ components:
                 items:
                   type: integer
               loadKgUsed:
+                type: number
+              durationSecondsUsed:
+                type: integer
+              distanceMetersUsed:
                 type: number
       required:
         - exercises
@@ -5008,6 +5033,9 @@ components:
         demoUrl:
           type: string
           nullable: true
+        trackingType:
+          type: string
+          enum: [load, bodyweight, time, distance]
       required:
         - id
         - name
@@ -5030,6 +5058,9 @@ components:
             type: string
         demoUrl:
           type: string
+        trackingType:
+          type: string
+          enum: [load, bodyweight, time, distance]
       required:
         - name
 
@@ -5249,16 +5280,16 @@ components:
       properties:
         id:
           type: string
-        loadKg:
+        value:
           type: number
         reps:
           type: integer
+          nullable: true
         achievedAt:
           type: string
       required:
         - id
-        - loadKg
-        - reps
+        - value
         - achievedAt
 
     PRHistoryResponse:
@@ -5268,6 +5299,8 @@ components:
           type: string
         exerciseName:
           type: string
+        recordType:
+          $ref: "#/components/schemas/RecordType"
         history:
           type: array
           items:
@@ -5275,6 +5308,7 @@ components:
       required:
         - exerciseId
         - exerciseName
+        - recordType
         - history
 
     Challenge:

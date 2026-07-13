@@ -12,6 +12,8 @@ import Svg, { Line, Polyline, Circle, Text as SvgText } from "react-native-svg";
 import { Feather } from "@expo/vector-icons";
 import { useGetExercisePRHistory, type PRHistoryEntry } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
+import { useFormatWeight } from "@/context/PreferencesContext";
+import { formatRecordValue, recordGain } from "@/lib/formatRecord";
 
 interface PRHistoryModalProps {
   exerciseId: string | null;
@@ -29,10 +31,10 @@ function PRLineChart({ entries }: { entries: PRHistoryEntry[] }) {
   const innerW = CHART_WIDTH - PADDING.left - PADDING.right;
   const innerH = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 
-  const loads = entries.map((e) => e.loadKg);
-  const minLoad = Math.min(...loads);
-  const maxLoad = Math.max(...loads);
-  const loadRange = maxLoad - minLoad || 1;
+  const values = entries.map((e) => e.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const valueRange = maxValue - minValue || 1;
 
   const dates = entries.map((e) => new Date(e.achievedAt).getTime());
   const minDate = Math.min(...dates);
@@ -40,17 +42,17 @@ function PRLineChart({ entries }: { entries: PRHistoryEntry[] }) {
   const dateRange = maxDate - minDate || 1;
 
   const toX = (ts: number) => PADDING.left + ((ts - minDate) / dateRange) * innerW;
-  const toY = (kg: number) =>
-    PADDING.top + innerH - ((kg - minLoad) / loadRange) * innerH;
+  const toY = (value: number) =>
+    PADDING.top + innerH - ((value - minValue) / valueRange) * innerH;
 
   const points = entries.map((e) => {
     const ts = new Date(e.achievedAt).getTime();
-    return { x: toX(ts), y: toY(e.loadKg), entry: e };
+    return { x: toX(ts), y: toY(e.value), entry: e };
   });
 
   const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
 
-  const yTicks = [minLoad, minLoad + loadRange / 2, maxLoad].filter(
+  const yTicks = [minValue, minValue + valueRange / 2, maxValue].filter(
     (v, i, arr) => arr.indexOf(v) === i
   );
   const xTicks = entries.length <= 5 ? entries : [entries[0], entries[entries.length - 1]];
@@ -132,12 +134,14 @@ function PRLineChart({ entries }: { entries: PRHistoryEntry[] }) {
 
 export function PRHistoryModal({ exerciseId, exerciseName, onClose }: PRHistoryModalProps) {
   const historyQuery = useGetExercisePRHistory(exerciseId ?? "");
+  const formatWeight = useFormatWeight();
 
   const entries = historyQuery.data?.history ?? [];
+  const recordType = historyQuery.data?.recordType ?? "load";
   const best = entries.length > 0 ? entries[entries.length - 1] : null;
   const first = entries.length > 0 ? entries[0] : null;
   const totalGain =
-    best && first && entries.length > 1 ? best.loadKg - first.loadKg : null;
+    best && first && entries.length > 1 ? recordGain(recordType, best.value, first.value) : null;
 
   return (
     <Modal
@@ -192,7 +196,7 @@ export function PRHistoryModal({ exerciseId, exerciseName, onClose }: PRHistoryM
                   <View style={styles.summaryChip}>
                     <Feather name="trending-up" size={11} color={COLORS.cyan} />
                     <Text style={[styles.summaryChipText, { fontFamily: FONTS.mono }]}>
-                      +{totalGain % 1 === 0 ? totalGain : totalGain.toFixed(1)} kg au total
+                      +{formatRecordValue(recordType, Math.round(totalGain * 100) / 100, formatWeight)} au total
                     </Text>
                   </View>
                   <Text style={[styles.summaryMeta, { fontFamily: FONTS.body }]}>
@@ -239,9 +243,9 @@ export function PRHistoryModal({ exerciseId, exerciseName, onClose }: PRHistoryM
                         { fontFamily: FONTS.monoBold, color: isLatest ? COLORS.cyan : COLORS.white },
                       ]}
                     >
-                      {entry.loadKg} kg
+                      {formatRecordValue(recordType, entry.value, formatWeight)}
                       <Text style={[styles.historyReps, { fontFamily: FONTS.mono }]}>
-                        {entry.reps > 0 ? ` × ${entry.reps}` : ""}
+                        {recordType !== "reps" && entry.reps != null && entry.reps > 0 ? ` × ${entry.reps}` : ""}
                       </Text>
                     </Text>
                   </View>
