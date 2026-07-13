@@ -15,7 +15,13 @@ type Lang = "fr" | "en";
 
 type SendEmailResult = { ok: true } | { ok: false; error: string };
 
-async function sendEmail(opts: { to: string; subject: string; html: string; text: string }): Promise<SendEmailResult> {
+async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  attachments?: { filename: string; content: Buffer; contentType?: string }[];
+}): Promise<SendEmailResult> {
   if (!resend) {
     logger.info({ to: opts.to, subject: opts.subject }, "[EMAIL-MOCK] Would send email");
     return { ok: true };
@@ -27,6 +33,7 @@ async function sendEmail(opts: { to: string; subject: string; html: string; text
       subject: opts.subject,
       html: opts.html,
       text: opts.text,
+      attachments: opts.attachments,
     });
     if (error) {
       logger.error({ error, to: opts.to }, "Resend error");
@@ -293,4 +300,27 @@ export async function sendOneOnOneConfirmedEmail(to: string, firstName: string, 
   `, lang, c.footer);
   const text = [`ADAPT — INTELLIGENCE PERFORMANCE`, ``, c.h2, ``, `Bonjour ${firstName},`, ``, c.bodyText(whenFormatted)].join("\n");
   return sendEmail({ to, subject: c.subject, html, text });
+}
+
+const MONTH_NAMES_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+// Monthly accounting export — the CSV itself is the deliverable, the email
+// body is just a wrapper. No lang variants: the accountant's language isn't
+// tracked anywhere, and French is the studio's operating language.
+export async function sendAccountingExportEmail(to: string, studioName: string, year: number, month: number, csv: string): Promise<SendEmailResult> {
+  const monthLabel = `${MONTH_NAMES_FR[month - 1] ?? month} ${year}`;
+  const html = baseTemplate(`
+    <h2>Export comptable — ${monthLabel}</h2>
+    <p>Bonjour,</p>
+    <p>Vous trouverez ci-joint l'export des factures et notes de crédit de <span class="highlight">${studioName}</span> pour <span class="highlight">${monthLabel}</span>, au format CSV.</p>
+  `, "fr", "Cet email est envoyé automatiquement chaque mois.");
+  const text = [`ADAPT — INTELLIGENCE PERFORMANCE`, ``, `Export comptable — ${monthLabel}`, ``, `Bonjour,`, ``, `Vous trouverez ci-joint l'export des factures et notes de crédit de ${studioName} pour ${monthLabel}, au format CSV.`].join("\n");
+  const filename = `export-${year}-${String(month).padStart(2, "0")}.csv`;
+  return sendEmail({
+    to,
+    subject: `Export comptable — ${monthLabel}`,
+    html,
+    text,
+    attachments: [{ filename, content: Buffer.from(csv, "utf-8"), contentType: "text/csv" }],
+  });
 }

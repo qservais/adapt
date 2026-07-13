@@ -23,3 +23,4 @@ export * from "./shop";
 export * from "./credits";
 export * from "./classes";
 export * from "./availability";
+export * from "./invoicing";

@@ -51,6 +51,7 @@ import type {
   CreateAppointmentRequest,
   CreateChallengeRequest,
   CreateCheckoutSessionRequest,
+  CreateCreditNoteRequest,
   CreateExerciseRequest,
   CreateOneOnOneRequest,
   CreatePerformanceTestRequest,
@@ -59,8 +60,10 @@ import type {
   CreateSessionRequest,
   CreateShopPromoRequest,
   CreditBalances,
+  CreditNoteListItem,
   ErrorResponse,
   ExerciseData,
+  ExportCoachInvoicesCsvParams,
   FreeCustomSessionRequest,
   GetAthleteCoachSlotsParams,
   GetClassOccurrencesParams,
@@ -72,6 +75,7 @@ import type {
   GiftCreditsRequest,
   HealthStatus,
   InviteCodeResponse,
+  InvoiceListItem,
   LibrarySession,
   LogExerciseRequest,
   LoginCodeRequest,
@@ -10871,3 +10875,431 @@ export const useUpdateNotificationPreferences = <
 > => {
   return useMutation(getUpdateNotificationPreferencesMutationOptions(options));
 };
+
+/**
+ * @summary List invoices issued by the coach (most recent 200)
+ */
+export const getGetCoachInvoicesUrl = () => {
+  return `/api/coach/invoices`;
+};
+
+export const getCoachInvoices = async (
+  options?: RequestInit,
+): Promise<InvoiceListItem[]> => {
+  return customFetch<InvoiceListItem[]>(getGetCoachInvoicesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachInvoicesQueryKey = () => {
+  return [`/api/coach/invoices`] as const;
+};
+
+export const getGetCoachInvoicesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachInvoices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachInvoices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachInvoicesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachInvoices>>
+  > = ({ signal }) => getCoachInvoices({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachInvoices>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachInvoicesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachInvoices>>
+>;
+export type GetCoachInvoicesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List invoices issued by the coach (most recent 200)
+ */
+
+export function useGetCoachInvoices<
+  TData = Awaited<ReturnType<typeof getCoachInvoices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachInvoices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachInvoicesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+ */
+export const getCreateInvoiceCreditNoteUrl = (id: string) => {
+  return `/api/coach/invoices/${id}/credit-note`;
+};
+
+export const createInvoiceCreditNote = async (
+  id: string,
+  createCreditNoteRequest: CreateCreditNoteRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getCreateInvoiceCreditNoteUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCreditNoteRequest),
+  });
+};
+
+export const getCreateInvoiceCreditNoteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+    TError,
+    { id: string; data: BodyType<CreateCreditNoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+  TError,
+  { id: string; data: BodyType<CreateCreditNoteRequest> },
+  TContext
+> => {
+  const mutationKey = ["createInvoiceCreditNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+    { id: string; data: BodyType<CreateCreditNoteRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createInvoiceCreditNote(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateInvoiceCreditNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createInvoiceCreditNote>>
+>;
+export type CreateInvoiceCreditNoteMutationBody =
+  BodyType<CreateCreditNoteRequest>;
+export type CreateInvoiceCreditNoteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+ */
+export const useCreateInvoiceCreditNote = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+    TError,
+    { id: string; data: BodyType<CreateCreditNoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+  TError,
+  { id: string; data: BodyType<CreateCreditNoteRequest> },
+  TContext
+> => {
+  return useMutation(getCreateInvoiceCreditNoteMutationOptions(options));
+};
+
+/**
+ * @summary Monthly accounting export (CSV) for the accountant
+ */
+export const getExportCoachInvoicesCsvUrl = (
+  params?: ExportCoachInvoicesCsvParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/invoices/export.csv?${stringifiedParams}`
+    : `/api/coach/invoices/export.csv`;
+};
+
+export const exportCoachInvoicesCsv = async (
+  params?: ExportCoachInvoicesCsvParams,
+  options?: RequestInit,
+): Promise<string> => {
+  return customFetch<string>(getExportCoachInvoicesCsvUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportCoachInvoicesCsvQueryKey = (
+  params?: ExportCoachInvoicesCsvParams,
+) => {
+  return [
+    `/api/coach/invoices/export.csv`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getExportCoachInvoicesCsvQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportCoachInvoicesCsvParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getExportCoachInvoicesCsvQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof exportCoachInvoicesCsv>>
+  > = ({ signal }) =>
+    exportCoachInvoicesCsv(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportCoachInvoicesCsvQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportCoachInvoicesCsv>>
+>;
+export type ExportCoachInvoicesCsvQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Monthly accounting export (CSV) for the accountant
+ */
+
+export function useExportCoachInvoicesCsv<
+  TData = Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportCoachInvoicesCsvParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportCoachInvoicesCsvQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Download an invoice or credit note PDF (owner athlete or issuing coach only)
+ */
+export const getGetInvoicePdfUrl = (id: string) => {
+  return `/api/invoices/${id}/pdf`;
+};
+
+export const getInvoicePdf = async (
+  id: string,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getGetInvoicePdfUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInvoicePdfQueryKey = (id: string) => {
+  return [`/api/invoices/${id}/pdf`] as const;
+};
+
+export const getGetInvoicePdfQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInvoicePdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvoicePdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetInvoicePdfQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvoicePdf>>> = ({
+    signal,
+  }) => getInvoicePdf(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInvoicePdf>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetInvoicePdfQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInvoicePdf>>
+>;
+export type GetInvoicePdfQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Download an invoice or credit note PDF (owner athlete or issuing coach only)
+ */
+
+export function useGetInvoicePdf<
+  TData = Awaited<ReturnType<typeof getInvoicePdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvoicePdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetInvoicePdfQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List credit notes issued by the coach
+ */
+export const getGetCoachCreditNotesUrl = () => {
+  return `/api/coach/credit-notes`;
+};
+
+export const getCoachCreditNotes = async (
+  options?: RequestInit,
+): Promise<CreditNoteListItem[]> => {
+  return customFetch<CreditNoteListItem[]>(getGetCoachCreditNotesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachCreditNotesQueryKey = () => {
+  return [`/api/coach/credit-notes`] as const;
+};
+
+export const getGetCoachCreditNotesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachCreditNotes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachCreditNotesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>
+  > = ({ signal }) => getCoachCreditNotes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachCreditNotesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachCreditNotes>>
+>;
+export type GetCoachCreditNotesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List credit notes issued by the coach
+ */
+
+export function useGetCoachCreditNotes<
+  TData = Awaited<ReturnType<typeof getCoachCreditNotes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachCreditNotesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

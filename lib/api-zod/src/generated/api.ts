@@ -2939,3 +2939,66 @@ export const UpdateNotificationPreferencesResponse = zod.object({
   encouragements: zod.boolean(),
   performance: zod.boolean(),
 });
+
+/**
+ * @summary List invoices issued by the coach (most recent 200)
+ */
+export const GetCoachInvoicesResponseItem = zod.object({
+  id: zod.string(),
+  invoiceNumber: zod.string(),
+  athleteId: zod.string(),
+  description: zod.string(),
+  regime: zod.enum(["franchise", "assujetti"]),
+  amountHtCents: zod.number(),
+  vatCents: zod.number(),
+  amountTtcCents: zod.number(),
+  paymentMethod: zod.string(),
+  status: zod.enum(["issued", "credited"]),
+  issuedAt: zod.string(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+export const GetCoachInvoicesResponse = zod.array(GetCoachInvoicesResponseItem);
+
+/**
+ * @summary Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+ */
+export const CreateInvoiceCreditNoteParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const createInvoiceCreditNoteBodyReasonMax = 500;
+
+export const CreateInvoiceCreditNoteBody = zod.object({
+  reason: zod.string().min(1).max(createInvoiceCreditNoteBodyReasonMax),
+});
+
+/**
+ * @summary Monthly accounting export (CSV) for the accountant
+ */
+export const ExportCoachInvoicesCsvQueryParams = zod.object({
+  year: zod.coerce.number().optional(),
+  month: zod.coerce.number().optional(),
+});
+
+/**
+ * @summary Download an invoice or credit note PDF (owner athlete or issuing coach only)
+ */
+export const GetInvoicePdfParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary List credit notes issued by the coach
+ */
+export const GetCoachCreditNotesResponseItem = zod.object({
+  id: zod.string(),
+  creditNoteNumber: zod.string(),
+  amountCents: zod.number(),
+  reason: zod.string(),
+  issuedAt: zod.string(),
+  invoiceId: zod.string(),
+});
+export const GetCoachCreditNotesResponse = zod.array(
+  GetCoachCreditNotesResponseItem,
+);

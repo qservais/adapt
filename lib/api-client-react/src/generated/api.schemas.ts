@@ -1462,6 +1462,55 @@ export interface UpdateAppointmentRequest {
   notes?: string;
 }
 
+export type InvoiceListItemRegime =
+  (typeof InvoiceListItemRegime)[keyof typeof InvoiceListItemRegime];
+
+export const InvoiceListItemRegime = {
+  franchise: "franchise",
+  assujetti: "assujetti",
+} as const;
+
+export type InvoiceListItemStatus =
+  (typeof InvoiceListItemStatus)[keyof typeof InvoiceListItemStatus];
+
+export const InvoiceListItemStatus = {
+  issued: "issued",
+  credited: "credited",
+} as const;
+
+export interface InvoiceListItem {
+  id: string;
+  invoiceNumber: string;
+  athleteId: string;
+  description: string;
+  regime: InvoiceListItemRegime;
+  amountHtCents: number;
+  vatCents: number;
+  amountTtcCents: number;
+  paymentMethod: string;
+  status: InvoiceListItemStatus;
+  issuedAt: string;
+  athleteFirstName?: string | null;
+  athleteLastName?: string | null;
+}
+
+export interface CreateCreditNoteRequest {
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  reason: string;
+}
+
+export interface CreditNoteListItem {
+  id: string;
+  creditNoteNumber: string;
+  amountCents: number;
+  reason: string;
+  issuedAt: string;
+  invoiceId: string;
+}
+
 export type GiftCredits201 = {
   success?: boolean;
   recipientCount?: number;
@@ -1507,4 +1556,9 @@ export type GetExercisesParams = {
 export type GetNotificationsParams = {
   offset?: number;
   limit?: number;
+};
+
+export type ExportCoachInvoicesCsvParams = {
+  year?: number;
+  month?: number;
 };

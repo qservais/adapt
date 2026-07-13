@@ -3,6 +3,7 @@ import { logger } from "./lib/logger.js";
 import { startAlertJob } from "./services/alert-job.js";
 import { startNotificationJob } from "./services/notification-job.js";
 import { startWaitlistJob } from "./services/waitlist-job.js";
+import { startInvoiceExportJob } from "./services/invoice-export-job.js";
 import { ensureAthleteInviteCodes } from "./services/invite-code-migration.js";
 import { fixProdData, runSchemaMigrations } from "./services/fix-prod-data.js";
 import { runBlockMigration } from "./services/block-migration.js";
@@ -32,6 +33,7 @@ async function start() {
     startAlertJob();
     startNotificationJob();
     startWaitlistJob();
+    startInvoiceExportJob();
   });
 }
 

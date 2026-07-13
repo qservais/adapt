@@ -322,6 +322,60 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – 1:1 booking tables failed");
     throw err;
   }
+
+  // Mouv'Up Phase 6 — invoicing (sequential numbering, invoices, credit notes)
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS invoice_number_sequences (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        year smallint NOT NULL,
+        series varchar(20) NOT NULL,
+        last_number integer NOT NULL DEFAULT 0
+      )
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS invoice_number_sequences_coach_year_series_idx ON invoice_number_sequences(coach_id, year, series)`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        invoice_number varchar(30) NOT NULL,
+        athlete_id uuid NOT NULL REFERENCES users(id),
+        description varchar(255) NOT NULL,
+        regime varchar(20) NOT NULL,
+        vat_number varchar(30),
+        amount_ht_cents integer NOT NULL,
+        vat_cents integer NOT NULL,
+        amount_ttc_cents integer NOT NULL,
+        payment_method varchar(20) NOT NULL,
+        source_type varchar(30) NOT NULL,
+        source_id varchar(255),
+        pdf_object_name text,
+        status varchar(20) NOT NULL DEFAULT 'issued',
+        issued_at timestamptz NOT NULL DEFAULT now(),
+        created_at timestamptz DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS invoices_invoice_number_idx ON invoices(invoice_number)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS invoices_coach_issued_idx ON invoices(coach_id, issued_at)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS invoices_source_idx ON invoices(source_type, source_id)`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS credit_notes (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        credit_note_number varchar(30) NOT NULL,
+        amount_cents integer NOT NULL,
+        reason text NOT NULL,
+        pdf_object_name text,
+        issued_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS credit_notes_number_idx ON credit_notes(credit_note_number)`);
+    logger.info("runSchemaMigrations: invoicing (invoice_number_sequences + invoices + credit_notes) OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – invoicing tables failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

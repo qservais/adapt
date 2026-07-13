@@ -40,6 +40,8 @@ tags:
     description: Credit packs, subscriptions, promos, and the athlete credit ledger
   - name: classes
     description: Bookable group classes, capacity, and waitlist
+  - name: invoicing
+    description: Legal invoices, credit notes, and accountant CSV export
 
 security:
   - bearerAuth: []
@@ -2589,6 +2591,117 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotificationPreferences"
+
+  /coach/invoices:
+    get:
+      operationId: getCoachInvoices
+      tags: [invoicing]
+      summary: List invoices issued by the coach (most recent 200)
+      responses:
+        "200":
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceListItem"
+
+  /coach/invoices/{id}/credit-note:
+    post:
+      operationId: createInvoiceCreditNote
+      tags: [invoicing]
+      summary: Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCreditNoteRequest"
+      responses:
+        "201":
+          description: Credit note issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "409":
+          description: Invoice already credited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/invoices/export.csv:
+    get:
+      operationId: exportCoachInvoicesCsv
+      tags: [invoicing]
+      summary: Monthly accounting export (CSV) for the accountant
+      parameters:
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /invoices/{id}/pdf:
+    get:
+      operationId: getInvoicePdf
+      tags: [invoicing]
+      summary: Download an invoice or credit note PDF (owner athlete or issuing coach only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/credit-notes:
+    get:
+      operationId: getCoachCreditNotes
+      tags: [invoicing]
+      summary: List credit notes issued by the coach
+      responses:
+        "200":
+          description: Credit notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditNoteListItem"
 
 components:
   securitySchemes:
@@ -5379,4 +5492,83 @@ components:
           type: string
         notes:
           type: string
+
+    InvoiceListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        invoiceNumber:
+          type: string
+        athleteId:
+          type: string
+        description:
+          type: string
+        regime:
+          type: string
+          enum: [franchise, assujetti]
+        amountHtCents:
+          type: integer
+        vatCents:
+          type: integer
+        amountTtcCents:
+          type: integer
+        paymentMethod:
+          type: string
+        status:
+          type: string
+          enum: [issued, credited]
+        issuedAt:
+          type: string
+        athleteFirstName:
+          type: string
+          nullable: true
+        athleteLastName:
+          type: string
+          nullable: true
+      required:
+        - id
+        - invoiceNumber
+        - athleteId
+        - description
+        - regime
+        - amountHtCents
+        - vatCents
+        - amountTtcCents
+        - paymentMethod
+        - status
+        - issuedAt
+
+    CreateCreditNoteRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - reason
+
+    CreditNoteListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        creditNoteNumber:
+          type: string
+        amountCents:
+          type: integer
+        reason:
+          type: string
+        issuedAt:
+          type: string
+        invoiceId:
+          type: string
+      required:
+        - id
+        - creditNoteNumber
+        - amountCents
+        - reason
+        - issuedAt
+        - invoiceId
 

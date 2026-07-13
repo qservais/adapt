@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { shopPacksTable, subscriptionPlansTable, subscriptionMembershipsTable, creditBatchesTable } from "@workspace/db";
+import { shopPacksTable, subscriptionPlansTable, subscriptionMembershipsTable, creditBatchesTable, usersTable, invoicesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 import { logger } from "../lib/logger.js";
 import { constructWebhookEvent } from "../services/stripe.service.js";
 import { creditBatch } from "../services/credit-ledger.service.js";
 import { notifyUser } from "../services/notify.service.js";
+import { issueInvoice } from "../services/invoicing.service.js";
 
 const router = Router();
 
@@ -39,6 +40,9 @@ router.post("/", async (req, res) => {
         break;
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+      case "invoice.paid":
+        await handleInvoicePaid(event.data.object as Stripe.Invoice);
         break;
       default:
         // Unhandled event types are expected — Stripe sends many we don't act on.
@@ -88,7 +92,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       validityMonths: pack.validityMonths,
     });
 
-    // Phase 6 (facturation) hooks in here: recordInvoiceForPayment({ athleteId, amountCents: session.amount_total, ... }).
+    const [athlete] = await db.select({ coachId: usersTable.coachId }).from(usersTable).where(eq(usersTable.id, athleteId));
+    if (athlete?.coachId) {
+      issueInvoice({
+        coachId: athlete.coachId,
+        athleteId,
+        description: pack.name,
+        amountCentsTtc: session.amount_total ?? pack.priceCents,
+        paymentMethod: "stripe",
+        sourceType: "shop_purchase",
+        sourceId: pack.id,
+      }).catch((err) => logger.error({ err, packId: pack.id, athleteId }, "webhooks/stripe: issueInvoice failed for pack purchase"));
+    } else {
+      logger.error({ athleteId }, "webhooks/stripe: athlete has no coach — cannot issue invoice");
+    }
 
     notifyUser({
       userId: athleteId,
@@ -122,7 +139,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       engagementEndsAt,
     });
 
-    // Phase 6 hooks in here too, on each recurring invoice.paid event (not modeled yet).
+    // No invoice issued here — Stripe fires invoice.paid for every billing
+    // cycle including this first one, so invoicing happens uniformly in
+    // handleInvoicePaid() below rather than once here and then again there
+    // (which would double-invoice the first period).
 
     notifyUser({
       userId: athleteId,
@@ -142,6 +162,43 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
       currentPeriodEnd: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000) : undefined,
     })
     .where(eq(subscriptionMembershipsTable.stripeSubscriptionId, subscription.id));
+}
+
+// Fires for every subscription billing cycle, including the first (see the
+// comment in handleCheckoutCompleted for why subscriptions are invoiced only
+// here, uniformly, rather than once at checkout and again per cycle).
+async function handleInvoicePaid(stripeInvoice: Stripe.Invoice): Promise<void> {
+  // As of the API version this SDK targets, `Invoice.subscription` was moved
+  // under `Invoice.parent.subscription_details.subscription`.
+  const subscriptionRef = stripeInvoice.parent?.subscription_details?.subscription;
+  const subscriptionId = typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
+  if (!subscriptionId) return; // one-off invoices (not subscription-related) are out of scope here
+
+  const [membership] = await db.select().from(subscriptionMembershipsTable).where(eq(subscriptionMembershipsTable.stripeSubscriptionId, subscriptionId));
+  if (!membership) {
+    logger.warn({ subscriptionId }, "webhooks/stripe: invoice.paid for unknown subscription membership");
+    return;
+  }
+
+  const [already] = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(eq(invoicesTable.sourceId, stripeInvoice.id));
+  if (already) return; // idempotency: Stripe may redeliver this event
+
+  const [plan] = await db.select({ name: subscriptionPlansTable.name }).from(subscriptionPlansTable).where(eq(subscriptionPlansTable.id, membership.planId));
+  const [athlete] = await db.select({ coachId: usersTable.coachId }).from(usersTable).where(eq(usersTable.id, membership.athleteId));
+  if (!athlete?.coachId) {
+    logger.error({ athleteId: membership.athleteId }, "webhooks/stripe: athlete has no coach — cannot issue subscription invoice");
+    return;
+  }
+
+  await issueInvoice({
+    coachId: athlete.coachId,
+    athleteId: membership.athleteId,
+    description: plan?.name ?? "Abonnement",
+    amountCentsTtc: stripeInvoice.amount_paid,
+    paymentMethod: "stripe",
+    sourceType: "subscription",
+    sourceId: stripeInvoice.id,
+  });
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {

@@ -31,6 +31,8 @@ import {
 } from "../services/booking.service.js";
 import { notifyUser } from "../services/notify.service.js";
 import { InsufficientCreditsError } from "../services/credit-ledger.service.js";
+import { issueInvoice } from "../services/invoicing.service.js";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
 
@@ -361,7 +363,31 @@ router.post("/coach/classes/occurrences/:occurrenceId/register", authenticate, r
     return;
   }
   try {
-    const booking = await manualRegisterForClass(String(req.params["occurrenceId"]), req.user!.userId, parsed.data);
+    const occurrenceId = String(req.params["occurrenceId"]);
+    const coachId = req.user!.userId;
+    const booking = await manualRegisterForClass(occurrenceId, coachId, parsed.data);
+
+    // "Sur place" is the one manual-registration mode where real money
+    // changes hands right then — invoice it. "Offert" has no accounting
+    // entry (per spec) and "crédit" was already invoiced when the credit
+    // pack itself was purchased. Guest/trial registrations (no athleteId)
+    // aren't invoiced — there's no account to attach the note to.
+    if (parsed.data.paymentMode === "pay_on_site" && parsed.data.athleteId) {
+      const [occurrence] = await db.select({ templateId: classOccurrencesTable.templateId }).from(classOccurrencesTable).where(eq(classOccurrencesTable.id, occurrenceId));
+      const [template] = occurrence ? await db.select({ name: classTemplatesTable.name, priceCents: classTemplatesTable.priceCents }).from(classTemplatesTable).where(eq(classTemplatesTable.id, occurrence.templateId)) : [];
+      if (template) {
+        issueInvoice({
+          coachId,
+          athleteId: parsed.data.athleteId,
+          description: template.name,
+          amountCentsTtc: template.priceCents,
+          paymentMethod: "cash",
+          sourceType: "class_booking",
+          sourceId: booking.id,
+        }).catch((err) => logger.error({ err, occurrenceId, athleteId: parsed.data.athleteId }, "issueInvoice (pay_on_site class registration) failed"));
+      }
+    }
+
     res.status(201).json(booking);
   } catch (err) {
     const mapped = bookingErrorResponse(err);
