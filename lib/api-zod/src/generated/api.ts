@@ -2209,6 +2209,10 @@ export const GetCoachAppointmentsResponseItem = zod.object({
   location: zod.string().nullish(),
   notes: zod.string().nullish(),
   type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
   createdAt: zod.string().nullish(),
   updatedAt: zod.string().nullish(),
   athleteFirstName: zod.string().nullish(),
@@ -2252,6 +2256,10 @@ export const UpdateCoachAppointmentResponse = zod.object({
   location: zod.string().nullish(),
   notes: zod.string().nullish(),
   type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
   createdAt: zod.string().nullish(),
   updatedAt: zod.string().nullish(),
   athleteFirstName: zod.string().nullish(),
@@ -2268,6 +2276,136 @@ export const DeleteCoachAppointmentParams = zod.object({
 export const DeleteCoachAppointmentResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
+});
+
+/**
+ * @summary Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+ */
+export const ConfirmOneOnOneRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ConfirmOneOnOneRequestResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  location: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+
+/**
+ * @summary Decline an athlete-requested 1:1
+ */
+export const DeclineOneOnOneRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeclineOneOnOneRequestResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  location: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+
+/**
+ * @summary List the coach's recurring 1:1 availability template
+ */
+export const getCoachAvailabilityResponseDayOfWeekMin = 0;
+export const getCoachAvailabilityResponseDayOfWeekMax = 6;
+
+export const GetCoachAvailabilityResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  dayOfWeek: zod
+    .number()
+    .min(getCoachAvailabilityResponseDayOfWeekMin)
+    .max(getCoachAvailabilityResponseDayOfWeekMax),
+  startTime: zod.string(),
+  isActive: zod.boolean().optional(),
+});
+export const GetCoachAvailabilityResponse = zod.array(
+  GetCoachAvailabilityResponseItem,
+);
+
+/**
+ * @summary Open a recurring weekly slot
+ */
+export const addCoachAvailabilitySlotBodyDayOfWeekMin = 0;
+export const addCoachAvailabilitySlotBodyDayOfWeekMax = 6;
+
+export const AddCoachAvailabilitySlotBody = zod.object({
+  dayOfWeek: zod
+    .number()
+    .min(addCoachAvailabilitySlotBodyDayOfWeekMin)
+    .max(addCoachAvailabilitySlotBodyDayOfWeekMax),
+  startTime: zod.string(),
+});
+
+/**
+ * @summary Close a recurring slot
+ */
+export const RemoveCoachAvailabilitySlotParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const RemoveCoachAvailabilitySlotResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)
+ */
+export const GetAthleteCoachSlotsQueryParams = zod.object({
+  date: zod.coerce.string(),
+});
+
+export const getAthleteCoachSlotsResponseDayOfWeekMin = 0;
+export const getAthleteCoachSlotsResponseDayOfWeekMax = 6;
+
+export const GetAthleteCoachSlotsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  dayOfWeek: zod
+    .number()
+    .min(getAthleteCoachSlotsResponseDayOfWeekMin)
+    .max(getAthleteCoachSlotsResponseDayOfWeekMax),
+  startTime: zod.string(),
+  isActive: zod.boolean().optional(),
+});
+export const GetAthleteCoachSlotsResponse = zod.array(
+  GetAthleteCoachSlotsResponseItem,
+);
+
+/**
+ * @summary Request a 1:1 slot (no credit debited until the coach confirms)
+ */
+export const CreateOneOnOneRequestBody = zod.object({
+  date: zod.string(),
+  time: zod.string(),
 });
 
 /**

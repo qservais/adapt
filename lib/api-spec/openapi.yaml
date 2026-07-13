@@ -1859,6 +1859,147 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /coach/appointments/{id}/confirm:
+    post:
+      operationId: confirmOneOnOneRequest
+      tags: [appointments]
+      summary: Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+        "402":
+          description: Insufficient individuel credits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/appointments/{id}/decline:
+    post:
+      operationId: declineOneOnOneRequest
+      tags: [appointments]
+      summary: Decline an athlete-requested 1:1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Declined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+
+  /coach/availability:
+    get:
+      operationId: getCoachAvailability
+      tags: [appointments]
+      summary: List the coach's recurring 1:1 availability template
+      responses:
+        "200":
+          description: Slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachAvailabilitySlot"
+    post:
+      operationId: addCoachAvailabilitySlot
+      tags: [appointments]
+      summary: Open a recurring weekly slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAvailabilitySlotRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAvailabilitySlot"
+
+  /coach/availability/{id}:
+    delete:
+      operationId: removeCoachAvailabilitySlot
+      tags: [appointments]
+      summary: Close a recurring slot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /athlete/coach-slots:
+    get:
+      operationId: getAthleteCoachSlots
+      tags: [athlete]
+      summary: Open 1:1 slots for a specific date (recurring template minus already-taken times)
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachAvailabilitySlot"
+
+  /athlete/1on1-requests:
+    post:
+      operationId: createOneOnOneRequest
+      tags: [athlete]
+      summary: Request a 1:1 slot (no credit debited until the coach confirms)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOneOnOneRequest"
+      responses:
+        "201":
+          description: Requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+        "409":
+          description: Slot no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /coach/scheduled-notifications:
     get:
       operationId: getScheduledNotifications
@@ -2921,6 +3062,51 @@ components:
         - occurrenceId
         - athleteId
         - status
+
+    CoachAvailabilitySlot:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        startTime:
+          type: string
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - dayOfWeek
+        - startTime
+
+    AddAvailabilitySlotRequest:
+      type: object
+      properties:
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        startTime:
+          type: string
+      required:
+        - dayOfWeek
+        - startTime
+
+    CreateOneOnOneRequest:
+      type: object
+      properties:
+        date:
+          type: string
+        time:
+          type: string
+      required:
+        - date
+        - time
 
     RefreshRequest:
       type: object
@@ -4906,6 +5092,12 @@ components:
           nullable: true
         type:
           type: string
+        status:
+          type: string
+          enum: [pending, confirmed, declined, cancelled]
+        requestedBy:
+          type: string
+          nullable: true
         createdAt:
           type: string
           nullable: true

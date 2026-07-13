@@ -825,6 +825,8 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
       .where(and(
         eq(coachAppointmentsTable.athleteId, athleteId),
         gte(coachAppointmentsTable.startAt, today),
+        ne(coachAppointmentsTable.status, "declined"),
+        ne(coachAppointmentsTable.status, "cancelled"),
       ));
 
     for (const appt of appts) {
@@ -843,6 +845,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           isCompleted: false,
           completedActualDate: null,
           isAppointment: true,
+          appointmentStatus: appt.status,
         });
       }
     }

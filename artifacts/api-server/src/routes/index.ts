@@ -20,6 +20,7 @@ import userRoutinesRouter from "./user-routines.js";
 import studioSettingsRouter from "./studio-settings.js";
 import shopRouter from "./shop.js";
 import classesRouter from "./classes.js";
+import oneOnOneRouter from "./one-on-one.js";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(userRoutinesRouter);
 router.use(studioSettingsRouter);
 router.use(shopRouter);
 router.use(classesRouter);
+router.use(oneOnOneRouter);
 
 export default router;

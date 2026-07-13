@@ -298,6 +298,30 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – class booking + waitlist tables failed");
     throw err;
   }
+
+  // Mouv'Up Phase 4 — 1:1 booking (request/confirm on top of the existing
+  // coach_appointments table, plus the coach's recurring availability template)
+  try {
+    await db.execute(sql`ALTER TABLE coach_appointments ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL DEFAULT 'confirmed'`);
+    await db.execute(sql`ALTER TABLE coach_appointments ADD COLUMN IF NOT EXISTS requested_by varchar(20)`);
+    await db.execute(sql`ALTER TABLE coach_appointments ADD COLUMN IF NOT EXISTS availability_slot_id uuid`);
+    await db.execute(sql`ALTER TABLE coach_appointments ADD COLUMN IF NOT EXISTS cancelled_at timestamptz`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS coach_availability_slots (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day_of_week smallint NOT NULL,
+        start_time varchar(5) NOT NULL,
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS coach_availability_slots_coach_idx ON coach_availability_slots(coach_id, day_of_week, is_active)`);
+    logger.info("runSchemaMigrations: 1:1 booking (coach_appointments extension + coach_availability_slots) OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – 1:1 booking tables failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

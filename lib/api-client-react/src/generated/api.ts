@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddAvailabilitySlotRequest,
   AlertData,
   AthleteLinkRequest,
   AthletePerformanceTest,
@@ -35,6 +36,7 @@ import type {
   ClientDetail,
   ClientSummary,
   CoachAppointment,
+  CoachAvailabilitySlot,
   CoachChallenge,
   CoachLinkRequest,
   CoachUnlinkRequest,
@@ -45,6 +47,7 @@ import type {
   CreateChallengeRequest,
   CreateCheckoutSessionRequest,
   CreateExerciseRequest,
+  CreateOneOnOneRequest,
   CreatePerformanceTestRequest,
   CreateProgramRequest,
   CreateScheduledNotificationRequest,
@@ -54,6 +57,7 @@ import type {
   ErrorResponse,
   ExerciseData,
   FreeCustomSessionRequest,
+  GetAthleteCoachSlotsParams,
   GetClassOccurrencesParams,
   GetExercisesParams,
   GetNotificationsParams,
@@ -7652,6 +7656,609 @@ export const useDeleteCoachAppointment = <
   TContext
 > => {
   return useMutation(getDeleteCoachAppointmentMutationOptions(options));
+};
+
+/**
+ * @summary Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+ */
+export const getConfirmOneOnOneRequestUrl = (id: string) => {
+  return `/api/coach/appointments/${id}/confirm`;
+};
+
+export const confirmOneOnOneRequest = async (
+  id: string,
+  options?: RequestInit,
+): Promise<CoachAppointment> => {
+  return customFetch<CoachAppointment>(getConfirmOneOnOneRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConfirmOneOnOneRequestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["confirmOneOnOneRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return confirmOneOnOneRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmOneOnOneRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmOneOnOneRequest>>
+>;
+
+export type ConfirmOneOnOneRequestMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+ */
+export const useConfirmOneOnOneRequest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getConfirmOneOnOneRequestMutationOptions(options));
+};
+
+/**
+ * @summary Decline an athlete-requested 1:1
+ */
+export const getDeclineOneOnOneRequestUrl = (id: string) => {
+  return `/api/coach/appointments/${id}/decline`;
+};
+
+export const declineOneOnOneRequest = async (
+  id: string,
+  options?: RequestInit,
+): Promise<CoachAppointment> => {
+  return customFetch<CoachAppointment>(getDeclineOneOnOneRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDeclineOneOnOneRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["declineOneOnOneRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return declineOneOnOneRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeclineOneOnOneRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof declineOneOnOneRequest>>
+>;
+
+export type DeclineOneOnOneRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Decline an athlete-requested 1:1
+ */
+export const useDeclineOneOnOneRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeclineOneOnOneRequestMutationOptions(options));
+};
+
+/**
+ * @summary List the coach's recurring 1:1 availability template
+ */
+export const getGetCoachAvailabilityUrl = () => {
+  return `/api/coach/availability`;
+};
+
+export const getCoachAvailability = async (
+  options?: RequestInit,
+): Promise<CoachAvailabilitySlot[]> => {
+  return customFetch<CoachAvailabilitySlot[]>(getGetCoachAvailabilityUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachAvailabilityQueryKey = () => {
+  return [`/api/coach/availability`] as const;
+};
+
+export const getGetCoachAvailabilityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachAvailability>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAvailability>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachAvailabilityQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachAvailability>>
+  > = ({ signal }) => getCoachAvailability({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAvailability>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachAvailabilityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachAvailability>>
+>;
+export type GetCoachAvailabilityQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the coach's recurring 1:1 availability template
+ */
+
+export function useGetCoachAvailability<
+  TData = Awaited<ReturnType<typeof getCoachAvailability>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAvailability>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachAvailabilityQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Open a recurring weekly slot
+ */
+export const getAddCoachAvailabilitySlotUrl = () => {
+  return `/api/coach/availability`;
+};
+
+export const addCoachAvailabilitySlot = async (
+  addAvailabilitySlotRequest: AddAvailabilitySlotRequest,
+  options?: RequestInit,
+): Promise<CoachAvailabilitySlot> => {
+  return customFetch<CoachAvailabilitySlot>(getAddCoachAvailabilitySlotUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addAvailabilitySlotRequest),
+  });
+};
+
+export const getAddCoachAvailabilitySlotMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+    TError,
+    { data: BodyType<AddAvailabilitySlotRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+  TError,
+  { data: BodyType<AddAvailabilitySlotRequest> },
+  TContext
+> => {
+  const mutationKey = ["addCoachAvailabilitySlot"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+    { data: BodyType<AddAvailabilitySlotRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return addCoachAvailabilitySlot(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddCoachAvailabilitySlotMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addCoachAvailabilitySlot>>
+>;
+export type AddCoachAvailabilitySlotMutationBody =
+  BodyType<AddAvailabilitySlotRequest>;
+export type AddCoachAvailabilitySlotMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Open a recurring weekly slot
+ */
+export const useAddCoachAvailabilitySlot = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+    TError,
+    { data: BodyType<AddAvailabilitySlotRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+  TError,
+  { data: BodyType<AddAvailabilitySlotRequest> },
+  TContext
+> => {
+  return useMutation(getAddCoachAvailabilitySlotMutationOptions(options));
+};
+
+/**
+ * @summary Close a recurring slot
+ */
+export const getRemoveCoachAvailabilitySlotUrl = (id: string) => {
+  return `/api/coach/availability/${id}`;
+};
+
+export const removeCoachAvailabilitySlot = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getRemoveCoachAvailabilitySlotUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveCoachAvailabilitySlotMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["removeCoachAvailabilitySlot"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return removeCoachAvailabilitySlot(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveCoachAvailabilitySlotMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>
+>;
+
+export type RemoveCoachAvailabilitySlotMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Close a recurring slot
+ */
+export const useRemoveCoachAvailabilitySlot = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getRemoveCoachAvailabilitySlotMutationOptions(options));
+};
+
+/**
+ * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)
+ */
+export const getGetAthleteCoachSlotsUrl = (
+  params: GetAthleteCoachSlotsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/athlete/coach-slots?${stringifiedParams}`
+    : `/api/athlete/coach-slots`;
+};
+
+export const getAthleteCoachSlots = async (
+  params: GetAthleteCoachSlotsParams,
+  options?: RequestInit,
+): Promise<CoachAvailabilitySlot[]> => {
+  return customFetch<CoachAvailabilitySlot[]>(
+    getGetAthleteCoachSlotsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAthleteCoachSlotsQueryKey = (
+  params?: GetAthleteCoachSlotsParams,
+) => {
+  return [`/api/athlete/coach-slots`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAthleteCoachSlotsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetAthleteCoachSlotsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAthleteCoachSlotsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAthleteCoachSlots>>
+  > = ({ signal }) =>
+    getAthleteCoachSlots(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAthleteCoachSlotsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAthleteCoachSlots>>
+>;
+export type GetAthleteCoachSlotsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)
+ */
+
+export function useGetAthleteCoachSlots<
+  TData = Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetAthleteCoachSlotsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAthleteCoachSlotsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Request a 1:1 slot (no credit debited until the coach confirms)
+ */
+export const getCreateOneOnOneRequestUrl = () => {
+  return `/api/athlete/1on1-requests`;
+};
+
+export const createOneOnOneRequest = async (
+  createOneOnOneRequest: CreateOneOnOneRequest,
+  options?: RequestInit,
+): Promise<CoachAppointment> => {
+  return customFetch<CoachAppointment>(getCreateOneOnOneRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createOneOnOneRequest),
+  });
+};
+
+export const getCreateOneOnOneRequestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOneOnOneRequest>>,
+    TError,
+    { data: BodyType<CreateOneOnOneRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOneOnOneRequest>>,
+  TError,
+  { data: BodyType<CreateOneOnOneRequest> },
+  TContext
+> => {
+  const mutationKey = ["createOneOnOneRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOneOnOneRequest>>,
+    { data: BodyType<CreateOneOnOneRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createOneOnOneRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOneOnOneRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOneOnOneRequest>>
+>;
+export type CreateOneOnOneRequestMutationBody = BodyType<CreateOneOnOneRequest>;
+export type CreateOneOnOneRequestMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Request a 1:1 slot (no credit debited until the coach confirms)
+ */
+export const useCreateOneOnOneRequest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOneOnOneRequest>>,
+    TError,
+    { data: BodyType<CreateOneOnOneRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createOneOnOneRequest>>,
+  TError,
+  { data: BodyType<CreateOneOnOneRequest> },
+  TContext
+> => {
+  return useMutation(getCreateOneOnOneRequestMutationOptions(options));
 };
 
 /**

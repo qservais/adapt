@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./addAvailabilitySlotRequest";
 export * from "./alertData";
 export * from "./athleteLinkRequest";
 export * from "./athletePerformanceTest";
@@ -31,6 +32,8 @@ export * from "./classWaitlistEntryStatus";
 export * from "./clientDetail";
 export * from "./clientSummary";
 export * from "./coachAppointment";
+export * from "./coachAppointmentStatus";
+export * from "./coachAvailabilitySlot";
 export * from "./coachChallenge";
 export * from "./coachLinkRequest";
 export * from "./coachUnlinkRequest";
@@ -47,6 +50,7 @@ export * from "./createCheckoutSessionRequest";
 export * from "./createCheckoutSessionRequestType";
 export * from "./createExerciseRequest";
 export * from "./createExerciseRequestCategory";
+export * from "./createOneOnOneRequest";
 export * from "./createPerformanceTestRequest";
 export * from "./createProgramRequest";
 export * from "./createScheduledNotificationRequest";
@@ -66,6 +70,7 @@ export * from "./errorResponse";
 export * from "./errorResponseError";
 export * from "./exerciseData";
 export * from "./freeCustomSessionRequest";
+export * from "./getAthleteCoachSlotsParams";
 export * from "./getClassOccurrencesParams";
 export * from "./getExercisesParams";
 export * from "./getNotificationsParams";

@@ -262,3 +262,35 @@ export async function sendPasswordResetEmail(
     text: textLines.join("\n"),
   });
 }
+
+const ONE_ON_ONE_COPY = {
+  fr: {
+    subject: "Ton 1:1 est confirmé",
+    h2: "Ton 1:1 est confirmé ✓",
+    body: (when: string) => `Rendez-vous <span class="highlight">${when}</span>. À bientôt !`,
+    bodyText: (when: string) => `Rendez-vous ${when}. À bientôt !`,
+    footer: "Vous recevez cet email car vous avez un compte sur ADAPT System.",
+  },
+  en: {
+    subject: "Your 1:1 is confirmed",
+    h2: "Your 1:1 is confirmed ✓",
+    body: (when: string) => `See you <span class="highlight">${when}</span>.`,
+    bodyText: (when: string) => `See you ${when}.`,
+    footer: "You're receiving this email because you have an account on ADAPT System.",
+  },
+} as const;
+
+// "Confirmation = push + email" per spec, for the coach-direct booking flow
+// (Fiche athlète 360° → "Planifier un 1:1"). The athlete-requested flow
+// (member picks from open availability, coach confirms) is push-only per
+// spec — see one-on-one.service.ts.
+export async function sendOneOnOneConfirmedEmail(to: string, firstName: string, whenFormatted: string, lang: Lang = "fr") {
+  const c = ONE_ON_ONE_COPY[lang] ?? ONE_ON_ONE_COPY.fr;
+  const html = baseTemplate(`
+    <h2>${c.h2}</h2>
+    <p>Bonjour ${firstName},</p>
+    <p>${c.body(whenFormatted)}</p>
+  `, lang, c.footer);
+  const text = [`ADAPT — INTELLIGENCE PERFORMANCE`, ``, c.h2, ``, `Bonjour ${firstName},`, ``, c.bodyText(whenFormatted)].join("\n");
+  return sendEmail({ to, subject: c.subject, html, text });
+}

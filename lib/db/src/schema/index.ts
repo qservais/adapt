@@ -22,3 +22,4 @@ export * from "./studio_settings";
 export * from "./shop";
 export * from "./credits";
 export * from "./classes";
+export * from "./availability";

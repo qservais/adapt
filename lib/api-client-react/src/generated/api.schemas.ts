@@ -364,6 +364,32 @@ export interface ClassWaitlistEntry {
   offerExpiresAt?: string | null;
 }
 
+export interface CoachAvailabilitySlot {
+  id: string;
+  coachId: string;
+  /**
+   * @minimum 0
+   * @maximum 6
+   */
+  dayOfWeek: number;
+  startTime: string;
+  isActive?: boolean;
+}
+
+export interface AddAvailabilitySlotRequest {
+  /**
+   * @minimum 0
+   * @maximum 6
+   */
+  dayOfWeek: number;
+  startTime: string;
+}
+
+export interface CreateOneOnOneRequest {
+  date: string;
+  time: string;
+}
+
 export interface RefreshRequest {
   refreshToken: string;
 }
@@ -1342,6 +1368,16 @@ export interface UpdateScheduledNotificationRequest {
   active?: boolean;
 }
 
+export type CoachAppointmentStatus =
+  (typeof CoachAppointmentStatus)[keyof typeof CoachAppointmentStatus];
+
+export const CoachAppointmentStatus = {
+  pending: "pending",
+  confirmed: "confirmed",
+  declined: "declined",
+  cancelled: "cancelled",
+} as const;
+
 export interface CoachAppointment {
   id: string;
   coachId: string;
@@ -1351,6 +1387,8 @@ export interface CoachAppointment {
   location?: string | null;
   notes?: string | null;
   type: string;
+  status?: CoachAppointmentStatus;
+  requestedBy?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   athleteFirstName?: string | null;
@@ -1384,6 +1422,10 @@ export type GetClassOccurrencesParams = {
 
 export type ScheduleClassTemplate201 = {
   occurrences?: ClassOccurrence[];
+};
+
+export type GetAthleteCoachSlotsParams = {
+  date: string;
 };
 
 export type GetExercisesParams = {
