@@ -316,6 +316,62 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
   return blocks.filter(b => b.exercises.length > 0);
 }
 
+// ─── Multi-session program parser ──────────────────────────────────────────────
+
+export interface ParsedProgramSession {
+  weekNumber: number;
+  dayNumber: number;
+  blocks: ParsedBlock[];
+}
+
+// A layer above parseSessionText, not a replacement for it — splits a
+// multi-week paste into per-session chunks on [SEMAINE N] / [SEANCE J]
+// headers, then delegates each chunk's body to parseSessionText (unchanged)
+// for the actual [BLOC]/exercice parsing and exercise-catalog matching. A
+// leading [PROGRAMME ...] line, if present, is skipped — it carries no
+// field this function needs (the caller already knows the target program
+// from context) and is only there so a pasted block reads naturally.
+export function parseProgramText(text: string, exercises: ExerciseData[]): ParsedProgramSession[] {
+  const lines = text.split("\n");
+  const chunks: { weekNumber: number; dayNumber: number; bodyLines: string[] }[] = [];
+
+  let currentWeek: number | null = null;
+  let currentDay: number | null = null;
+  let bodyLines: string[] = [];
+
+  const flush = () => {
+    if (currentWeek !== null && currentDay !== null && bodyLines.some(l => l.trim())) {
+      chunks.push({ weekNumber: currentWeek, dayNumber: currentDay, bodyLines });
+    }
+    bodyLines = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const weekMatch = line.match(/^\[SEMAINE\s+(\d+)\]$/i);
+    const dayMatch = line.match(/^\[SEANCE\s+(\d+)\]$/i);
+
+    if (weekMatch) {
+      flush();
+      currentWeek = parseInt(weekMatch[1], 10);
+      currentDay = null;
+    } else if (dayMatch) {
+      flush();
+      currentDay = parseInt(dayMatch[1], 10);
+    } else if (currentWeek !== null && currentDay !== null) {
+      bodyLines.push(rawLine);
+    }
+    // Lines before the first [SEMAINE]/[SEANCE] pair (e.g. a [PROGRAMME] title) are ignored.
+  }
+  flush();
+
+  return chunks.map(c => ({
+    weekNumber: c.weekNumber,
+    dayNumber: c.dayNumber,
+    blocks: parseSessionText(c.bodyLines.join("\n"), exercises),
+  }));
+}
+
 // ─── Convert to BlockDraft[] ──────────────────────────────────────────────────
 
 function parsedBlocksToBlockDrafts(parsedBlocks: ParsedBlock[]): BlockDraft[] {
