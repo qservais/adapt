@@ -869,6 +869,27 @@
     "phrase_delete_confirm": "Delete this phrase?",
     "all_athletes_option": "All my athletes"
   },
+  "resource_files": {
+    "tab_label": "Files",
+    "desc": "Share PDFs (contracts, guides, studio rules...) with one athlete or all your athletes.",
+    "btn_add": "Add a file",
+    "empty": "No files shared yet.",
+    "all_athletes_option": "All athletes",
+    "unknown_athlete": "Athlete",
+    "upload_dialog_title": "Share a file",
+    "title_label": "Title",
+    "title_placeholder": "Studio house rules",
+    "share_with_label": "Share with",
+    "file_label": "PDF file",
+    "choose_file": "Choose a file",
+    "btn_send": "Send",
+    "toast_uploaded": "File shared",
+    "toast_upload_error": "Failed to upload file",
+    "toast_deleted": "File deleted",
+    "toast_delete_error": "Failed to delete",
+    "delete_title": "Delete this file?",
+    "delete_desc": "This action cannot be undone."
+  },
   "alerts": {
     "title": "ALERTS FEED",
     "subtitle": "Real-time interventions and warnings.",

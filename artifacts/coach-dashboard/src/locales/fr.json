@@ -869,6 +869,27 @@
     "phrase_delete_confirm": "Supprimer cette phrase ?",
     "all_athletes_option": "Tous mes athlètes"
   },
+  "resource_files": {
+    "tab_label": "Fichiers",
+    "desc": "Partagez des PDF (contrats, guides, règlement du studio...) avec un athlète ou tous vos athlètes.",
+    "btn_add": "Ajouter un fichier",
+    "empty": "Aucun fichier partagé pour le moment.",
+    "all_athletes_option": "Tous les athlètes",
+    "unknown_athlete": "Athlète",
+    "upload_dialog_title": "Partager un fichier",
+    "title_label": "Titre",
+    "title_placeholder": "Règlement intérieur du studio",
+    "share_with_label": "Partager avec",
+    "file_label": "Fichier PDF",
+    "choose_file": "Choisir un fichier",
+    "btn_send": "Envoyer",
+    "toast_uploaded": "Fichier partagé",
+    "toast_upload_error": "Échec de l'envoi du fichier",
+    "toast_deleted": "Fichier supprimé",
+    "toast_delete_error": "Échec de la suppression",
+    "delete_title": "Supprimer ce fichier ?",
+    "delete_desc": "Cette action est irréversible."
+  },
   "alerts": {
     "title": "FLUX D'ALERTES",
     "subtitle": "Interventions et avertissements en temps réel.",
