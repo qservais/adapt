@@ -25,3 +25,4 @@ export * from "./classes";
 export * from "./availability";
 export * from "./invoicing";
 export * from "./motivation_phrases";
+export * from "./resource_files";

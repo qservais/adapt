@@ -59,6 +59,7 @@ import type {
   CreateOneOnOneRequest,
   CreatePerformanceTestRequest,
   CreateProgramRequest,
+  CreateResourceFileRequest,
   CreateScheduledNotificationRequest,
   CreateSessionRequest,
   CreateShopPromoRequest,
@@ -72,6 +73,7 @@ import type {
   GetClassOccurrencesParams,
   GetCoachAgendaParams,
   GetCoachClassOccurrencesParams,
+  GetCoachResourceFilesParams,
   GetExercisesParams,
   GetNotificationsParams,
   GiftCredits201,
@@ -104,6 +106,8 @@ import type {
   RegisterRequest,
   ResetLoginCodeRequest,
   ResolveAlertRequest,
+  ResourceFile,
+  ResourceFileUploadUrlResponse,
   ScheduleClassRequest,
   ScheduleClassTemplate201,
   ScheduledNotification,
@@ -117,6 +121,7 @@ import type {
   ShopPack,
   ShopPackWithPrice,
   ShopPromo,
+  SignedUrlResponse,
   StartProgramNowResult,
   StudioSettings,
   SubscriptionPlan,
@@ -9784,6 +9789,525 @@ export const useDeleteMotivationPhrase = <
 > => {
   return useMutation(getDeleteMotivationPhraseMutationOptions(options));
 };
+
+/**
+ * @summary Get a signed upload URL for a new resource file
+ */
+export const getGetResourceFileUploadUrlUrl = () => {
+  return `/api/coach/resource-files/upload-url`;
+};
+
+export const getResourceFileUploadUrl = async (
+  options?: RequestInit,
+): Promise<ResourceFileUploadUrlResponse> => {
+  return customFetch<ResourceFileUploadUrlResponse>(
+    getGetResourceFileUploadUrlUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getGetResourceFileUploadUrlMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["getResourceFileUploadUrl"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+    void
+  > = () => {
+    return getResourceFileUploadUrl(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetResourceFileUploadUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getResourceFileUploadUrl>>
+>;
+
+export type GetResourceFileUploadUrlMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get a signed upload URL for a new resource file
+ */
+export const useGetResourceFileUploadUrl = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getGetResourceFileUploadUrlMutationOptions(options));
+};
+
+/**
+ * @summary List resource files
+ */
+export const getGetCoachResourceFilesUrl = (
+  params?: GetCoachResourceFilesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/resource-files?${stringifiedParams}`
+    : `/api/coach/resource-files`;
+};
+
+export const getCoachResourceFiles = async (
+  params?: GetCoachResourceFilesParams,
+  options?: RequestInit,
+): Promise<ResourceFile[]> => {
+  return customFetch<ResourceFile[]>(getGetCoachResourceFilesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachResourceFilesQueryKey = (
+  params?: GetCoachResourceFilesParams,
+) => {
+  return [`/api/coach/resource-files`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCoachResourceFilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachResourceFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachResourceFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachResourceFilesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachResourceFiles>>
+  > = ({ signal }) =>
+    getCoachResourceFiles(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachResourceFiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachResourceFilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachResourceFiles>>
+>;
+export type GetCoachResourceFilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List resource files
+ */
+
+export function useGetCoachResourceFiles<
+  TData = Awaited<ReturnType<typeof getCoachResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachResourceFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachResourceFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachResourceFilesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Attach metadata to an uploaded resource file
+ */
+export const getCreateResourceFileUrl = () => {
+  return `/api/coach/resource-files`;
+};
+
+export const createResourceFile = async (
+  createResourceFileRequest: CreateResourceFileRequest,
+  options?: RequestInit,
+): Promise<ResourceFile> => {
+  return customFetch<ResourceFile>(getCreateResourceFileUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createResourceFileRequest),
+  });
+};
+
+export const getCreateResourceFileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResourceFile>>,
+    TError,
+    { data: BodyType<CreateResourceFileRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createResourceFile>>,
+  TError,
+  { data: BodyType<CreateResourceFileRequest> },
+  TContext
+> => {
+  const mutationKey = ["createResourceFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createResourceFile>>,
+    { data: BodyType<CreateResourceFileRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createResourceFile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateResourceFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createResourceFile>>
+>;
+export type CreateResourceFileMutationBody =
+  BodyType<CreateResourceFileRequest>;
+export type CreateResourceFileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Attach metadata to an uploaded resource file
+ */
+export const useCreateResourceFile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResourceFile>>,
+    TError,
+    { data: BodyType<CreateResourceFileRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createResourceFile>>,
+  TError,
+  { data: BodyType<CreateResourceFileRequest> },
+  TContext
+> => {
+  return useMutation(getCreateResourceFileMutationOptions(options));
+};
+
+/**
+ * @summary Delete a resource file
+ */
+export const getDeleteResourceFileUrl = (id: string) => {
+  return `/api/coach/resource-files/${id}`;
+};
+
+export const deleteResourceFile = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteResourceFileUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteResourceFileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResourceFile>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteResourceFile>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteResourceFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteResourceFile>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteResourceFile(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteResourceFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteResourceFile>>
+>;
+
+export type DeleteResourceFileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a resource file
+ */
+export const useDeleteResourceFile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResourceFile>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteResourceFile>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteResourceFileMutationOptions(options));
+};
+
+/**
+ * @summary List resource files shared with the current athlete
+ */
+export const getGetResourceFilesUrl = () => {
+  return `/api/resource-files`;
+};
+
+export const getResourceFiles = async (
+  options?: RequestInit,
+): Promise<ResourceFile[]> => {
+  return customFetch<ResourceFile[]>(getGetResourceFilesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResourceFilesQueryKey = () => {
+  return [`/api/resource-files`] as const;
+};
+
+export const getGetResourceFilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetResourceFilesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getResourceFiles>>
+  > = ({ signal }) => getResourceFiles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetResourceFilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResourceFiles>>
+>;
+export type GetResourceFilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List resource files shared with the current athlete
+ */
+
+export function useGetResourceFiles<
+  TData = Awaited<ReturnType<typeof getResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetResourceFilesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a signed download URL for a resource file
+ */
+export const getGetResourceFileSignedUrlUrl = (id: string) => {
+  return `/api/resource-files/${id}/signed-url`;
+};
+
+export const getResourceFileSignedUrl = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SignedUrlResponse> => {
+  return customFetch<SignedUrlResponse>(getGetResourceFileSignedUrlUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResourceFileSignedUrlQueryKey = (id: string) => {
+  return [`/api/resource-files/${id}/signed-url`] as const;
+};
+
+export const getGetResourceFileSignedUrlQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetResourceFileSignedUrlQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getResourceFileSignedUrl>>
+  > = ({ signal }) =>
+    getResourceFileSignedUrl(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetResourceFileSignedUrlQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResourceFileSignedUrl>>
+>;
+export type GetResourceFileSignedUrlQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a signed download URL for a resource file
+ */
+
+export function useGetResourceFileSignedUrl<
+  TData = Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetResourceFileSignedUrlQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get coach challenges

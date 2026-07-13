@@ -2388,6 +2388,110 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /coach/resource-files/upload-url:
+    post:
+      operationId: getResourceFileUploadUrl
+      tags: [coach]
+      summary: Get a signed upload URL for a new resource file
+      responses:
+        "200":
+          description: Signed upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceFileUploadUrlResponse"
+
+  /coach/resource-files:
+    get:
+      operationId: getCoachResourceFiles
+      tags: [coach]
+      summary: List resource files
+      parameters:
+        - name: athleteId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resource files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResourceFile"
+    post:
+      operationId: createResourceFile
+      tags: [coach]
+      summary: Attach metadata to an uploaded resource file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceFileRequest"
+      responses:
+        "201":
+          description: Resource file created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceFile"
+
+  /coach/resource-files/{id}:
+    delete:
+      operationId: deleteResourceFile
+      tags: [coach]
+      summary: Delete a resource file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /resource-files:
+    get:
+      operationId: getResourceFiles
+      tags: [athlete]
+      summary: List resource files shared with the current athlete
+      responses:
+        "200":
+          description: Resource files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResourceFile"
+
+  /resource-files/{id}/signed-url:
+    get:
+      operationId: getResourceFileSignedUrl
+      tags: [athlete]
+      summary: Get a signed download URL for a resource file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Signed URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedUrlResponse"
+
   /coach/challenges:
     get:
       operationId: getCoachChallenges
@@ -5658,6 +5762,67 @@ components:
           type: string
         active:
           type: boolean
+
+    ResourceFile:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+        title:
+          type: string
+        objectPath:
+          type: string
+        uploadedAt:
+          type: string
+      required:
+        - id
+        - coachId
+        - athleteId
+        - title
+        - objectPath
+        - uploadedAt
+
+    CreateResourceFileRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        objectPath:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+      required:
+        - title
+        - objectPath
+        - athleteId
+
+    ResourceFileUploadUrlResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+        objectPath:
+          type: string
+        metadataEndpoint:
+          type: string
+      required:
+        - uploadUrl
+        - objectPath
+        - metadataEndpoint
+
+    SignedUrlResponse:
+      type: object
+      properties:
+        signedUrl:
+          type: string
+      required:
+        - signedUrl
 
     CoachAppointment:
       type: object

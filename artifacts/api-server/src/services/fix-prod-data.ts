@@ -478,6 +478,27 @@ export async function runSchemaMigrations(): Promise<void> {
       logger.warn({ err }, "runSchemaMigrations: scheduled_notifications.athlete_id NOT NULL drop – non-fatal");
     }
   }
+
+  // Mouv'Up Phase 8 — resource_files (general PDF sharing: contracts, guides,
+  // studio rules...). Same GCS signed-URL pattern as nutrition_pdfs.
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS resource_files (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        athlete_id uuid REFERENCES users(id) ON DELETE CASCADE,
+        title varchar(200) NOT NULL,
+        object_path text NOT NULL,
+        uploaded_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_resource_files_coach ON resource_files(coach_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_resource_files_athlete ON resource_files(athlete_id)`);
+    logger.info("runSchemaMigrations: resource_files OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – resource_files failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

@@ -2728,6 +2728,79 @@ export const DeleteMotivationPhraseResponse = zod.object({
 });
 
 /**
+ * @summary Get a signed upload URL for a new resource file
+ */
+export const GetResourceFileUploadUrlResponse = zod.object({
+  uploadUrl: zod.string(),
+  objectPath: zod.string(),
+  metadataEndpoint: zod.string(),
+});
+
+/**
+ * @summary List resource files
+ */
+export const GetCoachResourceFilesQueryParams = zod.object({
+  athleteId: zod.coerce.string().optional(),
+});
+
+export const GetCoachResourceFilesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string().nullable(),
+  title: zod.string(),
+  objectPath: zod.string(),
+  uploadedAt: zod.string(),
+});
+export const GetCoachResourceFilesResponse = zod.array(
+  GetCoachResourceFilesResponseItem,
+);
+
+/**
+ * @summary Attach metadata to an uploaded resource file
+ */
+export const CreateResourceFileBody = zod.object({
+  title: zod.string(),
+  objectPath: zod.string(),
+  athleteId: zod.string().nullable(),
+});
+
+/**
+ * @summary Delete a resource file
+ */
+export const DeleteResourceFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteResourceFileResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary List resource files shared with the current athlete
+ */
+export const GetResourceFilesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string().nullable(),
+  title: zod.string(),
+  objectPath: zod.string(),
+  uploadedAt: zod.string(),
+});
+export const GetResourceFilesResponse = zod.array(GetResourceFilesResponseItem);
+
+/**
+ * @summary Get a signed download URL for a resource file
+ */
+export const GetResourceFileSignedUrlParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetResourceFileSignedUrlResponse = zod.object({
+  signedUrl: zod.string(),
+});
+
+/**
  * @summary Get coach challenges
  */
 export const GetCoachChallengesResponseItem = zod.object({

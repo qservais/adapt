@@ -1480,6 +1480,31 @@ export interface UpdateMotivationPhraseRequest {
   active?: boolean;
 }
 
+export interface ResourceFile {
+  id: string;
+  coachId: string;
+  athleteId: string | null;
+  title: string;
+  objectPath: string;
+  uploadedAt: string;
+}
+
+export interface CreateResourceFileRequest {
+  title: string;
+  objectPath: string;
+  athleteId: string | null;
+}
+
+export interface ResourceFileUploadUrlResponse {
+  uploadUrl: string;
+  objectPath: string;
+  metadataEndpoint: string;
+}
+
+export interface SignedUrlResponse {
+  signedUrl: string;
+}
+
 export type CoachAppointmentStatus =
   (typeof CoachAppointmentStatus)[keyof typeof CoachAppointmentStatus];
 
@@ -1657,6 +1682,10 @@ export type GetCoachAgendaParams = {
 
 export type GetAthleteCoachSlotsParams = {
   date: string;
+};
+
+export type GetCoachResourceFilesParams = {
+  athleteId?: string;
 };
 
 export type GetExercisesParams = {
