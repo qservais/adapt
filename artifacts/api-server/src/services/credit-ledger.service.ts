@@ -15,6 +15,18 @@ function notExpired(now: Date) {
   return or(isNull(creditBatchesTable.expiresAt), gt(creditBatchesTable.expiresAt, now));
 }
 
+// The mutating functions below (creditBatch/consumeCredits/refundByBookingId)
+// accept an optional executor so a caller that's already inside its own
+// db.transaction() — e.g. booking.service.ts creating a booking AND debiting
+// a credit — can pass its `tx` through and get one real atomic transaction,
+// instead of these opening a second, separate one that could commit even if
+// the outer operation later rolls back. Defaults to the top-level `db` for
+// simple one-off callers (shop.ts, webhooks.ts) that don't need that.
+// `Tx` is derived from db.transaction's own callback parameter rather than
+// re-declared, so it can't drift from whatever drizzle-orm actually passes in.
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type Executor = typeof db | Tx;
+
 export async function getBalance(athleteId: string, creditType: CreditType): Promise<number> {
   const now = new Date();
   const rows = await db
@@ -52,12 +64,12 @@ interface CreditBatchParams {
 
 // Opens a new lot and records the crediting transaction. Validity is a per-lot
 // timer starting now (per the client spec: "le compte à rebours démarre à l'achat").
-export async function creditBatch(params: CreditBatchParams) {
+export async function creditBatch(params: CreditBatchParams, executor: Executor = db) {
   const expiresAt = params.validityMonths
     ? new Date(Date.now() + params.validityMonths * 30 * 24 * 60 * 60 * 1000)
     : null;
 
-  return db.transaction(async (tx) => {
+  const run = async (tx: Executor) => {
     const [batch] = await tx
       .insert(creditBatchesTable)
       .values({
@@ -82,7 +94,9 @@ export async function creditBatch(params: CreditBatchParams) {
     });
 
     return batch!;
-  });
+  };
+
+  return executor === db ? db.transaction(run) : run(executor);
 }
 
 interface ConsumeParams {
@@ -97,8 +111,10 @@ interface ConsumeParams {
 // concurrent bookings can't both spend the same last credit. Throws
 // InsufficientCreditsError (and rolls the transaction back) if the balance is
 // too low — callers should catch it and return a normal 4xx, not a 500.
-export async function consumeCredits(params: ConsumeParams): Promise<void> {
-  await db.transaction(async (tx) => {
+// Pass `executor` (a `tx`) when this must commit-or-rollback together with
+// other writes (e.g. the booking row itself) in the same transaction.
+export async function consumeCredits(params: ConsumeParams, executor: Executor = db): Promise<void> {
+  const run = async (tx: Executor) => {
     const now = new Date();
     const batches = await tx
       .select()
@@ -135,14 +151,16 @@ export async function consumeCredits(params: ConsumeParams): Promise<void> {
         relatedBookingId: params.relatedBookingId,
       });
     }
-  });
+  };
+
+  await (executor === db ? db.transaction(run) : run(executor));
 }
 
 // Reverses exactly the debits recorded under `relatedBookingId`, crediting each
 // affected batch back rather than opening a fresh one — preserves the original
 // expiry provenance instead of silently extending it via a new unlimited batch.
-export async function refundByBookingId(relatedBookingId: string, reason: "cancellation_refund" = "cancellation_refund"): Promise<void> {
-  await db.transaction(async (tx) => {
+export async function refundByBookingId(relatedBookingId: string, reason: "cancellation_refund" = "cancellation_refund", executor: Executor = db): Promise<void> {
+  const run = async (tx: Executor) => {
     const debits = await tx
       .select()
       .from(creditTransactionsTable)
@@ -168,5 +186,7 @@ export async function refundByBookingId(relatedBookingId: string, reason: "cance
         relatedBookingId,
       });
     }
-  });
+  };
+
+  await (executor === db ? db.transaction(run) : run(executor));
 }

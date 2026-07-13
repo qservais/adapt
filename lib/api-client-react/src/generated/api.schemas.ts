@@ -252,6 +252,118 @@ export interface GiftCreditsRequest {
   message?: string;
 }
 
+export interface ClassTemplate {
+  id: string;
+  coachId: string;
+  name: string;
+  description?: string | null;
+  capacity: number;
+  priceCents: number;
+  creditCost: number;
+  durationMin: number;
+  cancellationWindowHours?: number | null;
+  isActive: boolean;
+}
+
+export interface UpsertClassTemplateRequest {
+  name?: string;
+  description?: string;
+  /** @minimum 1 */
+  capacity?: number;
+  /** @minimum 0 */
+  priceCents?: number;
+  /** @minimum 1 */
+  creditCost?: number;
+  /** @minimum 5 */
+  durationMin?: number;
+  cancellationWindowHours?: number | null;
+}
+
+export type ScheduleClassRequestMode =
+  (typeof ScheduleClassRequestMode)[keyof typeof ScheduleClassRequestMode];
+
+export const ScheduleClassRequestMode = {
+  once: "once",
+  weekly: "weekly",
+} as const;
+
+export interface ScheduleClassRequest {
+  mode: ScheduleClassRequestMode;
+  /** Required when mode=once */
+  startAt?: string;
+  /** Required when mode=weekly (0=Sunday..6=Saturday) */
+  dayOfWeek?: number;
+  /** Required when mode=weekly, HH:MM */
+  startTime?: string;
+  weeksAhead?: number;
+}
+
+export type ClassOccurrenceStatus =
+  (typeof ClassOccurrenceStatus)[keyof typeof ClassOccurrenceStatus];
+
+export const ClassOccurrenceStatus = {
+  scheduled: "scheduled",
+  cancelled: "cancelled",
+} as const;
+
+export interface ClassOccurrence {
+  id: string;
+  templateId: string;
+  coachId?: string;
+  startAt: string;
+  durationMin: number;
+  capacity: number;
+  status: ClassOccurrenceStatus;
+}
+
+export type ClassOccurrenceWithAvailability = ClassOccurrence & {
+  name: string;
+  description?: string | null;
+  priceCents: number;
+  creditCost: number;
+  coachFirstName?: string;
+  spotsBooked: number;
+  spotsAvailable: number;
+  isBooked: boolean;
+  bookingId?: string | null;
+  waitlistStatus?: string | null;
+};
+
+export interface ClassBooking {
+  id: string;
+  occurrenceId: string;
+  athleteId?: string | null;
+  status: string;
+  paymentMode: string;
+  paymentStatus?: string;
+}
+
+export interface CancelBookingResponse {
+  success: boolean;
+  refunded: boolean;
+  lateCancellation: boolean;
+  message?: string;
+}
+
+export type ClassWaitlistEntryStatus =
+  (typeof ClassWaitlistEntryStatus)[keyof typeof ClassWaitlistEntryStatus];
+
+export const ClassWaitlistEntryStatus = {
+  waiting: "waiting",
+  offered: "offered",
+  expired: "expired",
+  confirmed: "confirmed",
+  withdrawn: "withdrawn",
+} as const;
+
+export interface ClassWaitlistEntry {
+  id: string;
+  occurrenceId: string;
+  athleteId: string;
+  status: ClassWaitlistEntryStatus;
+  offerExpiresAt?: string | null;
+}
+
 export interface RefreshRequest {
   refreshToken: string;
 }
@@ -1263,6 +1375,15 @@ export interface UpdateAppointmentRequest {
 export type GiftCredits201 = {
   success?: boolean;
   recipientCount?: number;
+};
+
+export type GetClassOccurrencesParams = {
+  from?: string;
+  to?: string;
+};
+
+export type ScheduleClassTemplate201 = {
+  occurrences?: ClassOccurrence[];
 };
 
 export type GetExercisesParams = {

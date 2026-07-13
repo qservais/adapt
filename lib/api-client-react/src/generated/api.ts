@@ -22,11 +22,16 @@ import type {
   AthletePerformanceTest,
   AuthResponse,
   BadgesResponse,
+  CancelBookingResponse,
   Challenge,
   CheckinData,
   CheckinRequest,
   CheckinResponse,
   CheckoutSessionResponse,
+  ClassBooking,
+  ClassOccurrenceWithAvailability,
+  ClassTemplate,
+  ClassWaitlistEntry,
   ClientDetail,
   ClientSummary,
   CoachAppointment,
@@ -49,6 +54,7 @@ import type {
   ErrorResponse,
   ExerciseData,
   FreeCustomSessionRequest,
+  GetClassOccurrencesParams,
   GetExercisesParams,
   GetNotificationsParams,
   GiftCredits201,
@@ -76,6 +82,8 @@ import type {
   RegisterRequest,
   ResetLoginCodeRequest,
   ResolveAlertRequest,
+  ScheduleClassRequest,
+  ScheduleClassTemplate201,
   ScheduledNotification,
   SendMessageRequest,
   SessionDetail,
@@ -102,6 +110,7 @@ import type {
   UploadDocumentResponse,
   UploadMediaRequest,
   UploadMediaResponse,
+  UpsertClassTemplateRequest,
   UpsertShopPackRequest,
   UserProfile,
   WeeklyRecapResponse,
@@ -1936,6 +1945,963 @@ export const useGiftCredits = <
   TContext
 > => {
   return useMutation(getGiftCreditsMutationOptions(options));
+};
+
+/**
+ * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+ */
+export const getGetClassOccurrencesUrl = (
+  params?: GetClassOccurrencesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/classes/occurrences?${stringifiedParams}`
+    : `/api/classes/occurrences`;
+};
+
+export const getClassOccurrences = async (
+  params?: GetClassOccurrencesParams,
+  options?: RequestInit,
+): Promise<ClassOccurrenceWithAvailability[]> => {
+  return customFetch<ClassOccurrenceWithAvailability[]>(
+    getGetClassOccurrencesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetClassOccurrencesQueryKey = (
+  params?: GetClassOccurrencesParams,
+) => {
+  return [`/api/classes/occurrences`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetClassOccurrencesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetClassOccurrencesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getClassOccurrences>>
+  > = ({ signal }) =>
+    getClassOccurrences(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getClassOccurrences>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetClassOccurrencesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClassOccurrences>>
+>;
+export type GetClassOccurrencesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+ */
+
+export function useGetClassOccurrences<
+  TData = Awaited<ReturnType<typeof getClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetClassOccurrencesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Book a class with 1 (or the class's) collective credit
+ */
+export const getBookClassUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/book`;
+};
+
+export const bookClass = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassBooking> => {
+  return customFetch<ClassBooking>(getBookClassUrl(occurrenceId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getBookClassMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bookClass>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bookClass>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["bookClass"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bookClass>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return bookClass(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BookClassMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bookClass>>
+>;
+
+export type BookClassMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Book a class with 1 (or the class's) collective credit
+ */
+export const useBookClass = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bookClass>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bookClass>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getBookClassMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+ */
+export const getCancelClassBookingUrl = (bookingId: string) => {
+  return `/api/classes/bookings/${bookingId}/cancel`;
+};
+
+export const cancelClassBooking = async (
+  bookingId: string,
+  options?: RequestInit,
+): Promise<CancelBookingResponse> => {
+  return customFetch<CancelBookingResponse>(
+    getCancelClassBookingUrl(bookingId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getCancelClassBookingMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassBooking>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelClassBooking>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  const mutationKey = ["cancelClassBooking"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelClassBooking>>,
+    { bookingId: string }
+  > = (props) => {
+    const { bookingId } = props ?? {};
+
+    return cancelClassBooking(bookingId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelClassBookingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelClassBooking>>
+>;
+
+export type CancelClassBookingMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+ */
+export const useCancelClassBooking = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassBooking>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelClassBooking>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  return useMutation(getCancelClassBookingMutationOptions(options));
+};
+
+/**
+ * @summary Join the waitlist for a full class
+ */
+export const getJoinClassWaitlistUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/waitlist`;
+};
+
+export const joinClassWaitlist = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassWaitlistEntry> => {
+  return customFetch<ClassWaitlistEntry>(
+    getJoinClassWaitlistUrl(occurrenceId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getJoinClassWaitlistMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof joinClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["joinClassWaitlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof joinClassWaitlist>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return joinClassWaitlist(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type JoinClassWaitlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof joinClassWaitlist>>
+>;
+
+export type JoinClassWaitlistMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Join the waitlist for a full class
+ */
+export const useJoinClassWaitlist = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof joinClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getJoinClassWaitlistMutationOptions(options));
+};
+
+/**
+ * @summary Leave the waitlist
+ */
+export const getLeaveClassWaitlistUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/waitlist`;
+};
+
+export const leaveClassWaitlist = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getLeaveClassWaitlistUrl(occurrenceId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getLeaveClassWaitlistMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof leaveClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof leaveClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["leaveClassWaitlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof leaveClassWaitlist>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return leaveClassWaitlist(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LeaveClassWaitlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof leaveClassWaitlist>>
+>;
+
+export type LeaveClassWaitlistMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Leave the waitlist
+ */
+export const useLeaveClassWaitlist = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof leaveClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof leaveClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getLeaveClassWaitlistMutationOptions(options));
+};
+
+/**
+ * @summary Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+ */
+export const getConfirmClassWaitlistOfferUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/waitlist/confirm`;
+};
+
+export const confirmClassWaitlistOffer = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassBooking> => {
+  return customFetch<ClassBooking>(
+    getConfirmClassWaitlistOfferUrl(occurrenceId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getConfirmClassWaitlistOfferMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["confirmClassWaitlistOffer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return confirmClassWaitlistOffer(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmClassWaitlistOfferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmClassWaitlistOffer>>
+>;
+
+export type ConfirmClassWaitlistOfferMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+ */
+export const useConfirmClassWaitlistOffer = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getConfirmClassWaitlistOfferMutationOptions(options));
+};
+
+/**
+ * @summary List the coach's class templates
+ */
+export const getGetCoachClassTemplatesUrl = () => {
+  return `/api/coach/classes/templates`;
+};
+
+export const getCoachClassTemplates = async (
+  options?: RequestInit,
+): Promise<ClassTemplate[]> => {
+  return customFetch<ClassTemplate[]>(getGetCoachClassTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachClassTemplatesQueryKey = () => {
+  return [`/api/coach/classes/templates`] as const;
+};
+
+export const getGetCoachClassTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachClassTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachClassTemplatesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>
+  > = ({ signal }) => getCoachClassTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachClassTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachClassTemplates>>
+>;
+export type GetCoachClassTemplatesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the coach's class templates
+ */
+
+export function useGetCoachClassTemplates<
+  TData = Awaited<ReturnType<typeof getCoachClassTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachClassTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a class template
+ */
+export const getCreateClassTemplateUrl = () => {
+  return `/api/coach/classes/templates`;
+};
+
+export const createClassTemplate = async (
+  upsertClassTemplateRequest: UpsertClassTemplateRequest,
+  options?: RequestInit,
+): Promise<ClassTemplate> => {
+  return customFetch<ClassTemplate>(getCreateClassTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertClassTemplateRequest),
+  });
+};
+
+export const getCreateClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClassTemplate>>,
+    TError,
+    { data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createClassTemplate>>,
+  TError,
+  { data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  const mutationKey = ["createClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createClassTemplate>>,
+    { data: BodyType<UpsertClassTemplateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createClassTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createClassTemplate>>
+>;
+export type CreateClassTemplateMutationBody =
+  BodyType<UpsertClassTemplateRequest>;
+export type CreateClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a class template
+ */
+export const useCreateClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClassTemplate>>,
+    TError,
+    { data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createClassTemplate>>,
+  TError,
+  { data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  return useMutation(getCreateClassTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Update a class template
+ */
+export const getUpdateClassTemplateUrl = (id: string) => {
+  return `/api/coach/classes/templates/${id}`;
+};
+
+export const updateClassTemplate = async (
+  id: string,
+  upsertClassTemplateRequest: UpsertClassTemplateRequest,
+  options?: RequestInit,
+): Promise<ClassTemplate> => {
+  return customFetch<ClassTemplate>(getUpdateClassTemplateUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertClassTemplateRequest),
+  });
+};
+
+export const getUpdateClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateClassTemplate>>,
+    { id: string; data: BodyType<UpsertClassTemplateRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateClassTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateClassTemplate>>
+>;
+export type UpdateClassTemplateMutationBody =
+  BodyType<UpsertClassTemplateRequest>;
+export type UpdateClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a class template
+ */
+export const useUpdateClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateClassTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Deactivate a class template
+ */
+export const getDeleteClassTemplateUrl = (id: string) => {
+  return `/api/coach/classes/templates/${id}`;
+};
+
+export const deleteClassTemplate = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteClassTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteClassTemplate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteClassTemplate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteClassTemplate>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteClassTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteClassTemplate>>
+>;
+
+export type DeleteClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Deactivate a class template
+ */
+export const useDeleteClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteClassTemplate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteClassTemplate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteClassTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+ */
+export const getScheduleClassTemplateUrl = (id: string) => {
+  return `/api/coach/classes/templates/${id}/schedule`;
+};
+
+export const scheduleClassTemplate = async (
+  id: string,
+  scheduleClassRequest: ScheduleClassRequest,
+  options?: RequestInit,
+): Promise<ScheduleClassTemplate201> => {
+  return customFetch<ScheduleClassTemplate201>(
+    getScheduleClassTemplateUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(scheduleClassRequest),
+    },
+  );
+};
+
+export const getScheduleClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<ScheduleClassRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scheduleClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<ScheduleClassRequest> },
+  TContext
+> => {
+  const mutationKey = ["scheduleClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scheduleClassTemplate>>,
+    { id: string; data: BodyType<ScheduleClassRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return scheduleClassTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScheduleClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scheduleClassTemplate>>
+>;
+export type ScheduleClassTemplateMutationBody = BodyType<ScheduleClassRequest>;
+export type ScheduleClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+ */
+export const useScheduleClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<ScheduleClassRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof scheduleClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<ScheduleClassRequest> },
+  TContext
+> => {
+  return useMutation(getScheduleClassTemplateMutationOptions(options));
 };
 
 /**

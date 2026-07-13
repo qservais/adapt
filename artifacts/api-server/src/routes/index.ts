@@ -19,6 +19,7 @@ import statsRouter from "./stats.js";
 import userRoutinesRouter from "./user-routines.js";
 import studioSettingsRouter from "./studio-settings.js";
 import shopRouter from "./shop.js";
+import classesRouter from "./classes.js";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(statsRouter);
 router.use(userRoutinesRouter);
 router.use(studioSettingsRouter);
 router.use(shopRouter);
+router.use(classesRouter);
 
 export default router;

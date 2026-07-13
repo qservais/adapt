@@ -215,6 +215,89 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – credit ledger tables failed");
     throw err;
   }
+
+  // Mouv'Up Phase 3 — group class booking + waitlist
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS class_templates (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name varchar(100) NOT NULL,
+        description text,
+        capacity integer NOT NULL DEFAULT 12,
+        price_cents integer NOT NULL DEFAULT 0,
+        credit_cost integer NOT NULL DEFAULT 1,
+        duration_min integer NOT NULL DEFAULT 60,
+        cancellation_window_hours integer,
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS class_recurrence_rules (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        template_id uuid NOT NULL REFERENCES class_templates(id) ON DELETE CASCADE,
+        day_of_week smallint NOT NULL,
+        start_time varchar(5) NOT NULL,
+        effective_from timestamptz NOT NULL DEFAULT now(),
+        effective_until timestamptz,
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS class_occurrences (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        template_id uuid NOT NULL REFERENCES class_templates(id) ON DELETE CASCADE,
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        recurrence_rule_id uuid REFERENCES class_recurrence_rules(id),
+        start_at timestamptz NOT NULL,
+        duration_min integer NOT NULL,
+        capacity integer NOT NULL,
+        status varchar(20) NOT NULL DEFAULT 'scheduled',
+        cancelled_at timestamptz,
+        cancellation_note text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS class_occurrences_start_idx ON class_occurrences(start_at, status)`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS class_bookings (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        occurrence_id uuid NOT NULL REFERENCES class_occurrences(id) ON DELETE CASCADE,
+        athlete_id uuid REFERENCES users(id) ON DELETE CASCADE,
+        guest_name varchar(150),
+        status varchar(20) NOT NULL DEFAULT 'confirmed',
+        payment_mode varchar(20) NOT NULL,
+        payment_status varchar(20) NOT NULL DEFAULT 'paid',
+        stripe_payment_intent_id varchar(255),
+        registered_by varchar(20) NOT NULL DEFAULT 'self',
+        late_cancellation boolean NOT NULL DEFAULT false,
+        late_cancellation_waived boolean NOT NULL DEFAULT false,
+        cancelled_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS class_bookings_occurrence_idx ON class_bookings(occurrence_id, status)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS class_bookings_athlete_idx ON class_bookings(athlete_id, status)`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS class_waitlist_entries (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        occurrence_id uuid NOT NULL REFERENCES class_occurrences(id) ON DELETE CASCADE,
+        athlete_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status varchar(20) NOT NULL DEFAULT 'waiting',
+        offered_at timestamptz,
+        offer_expires_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS class_waitlist_occurrence_idx ON class_waitlist_entries(occurrence_id, status, created_at)`);
+    logger.info("runSchemaMigrations: class booking + waitlist tables OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – class booking + waitlist tables failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

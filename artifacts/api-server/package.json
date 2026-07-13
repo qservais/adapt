@@ -9,7 +9,8 @@
     "seed": "tsx ./src/scripts/seed-prod.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:library": "tsx tests/exercises-library.test.ts",
-    "test:credit-ledger": "tsx tests/credit-ledger.test.ts"
+    "test:credit-ledger": "tsx tests/credit-ledger.test.ts",
+    "test:booking": "tsx tests/booking.test.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",

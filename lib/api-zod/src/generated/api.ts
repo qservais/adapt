@@ -455,6 +455,199 @@ export const GiftCreditsBody = zod.object({
 });
 
 /**
+ * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+ */
+export const GetClassOccurrencesQueryParams = zod.object({
+  from: zod.coerce.string().optional(),
+  to: zod.coerce.string().optional(),
+});
+
+export const GetClassOccurrencesResponseItem = zod
+  .object({
+    id: zod.string(),
+    templateId: zod.string(),
+    coachId: zod.string().optional(),
+    startAt: zod.string(),
+    durationMin: zod.number(),
+    capacity: zod.number(),
+    status: zod.enum(["scheduled", "cancelled"]),
+  })
+  .and(
+    zod.object({
+      name: zod.string(),
+      description: zod.string().nullish(),
+      priceCents: zod.number(),
+      creditCost: zod.number(),
+      coachFirstName: zod.string().optional(),
+      spotsBooked: zod.number(),
+      spotsAvailable: zod.number(),
+      isBooked: zod.boolean(),
+      bookingId: zod.string().nullish(),
+      waitlistStatus: zod.string().nullish(),
+    }),
+  );
+export const GetClassOccurrencesResponse = zod.array(
+  GetClassOccurrencesResponseItem,
+);
+
+/**
+ * @summary Book a class with 1 (or the class's) collective credit
+ */
+export const BookClassParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+/**
+ * @summary Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+ */
+export const CancelClassBookingParams = zod.object({
+  bookingId: zod.coerce.string(),
+});
+
+export const CancelClassBookingResponse = zod.object({
+  success: zod.boolean(),
+  refunded: zod.boolean(),
+  lateCancellation: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Join the waitlist for a full class
+ */
+export const JoinClassWaitlistParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+/**
+ * @summary Leave the waitlist
+ */
+export const LeaveClassWaitlistParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const LeaveClassWaitlistResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+ */
+export const ConfirmClassWaitlistOfferParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+/**
+ * @summary List the coach's class templates
+ */
+export const GetCoachClassTemplatesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  capacity: zod.number(),
+  priceCents: zod.number(),
+  creditCost: zod.number(),
+  durationMin: zod.number(),
+  cancellationWindowHours: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+export const GetCoachClassTemplatesResponse = zod.array(
+  GetCoachClassTemplatesResponseItem,
+);
+
+/**
+ * @summary Create a class template
+ */
+
+export const createClassTemplateBodyPriceCentsMin = 0;
+
+export const createClassTemplateBodyDurationMinMin = 5;
+
+export const CreateClassTemplateBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  capacity: zod.number().min(1).optional(),
+  priceCents: zod.number().min(createClassTemplateBodyPriceCentsMin).optional(),
+  creditCost: zod.number().min(1).optional(),
+  durationMin: zod
+    .number()
+    .min(createClassTemplateBodyDurationMinMin)
+    .optional(),
+  cancellationWindowHours: zod.number().nullish(),
+});
+
+/**
+ * @summary Update a class template
+ */
+export const UpdateClassTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateClassTemplateBodyPriceCentsMin = 0;
+
+export const updateClassTemplateBodyDurationMinMin = 5;
+
+export const UpdateClassTemplateBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  capacity: zod.number().min(1).optional(),
+  priceCents: zod.number().min(updateClassTemplateBodyPriceCentsMin).optional(),
+  creditCost: zod.number().min(1).optional(),
+  durationMin: zod
+    .number()
+    .min(updateClassTemplateBodyDurationMinMin)
+    .optional(),
+  cancellationWindowHours: zod.number().nullish(),
+});
+
+export const UpdateClassTemplateResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  capacity: zod.number(),
+  priceCents: zod.number(),
+  creditCost: zod.number(),
+  durationMin: zod.number(),
+  cancellationWindowHours: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+
+/**
+ * @summary Deactivate a class template
+ */
+export const DeleteClassTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteClassTemplateResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+ */
+export const ScheduleClassTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ScheduleClassTemplateBody = zod.object({
+  mode: zod.enum(["once", "weekly"]),
+  startAt: zod.string().optional().describe("Required when mode=once"),
+  dayOfWeek: zod
+    .number()
+    .optional()
+    .describe("Required when mode=weekly (0=Sunday..6=Saturday)"),
+  startTime: zod
+    .string()
+    .optional()
+    .describe("Required when mode=weekly, HH:MM"),
+  weeksAhead: zod.number().optional(),
+});
+
+/**
  * @summary Get current user profile
  */
 export const GetMeResponse = zod.object({

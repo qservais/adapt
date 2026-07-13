@@ -38,6 +38,8 @@ tags:
     description: Studio settings (Mouv'Up — WhatsApp number, VAT regime, cancellation window...)
   - name: shop
     description: Credit packs, subscriptions, promos, and the athlete credit ledger
+  - name: classes
+    description: Bookable group classes, capacity, and waitlist
 
 security:
   - bearerAuth: []
@@ -499,6 +501,240 @@ paths:
                     type: boolean
                   recipientCount:
                     type: integer
+
+  # CLASSES
+  /classes/occurrences:
+    get:
+      operationId: getClassOccurrences
+      tags: [classes]
+      summary: List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Occurrences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassOccurrenceWithAvailability"
+
+  /classes/{occurrenceId}/book:
+    post:
+      operationId: bookClass
+      tags: [classes]
+      summary: Book a class with 1 (or the class's) collective credit
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBooking"
+        "409":
+          description: Class is full or already booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /classes/bookings/{bookingId}/cancel:
+    post:
+      operationId: cancelClassBooking
+      tags: [classes]
+      summary: Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelBookingResponse"
+
+  /classes/{occurrenceId}/waitlist:
+    post:
+      operationId: joinClassWaitlist
+      tags: [classes]
+      summary: Join the waitlist for a full class
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassWaitlistEntry"
+    delete:
+      operationId: leaveClassWaitlist
+      tags: [classes]
+      summary: Leave the waitlist
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Left
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /classes/{occurrenceId}/waitlist/confirm:
+    post:
+      operationId: confirmClassWaitlistOffer
+      tags: [classes]
+      summary: Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Confirmed and booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBooking"
+        "410":
+          description: Offer expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/classes/templates:
+    get:
+      operationId: getCoachClassTemplates
+      tags: [classes]
+      summary: List the coach's class templates
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassTemplate"
+    post:
+      operationId: createClassTemplate
+      tags: [classes]
+      summary: Create a class template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertClassTemplateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassTemplate"
+
+  /coach/classes/templates/{id}:
+    put:
+      operationId: updateClassTemplate
+      tags: [classes]
+      summary: Update a class template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertClassTemplateRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassTemplate"
+    delete:
+      operationId: deleteClassTemplate
+      tags: [classes]
+      summary: Deactivate a class template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/classes/templates/{id}/schedule:
+    post:
+      operationId: scheduleClassTemplate
+      tags: [classes]
+      summary: Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleClassRequest"
+      responses:
+        "201":
+          description: Occurrence(s) created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  occurrences:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ClassOccurrence"
 
   # USERS
   /users/me:
@@ -2486,6 +2722,205 @@ components:
         - athleteIds
         - creditType
         - quantity
+
+    ClassTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        priceCents:
+          type: integer
+        creditCost:
+          type: integer
+        durationMin:
+          type: integer
+        cancellationWindowHours:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - name
+        - capacity
+        - priceCents
+        - creditCost
+        - durationMin
+        - isActive
+
+    UpsertClassTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        priceCents:
+          type: integer
+          minimum: 0
+        creditCost:
+          type: integer
+          minimum: 1
+        durationMin:
+          type: integer
+          minimum: 5
+        cancellationWindowHours:
+          type: integer
+          nullable: true
+
+    ScheduleClassRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [once, weekly]
+        startAt:
+          type: string
+          description: Required when mode=once
+        dayOfWeek:
+          type: integer
+          description: Required when mode=weekly (0=Sunday..6=Saturday)
+        startTime:
+          type: string
+          description: "Required when mode=weekly, HH:MM"
+        weeksAhead:
+          type: integer
+      required:
+        - mode
+
+    ClassOccurrence:
+      type: object
+      properties:
+        id:
+          type: string
+        templateId:
+          type: string
+        coachId:
+          type: string
+        startAt:
+          type: string
+        durationMin:
+          type: integer
+        capacity:
+          type: integer
+        status:
+          type: string
+          enum: [scheduled, cancelled]
+      required:
+        - id
+        - templateId
+        - startAt
+        - durationMin
+        - capacity
+        - status
+
+    ClassOccurrenceWithAvailability:
+      allOf:
+        - $ref: "#/components/schemas/ClassOccurrence"
+        - type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+              nullable: true
+            priceCents:
+              type: integer
+            creditCost:
+              type: integer
+            coachFirstName:
+              type: string
+            spotsBooked:
+              type: integer
+            spotsAvailable:
+              type: integer
+            isBooked:
+              type: boolean
+            bookingId:
+              type: string
+              nullable: true
+            waitlistStatus:
+              type: string
+              nullable: true
+          required:
+            - name
+            - priceCents
+            - creditCost
+            - spotsBooked
+            - spotsAvailable
+            - isBooked
+
+    ClassBooking:
+      type: object
+      properties:
+        id:
+          type: string
+        occurrenceId:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+        status:
+          type: string
+        paymentMode:
+          type: string
+        paymentStatus:
+          type: string
+      required:
+        - id
+        - occurrenceId
+        - status
+        - paymentMode
+
+    CancelBookingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        refunded:
+          type: boolean
+        lateCancellation:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+        - refunded
+        - lateCancellation
+
+    ClassWaitlistEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        occurrenceId:
+          type: string
+        athleteId:
+          type: string
+        status:
+          type: string
+          enum: [waiting, offered, expired, confirmed, withdrawn]
+        offerExpiresAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - occurrenceId
+        - athleteId
+        - status
 
     RefreshRequest:
       type: object

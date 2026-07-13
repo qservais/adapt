@@ -21,3 +21,4 @@ export * from "./user_session_templates";
 export * from "./studio_settings";
 export * from "./shop";
 export * from "./credits";
+export * from "./classes";
