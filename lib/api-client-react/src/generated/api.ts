@@ -20,6 +20,7 @@ import type {
   AddAvailabilitySlotRequest,
   AgendaEntry,
   AlertData,
+  AthleteCreditsDetail,
   AthleteLinkRequest,
   AthletePerformanceTest,
   AuthResponse,
@@ -1977,6 +1978,95 @@ export const useGiftCredits = <
 > => {
   return useMutation(getGiftCreditsMutationOptions(options));
 };
+
+/**
+ * @summary Credit balances and recent transaction history for one athlete
+ */
+export const getGetClientCreditsUrl = (athleteId: string) => {
+  return `/api/coach/clients/${athleteId}/credits`;
+};
+
+export const getClientCredits = async (
+  athleteId: string,
+  options?: RequestInit,
+): Promise<AthleteCreditsDetail> => {
+  return customFetch<AthleteCreditsDetail>(getGetClientCreditsUrl(athleteId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetClientCreditsQueryKey = (athleteId: string) => {
+  return [`/api/coach/clients/${athleteId}/credits`] as const;
+};
+
+export const getGetClientCreditsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClientCredits>>,
+  TError = ErrorType<unknown>,
+>(
+  athleteId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClientCredits>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetClientCreditsQueryKey(athleteId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getClientCredits>>
+  > = ({ signal }) =>
+    getClientCredits(athleteId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!athleteId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getClientCredits>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetClientCreditsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClientCredits>>
+>;
+export type GetClientCreditsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Credit balances and recent transaction history for one athlete
+ */
+
+export function useGetClientCredits<
+  TData = Awaited<ReturnType<typeof getClientCredits>>,
+  TError = ErrorType<unknown>,
+>(
+  athleteId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClientCredits>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetClientCreditsQueryOptions(athleteId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status

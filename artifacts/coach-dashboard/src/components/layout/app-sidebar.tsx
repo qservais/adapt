@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings, CalendarRange } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +39,13 @@ export function AppSidebar() {
       subtitle: t("sidebar.item_athletes_subtitle"),
       url: "/clients",
       icon: Users,
+      exactMatch: false,
+    },
+    {
+      title: t("sidebar.item_agenda_title"),
+      subtitle: t("sidebar.item_agenda_subtitle"),
+      url: "/agenda",
+      icon: CalendarRange,
       exactMatch: false,
     },
     {

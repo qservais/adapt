@@ -12,6 +12,7 @@ import ResetPasswordPage from "./pages/auth/reset-password";
 import Dashboard from "./pages/dashboard/index";
 import ClientsOverview from "./pages/clients/index";
 import ClientDetail from "./pages/clients/detail";
+import AgendaPage from "./pages/agenda/index";
 import ProgramsList from "./pages/programs/index";
 import ProgramDetail from "./pages/programs/detail";
 import AlertsFeed from "./pages/alerts/index";
@@ -79,6 +80,7 @@ function AppRouter() {
         <Route path="/" component={Dashboard} />
         <Route path="/clients" component={ClientsOverview} />
         <Route path="/clients/:id" component={ClientDetail} />
+        <Route path="/agenda" component={AgendaPage} />
         <Route path="/programs" component={ProgramsList} />
         <Route path="/programs/:id" component={ProgramDetail} />
         <Route path="/library" component={LibraryPage} />

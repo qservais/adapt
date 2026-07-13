@@ -455,6 +455,29 @@ export const GiftCreditsBody = zod.object({
 });
 
 /**
+ * @summary Credit balances and recent transaction history for one athlete
+ */
+export const GetClientCreditsParams = zod.object({
+  athleteId: zod.coerce.string(),
+});
+
+export const GetClientCreditsResponse = zod.object({
+  balances: zod.object({
+    collectif: zod.number(),
+    individuel: zod.number(),
+  }),
+  transactions: zod.array(
+    zod.object({
+      id: zod.string(),
+      delta: zod.number(),
+      reason: zod.string(),
+      creditType: zod.enum(["collectif", "individuel"]),
+      createdAt: zod.string().nullable(),
+    }),
+  ),
+});
+
+/**
  * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
  */
 export const GetClassOccurrencesQueryParams = zod.object({

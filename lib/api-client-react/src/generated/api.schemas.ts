@@ -258,6 +258,32 @@ export interface GiftCreditsRequest {
   message?: string;
 }
 
+export type AthleteCreditTransactionCreditType =
+  (typeof AthleteCreditTransactionCreditType)[keyof typeof AthleteCreditTransactionCreditType];
+
+export const AthleteCreditTransactionCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface AthleteCreditTransaction {
+  id: string;
+  delta: number;
+  reason: string;
+  creditType: AthleteCreditTransactionCreditType;
+  createdAt: string | null;
+}
+
+export type AthleteCreditsDetailBalances = {
+  collectif: number;
+  individuel: number;
+};
+
+export interface AthleteCreditsDetail {
+  balances: AthleteCreditsDetailBalances;
+  transactions: AthleteCreditTransaction[];
+}
+
 export interface ClassTemplate {
   id: string;
   coachId: string;

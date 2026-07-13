@@ -169,6 +169,8 @@
     "item_dashboard_subtitle": "Daily operational view",
     "item_athletes_title": "Athletes",
     "item_athletes_subtitle": "Profiles, alerts and check-ins",
+    "item_agenda_title": "Agenda",
+    "item_agenda_subtitle": "Group classes and 1:1 appointments",
     "item_programs_title": "Programs",
     "item_programs_subtitle": "Training plans",
     "item_library_title": "Library",
@@ -322,6 +324,7 @@
       "tab_program": "Program",
       "tab_tests": "Tests",
       "tab_nutrition": "Nutrition",
+      "tab_commercial": "Commercial",
       "dialog_edit_profile": "EDIT PROFILE",
       "label_height_cm": "Height (cm)",
       "label_weight_kg": "Weight (kg)",
@@ -811,6 +814,13 @@
     "format_unsupported": "Unsupported format. Accepted: PDF, Word, Excel, images.",
     "format_size_error": "Format or size unsupported",
     "send_failed": "Could not send the document. Try again."
+  },
+  "agenda_page": {
+    "title": "AGENDA",
+    "subtitle": "Group classes and 1:1 appointments, in one calendar.",
+    "this_week": "This week",
+    "no_entries": "Nothing scheduled.",
+    "spots": "spots"
   },
   "notifications_page": {
     "title": "NOTIFICATIONS",

@@ -169,6 +169,8 @@
     "item_dashboard_subtitle": "Vue opérationnelle du jour",
     "item_athletes_title": "Athlètes",
     "item_athletes_subtitle": "Profils, alertes et check-ins",
+    "item_agenda_title": "Agenda",
+    "item_agenda_subtitle": "Cours collectifs et rendez-vous 1:1",
     "item_programs_title": "Programmes",
     "item_programs_subtitle": "Plans d'entraînement",
     "item_library_title": "Bibliothèque",
@@ -322,6 +324,7 @@
       "tab_program": "Programme",
       "tab_tests": "Tests",
       "tab_nutrition": "Nutrition",
+      "tab_commercial": "Commercial",
       "dialog_edit_profile": "MODIFIER LE PROFIL",
       "label_height_cm": "Taille (cm)",
       "label_weight_kg": "Poids (kg)",
@@ -811,6 +814,13 @@
     "format_unsupported": "Format non supporté. Formats acceptés : PDF, Word, Excel, images.",
     "format_size_error": "Format ou taille non supportés",
     "send_failed": "Impossible d'envoyer le document. Réessaie."
+  },
+  "agenda_page": {
+    "title": "AGENDA",
+    "subtitle": "Cours collectifs et rendez-vous 1:1, en un seul calendrier.",
+    "this_week": "Cette semaine",
+    "no_entries": "Rien de prévu.",
+    "spots": "places"
   },
   "notifications_page": {
     "title": "NOTIFICATIONS",

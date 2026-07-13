@@ -5,6 +5,9 @@ import {
   shopPromosTable,
   subscriptionPlansTable,
   subscriptionMembershipsTable,
+  usersTable,
+  creditTransactionsTable,
+  creditBatchesTable,
 } from "@workspace/db";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
@@ -312,6 +315,38 @@ router.post("/coach/credits/gift", authenticate, requireRole("coach"), async (re
       }).catch(() => {});
     }
     res.status(201).json({ success: true, recipientCount: athleteIds.length });
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/coach/clients/:athleteId/credits", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const athleteId = String(req.params["athleteId"]);
+    const [athlete] = await db.select({ coachId: usersTable.coachId }).from(usersTable).where(eq(usersTable.id, athleteId));
+    if (!athlete || athlete.coachId !== coachId) {
+      res.status(403).json({ error: { code: "FORBIDDEN", message: "Accès refusé" } });
+      return;
+    }
+    const balances = await getBalances(athleteId);
+    const transactions = await db
+      .select({
+        id: creditTransactionsTable.id,
+        delta: creditTransactionsTable.delta,
+        reason: creditTransactionsTable.reason,
+        createdAt: creditTransactionsTable.createdAt,
+        creditType: creditBatchesTable.creditType,
+      })
+      .from(creditTransactionsTable)
+      .innerJoin(creditBatchesTable, eq(creditTransactionsTable.batchId, creditBatchesTable.id))
+      .where(eq(creditTransactionsTable.athleteId, athleteId))
+      .orderBy(desc(creditTransactionsTable.createdAt))
+      .limit(30);
+    res.json({
+      balances,
+      transactions: transactions.map((t) => ({ ...t, createdAt: t.createdAt?.toISOString() ?? null })),
+    });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

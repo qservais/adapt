@@ -504,6 +504,25 @@ paths:
                   recipientCount:
                     type: integer
 
+  /coach/clients/{athleteId}/credits:
+    get:
+      operationId: getClientCredits
+      tags: [shop]
+      summary: Credit balances and recent transaction history for one athlete
+      parameters:
+        - name: athleteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Credits detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteCreditsDetail"
+
   # CLASSES
   /classes/occurrences:
     get:
@@ -3421,6 +3440,49 @@ components:
         - athleteIds
         - creditType
         - quantity
+
+    AthleteCreditTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        delta:
+          type: integer
+        reason:
+          type: string
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        createdAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - delta
+        - reason
+        - creditType
+        - createdAt
+
+    AthleteCreditsDetail:
+      type: object
+      properties:
+        balances:
+          type: object
+          properties:
+            collectif:
+              type: integer
+            individuel:
+              type: integer
+          required:
+            - collectif
+            - individuel
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AthleteCreditTransaction"
+      required:
+        - balances
+        - transactions
 
     ClassTemplate:
       type: object
