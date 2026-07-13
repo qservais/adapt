@@ -8,6 +8,10 @@ import {
   useGetMorningNotifHour,
   useUpdateMorningNotifHour,
   useGetClients,
+  useGetMotivationPhrases,
+  useCreateMotivationPhrase,
+  useUpdateMotivationPhrase,
+  useDeleteMotivationPhrase,
 } from "@workspace/api-client-react";
 import type { ScheduledNotification, CreateScheduledNotificationRequest } from "@workspace/api-client-react";
 import {
@@ -20,6 +24,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Pencil,
+  Quote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +68,15 @@ export default function NotificationsPage() {
   const updateHourMutation = useUpdateMorningNotifHour();
   const { toast } = useToast();
 
+  const { data: phrases, refetch: refetchPhrases } = useGetMotivationPhrases({
+    query: { queryKey: ["/api/coach/motivation-phrases"] },
+  });
+  const createPhraseMutation = useCreateMotivationPhrase();
+  const updatePhraseMutation = useUpdateMotivationPhrase();
+  const deletePhraseMutation = useDeleteMotivationPhrase();
+  const [newPhrase, setNewPhrase] = useState("");
+  const [deletePhraseId, setDeletePhraseId] = useState<string | null>(null);
+
   const [showCreate, setShowCreate] = useState(false);
   const [editItem, setEditItem] = useState<ScheduledNotification | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -89,6 +103,38 @@ export default function NotificationsPage() {
       toast({ title: t("notifications_page.update_failed"), variant: "destructive" });
     } finally {
       setSavingHour(false);
+    }
+  };
+
+  const handleAddPhrase = async () => {
+    if (!newPhrase.trim()) return;
+    try {
+      await createPhraseMutation.mutateAsync({ data: { text: newPhrase.trim() } });
+      setNewPhrase("");
+      refetchPhrases();
+      toast({ title: t("notifications_page.phrase_added") });
+    } catch {
+      toast({ title: t("notifications_page.operation_failed"), variant: "destructive" });
+    }
+  };
+
+  const handleTogglePhraseActive = async (id: string, active: boolean) => {
+    try {
+      await updatePhraseMutation.mutateAsync({ id, data: { active: !active } });
+      refetchPhrases();
+    } catch {
+      toast({ title: t("notifications_page.operation_failed"), variant: "destructive" });
+    }
+  };
+
+  const handleDeletePhrase = async (id: string) => {
+    try {
+      await deletePhraseMutation.mutateAsync({ id });
+      refetchPhrases();
+      setDeletePhraseId(null);
+      toast({ title: t("notifications_page.phrase_deleted") });
+    } catch {
+      toast({ title: t("notifications_page.delete_failed"), variant: "destructive" });
     }
   };
 
@@ -242,6 +288,61 @@ export default function NotificationsPage() {
         </div>
       </div>
 
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Quote className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-display text-white">{t("notifications_page.phrases_title")}</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">{t("notifications_page.phrases_desc")}</p>
+        <div className="flex items-center gap-2 mb-4">
+          <Input
+            value={newPhrase}
+            onChange={(e) => setNewPhrase(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAddPhrase(); }}
+            placeholder={t("notifications_page.phrases_add_placeholder")}
+            className="bg-background border-border"
+          />
+          <Button
+            onClick={handleAddPhrase}
+            disabled={createPhraseMutation.isPending || !newPhrase.trim()}
+            className="gap-1.5 bg-primary text-black hover:bg-primary/90 font-bold shrink-0"
+          >
+            {createPhraseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          </Button>
+        </div>
+        {(!phrases || phrases.length === 0) ? (
+          <p className="text-sm text-muted-foreground">{t("notifications_page.phrases_empty")}</p>
+        ) : (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {phrases.map((p) => (
+              <div
+                key={p.id}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${p.active ? "border-border" : "border-border/40 opacity-50"}`}
+              >
+                <p className="flex-1 text-sm text-white min-w-0 truncate">{p.text}</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-primary shrink-0"
+                  onClick={() => handleTogglePhraseActive(p.id, p.active)}
+                  title={p.active ? t("notifications_page.deactivate") : t("notifications_page.activate")}
+                >
+                  {p.active ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive shrink-0"
+                  onClick={() => setDeletePhraseId(p.id)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-3">
         <h2 className="text-lg font-display text-white flex items-center gap-2">
           <Bell className="w-5 h-5 text-primary" /> {t("notifications_page.custom_reminders_title")}
@@ -389,6 +490,25 @@ export default function NotificationsPage() {
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("common.delete", { defaultValue: "Supprimer" })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deletePhraseId} onOpenChange={(o) => { if (!o) setDeletePhraseId(null); }}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-white">{t("notifications_page.phrase_delete_confirm")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("notifications_page.irreversible")}</p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeletePhraseId(null)}>{t("common.cancel", { defaultValue: "Annuler" })}</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletePhraseId && handleDeletePhrase(deletePhraseId)}
+              disabled={deletePhraseMutation.isPending}
+            >
+              {deletePhraseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("common.delete", { defaultValue: "Supprimer" })}
             </Button>
           </DialogFooter>
         </DialogContent>

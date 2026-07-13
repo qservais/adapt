@@ -6,36 +6,23 @@ import {
   usersTable,
   sessionsTable,
   programsTable,
+  motivationPhrasesTable,
 } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { notifyUser } from "./notify.service.js";
+import { DEFAULT_MOTIVATION_PHRASES } from "../lib/motivation-phrases-seed.js";
 
-const PHRASES_MOTIVATION = [
-  "Chaque répétition te rapproche de la meilleure version de toi-même.",
-  "La discipline d'aujourd'hui est la performance de demain.",
-  "Le corps atteint ce que l'esprit croit possible.",
-  "Pas de raccourci — juste du travail bien fait.",
-  "Tu es plus fort(e) que tu ne le penses. Prouve-le aujourd'hui.",
-  "La régularité bat le talent qui ne travaille pas.",
-  "Chaque effort compte, même les petits.",
-  "Tu n'as pas à être parfait(e), tu dois juste avancer.",
-  "La douleur d'aujourd'hui est ta force de demain.",
-  "Un pas à la fois. C'est comme ça que les grandes choses se font.",
-  "Fais confiance au processus. Les résultats viennent avec le temps.",
-  "L'excellence n'est pas un acte, c'est une habitude.",
-  "Tes limites sont là pour être repoussées.",
-  "Entraîne-toi dur, récupère bien, recommence.",
-  "Le seul mauvais entraînement est celui qu'on n'a pas fait.",
-  "Sois la version la plus forte de toi-même, chaque jour.",
-  "Le succès est la somme de petits efforts répétés chaque jour.",
-  "Crois en toi. Tu as déjà surmonté des choses plus difficiles.",
-  "Donne le meilleur de toi-même et laisse l'entraînement faire le reste.",
-  "Progresse à ton rythme — mais ne t'arrête jamais.",
-];
-
-function randomPhrase(): string {
-  return PHRASES_MOTIVATION[Math.floor(Math.random() * PHRASES_MOTIVATION.length)]!;
+async function getRandomPhrase(coachId: string): Promise<string> {
+  const [row] = await db
+    .select({ text: motivationPhrasesTable.text })
+    .from(motivationPhrasesTable)
+    .where(and(eq(motivationPhrasesTable.coachId, coachId), eq(motivationPhrasesTable.active, true)))
+    .orderBy(sql`random()`)
+    .limit(1);
+  if (row) return row.text;
+  // A coach with an empty/fully-deactivated bank still gets a phrase.
+  return DEFAULT_MOTIVATION_PHRASES[Math.floor(Math.random() * DEFAULT_MOTIVATION_PHRASES.length)]!;
 }
 
 function shouldFireToday(
@@ -145,7 +132,7 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
         );
       if (existing.length > 0) continue;
 
-      const phrase = randomPhrase();
+      const phrase = await getRandomPhrase(coach.id);
       const sessionSummary = await getSessionSummaryForAthlete(athlete.id, today);
       const body = sessionSummary ? `${phrase}\n\n📋 ${sessionSummary}` : `${phrase}\n\n🌿 Journée de récupération — profites-en pour te reposer.`;
       const title = "Bonjour ! Voici ta dose de motivation 💪";

@@ -23,6 +23,7 @@ import classesRouter from "./classes.js";
 import oneOnOneRouter from "./one-on-one.js";
 import coachAgendaRouter from "./coach-agenda.js";
 import invoicesRouter from "./invoices.js";
+import motivationPhrasesRouter from "./motivation-phrases.js";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(classesRouter);
 router.use(oneOnOneRouter);
 router.use(coachAgendaRouter);
 router.use(invoicesRouter);
+router.use(motivationPhrasesRouter);
 
 export default router;

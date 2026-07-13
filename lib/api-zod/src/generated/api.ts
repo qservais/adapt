@@ -2675,6 +2675,59 @@ export const DeleteScheduledNotificationResponse = zod.object({
 });
 
 /**
+ * @summary Get the coach's motivation phrase bank
+ */
+export const GetMotivationPhrasesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  text: zod.string(),
+  active: zod.boolean(),
+  createdAt: zod.string().nullish(),
+});
+export const GetMotivationPhrasesResponse = zod.array(
+  GetMotivationPhrasesResponseItem,
+);
+
+/**
+ * @summary Add a motivation phrase
+ */
+export const CreateMotivationPhraseBody = zod.object({
+  text: zod.string(),
+});
+
+/**
+ * @summary Update a motivation phrase
+ */
+export const UpdateMotivationPhraseParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateMotivationPhraseBody = zod.object({
+  text: zod.string().optional(),
+  active: zod.boolean().optional(),
+});
+
+export const UpdateMotivationPhraseResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  text: zod.string(),
+  active: zod.boolean(),
+  createdAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a motivation phrase
+ */
+export const DeleteMotivationPhraseParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteMotivationPhraseResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Get coach challenges
  */
 export const GetCoachChallengesResponseItem = zod.object({

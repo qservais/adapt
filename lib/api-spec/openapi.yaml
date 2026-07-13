@@ -2314,6 +2314,80 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /coach/motivation-phrases:
+    get:
+      operationId: getMotivationPhrases
+      tags: [coach]
+      summary: Get the coach's motivation phrase bank
+      responses:
+        "200":
+          description: Motivation phrases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MotivationPhrase"
+    post:
+      operationId: createMotivationPhrase
+      tags: [coach]
+      summary: Add a motivation phrase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMotivationPhraseRequest"
+      responses:
+        "201":
+          description: Phrase created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MotivationPhrase"
+
+  /coach/motivation-phrases/{id}:
+    put:
+      operationId: updateMotivationPhrase
+      tags: [coach]
+      summary: Update a motivation phrase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMotivationPhraseRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MotivationPhrase"
+    delete:
+      operationId: deleteMotivationPhrase
+      tags: [coach]
+      summary: Delete a motivation phrase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /coach/challenges:
     get:
       operationId: getCoachChallenges
@@ -5544,6 +5618,42 @@ components:
           additionalProperties: true
         sendHour:
           type: integer
+        active:
+          type: boolean
+
+    MotivationPhrase:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        text:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - coachId
+        - text
+        - active
+
+    CreateMotivationPhraseRequest:
+      type: object
+      properties:
+        text:
+          type: string
+      required:
+        - text
+
+    UpdateMotivationPhraseRequest:
+      type: object
+      properties:
+        text:
+          type: string
         active:
           type: boolean
 

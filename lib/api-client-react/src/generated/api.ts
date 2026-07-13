@@ -55,6 +55,7 @@ import type {
   CreateCheckoutSessionRequest,
   CreateCreditNoteRequest,
   CreateExerciseRequest,
+  CreateMotivationPhraseRequest,
   CreateOneOnOneRequest,
   CreatePerformanceTestRequest,
   CreateProgramRequest,
@@ -90,6 +91,7 @@ import type {
   MissedSessionsResponse,
   MorningNotifHourBody,
   MorningNotifHourResponse,
+  MotivationPhrase,
   NotificationPreferences,
   NotificationsResponse,
   OverrideRequest,
@@ -121,6 +123,7 @@ import type {
   SuccessResponse,
   UpcomingSession,
   UpdateAppointmentRequest,
+  UpdateMotivationPhraseRequest,
   UpdateNotificationPreferencesRequest,
   UpdateProfileRequest,
   UpdateProgramRequest,
@@ -9446,6 +9449,340 @@ export const useDeleteScheduledNotification = <
   TContext
 > => {
   return useMutation(getDeleteScheduledNotificationMutationOptions(options));
+};
+
+/**
+ * @summary Get the coach's motivation phrase bank
+ */
+export const getGetMotivationPhrasesUrl = () => {
+  return `/api/coach/motivation-phrases`;
+};
+
+export const getMotivationPhrases = async (
+  options?: RequestInit,
+): Promise<MotivationPhrase[]> => {
+  return customFetch<MotivationPhrase[]>(getGetMotivationPhrasesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMotivationPhrasesQueryKey = () => {
+  return [`/api/coach/motivation-phrases`] as const;
+};
+
+export const getGetMotivationPhrasesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMotivationPhrases>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMotivationPhrases>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMotivationPhrasesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMotivationPhrases>>
+  > = ({ signal }) => getMotivationPhrases({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMotivationPhrases>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMotivationPhrasesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMotivationPhrases>>
+>;
+export type GetMotivationPhrasesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the coach's motivation phrase bank
+ */
+
+export function useGetMotivationPhrases<
+  TData = Awaited<ReturnType<typeof getMotivationPhrases>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMotivationPhrases>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMotivationPhrasesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a motivation phrase
+ */
+export const getCreateMotivationPhraseUrl = () => {
+  return `/api/coach/motivation-phrases`;
+};
+
+export const createMotivationPhrase = async (
+  createMotivationPhraseRequest: CreateMotivationPhraseRequest,
+  options?: RequestInit,
+): Promise<MotivationPhrase> => {
+  return customFetch<MotivationPhrase>(getCreateMotivationPhraseUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createMotivationPhraseRequest),
+  });
+};
+
+export const getCreateMotivationPhraseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMotivationPhrase>>,
+    TError,
+    { data: BodyType<CreateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createMotivationPhrase>>,
+  TError,
+  { data: BodyType<CreateMotivationPhraseRequest> },
+  TContext
+> => {
+  const mutationKey = ["createMotivationPhrase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMotivationPhrase>>,
+    { data: BodyType<CreateMotivationPhraseRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createMotivationPhrase(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateMotivationPhraseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createMotivationPhrase>>
+>;
+export type CreateMotivationPhraseMutationBody =
+  BodyType<CreateMotivationPhraseRequest>;
+export type CreateMotivationPhraseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a motivation phrase
+ */
+export const useCreateMotivationPhrase = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMotivationPhrase>>,
+    TError,
+    { data: BodyType<CreateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createMotivationPhrase>>,
+  TError,
+  { data: BodyType<CreateMotivationPhraseRequest> },
+  TContext
+> => {
+  return useMutation(getCreateMotivationPhraseMutationOptions(options));
+};
+
+/**
+ * @summary Update a motivation phrase
+ */
+export const getUpdateMotivationPhraseUrl = (id: string) => {
+  return `/api/coach/motivation-phrases/${id}`;
+};
+
+export const updateMotivationPhrase = async (
+  id: string,
+  updateMotivationPhraseRequest: UpdateMotivationPhraseRequest,
+  options?: RequestInit,
+): Promise<MotivationPhrase> => {
+  return customFetch<MotivationPhrase>(getUpdateMotivationPhraseUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateMotivationPhraseRequest),
+  });
+};
+
+export const getUpdateMotivationPhraseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMotivationPhrase>>,
+    TError,
+    { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMotivationPhrase>>,
+  TError,
+  { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateMotivationPhrase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMotivationPhrase>>,
+    { id: string; data: BodyType<UpdateMotivationPhraseRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateMotivationPhrase(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMotivationPhraseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMotivationPhrase>>
+>;
+export type UpdateMotivationPhraseMutationBody =
+  BodyType<UpdateMotivationPhraseRequest>;
+export type UpdateMotivationPhraseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a motivation phrase
+ */
+export const useUpdateMotivationPhrase = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMotivationPhrase>>,
+    TError,
+    { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMotivationPhrase>>,
+  TError,
+  { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateMotivationPhraseMutationOptions(options));
+};
+
+/**
+ * @summary Delete a motivation phrase
+ */
+export const getDeleteMotivationPhraseUrl = (id: string) => {
+  return `/api/coach/motivation-phrases/${id}`;
+};
+
+export const deleteMotivationPhrase = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteMotivationPhraseUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteMotivationPhraseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteMotivationPhrase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteMotivationPhrase(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteMotivationPhraseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteMotivationPhrase>>
+>;
+
+export type DeleteMotivationPhraseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a motivation phrase
+ */
+export const useDeleteMotivationPhrase = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteMotivationPhraseMutationOptions(options));
 };
 
 /**

@@ -859,7 +859,14 @@
       "Thu",
       "Fri",
       "Sat"
-    ]
+    ],
+    "phrases_title": "Motivation phrase bank",
+    "phrases_desc": "Customize the phrases used for morning motivation. An active phrase is picked at random each day.",
+    "phrases_add_placeholder": "Add a new phrase...",
+    "phrases_empty": "No custom phrases yet — the default phrases are used.",
+    "phrase_added": "Phrase added",
+    "phrase_deleted": "Phrase deleted",
+    "phrase_delete_confirm": "Delete this phrase?"
   },
   "alerts": {
     "title": "ALERTS FEED",

@@ -859,7 +859,14 @@
       "Jeu",
       "Ven",
       "Sam"
-    ]
+    ],
+    "phrases_title": "Banque de phrases motivantes",
+    "phrases_desc": "Personnalisez les phrases utilisées pour la motivation matinale. Une phrase active est tirée au sort chaque jour.",
+    "phrases_add_placeholder": "Ajouter une nouvelle phrase...",
+    "phrases_empty": "Aucune phrase personnalisée — les phrases par défaut sont utilisées.",
+    "phrase_added": "Phrase ajoutée",
+    "phrase_deleted": "Phrase supprimée",
+    "phrase_delete_confirm": "Supprimer cette phrase ?"
   },
   "alerts": {
     "title": "FLUX D'ALERTES",

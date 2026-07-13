@@ -1463,6 +1463,23 @@ export interface UpdateScheduledNotificationRequest {
   active?: boolean;
 }
 
+export interface MotivationPhrase {
+  id: string;
+  coachId: string;
+  text: string;
+  active: boolean;
+  createdAt?: string | null;
+}
+
+export interface CreateMotivationPhraseRequest {
+  text: string;
+}
+
+export interface UpdateMotivationPhraseRequest {
+  text?: string;
+  active?: boolean;
+}
+
 export type CoachAppointmentStatus =
   (typeof CoachAppointmentStatus)[keyof typeof CoachAppointmentStatus];
 

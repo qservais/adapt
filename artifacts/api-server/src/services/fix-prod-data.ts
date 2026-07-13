@@ -1,7 +1,8 @@
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
+import { usersTable, motivationPhrasesTable } from "@workspace/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
+import { DEFAULT_MOTIVATION_PHRASES } from "../lib/motivation-phrases-seed.js";
 
 export async function runSchemaMigrations(): Promise<void> {
   // Drop NOT NULL on athlete_id so templates (athleteId=null) can be inserted
@@ -425,6 +426,43 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.info("runSchemaMigrations: notifications.source_type/source_id OK");
   } catch (err) {
     logger.error({ err }, "runSchemaMigrations: FATAL – notifications source columns failed");
+    throw err;
+  }
+
+  // Mouv'Up Phase 8 — motivation_phrases table (per-coach bank, replaces the
+  // hardcoded PHRASES_MOTIVATION array). Seeds every coach that has none yet
+  // with the original 20 French phrases, so morning notifications keep
+  // working unchanged until a coach customizes their own bank.
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS motivation_phrases (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        text text NOT NULL,
+        active boolean NOT NULL DEFAULT true,
+        created_at timestamptz DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_motivation_phrases_coach ON motivation_phrases(coach_id)`);
+
+    const coachesWithoutPhrases = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.role, "coach"),
+          sql`NOT EXISTS (SELECT 1 FROM motivation_phrases mp WHERE mp.coach_id = ${usersTable.id})`
+        )
+      );
+    for (const coach of coachesWithoutPhrases) {
+      await db.insert(motivationPhrasesTable).values(
+        DEFAULT_MOTIVATION_PHRASES.map((text) => ({ coachId: coach.id, text }))
+      );
+    }
+
+    logger.info({ seededCoaches: coachesWithoutPhrases.length }, "runSchemaMigrations: motivation_phrases OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – motivation_phrases failed");
     throw err;
   }
 }
