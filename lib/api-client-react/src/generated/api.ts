@@ -45,6 +45,7 @@ import type {
   CoachChallenge,
   CoachClassOccurrence,
   CoachLinkRequest,
+  CoachShopPack,
   CoachUnlinkRequest,
   CoachUpdateAthleteRequest,
   CompleteSessionRequest,
@@ -1304,7 +1305,7 @@ export function useGetMyCredits<
 }
 
 /**
- * @summary List the coach's packs (including inactive)
+ * @summary List the coach's packs (including inactive), each with its active promo if any
  */
 export const getGetCoachShopPacksUrl = () => {
   return `/api/coach/shop/packs`;
@@ -1312,8 +1313,8 @@ export const getGetCoachShopPacksUrl = () => {
 
 export const getCoachShopPacks = async (
   options?: RequestInit,
-): Promise<ShopPack[]> => {
-  return customFetch<ShopPack[]>(getGetCoachShopPacksUrl(), {
+): Promise<CoachShopPack[]> => {
+  return customFetch<CoachShopPack[]>(getGetCoachShopPacksUrl(), {
     ...options,
     method: "GET",
   });
@@ -1355,7 +1356,7 @@ export type GetCoachShopPacksQueryResult = NonNullable<
 export type GetCoachShopPacksQueryError = ErrorType<unknown>;
 
 /**
- * @summary List the coach's packs (including inactive)
+ * @summary List the coach's packs (including inactive), each with its active promo if any
  */
 
 export function useGetCoachShopPacks<
@@ -1804,6 +1805,82 @@ export const useEndShopPromo = <
 > => {
   return useMutation(getEndShopPromoMutationOptions(options));
 };
+
+/**
+ * @summary List the coach's subscription plans (including inactive)
+ */
+export const getGetCoachShopSubscriptionsUrl = () => {
+  return `/api/coach/shop/subscriptions`;
+};
+
+export const getCoachShopSubscriptions = async (
+  options?: RequestInit,
+): Promise<SubscriptionPlan[]> => {
+  return customFetch<SubscriptionPlan[]>(getGetCoachShopSubscriptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachShopSubscriptionsQueryKey = () => {
+  return [`/api/coach/shop/subscriptions`] as const;
+};
+
+export const getGetCoachShopSubscriptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachShopSubscriptionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>
+  > = ({ signal }) => getCoachShopSubscriptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachShopSubscriptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachShopSubscriptions>>
+>;
+export type GetCoachShopSubscriptionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the coach's subscription plans (including inactive)
+ */
+
+export function useGetCoachShopSubscriptions<
+  TData = Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachShopSubscriptionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Update a subscription plan's price/engagement

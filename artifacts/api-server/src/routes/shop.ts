@@ -147,7 +147,14 @@ const packSchema = z.object({
 router.get("/coach/shop/packs", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const packs = await db.select().from(shopPacksTable).where(eq(shopPacksTable.coachId, req.user!.userId)).orderBy(asc(shopPacksTable.createdAt));
-    res.json(packs);
+    const withPromos = await Promise.all(
+      packs.map(async (p) => {
+        const candidates = await db.select().from(shopPromosTable).where(eq(shopPromosTable.packId, p.id)).orderBy(desc(shopPromosTable.createdAt));
+        const activePromo = candidates.find((promo) => isPromoActive(promo, new Date())) ?? null;
+        return { ...p, activePromo };
+      }),
+    );
+    res.json(withPromos);
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
@@ -258,6 +265,19 @@ router.delete("/coach/shop/promos/:id", authenticate, requireRole("coach"), asyn
 });
 
 // ─── Coach: subscription plan pricing ────────────────────────────────────────
+
+router.get("/coach/shop/subscriptions", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const plans = await db
+      .select()
+      .from(subscriptionPlansTable)
+      .where(eq(subscriptionPlansTable.coachId, req.user!.userId))
+      .orderBy(asc(subscriptionPlansTable.createdAt));
+    res.json(plans);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
 
 const subPlanUpdateSchema = z.object({
   priceCents: z.number().int().min(0).optional(),

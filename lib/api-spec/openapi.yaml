@@ -347,7 +347,7 @@ paths:
     get:
       operationId: getCoachShopPacks
       tags: [shop]
-      summary: List the coach's packs (including inactive)
+      summary: List the coach's packs (including inactive), each with its active promo if any
       responses:
         "200":
           description: Packs
@@ -356,7 +356,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ShopPack"
+                  $ref: "#/components/schemas/CoachShopPack"
     post:
       operationId: createShopPack
       tags: [shop]
@@ -454,6 +454,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/shop/subscriptions:
+    get:
+      operationId: getCoachShopSubscriptions
+      tags: [shop]
+      summary: List the coach's subscription plans (including inactive)
+      responses:
+        "200":
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionPlan"
 
   /coach/shop/subscriptions/{id}:
     put:
@@ -3282,6 +3297,18 @@ components:
           required:
             - currentPriceCents
             - hasActivePromo
+
+    CoachShopPack:
+      allOf:
+        - $ref: "#/components/schemas/ShopPack"
+        - type: object
+          properties:
+            activePromo:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/ShopPromo"
+          required:
+            - activePromo
 
     UpsertShopPackRequest:
       type: object

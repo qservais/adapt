@@ -47,6 +47,7 @@ export * from "./coachAvailabilitySlot";
 export * from "./coachChallenge";
 export * from "./coachClassOccurrence";
 export * from "./coachLinkRequest";
+export * from "./coachShopPack";
 export * from "./coachUnlinkRequest";
 export * from "./coachUpdateAthleteRequest";
 export * from "./completeSessionNewPR";

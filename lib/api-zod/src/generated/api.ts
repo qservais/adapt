@@ -313,19 +313,34 @@ export const GetMyCreditsResponse = zod.object({
 });
 
 /**
- * @summary List the coach's packs (including inactive)
+ * @summary List the coach's packs (including inactive), each with its active promo if any
  */
-export const GetCoachShopPacksResponseItem = zod.object({
-  id: zod.string(),
-  coachId: zod.string(),
-  creditType: zod.enum(["collectif", "individuel"]),
-  name: zod.string(),
-  credits: zod.number(),
-  priceCents: zod.number(),
-  validityMonths: zod.number().nullish(),
-  tag: zod.string().nullish(),
-  isActive: zod.boolean(),
-});
+export const GetCoachShopPacksResponseItem = zod
+  .object({
+    id: zod.string(),
+    coachId: zod.string(),
+    creditType: zod.enum(["collectif", "individuel"]),
+    name: zod.string(),
+    credits: zod.number(),
+    priceCents: zod.number(),
+    validityMonths: zod.number().nullish(),
+    tag: zod.string().nullish(),
+    isActive: zod.boolean(),
+  })
+  .and(
+    zod.object({
+      activePromo: zod
+        .object({
+          id: zod.string(),
+          packId: zod.string(),
+          discountedPriceCents: zod.number(),
+          startsAt: zod.string(),
+          expiresAt: zod.string(),
+          createdBy: zod.string().optional(),
+        })
+        .nullable(),
+    }),
+  );
 export const GetCoachShopPacksResponse = zod.array(
   GetCoachShopPacksResponseItem,
 );
@@ -413,6 +428,23 @@ export const EndShopPromoResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });
+
+/**
+ * @summary List the coach's subscription plans (including inactive)
+ */
+export const GetCoachShopSubscriptionsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  priceCents: zod.number(),
+  presentialText: zod.string().nullish(),
+  tag: zod.string().nullish(),
+  engagementMonths: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+export const GetCoachShopSubscriptionsResponse = zod.array(
+  GetCoachShopSubscriptionsResponseItem,
+);
 
 /**
  * @summary Update a subscription plan's price/engagement

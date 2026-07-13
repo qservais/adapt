@@ -159,6 +159,19 @@ export type ShopPackWithPrice = ShopPack & {
   hasActivePromo: boolean;
 };
 
+export interface ShopPromo {
+  id: string;
+  packId: string;
+  discountedPriceCents: number;
+  startsAt: string;
+  expiresAt: string;
+  createdBy?: string;
+}
+
+export type CoachShopPack = ShopPack & {
+  activePromo: ShopPromo | null;
+};
+
 export type UpsertShopPackRequestCreditType =
   (typeof UpsertShopPackRequestCreditType)[keyof typeof UpsertShopPackRequestCreditType];
 
@@ -176,15 +189,6 @@ export interface UpsertShopPackRequest {
   priceCents?: number;
   validityMonths?: number | null;
   tag?: string | null;
-}
-
-export interface ShopPromo {
-  id: string;
-  packId: string;
-  discountedPriceCents: number;
-  startsAt: string;
-  expiresAt: string;
-  createdBy?: string;
 }
 
 export interface CreateShopPromoRequest {
