@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable, SESSION_BLOCK_TYPES } from "@workspace/db";
 import { eq, and, inArray, count, isNull, gte, sql } from "drizzle-orm";
@@ -8,6 +9,7 @@ import { notifyUser } from "../services/notify.service.js";
 import { t } from "../locales/index.js";
 import { copyProgramForAthlete } from "../services/program-copy.service.js";
 import { logger } from "../lib/logger.js";
+import { convertFreeTextToAdaptFormat, AiNotConfiguredError } from "../services/ai-session-converter.service.js";
 
 const ALL_SESSION_TYPES = [
   "strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning",
@@ -16,6 +18,39 @@ const ALL_SESSION_TYPES = [
 type SessionType = typeof ALL_SESSION_TYPES[number];
 
 const router = Router();
+
+// Each call is a paid external API request — throttle beyond normal usage,
+// not just abuse (a coach converting one session at a time won't come close).
+const convertSessionTextLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "TOO_MANY_REQUESTS", message: "Trop de conversions IA. Réessaie dans quelques minutes." } },
+});
+
+const convertSessionTextSchema = z.object({
+  text: z.string().min(1).max(20000),
+});
+
+router.post("/programs/convert-session-text", authenticate, requireRole("coach"), convertSessionTextLimiter, async (req, res) => {
+  const parsed = convertSessionTextSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const convertedText = await convertFreeTextToAdaptFormat(parsed.data.text);
+    res.json({ convertedText });
+  } catch (err) {
+    if (err instanceof AiNotConfiguredError) {
+      res.status(503).json({ error: { code: "AI_NOT_CONFIGURED", message: "La conversion IA n'est pas configurée sur ce serveur" } });
+      return;
+    }
+    logger.error({ err }, "convert-session-text failed");
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "La conversion IA a échoué" } });
+  }
+});
 
 router.get("/programs", authenticate, requireRole("coach"), async (req, res) => {
   try {

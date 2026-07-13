@@ -1338,6 +1338,19 @@ export const DeleteExerciseLogResponse = zod.object({
 });
 
 /**
+ * @summary Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+ */
+export const convertSessionTextWithAiBodyTextMax = 20000;
+
+export const ConvertSessionTextWithAiBody = zod.object({
+  text: zod.string().min(1).max(convertSessionTextWithAiBodyTextMax),
+});
+
+export const ConvertSessionTextWithAiResponse = zod.object({
+  convertedText: zod.string(),
+});
+
+/**
  * @summary Get coach programs
  */
 export const GetProgramsResponseItem = zod.object({

@@ -1593,6 +1593,18 @@ export interface SendToAthletesResponse {
   results: SendToAthletesResultItem[];
 }
 
+export interface ConvertSessionTextRequest {
+  /**
+   * @minLength 1
+   * @maxLength 20000
+   */
+  text: string;
+}
+
+export interface ConvertSessionTextResponse {
+  convertedText: string;
+}
+
 export type GiftCredits201 = {
   success?: boolean;
   recipientCount?: number;

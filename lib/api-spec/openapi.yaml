@@ -1283,6 +1283,31 @@ paths:
                 $ref: "#/components/schemas/SuccessResponse"
 
   # PROGRAMS
+  /programs/convert-session-text:
+    post:
+      operationId: convertSessionTextWithAi
+      tags: [programs]
+      summary: Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertSessionTextRequest"
+      responses:
+        "200":
+          description: Converted text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvertSessionTextResponse"
+        "503":
+          description: AI conversion not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /programs:
     get:
       operationId: getPrograms
@@ -5742,4 +5767,22 @@ components:
             $ref: "#/components/schemas/SendToAthletesResultItem"
       required:
         - results
+
+    ConvertSessionTextRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 20000
+      required:
+        - text
+
+    ConvertSessionTextResponse:
+      type: object
+      properties:
+        convertedText:
+          type: string
+      required:
+        - convertedText
 

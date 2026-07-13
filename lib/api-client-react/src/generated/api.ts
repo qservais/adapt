@@ -48,6 +48,8 @@ import type {
   CoachUpdateAthleteRequest,
   CompleteSessionRequest,
   CompleteSessionResult,
+  ConvertSessionTextRequest,
+  ConvertSessionTextResponse,
   CreateAppointmentRequest,
   CreateChallengeRequest,
   CreateCheckoutSessionRequest,
@@ -5176,6 +5178,96 @@ export const useDeleteExerciseLog = <
   TContext
 > => {
   return useMutation(getDeleteExerciseLogMutationOptions(options));
+};
+
+/**
+ * @summary Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+ */
+export const getConvertSessionTextWithAiUrl = () => {
+  return `/api/programs/convert-session-text`;
+};
+
+export const convertSessionTextWithAi = async (
+  convertSessionTextRequest: ConvertSessionTextRequest,
+  options?: RequestInit,
+): Promise<ConvertSessionTextResponse> => {
+  return customFetch<ConvertSessionTextResponse>(
+    getConvertSessionTextWithAiUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(convertSessionTextRequest),
+    },
+  );
+};
+
+export const getConvertSessionTextWithAiMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+    TError,
+    { data: BodyType<ConvertSessionTextRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+  TError,
+  { data: BodyType<ConvertSessionTextRequest> },
+  TContext
+> => {
+  const mutationKey = ["convertSessionTextWithAi"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+    { data: BodyType<ConvertSessionTextRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return convertSessionTextWithAi(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConvertSessionTextWithAiMutationResult = NonNullable<
+  Awaited<ReturnType<typeof convertSessionTextWithAi>>
+>;
+export type ConvertSessionTextWithAiMutationBody =
+  BodyType<ConvertSessionTextRequest>;
+export type ConvertSessionTextWithAiMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+ */
+export const useConvertSessionTextWithAi = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+    TError,
+    { data: BodyType<ConvertSessionTextRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+  TError,
+  { data: BodyType<ConvertSessionTextRequest> },
+  TContext
+> => {
+  return useMutation(getConvertSessionTextWithAiMutationOptions(options));
 };
 
 /**

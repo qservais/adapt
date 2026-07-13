@@ -50,6 +50,8 @@ export * from "./completeSessionRequest";
 export * from "./completeSessionRequestExercisesItem";
 export * from "./completeSessionRequestPerceivedDifficulty";
 export * from "./completeSessionResult";
+export * from "./convertSessionTextRequest";
+export * from "./convertSessionTextResponse";
 export * from "./createAppointmentRequest";
 export * from "./createChallengeRequest";
 export * from "./createChallengeRequestMetric";

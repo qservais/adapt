@@ -10,11 +10,12 @@ import { Input } from "@/components/ui/input";
 import {
   FileText, Loader2, CheckCircle2, AlertCircle,
   ChevronRight, X, Search, RotateCcw, ClipboardPaste,
-  Layers, Plus,
+  Layers, Plus, Sparkles,
 } from "lucide-react";
 import { cn } from "@/components/ui/mode-badge";
-import { useGetExercises, ExerciseData } from "@workspace/api-client-react";
+import { useGetExercises, ExerciseData, useConvertSessionTextWithAi } from "@workspace/api-client-react";
 import { BlockDraft, BlockType, ExerciseRow, emptyBlock, BLOCK_TYPE_META } from "./program-editor";
+import { useToast } from "@/hooks/use-toast";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -654,6 +655,8 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
   const [text, setText] = useState("");
   const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
   const [isParsing, setIsParsing] = useState(false);
+  const { toast } = useToast();
+  const convertMutation = useConvertSessionTextWithAi();
 
   const { data: exercises } = useGetExercises(
     {},
@@ -671,6 +674,22 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
   const matchedCount = flatExercises.filter(e => e.matchedExercise).length;
   const totalCount = flatExercises.length;
   const unmatchedCount = totalCount - matchedCount;
+
+  const handleAiConvert = useCallback(async () => {
+    if (!text.trim()) return;
+    try {
+      const result = await convertMutation.mutateAsync({ data: { text } });
+      setText(result.convertedText);
+      toast({ title: "Texte reformaté par l'IA — vérifie le résultat avant d'analyser." });
+    } catch (err: any) {
+      const isNotConfigured = err?.status === 503;
+      toast({
+        title: isNotConfigured ? "Conversion IA indisponible sur ce serveur" : "Échec de la conversion IA",
+        description: isNotConfigured ? undefined : "Tu peux toujours coller ta séance au format attendu ci-dessous.",
+        variant: "destructive",
+      });
+    }
+  }, [text, convertMutation, toast]);
 
   const handleParse = useCallback(() => {
     if (!text.trim()) return;
@@ -750,10 +769,23 @@ Planche | 3x45s | repos 60s | Gainage serré`}</pre>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-muted-foreground uppercase tracking-wider">Colle ta séance ici</label>
-                <button type="button" onClick={() => setText(EXAMPLE_TEXT)}
-                  className="text-[10px] text-primary hover:text-primary/80 transition-colors">
-                  Charger l'exemple
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAiConvert}
+                    disabled={!text.trim() || convertMutation.isPending}
+                    className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {convertMutation.isPending
+                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                      : <Sparkles className="w-3 h-3" />}
+                    Reformater avec l'IA
+                  </button>
+                  <button type="button" onClick={() => setText(EXAMPLE_TEXT)}
+                    className="text-[10px] text-primary hover:text-primary/80 transition-colors">
+                    Charger l'exemple
+                  </button>
+                </div>
               </div>
               <textarea
                 value={text}
