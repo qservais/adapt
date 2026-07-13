@@ -1302,6 +1302,23 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            onPress={() => router.push("/progression" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>📈</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Ta progression</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
+                  Score ADAPT et derniers records
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => router.push("/resource-files" as any)}
             style={styles.quickLinkRow}
             activeOpacity={0.7}
