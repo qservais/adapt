@@ -18,6 +18,7 @@ import appointmentsRouter from "./appointments.js";
 import statsRouter from "./stats.js";
 import userRoutinesRouter from "./user-routines.js";
 import studioSettingsRouter from "./studio-settings.js";
+import shopRouter from "./shop.js";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(appointmentsRouter);
 router.use(statsRouter);
 router.use(userRoutinesRouter);
 router.use(studioSettingsRouter);
+router.use(shopRouter);
 
 export default router;

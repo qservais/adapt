@@ -8,7 +8,8 @@
     "build": "tsx ./build.ts",
     "seed": "tsx ./src/scripts/seed-prod.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:library": "tsx tests/exercises-library.test.ts"
+    "test:library": "tsx tests/exercises-library.test.ts",
+    "test:credit-ledger": "tsx tests/credit-ledger.test.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
@@ -29,6 +30,7 @@
     "pino-http": "^10",
     "resend": "^6.12.2",
     "sharp": "^0.34.5",
+    "stripe": "^22.3.1",
     "web-push": "^3.6.7",
     "zod": "catalog:"
   },

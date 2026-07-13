@@ -112,6 +112,109 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – studio_settings creation failed");
     throw err;
   }
+
+  // Mouv'Up Phase 2 — shop catalogue (packs/promos/subscription plans)
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS shop_packs (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        credit_type varchar(20) NOT NULL,
+        name varchar(100) NOT NULL,
+        credits integer NOT NULL,
+        price_cents integer NOT NULL,
+        validity_months integer,
+        tag varchar(30),
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS shop_promos (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        pack_id uuid NOT NULL REFERENCES shop_packs(id) ON DELETE CASCADE,
+        discounted_price_cents integer NOT NULL,
+        starts_at timestamptz NOT NULL DEFAULT now(),
+        expires_at timestamptz NOT NULL,
+        created_by uuid NOT NULL REFERENCES users(id),
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS shop_promos_pack_idx ON shop_promos(pack_id, expires_at)`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS subscription_plans (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name varchar(100) NOT NULL,
+        price_cents integer NOT NULL,
+        presential_text varchar(100),
+        tag varchar(30),
+        engagement_months integer,
+        is_active boolean NOT NULL DEFAULT true,
+        stripe_price_id varchar(255),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS subscription_memberships (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        athlete_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        plan_id uuid NOT NULL REFERENCES subscription_plans(id),
+        stripe_subscription_id varchar(255),
+        status varchar(20) NOT NULL DEFAULT 'active',
+        started_at timestamptz NOT NULL DEFAULT now(),
+        engagement_ends_at timestamptz,
+        current_period_end timestamptz,
+        canceled_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    logger.info("runSchemaMigrations: shop catalogue tables OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – shop catalogue tables failed");
+    throw err;
+  }
+
+  // Mouv'Up Phase 2 — credit ledger (batches with per-purchase expiry, not a flat counter)
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS credit_batches (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        athlete_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        credit_type varchar(20) NOT NULL,
+        credits_total integer NOT NULL,
+        credits_remaining integer NOT NULL,
+        source varchar(20) NOT NULL,
+        pack_id uuid REFERENCES shop_packs(id),
+        stripe_payment_intent_id varchar(255),
+        price_paid_cents integer,
+        purchased_at timestamptz NOT NULL DEFAULT now(),
+        expires_at timestamptz,
+        note text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS credit_batches_athlete_idx ON credit_batches(athlete_id, credit_type, expires_at)`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS credit_batches_payment_intent_idx ON credit_batches(stripe_payment_intent_id) WHERE stripe_payment_intent_id IS NOT NULL`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS credit_transactions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        athlete_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        batch_id uuid NOT NULL REFERENCES credit_batches(id) ON DELETE CASCADE,
+        delta integer NOT NULL,
+        reason varchar(30) NOT NULL,
+        related_booking_id uuid,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS credit_transactions_booking_idx ON credit_transactions(related_booking_id)`);
+    logger.info("runSchemaMigrations: credit ledger tables OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – credit ledger tables failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

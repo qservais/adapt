@@ -36,6 +36,8 @@ tags:
     description: Athlete-specific endpoints
   - name: studio
     description: Studio settings (Mouv'Up — WhatsApp number, VAT regime, cancellation window...)
+  - name: shop
+    description: Credit packs, subscriptions, promos, and the athlete credit ledger
 
 security:
   - bearerAuth: []
@@ -267,6 +269,236 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  # SHOP
+  /shop/packs:
+    get:
+      operationId: getShopPacks
+      tags: [shop]
+      summary: List active credit packs with resolved current price (promo-aware)
+      responses:
+        "200":
+          description: Packs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopPackWithPrice"
+
+  /shop/subscriptions:
+    get:
+      operationId: getShopSubscriptions
+      tags: [shop]
+      summary: List active subscription plans
+      responses:
+        "200":
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionPlan"
+
+  /shop/checkout-session:
+    post:
+      operationId: createCheckoutSession
+      tags: [shop]
+      summary: Start a Stripe Checkout session for a pack or subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "503":
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/credits:
+    get:
+      operationId: getMyCredits
+      tags: [shop]
+      summary: Get the current athlete's credit balances
+      responses:
+        "200":
+          description: Balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditBalances"
+
+  /coach/shop/packs:
+    get:
+      operationId: getCoachShopPacks
+      tags: [shop]
+      summary: List the coach's packs (including inactive)
+      responses:
+        "200":
+          description: Packs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopPack"
+    post:
+      operationId: createShopPack
+      tags: [shop]
+      summary: Create a new credit pack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertShopPackRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPack"
+
+  /coach/shop/packs/{id}:
+    put:
+      operationId: updateShopPack
+      tags: [shop]
+      summary: Update a credit pack
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertShopPackRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPack"
+    delete:
+      operationId: deleteShopPack
+      tags: [shop]
+      summary: Deactivate a credit pack (soft delete — past purchases stay valid)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/shop/promos:
+    post:
+      operationId: createShopPromo
+      tags: [shop]
+      summary: Launch a time-limited promo on a pack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShopPromoRequest"
+      responses:
+        "201":
+          description: Promo created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPromo"
+
+  /coach/shop/promos/{id}:
+    delete:
+      operationId: endShopPromo
+      tags: [shop]
+      summary: End a promo immediately
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/shop/subscriptions/{id}:
+    put:
+      operationId: updateSubscriptionPlan
+      tags: [shop]
+      summary: Update a subscription plan's price/engagement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubscriptionPlanRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionPlan"
+
+  /coach/credits/gift:
+    post:
+      operationId: giftCredits
+      tags: [shop]
+      summary: Gift credits to one or more athletes (no charge)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GiftCreditsRequest"
+      responses:
+        "201":
+          description: Credits gifted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  recipientCount:
+                    type: integer
 
   # USERS
   /users/me:
@@ -2049,6 +2281,211 @@ components:
         accountantEmail:
           type: string
           nullable: true
+
+    ShopPack:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        name:
+          type: string
+        credits:
+          type: integer
+        priceCents:
+          type: integer
+        validityMonths:
+          type: integer
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - creditType
+        - name
+        - credits
+        - priceCents
+        - isActive
+
+    ShopPackWithPrice:
+      allOf:
+        - $ref: "#/components/schemas/ShopPack"
+        - type: object
+          properties:
+            currentPriceCents:
+              type: integer
+              description: List price, or the active promo price if one currently applies
+            hasActivePromo:
+              type: boolean
+          required:
+            - currentPriceCents
+            - hasActivePromo
+
+    UpsertShopPackRequest:
+      type: object
+      properties:
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        name:
+          type: string
+        credits:
+          type: integer
+          minimum: 1
+        priceCents:
+          type: integer
+          minimum: 0
+        validityMonths:
+          type: integer
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+
+    ShopPromo:
+      type: object
+      properties:
+        id:
+          type: string
+        packId:
+          type: string
+        discountedPriceCents:
+          type: integer
+        startsAt:
+          type: string
+        expiresAt:
+          type: string
+        createdBy:
+          type: string
+      required:
+        - id
+        - packId
+        - discountedPriceCents
+        - startsAt
+        - expiresAt
+
+    CreateShopPromoRequest:
+      type: object
+      properties:
+        packId:
+          type: string
+        discountedPriceCents:
+          type: integer
+          minimum: 0
+        durationDays:
+          type: integer
+          minimum: 1
+          maximum: 90
+      required:
+        - packId
+        - discountedPriceCents
+        - durationDays
+
+    SubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        name:
+          type: string
+        priceCents:
+          type: integer
+        presentialText:
+          type: string
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+        engagementMonths:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - name
+        - priceCents
+        - isActive
+
+    UpdateSubscriptionPlanRequest:
+      type: object
+      properties:
+        priceCents:
+          type: integer
+          minimum: 0
+        engagementMonths:
+          type: integer
+          nullable: true
+
+    CreateCheckoutSessionRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [pack, subscription]
+        id:
+          type: string
+        successUrl:
+          type: string
+        cancelUrl:
+          type: string
+      required:
+        - type
+        - id
+        - successUrl
+        - cancelUrl
+
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        checkoutUrl:
+          type: string
+          nullable: true
+      required:
+        - checkoutUrl
+
+    CreditBalances:
+      type: object
+      properties:
+        collectif:
+          type: integer
+        individuel:
+          type: integer
+      required:
+        - collectif
+        - individuel
+
+    GiftCreditsRequest:
+      type: object
+      properties:
+        athleteIds:
+          type: array
+          items:
+            type: string
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 50
+        message:
+          type: string
+      required:
+        - athleteIds
+        - creditType
+        - quantity
 
     RefreshRequest:
       type: object

@@ -247,6 +247,214 @@ export const UpdateStudioSettingsResponse = zod.object({
 });
 
 /**
+ * @summary List active credit packs with resolved current price (promo-aware)
+ */
+export const GetShopPacksResponseItem = zod
+  .object({
+    id: zod.string(),
+    coachId: zod.string(),
+    creditType: zod.enum(["collectif", "individuel"]),
+    name: zod.string(),
+    credits: zod.number(),
+    priceCents: zod.number(),
+    validityMonths: zod.number().nullish(),
+    tag: zod.string().nullish(),
+    isActive: zod.boolean(),
+  })
+  .and(
+    zod.object({
+      currentPriceCents: zod
+        .number()
+        .describe(
+          "List price, or the active promo price if one currently applies",
+        ),
+      hasActivePromo: zod.boolean(),
+    }),
+  );
+export const GetShopPacksResponse = zod.array(GetShopPacksResponseItem);
+
+/**
+ * @summary List active subscription plans
+ */
+export const GetShopSubscriptionsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  priceCents: zod.number(),
+  presentialText: zod.string().nullish(),
+  tag: zod.string().nullish(),
+  engagementMonths: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+export const GetShopSubscriptionsResponse = zod.array(
+  GetShopSubscriptionsResponseItem,
+);
+
+/**
+ * @summary Start a Stripe Checkout session for a pack or subscription
+ */
+export const CreateCheckoutSessionBody = zod.object({
+  type: zod.enum(["pack", "subscription"]),
+  id: zod.string(),
+  successUrl: zod.string(),
+  cancelUrl: zod.string(),
+});
+
+export const CreateCheckoutSessionResponse = zod.object({
+  checkoutUrl: zod.string().nullable(),
+});
+
+/**
+ * @summary Get the current athlete's credit balances
+ */
+export const GetMyCreditsResponse = zod.object({
+  collectif: zod.number(),
+  individuel: zod.number(),
+});
+
+/**
+ * @summary List the coach's packs (including inactive)
+ */
+export const GetCoachShopPacksResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  creditType: zod.enum(["collectif", "individuel"]),
+  name: zod.string(),
+  credits: zod.number(),
+  priceCents: zod.number(),
+  validityMonths: zod.number().nullish(),
+  tag: zod.string().nullish(),
+  isActive: zod.boolean(),
+});
+export const GetCoachShopPacksResponse = zod.array(
+  GetCoachShopPacksResponseItem,
+);
+
+/**
+ * @summary Create a new credit pack
+ */
+
+export const createShopPackBodyPriceCentsMin = 0;
+
+export const CreateShopPackBody = zod.object({
+  creditType: zod.enum(["collectif", "individuel"]).optional(),
+  name: zod.string().optional(),
+  credits: zod.number().min(1).optional(),
+  priceCents: zod.number().min(createShopPackBodyPriceCentsMin).optional(),
+  validityMonths: zod.number().nullish(),
+  tag: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a credit pack
+ */
+export const UpdateShopPackParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateShopPackBodyPriceCentsMin = 0;
+
+export const UpdateShopPackBody = zod.object({
+  creditType: zod.enum(["collectif", "individuel"]).optional(),
+  name: zod.string().optional(),
+  credits: zod.number().min(1).optional(),
+  priceCents: zod.number().min(updateShopPackBodyPriceCentsMin).optional(),
+  validityMonths: zod.number().nullish(),
+  tag: zod.string().nullish(),
+});
+
+export const UpdateShopPackResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  creditType: zod.enum(["collectif", "individuel"]),
+  name: zod.string(),
+  credits: zod.number(),
+  priceCents: zod.number(),
+  validityMonths: zod.number().nullish(),
+  tag: zod.string().nullish(),
+  isActive: zod.boolean(),
+});
+
+/**
+ * @summary Deactivate a credit pack (soft delete — past purchases stay valid)
+ */
+export const DeleteShopPackParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteShopPackResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Launch a time-limited promo on a pack
+ */
+export const createShopPromoBodyDiscountedPriceCentsMin = 0;
+
+export const createShopPromoBodyDurationDaysMax = 90;
+
+export const CreateShopPromoBody = zod.object({
+  packId: zod.string(),
+  discountedPriceCents: zod
+    .number()
+    .min(createShopPromoBodyDiscountedPriceCentsMin),
+  durationDays: zod.number().min(1).max(createShopPromoBodyDurationDaysMax),
+});
+
+/**
+ * @summary End a promo immediately
+ */
+export const EndShopPromoParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const EndShopPromoResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Update a subscription plan's price/engagement
+ */
+export const UpdateSubscriptionPlanParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateSubscriptionPlanBodyPriceCentsMin = 0;
+
+export const UpdateSubscriptionPlanBody = zod.object({
+  priceCents: zod
+    .number()
+    .min(updateSubscriptionPlanBodyPriceCentsMin)
+    .optional(),
+  engagementMonths: zod.number().nullish(),
+});
+
+export const UpdateSubscriptionPlanResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  priceCents: zod.number(),
+  presentialText: zod.string().nullish(),
+  tag: zod.string().nullish(),
+  engagementMonths: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+
+/**
+ * @summary Gift credits to one or more athletes (no charge)
+ */
+export const giftCreditsBodyQuantityMax = 50;
+
+export const GiftCreditsBody = zod.object({
+  athleteIds: zod.array(zod.string()),
+  creditType: zod.enum(["collectif", "individuel"]),
+  quantity: zod.number().min(1).max(giftCreditsBodyQuantityMax),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Get current user profile
  */
 export const GetMeResponse = zod.object({

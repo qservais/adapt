@@ -127,6 +127,131 @@ export interface UpdateStudioSettingsRequest {
   accountantEmail?: string | null;
 }
 
+export type ShopPackCreditType =
+  (typeof ShopPackCreditType)[keyof typeof ShopPackCreditType];
+
+export const ShopPackCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface ShopPack {
+  id: string;
+  coachId: string;
+  creditType: ShopPackCreditType;
+  name: string;
+  credits: number;
+  priceCents: number;
+  validityMonths?: number | null;
+  tag?: string | null;
+  isActive: boolean;
+}
+
+export type ShopPackWithPrice = ShopPack & {
+  /** List price, or the active promo price if one currently applies */
+  currentPriceCents: number;
+  hasActivePromo: boolean;
+};
+
+export type UpsertShopPackRequestCreditType =
+  (typeof UpsertShopPackRequestCreditType)[keyof typeof UpsertShopPackRequestCreditType];
+
+export const UpsertShopPackRequestCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface UpsertShopPackRequest {
+  creditType?: UpsertShopPackRequestCreditType;
+  name?: string;
+  /** @minimum 1 */
+  credits?: number;
+  /** @minimum 0 */
+  priceCents?: number;
+  validityMonths?: number | null;
+  tag?: string | null;
+}
+
+export interface ShopPromo {
+  id: string;
+  packId: string;
+  discountedPriceCents: number;
+  startsAt: string;
+  expiresAt: string;
+  createdBy?: string;
+}
+
+export interface CreateShopPromoRequest {
+  packId: string;
+  /** @minimum 0 */
+  discountedPriceCents: number;
+  /**
+   * @minimum 1
+   * @maximum 90
+   */
+  durationDays: number;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  coachId: string;
+  name: string;
+  priceCents: number;
+  presentialText?: string | null;
+  tag?: string | null;
+  engagementMonths?: number | null;
+  isActive: boolean;
+}
+
+export interface UpdateSubscriptionPlanRequest {
+  /** @minimum 0 */
+  priceCents?: number;
+  engagementMonths?: number | null;
+}
+
+export type CreateCheckoutSessionRequestType =
+  (typeof CreateCheckoutSessionRequestType)[keyof typeof CreateCheckoutSessionRequestType];
+
+export const CreateCheckoutSessionRequestType = {
+  pack: "pack",
+  subscription: "subscription",
+} as const;
+
+export interface CreateCheckoutSessionRequest {
+  type: CreateCheckoutSessionRequestType;
+  id: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export interface CheckoutSessionResponse {
+  checkoutUrl: string | null;
+}
+
+export interface CreditBalances {
+  collectif: number;
+  individuel: number;
+}
+
+export type GiftCreditsRequestCreditType =
+  (typeof GiftCreditsRequestCreditType)[keyof typeof GiftCreditsRequestCreditType];
+
+export const GiftCreditsRequestCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface GiftCreditsRequest {
+  athleteIds: string[];
+  creditType: GiftCreditsRequestCreditType;
+  /**
+   * @minimum 1
+   * @maximum 50
+   */
+  quantity: number;
+  message?: string;
+}
+
 export interface RefreshRequest {
   refreshToken: string;
 }
@@ -1134,6 +1259,11 @@ export interface UpdateAppointmentRequest {
   location?: string;
   notes?: string;
 }
+
+export type GiftCredits201 = {
+  success?: boolean;
+  recipientCount?: number;
+};
 
 export type GetExercisesParams = {
   category?: string;
