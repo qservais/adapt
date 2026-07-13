@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings, CalendarRange, ShoppingBag, UsersRound, Handshake } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings, CalendarRange, ShoppingBag, UsersRound, Handshake, Receipt } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -67,6 +67,13 @@ export function AppSidebar() {
       subtitle: t("sidebar.item_shop_subtitle"),
       url: "/shop",
       icon: ShoppingBag,
+      exactMatch: false,
+    },
+    {
+      title: t("sidebar.item_invoices_title"),
+      subtitle: t("sidebar.item_invoices_subtitle"),
+      url: "/invoices",
+      icon: Receipt,
       exactMatch: false,
     },
     {
