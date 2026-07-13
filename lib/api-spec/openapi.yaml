@@ -4529,7 +4529,6 @@ components:
           type: string
       required:
         - name
-        - athleteId
         - durationWeeks
 
     UpdateProgramRequest:

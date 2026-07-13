@@ -9,7 +9,7 @@
 export interface CreateProgramRequest {
   name: string;
   description?: string;
-  athleteId: string;
+  athleteId?: string;
   durationWeeks: number;
   startDate?: string;
 }

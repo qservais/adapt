@@ -1376,7 +1376,7 @@ export const GetProgramsResponse = zod.array(GetProgramsResponseItem);
 export const CreateProgramBody = zod.object({
   name: zod.string(),
   description: zod.string().optional(),
-  athleteId: zod.string(),
+  athleteId: zod.string().optional(),
   durationWeeks: zod.number(),
   startDate: zod.string().optional(),
 });
