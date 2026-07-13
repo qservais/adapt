@@ -8,6 +8,10 @@ import {
   useGetMorningNotifHour,
   useUpdateMorningNotifHour,
   useGetClients,
+  useGetMotivationPhrases,
+  useCreateMotivationPhrase,
+  useUpdateMotivationPhrase,
+  useDeleteMotivationPhrase,
 } from "@workspace/api-client-react";
 import type { ScheduledNotification, CreateScheduledNotificationRequest } from "@workspace/api-client-react";
 import {
@@ -20,6 +24,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Pencil,
+  Quote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +46,8 @@ function formatHour(h: number) {
   return `${String(h).padStart(2, "0")}:00`;
 }
 
-function athleteName(n: ScheduledNotification, fallback: string) {
+function athleteName(n: ScheduledNotification, fallback: string, allLabel: string) {
+  if (n.athleteId === null) return allLabel;
   const first = n.athleteFirstName ?? "";
   const last = n.athleteLastName ?? "";
   return `${first} ${last}`.trim() || fallback;
@@ -62,6 +68,15 @@ export default function NotificationsPage() {
   const deleteMutation = useDeleteScheduledNotification();
   const updateHourMutation = useUpdateMorningNotifHour();
   const { toast } = useToast();
+
+  const { data: phrases, refetch: refetchPhrases } = useGetMotivationPhrases({
+    query: { queryKey: ["/api/coach/motivation-phrases"] },
+  });
+  const createPhraseMutation = useCreateMotivationPhrase();
+  const updatePhraseMutation = useUpdateMotivationPhrase();
+  const deletePhraseMutation = useDeleteMotivationPhrase();
+  const [newPhrase, setNewPhrase] = useState("");
+  const [deletePhraseId, setDeletePhraseId] = useState<string | null>(null);
 
   const [showCreate, setShowCreate] = useState(false);
   const [editItem, setEditItem] = useState<ScheduledNotification | null>(null);
@@ -89,6 +104,38 @@ export default function NotificationsPage() {
       toast({ title: t("notifications_page.update_failed"), variant: "destructive" });
     } finally {
       setSavingHour(false);
+    }
+  };
+
+  const handleAddPhrase = async () => {
+    if (!newPhrase.trim()) return;
+    try {
+      await createPhraseMutation.mutateAsync({ data: { text: newPhrase.trim() } });
+      setNewPhrase("");
+      refetchPhrases();
+      toast({ title: t("notifications_page.phrase_added") });
+    } catch {
+      toast({ title: t("notifications_page.operation_failed"), variant: "destructive" });
+    }
+  };
+
+  const handleTogglePhraseActive = async (id: string, active: boolean) => {
+    try {
+      await updatePhraseMutation.mutateAsync({ id, data: { active: !active } });
+      refetchPhrases();
+    } catch {
+      toast({ title: t("notifications_page.operation_failed"), variant: "destructive" });
+    }
+  };
+
+  const handleDeletePhrase = async (id: string) => {
+    try {
+      await deletePhraseMutation.mutateAsync({ id });
+      refetchPhrases();
+      setDeletePhraseId(null);
+      toast({ title: t("notifications_page.phrase_deleted") });
+    } catch {
+      toast({ title: t("notifications_page.delete_failed"), variant: "destructive" });
     }
   };
 
@@ -122,7 +169,7 @@ export default function NotificationsPage() {
       toast({ title: t("notifications_page.msg_required"), variant: "destructive" });
       return;
     }
-    if (!editItem && !form.athleteId) {
+    if (!editItem && form.athleteId === undefined) {
       toast({ title: t("notifications_page.athlete_required"), variant: "destructive" });
       return;
     }
@@ -144,7 +191,7 @@ export default function NotificationsPage() {
       } else {
         await createMutation.mutateAsync({
           data: {
-            athleteId: form.athleteId!,
+            athleteId: form.athleteId ?? null,
             message: form.message!,
             recurrenceType: form.recurrenceType as CreateScheduledNotificationRequest["recurrenceType"],
             recurrenceConfig: config,
@@ -242,6 +289,61 @@ export default function NotificationsPage() {
         </div>
       </div>
 
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Quote className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-display text-white">{t("notifications_page.phrases_title")}</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">{t("notifications_page.phrases_desc")}</p>
+        <div className="flex items-center gap-2 mb-4">
+          <Input
+            value={newPhrase}
+            onChange={(e) => setNewPhrase(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAddPhrase(); }}
+            placeholder={t("notifications_page.phrases_add_placeholder")}
+            className="bg-background border-border"
+          />
+          <Button
+            onClick={handleAddPhrase}
+            disabled={createPhraseMutation.isPending || !newPhrase.trim()}
+            className="gap-1.5 bg-primary text-black hover:bg-primary/90 font-bold shrink-0"
+          >
+            {createPhraseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          </Button>
+        </div>
+        {(!phrases || phrases.length === 0) ? (
+          <p className="text-sm text-muted-foreground">{t("notifications_page.phrases_empty")}</p>
+        ) : (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {phrases.map((p) => (
+              <div
+                key={p.id}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${p.active ? "border-border" : "border-border/40 opacity-50"}`}
+              >
+                <p className="flex-1 text-sm text-white min-w-0 truncate">{p.text}</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-primary shrink-0"
+                  onClick={() => handleTogglePhraseActive(p.id, p.active)}
+                  title={p.active ? t("notifications_page.deactivate") : t("notifications_page.activate")}
+                >
+                  {p.active ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive shrink-0"
+                  onClick={() => setDeletePhraseId(p.id)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-3">
         <h2 className="text-lg font-display text-white flex items-center gap-2">
           <Bell className="w-5 h-5 text-primary" /> {t("notifications_page.custom_reminders_title")}
@@ -278,11 +380,17 @@ export default function NotificationsPage() {
             {!editItem && (
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("notifications_page.label_athlete")}</Label>
-                <Select value={form.athleteId ?? ""} onValueChange={(v) => setForm(f => ({ ...f, athleteId: v }))}>
+                <Select
+                  value={form.athleteId === null ? "__all__" : (form.athleteId ?? "")}
+                  onValueChange={(v) => setForm(f => ({ ...f, athleteId: v === "__all__" ? null : v }))}
+                >
                   <SelectTrigger className="bg-background border-border">
                     <SelectValue placeholder={t("notifications_page.select_athlete_placeholder")} />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__all__" className="font-bold text-primary">
+                      {t("notifications_page.all_athletes_option")}
+                    </SelectItem>
                     {(clients ?? []).map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.firstName} {c.lastName}
@@ -393,6 +501,25 @@ export default function NotificationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!deletePhraseId} onOpenChange={(o) => { if (!o) setDeletePhraseId(null); }}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-white">{t("notifications_page.phrase_delete_confirm")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("notifications_page.irreversible")}</p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeletePhraseId(null)}>{t("common.cancel", { defaultValue: "Annuler" })}</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletePhraseId && handleDeletePhrase(deletePhraseId)}
+              disabled={deletePhraseMutation.isPending}
+            >
+              {deletePhraseMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t("common.delete", { defaultValue: "Supprimer" })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -428,7 +555,7 @@ function NotificationCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-mono font-bold text-primary uppercase">
-              {athleteName(n, t("notifications_page.default_athlete_label"))}
+              {athleteName(n, t("notifications_page.default_athlete_label"), t("notifications_page.all_athletes_option"))}
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${n.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
               {n.active ? t("notifications_page.active") : t("notifications_page.inactive")}

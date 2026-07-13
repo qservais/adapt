@@ -4,8 +4,8 @@ import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
 import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq, and, gt } from "drizzle-orm";
+import { usersTable, studioSettingsTable } from "@workspace/db";
+import { eq, and, gt, asc } from "drizzle-orm";
 import { authenticate } from "../middleware/auth.js";
 import { z } from "zod";
 import { sendWelcomeEmail, sendPasswordResetEmail } from "../services/email.js";
@@ -31,6 +31,19 @@ const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: { code: "TOO_MANY_REQUESTS", message: "Trop de tentatives. Réessaie dans 15 minutes." } },
 });
+
+// A 6-digit PIN only has 1M combinations — throttle guesses on top of bcrypt's
+// inherent per-attempt cost (defense in depth, not a substitute for it).
+const loginCodeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "TOO_MANY_REQUESTS", message: "Trop de tentatives. Réessaie dans 15 minutes." } },
+});
+
+// Bump when the consent text in the athlete-app onboarding screen changes materially.
+const CONSENT_VERSION = "mouvup-2026-07";
 
 function generateTokens(userId: string, role: string, email: string, language?: string | null) {
   const payload: Record<string, unknown> = { userId, role, email };
@@ -124,6 +137,124 @@ router.post("/auth/register", async (req, res) => {
   }
 });
 
+// Open, self-service 2-step athlete signup (identity + sport profile/PAR-Q/consent
+// merged into one atomic call, matching the product spec's onboarding wizard).
+// Distinct from /auth/register: athletes here authenticate with a 6-digit PIN
+// (`loginCode`) instead of a password, and the account is auto-linked to whichever
+// coach owns the studio's settings row (mono-coach V1 — see studio-settings.ts).
+const registerAthleteSchema = z
+  .object({
+    email: z.string().email(),
+    loginCode: z.string().regex(/^\d{6}$/, "Le code doit contenir 6 chiffres"),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    phone: z.string().min(1),
+    age: z.number().int().min(10).max(100).optional(),
+    primaryGoal: z.string().max(20).optional(),
+    fitnessLevel: z.string().max(20).optional(),
+    trainingFrequency: z.number().int().min(0).max(14).optional(),
+    hasInjuryHistory: z.boolean(),
+    injuries: z.string().optional(),
+    medicalContraindication: z.boolean(),
+    acquisitionSource: z.string().max(50).optional(),
+    consent: z.literal(true),
+  })
+  .refine((data) => !data.hasInjuryHistory || !!data.injuries?.trim(), {
+    message: "Merci de préciser tes blessures ou antécédents",
+    path: ["injuries"],
+  });
+
+router.post("/auth/register-athlete", async (req, res) => {
+  const parsed = registerAthleteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+
+  const {
+    email, loginCode, firstName, lastName, phone, age,
+    primaryGoal, fitnessLevel, trainingFrequency,
+    hasInjuryHistory, injuries, medicalContraindication, acquisitionSource,
+  } = parsed.data;
+
+  try {
+    const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
+    if (existing.length > 0) {
+      res.status(409).json({ error: { code: "EMAIL_IN_USE", message: "Email already in use" } });
+      return;
+    }
+
+    const loginCodeHash = await bcrypt.hash(loginCode, 12);
+
+    let inviteCode: string | undefined;
+    {
+      let unique = false;
+      while (!unique) {
+        inviteCode = generateInviteCode();
+        const existingCode = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.inviteCode, inviteCode));
+        if (existingCode.length === 0) unique = true;
+      }
+    }
+
+    // Mono-coach V1: whoever owns the (first-configured) studio_settings row
+    // receives new open signups. No hardcoded coach identity in code.
+    const [studio] = await db
+      .select({ coachId: studioSettingsTable.coachId })
+      .from(studioSettingsTable)
+      .orderBy(asc(studioSettingsTable.createdAt))
+      .limit(1);
+
+    const [user] = await db.insert(usersTable).values({
+      email,
+      loginCodeHash,
+      firstName,
+      lastName,
+      phone,
+      age,
+      role: "athlete",
+      primaryGoal,
+      fitnessLevel,
+      trainingFrequency,
+      hasInjuryHistory,
+      injuries: hasInjuryHistory ? injuries : null,
+      medicalContraindication,
+      acquisitionSource,
+      consentAcceptedAt: new Date(),
+      consentVersion: CONSENT_VERSION,
+      coachId: studio?.coachId ?? null,
+      inviteCode,
+    }).returning();
+
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email, user.language);
+    await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
+
+    sendWelcomeEmail(email, firstName, "athlete", req.locale).catch(() => {});
+
+    res.status(201).json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        age: user.age,
+        weightKg: user.weightKg,
+        heightCm: user.heightCm,
+        fitnessLevel: user.fitnessLevel,
+        primaryGoal: user.primaryGoal,
+        cycleTracking: user.cycleTracking,
+        coachId: user.coachId,
+        inviteCode: user.inviteCode,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -145,6 +276,63 @@ router.post("/auth/login", async (req, res) => {
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      res.status(401).json({ error: { code: "AUTH_INVALID_CREDENTIALS", message: "Invalid credentials" } });
+      return;
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.email, user.language);
+    await db.update(usersTable).set({ refreshToken }).where(eq(usersTable.id, user.id));
+
+    res.json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        age: user.age,
+        weightKg: user.weightKg,
+        heightCm: user.heightCm,
+        fitnessLevel: user.fitnessLevel,
+        primaryGoal: user.primaryGoal,
+        cycleTracking: user.cycleTracking,
+        coachId: user.coachId,
+        inviteCode: user.inviteCode,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const loginCodeSchema = z.object({
+  email: z.string().email(),
+  code: z.string().regex(/^\d{6}$/),
+});
+
+// Athlete-app login: email + 6-digit PIN, in one step (no emailed one-time code —
+// the PIN is the long-lived credential the athlete chose at signup, hashed like a
+// password). Coach dashboard keeps using /auth/login with a real password.
+router.post("/auth/login-code", loginCodeLimiter, async (req, res) => {
+  const parsed = loginCodeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  const { email, code } = parsed.data;
+
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    if (!user || !user.loginCodeHash) {
+      res.status(401).json({ error: { code: "AUTH_INVALID_CREDENTIALS", message: "Invalid credentials" } });
+      return;
+    }
+
+    const valid = await bcrypt.compare(code, user.loginCodeHash);
     if (!valid) {
       res.status(401).json({ error: { code: "AUTH_INVALID_CREDENTIALS", message: "Invalid credentials" } });
       return;
@@ -271,7 +459,7 @@ router.post("/auth/forgot-password", forgotPasswordLimiter, async (req, res) => 
       ? `athlete-app://auth/reset-password?token=${resetToken}`
       : undefined;
     const lang = (user.language === "en" ? "en" : user.language === "fr" ? "fr" : req.locale) as "fr" | "en";
-    await sendPasswordResetEmail(user.email, user.firstName, resetUrl, deepLinkUrl, lang);
+    await sendPasswordResetEmail(user.email, user.firstName, resetUrl, deepLinkUrl, lang, user.role === "coach" ? "password" : "code");
   } catch (err) {
     console.error("forgot-password background error:", err);
   }
@@ -312,6 +500,50 @@ router.post("/auth/reset-password", async (req, res) => {
       .where(eq(usersTable.id, user.id));
 
     res.json({ success: true, message: "Mot de passe mis à jour avec succès." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const resetLoginCodeSchema = z.object({
+  token: z.string().min(1),
+  newLoginCode: z.string().regex(/^\d{6}$/, "Le code doit contenir 6 chiffres"),
+});
+
+// Mirrors /auth/reset-password exactly, but sets loginCodeHash instead of
+// passwordHash. Reuses the same emailed reset link/token — /auth/forgot-password
+// doesn't need to know which credential type an account uses.
+router.post("/auth/reset-login-code", async (req, res) => {
+  const parsed = resetLoginCodeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  const { token, newLoginCode } = parsed.data;
+
+  try {
+    const now = new Date();
+    const [user] = await db.select({ id: usersTable.id, passwordResetExpiry: usersTable.passwordResetExpiry })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.passwordResetToken, token),
+          gt(usersTable.passwordResetExpiry, now),
+        ),
+      );
+
+    if (!user) {
+      res.status(400).json({ error: { code: "INVALID_TOKEN", message: "Lien invalide ou expiré." } });
+      return;
+    }
+
+    const loginCodeHash = await bcrypt.hash(newLoginCode, 12);
+    await db.update(usersTable)
+      .set({ loginCodeHash, passwordResetToken: null, passwordResetExpiry: null, refreshToken: null })
+      .where(eq(usersTable.id, user.id));
+
+    res.json({ success: true, message: "Code mis à jour avec succès." });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });

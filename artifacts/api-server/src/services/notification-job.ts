@@ -6,36 +6,24 @@ import {
   usersTable,
   sessionsTable,
   programsTable,
+  motivationPhrasesTable,
 } from "@workspace/db";
+import type { ScheduledNotification } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { notifyUser } from "./notify.service.js";
+import { DEFAULT_MOTIVATION_PHRASES } from "../lib/motivation-phrases-seed.js";
 
-const PHRASES_MOTIVATION = [
-  "Chaque répétition te rapproche de la meilleure version de toi-même.",
-  "La discipline d'aujourd'hui est la performance de demain.",
-  "Le corps atteint ce que l'esprit croit possible.",
-  "Pas de raccourci — juste du travail bien fait.",
-  "Tu es plus fort(e) que tu ne le penses. Prouve-le aujourd'hui.",
-  "La régularité bat le talent qui ne travaille pas.",
-  "Chaque effort compte, même les petits.",
-  "Tu n'as pas à être parfait(e), tu dois juste avancer.",
-  "La douleur d'aujourd'hui est ta force de demain.",
-  "Un pas à la fois. C'est comme ça que les grandes choses se font.",
-  "Fais confiance au processus. Les résultats viennent avec le temps.",
-  "L'excellence n'est pas un acte, c'est une habitude.",
-  "Tes limites sont là pour être repoussées.",
-  "Entraîne-toi dur, récupère bien, recommence.",
-  "Le seul mauvais entraînement est celui qu'on n'a pas fait.",
-  "Sois la version la plus forte de toi-même, chaque jour.",
-  "Le succès est la somme de petits efforts répétés chaque jour.",
-  "Crois en toi. Tu as déjà surmonté des choses plus difficiles.",
-  "Donne le meilleur de toi-même et laisse l'entraînement faire le reste.",
-  "Progresse à ton rythme — mais ne t'arrête jamais.",
-];
-
-function randomPhrase(): string {
-  return PHRASES_MOTIVATION[Math.floor(Math.random() * PHRASES_MOTIVATION.length)]!;
+async function getRandomPhrase(coachId: string): Promise<string> {
+  const [row] = await db
+    .select({ text: motivationPhrasesTable.text })
+    .from(motivationPhrasesTable)
+    .where(and(eq(motivationPhrasesTable.coachId, coachId), eq(motivationPhrasesTable.active, true)))
+    .orderBy(sql`random()`)
+    .limit(1);
+  if (row) return row.text;
+  // A coach with an empty/fully-deactivated bank still gets a phrase.
+  return DEFAULT_MOTIVATION_PHRASES[Math.floor(Math.random() * DEFAULT_MOTIVATION_PHRASES.length)]!;
 }
 
 function shouldFireToday(
@@ -145,7 +133,7 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
         );
       if (existing.length > 0) continue;
 
-      const phrase = randomPhrase();
+      const phrase = await getRandomPhrase(coach.id);
       const sessionSummary = await getSessionSummaryForAthlete(athlete.id, today);
       const body = sessionSummary ? `${phrase}\n\n📋 ${sessionSummary}` : `${phrase}\n\n🌿 Journée de récupération — profites-en pour te reposer.`;
       const title = "Bonjour ! Voici ta dose de motivation 💪";
@@ -161,6 +149,33 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
       logger.info({ athleteId: athlete.id, coachId: coach.id }, "Morning notification sent");
     }
   }
+}
+
+async function sendReminderToAthlete(notif: ScheduledNotification, athleteId: string): Promise<void> {
+  const existing = await db
+    .select({ id: notificationsTable.id })
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.userId, athleteId),
+        eq(notificationsTable.sourceType, "scheduled_notification"),
+        eq(notificationsTable.sourceId, notif.id),
+        sql`date_trunc('day', created_at) = current_date`
+      )
+    );
+  if (existing.length > 0) return;
+
+  await notifyUser({
+    userId: athleteId,
+    type: "scheduled_reminder",
+    title: "Rappel de ton coach",
+    body: notif.message,
+    link: "/(tabs)/session",
+    sourceType: "scheduled_notification",
+    sourceId: notif.id,
+  });
+
+  logger.info({ notifId: notif.id, athleteId }, "Scheduled reminder sent");
 }
 
 async function runScheduledReminders(currentHour: number): Promise<void> {
@@ -183,28 +198,20 @@ async function runScheduledReminders(currentHour: number): Promise<void> {
     const config = (notif.recurrenceConfig ?? {}) as Record<string, unknown>;
     if (!shouldFireToday(notif.recurrenceType, config, now)) continue;
 
-    const existing = await db
-      .select({ id: notificationsTable.id })
-      .from(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.userId, notif.athleteId),
-          eq(notificationsTable.type, "scheduled_reminder"),
-          sql`body LIKE ${`%${notif.id}%`}`,
-          sql`date_trunc('day', created_at) = current_date`
-        )
-      );
-    if (existing.length > 0) continue;
+    if (notif.athleteId) {
+      await sendReminderToAthlete(notif, notif.athleteId);
+      continue;
+    }
 
-    await notifyUser({
-      userId: notif.athleteId,
-      type: "scheduled_reminder",
-      title: "Rappel de ton coach",
-      body: `${notif.message}\n\n[ref:${notif.id}]`,
-      link: "/(tabs)/session",
-    });
-
-    logger.info({ notifId: notif.id, athleteId: notif.athleteId }, "Scheduled reminder sent");
+    // Broadcast: resolved against the coach's *current* athlete roster at
+    // send time, not a snapshot frozen when the reminder was created.
+    const athletes = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.coachId, notif.coachId), eq(usersTable.role, "athlete")));
+    for (const athlete of athletes) {
+      await sendReminderToAthlete(notif, athlete.id);
+    }
   }
 }
 

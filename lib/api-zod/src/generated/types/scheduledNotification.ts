@@ -11,7 +11,7 @@ import type { ScheduledNotificationRecurrenceType } from "./scheduledNotificatio
 export interface ScheduledNotification {
   id: string;
   coachId: string;
-  athleteId: string;
+  athleteId: string | null;
   message: string;
   recurrenceType: ScheduledNotificationRecurrenceType;
   recurrenceConfig?: ScheduledNotificationRecurrenceConfig;

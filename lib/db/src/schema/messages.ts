@@ -24,6 +24,11 @@ export const notificationsTable = pgTable("notifications", {
   title: varchar("title", { length: 255 }).notNull(),
   body: text("body"),
   link: varchar("link", { length: 512 }),
+  // Identifies the row that triggered this notification (e.g. a
+  // scheduled_notifications.id), so idempotency/dedup checks can query a
+  // real column instead of grepping the rendered body text for a marker.
+  sourceType: varchar("source_type", { length: 50 }),
+  sourceId: uuid("source_id"),
   isRead: boolean("is_read").default(false),
   isSent: boolean("is_sent").default(false),
   sentAt: timestamp("sent_at", { withTimezone: true }),
@@ -33,7 +38,10 @@ export const notificationsTable = pgTable("notifications", {
 export const scheduledNotificationsTable = pgTable("scheduled_notifications", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   coachId: uuid("coach_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
-  athleteId: uuid("athlete_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  // null = broadcast to every athlete of this coach, resolved at send time
+  // (not a frozen snapshot list), matching the same nullable-target idiom
+  // used elsewhere for "all my athletes".
+  athleteId: uuid("athlete_id").references(() => usersTable.id, { onDelete: "cascade" }),
   message: text("message").notNull(),
   recurrenceType: varchar("recurrence_type", { length: 20 }).notNull().default("daily"),
   recurrenceConfig: jsonb("recurrence_config").$type<Record<string, unknown>>().default({}),

@@ -11,12 +11,13 @@ import {
   UpcomingSession,
 } from "@workspace/api-client-react";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
-import { 
+import {
   Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
   Pencil, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Copy, Check,
-  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus, Trash2, Apple
+  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus, Trash2, Apple, Wallet
 } from "lucide-react";
 import { CoachNutritionPanel } from "@/components/nutrition/CoachNutritionPanel";
+import { CoachClientCommercialPanel } from "@/components/clients/CoachClientCommercialPanel";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
@@ -138,7 +139,7 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
   mixed: "Mixte",
 };
 
-type Tab = "apercu" | "programme" | "tests" | "nutrition";
+type Tab = "apercu" | "programme" | "tests" | "nutrition" | "commercial";
 
 export default function ClientDetail() {
   const { t } = useTranslation();
@@ -434,6 +435,7 @@ export default function ClientDetail() {
     { id: "programme", label: t("clients.detail.tab_program"), icon: Dumbbell },
     { id: "tests", label: t("clients.detail.tab_tests"), icon: TrendingUp },
     { id: "nutrition", label: t("clients.detail.tab_nutrition"), icon: Apple },
+    { id: "commercial", label: t("clients.detail.tab_commercial", { defaultValue: "Commercial" }), icon: Wallet },
   ];
 
   const levelLabel = (lvl: string) => t(`clients.detail.level_${lvl}`, { defaultValue: lvl });
@@ -1867,6 +1869,11 @@ export default function ClientDetail() {
       {/* NUTRITION TAB */}
       {activeTab === "nutrition" && (
         <CoachNutritionPanel athleteId={id ?? ""} />
+      )}
+
+      {/* COMMERCIAL TAB */}
+      {activeTab === "commercial" && (
+        <CoachClientCommercialPanel athleteId={id ?? ""} />
       )}
 
       {/* PROGRAMME TAB */}
