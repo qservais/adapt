@@ -14,6 +14,7 @@ import ClientsOverview from "./pages/clients/index";
 import ClientDetail from "./pages/clients/detail";
 import AgendaPage from "./pages/agenda/index";
 import ShopPage from "./pages/shop/index";
+import ClassesManagementPage from "./pages/classes/index";
 import ProgramsList from "./pages/programs/index";
 import ProgramDetail from "./pages/programs/detail";
 import AlertsFeed from "./pages/alerts/index";
@@ -83,6 +84,7 @@ function AppRouter() {
         <Route path="/clients/:id" component={ClientDetail} />
         <Route path="/agenda" component={AgendaPage} />
         <Route path="/shop" component={ShopPage} />
+        <Route path="/classes" component={ClassesManagementPage} />
         <Route path="/programs" component={ProgramsList} />
         <Route path="/programs/:id" component={ProgramDetail} />
         <Route path="/library" component={LibraryPage} />
