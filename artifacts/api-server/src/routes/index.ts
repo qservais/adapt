@@ -17,14 +17,6 @@ import scheduledNotificationsRouter from "./scheduled-notifications.js";
 import appointmentsRouter from "./appointments.js";
 import statsRouter from "./stats.js";
 import userRoutinesRouter from "./user-routines.js";
-import studioSettingsRouter from "./studio-settings.js";
-import shopRouter from "./shop.js";
-import classesRouter from "./classes.js";
-import oneOnOneRouter from "./one-on-one.js";
-import coachAgendaRouter from "./coach-agenda.js";
-import invoicesRouter from "./invoices.js";
-import motivationPhrasesRouter from "./motivation-phrases.js";
-import resourceFilesRouter from "./resource-files.js";
 
 const router: IRouter = Router();
 
@@ -46,13 +38,5 @@ router.use(scheduledNotificationsRouter);
 router.use(appointmentsRouter);
 router.use(statsRouter);
 router.use(userRoutinesRouter);
-router.use(studioSettingsRouter);
-router.use(shopRouter);
-router.use(classesRouter);
-router.use(oneOnOneRouter);
-router.use(coachAgendaRouter);
-router.use(invoicesRouter);
-router.use(motivationPhrasesRouter);
-router.use(resourceFilesRouter);
 
 export default router;

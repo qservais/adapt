@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings, CalendarRange, ShoppingBag, UsersRound, Handshake, Receipt } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -39,41 +39,6 @@ export function AppSidebar() {
       subtitle: t("sidebar.item_athletes_subtitle"),
       url: "/clients",
       icon: Users,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_agenda_title"),
-      subtitle: t("sidebar.item_agenda_subtitle"),
-      url: "/agenda",
-      icon: CalendarRange,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_classes_title"),
-      subtitle: t("sidebar.item_classes_subtitle"),
-      url: "/classes",
-      icon: UsersRound,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_one_on_one_title"),
-      subtitle: t("sidebar.item_one_on_one_subtitle"),
-      url: "/one-on-one",
-      icon: Handshake,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_shop_title"),
-      subtitle: t("sidebar.item_shop_subtitle"),
-      url: "/shop",
-      icon: ShoppingBag,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_invoices_title"),
-      subtitle: t("sidebar.item_invoices_subtitle"),
-      url: "/invoices",
-      icon: Receipt,
       exactMatch: false,
     },
     {

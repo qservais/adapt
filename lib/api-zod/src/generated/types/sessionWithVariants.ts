@@ -19,7 +19,6 @@ export interface SessionWithVariants {
   visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
-  isTest?: boolean;
   variants: VariantWithExercises[];
   blocks?: SessionBlockItem[];
 }

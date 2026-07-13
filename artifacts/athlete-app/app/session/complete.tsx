@@ -30,8 +30,6 @@ import {
 } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { useFormatWeight } from "@/context/PreferencesContext";
-import { formatRecordValue } from "@/lib/formatRecord";
 
 const { width } = Dimensions.get("window");
 
@@ -95,7 +93,6 @@ export default function SessionCompleteScreen() {
     }
   }, [session?.sessionType]);
 
-  const formatWeight = useFormatWeight();
   const newPRs = completeMutation.data?.newPRs ?? [];
   const newBadges = completeMutation.data?.newBadges ?? [];
   const hasPRs = newPRs.length > 0;
@@ -338,13 +335,13 @@ export default function SessionCompleteScreen() {
                   {pr.exerciseName}
                 </Text>
                 <View style={styles.prLoads}>
-                  {pr.previousValue != null && (
+                  {pr.previousLoadKg != null && (
                     <Text style={[styles.prPrev, { fontFamily: FONTS.mono }]}>
-                      {formatRecordValue(pr.recordType, pr.previousValue, formatWeight)} →
+                      {pr.previousLoadKg} kg →
                     </Text>
                   )}
                   <Text style={[styles.prNew, { fontFamily: FONTS.monoBold, color: COLORS.green }]}>
-                    {formatRecordValue(pr.recordType, pr.value, formatWeight)}
+                    {pr.loadKg} kg
                   </Text>
                 </View>
               </View>

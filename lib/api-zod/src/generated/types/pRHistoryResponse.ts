@@ -6,11 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PRHistoryEntry } from "./pRHistoryEntry";
-import type { RecordType } from "./recordType";
 
 export interface PRHistoryResponse {
   exerciseId: string;
   exerciseName: string;
-  recordType: RecordType;
   history: PRHistoryEntry[];
 }

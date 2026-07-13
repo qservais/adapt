@@ -508,8 +508,6 @@ const completeSchema = z.object({
     setsCompleted: z.number().int().optional(),
     repsPerSet: z.array(z.number().int()).optional(),
     loadKgUsed: z.number().optional(),
-    durationSecondsUsed: z.number().int().optional(),
-    distanceMetersUsed: z.number().optional(),
   })).optional().default([]),
 });
 
@@ -555,8 +553,6 @@ router.post("/sessions/:sessionId/complete", authenticate, requireRole("athlete"
         setsCompleted: ex.setsCompleted ?? null,
         repsPerSet: ex.repsPerSet ?? null,
         loadKgUsed: ex.loadKgUsed != null ? ex.loadKgUsed.toString() : null,
-        durationSecondsUsed: ex.durationSecondsUsed ?? null,
-        distanceMetersUsed: ex.distanceMetersUsed != null ? ex.distanceMetersUsed.toString() : null,
       });
       const prefReps = ex.repsPerSet != null && ex.repsPerSet.length > 0
         ? String(ex.repsPerSet[0])
@@ -591,8 +587,6 @@ router.post("/sessions/:sessionId/complete", authenticate, requireRole("athlete"
         setsCompleted: ex.setsCompleted,
         repsPerSet: ex.repsPerSet,
         loadKgUsed: ex.loadKgUsed,
-        durationSecondsUsed: ex.durationSecondsUsed,
-        distanceMetersUsed: ex.distanceMetersUsed,
       })));
       newBadges = await checkAfterSession(sessionLog.athleteId, sessionLog.variantMode, newPRs.length);
     }
@@ -831,8 +825,6 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
       .where(and(
         eq(coachAppointmentsTable.athleteId, athleteId),
         gte(coachAppointmentsTable.startAt, today),
-        ne(coachAppointmentsTable.status, "declined"),
-        ne(coachAppointmentsTable.status, "cancelled"),
       ));
 
     for (const appt of appts) {
@@ -851,7 +843,6 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           isCompleted: false,
           completedActualDate: null,
           isAppointment: true,
-          appointmentStatus: appt.status,
         });
       }
     }

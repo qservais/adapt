@@ -25,7 +25,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { useGetTodaySession, equipmentLabelFromKey, type AthletePRItem } from "@workspace/api-client-react";
+import { useGetTodaySession, equipmentLabelFromKey } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { CircularTimer, type CircularTimerRef } from "@/components/ui/CircularTimer";
 import { Stepper } from "@/components/ui/Stepper";
@@ -182,7 +182,7 @@ export default function ExerciseScreen() {
   const exercises = session?.exercises ?? [];
   const modeKey = (session?.mode ?? "normal") as SessionMode;
   const cfg = MODE_CONFIG[modeKey] ?? MODE_CONFIG.normal;
-  const athletePRs = (session as any)?.athletePRs as Record<string, AthletePRItem> | undefined;
+  const athletePRs = (session as any)?.athletePRs as Record<string, number> | undefined;
 
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
@@ -334,10 +334,7 @@ export default function ExerciseScreen() {
   const lastUsedDate = exercise.lastUsedDate ?? null;
 
   const currentLoad = loadAdjustments[exercise.id] ?? exercise.adaptedLoadKg ?? exercise.nominalLoadKg ?? lastUsedLoadKg ?? 0;
-  // Load-vs-load comparison only makes sense for load-tracked exercises —
-  // reps/time/distance PRs aren't comparable to the kg value being adjusted here.
-  const currentPRItem = athletePRs?.[exercise.exerciseId];
-  const currentPR = currentPRItem?.recordType === "load" ? currentPRItem.value : null;
+  const currentPR = athletePRs?.[exercise.exerciseId];
   const isAbovePR = currentPR != null && currentLoad > currentPR;
 
   const effectiveSets = setOverrides[exercise.id] ?? exercise.sets ?? 1;

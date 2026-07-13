@@ -45,26 +45,3 @@ export function computeSessionDate(
   const targetMs = weekMondayMs + totalOffset * 86400000;
   return new Date(targetMs).toISOString().split("T")[0]!;
 }
-
-/**
- * Inverse of computeSessionDate(): given a programme start date and a real
- * calendar date, return which training week/day that date falls on.
- *
- * weekNumber can come back <= 0 for a date before the programme's week 1 —
- * same caveat as computeSessionDate(), callers should guard against it.
- */
-export function computeWeekDayFromDate(
-  programStartStr: string,
-  targetDateStr: string
-): { weekNumber: number; dayNumber: number } {
-  const startMs = new Date(programStartStr + "T12:00:00Z").getTime();
-  const startDow = new Date(programStartStr + "T12:00:00Z").getUTCDay();
-  const daysFromMonday = startDow === 0 ? 6 : startDow - 1;
-  const weekMondayMs = startMs - daysFromMonday * 86400000;
-  const weekMondayStr = new Date(weekMondayMs).toISOString().split("T")[0]!;
-
-  const totalOffset = dateDiffDays(weekMondayStr, targetDateStr);
-  const weekNumber = Math.floor(totalOffset / 7) + 1;
-  const dayNumber = (((totalOffset % 7) + 7) % 7) + 1;
-  return { weekNumber, dayNumber };
-}

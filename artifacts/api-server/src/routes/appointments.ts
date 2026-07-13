@@ -1,13 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { coachAppointmentsTable, usersTable } from "@workspace/db";
-import { eq, and, gte, lte, lt, ne } from "drizzle-orm";
+import { eq, and, gte, lte, lt } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
-import { consumeCredits, InsufficientCreditsError } from "../services/credit-ledger.service.js";
-import { notifyUser } from "../services/notify.service.js";
-import { sendOneOnOneConfirmedEmail } from "../services/email.js";
-import { cancelOneOnOne, RequestNotFoundError, formatWhenFr } from "../services/one-on-one.service.js";
 
 const router = Router();
 
@@ -41,8 +37,6 @@ router.get("/coach/appointments", authenticate, requireRole("coach"), async (req
           location: coachAppointmentsTable.location,
           notes: coachAppointmentsTable.notes,
           type: coachAppointmentsTable.type,
-          status: coachAppointmentsTable.status,
-          requestedBy: coachAppointmentsTable.requestedBy,
           createdAt: coachAppointmentsTable.createdAt,
           athleteFirstName: usersTable.firstName,
           athleteLastName: usersTable.lastName,
@@ -53,8 +47,7 @@ router.get("/coach/appointments", authenticate, requireRole("coach"), async (req
           and(
             eq(coachAppointmentsTable.coachId, coachId),
             gte(coachAppointmentsTable.startAt, monthStart),
-            lt(coachAppointmentsTable.startAt, monthEnd),
-            ne(coachAppointmentsTable.status, "declined"),
+            lt(coachAppointmentsTable.startAt, monthEnd)
           )
         );
     } else {
@@ -68,15 +61,13 @@ router.get("/coach/appointments", authenticate, requireRole("coach"), async (req
           location: coachAppointmentsTable.location,
           notes: coachAppointmentsTable.notes,
           type: coachAppointmentsTable.type,
-          status: coachAppointmentsTable.status,
-          requestedBy: coachAppointmentsTable.requestedBy,
           createdAt: coachAppointmentsTable.createdAt,
           athleteFirstName: usersTable.firstName,
           athleteLastName: usersTable.lastName,
         })
         .from(coachAppointmentsTable)
         .leftJoin(usersTable, eq(coachAppointmentsTable.athleteId, usersTable.id))
-        .where(and(eq(coachAppointmentsTable.coachId, coachId), ne(coachAppointmentsTable.status, "declined")));
+        .where(eq(coachAppointmentsTable.coachId, coachId));
     }
 
     res.json(rows.map((r) => ({
@@ -89,11 +80,6 @@ router.get("/coach/appointments", authenticate, requireRole("coach"), async (req
   }
 });
 
-// Direct coach booking (Fiche athlète 360° → "Planifier un 1:1"). Debits 1
-// individuel credit immediately — a coach-initiated session is a real
-// session too, not a way to bypass the credit system — and sends push+email
-// (the athlete-requested flow confirmed via /confirm below is push-only,
-// per spec: the two flows have different notification requirements).
 router.post("/coach/appointments", authenticate, requireRole("coach"), async (req, res) => {
   const parsed = appointmentSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -103,47 +89,26 @@ router.post("/coach/appointments", authenticate, requireRole("coach"), async (re
   try {
     const coachId = req.user!.userId;
     const [athlete] = await db
-      .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName, language: usersTable.language })
+      .select({ id: usersTable.id })
       .from(usersTable)
       .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, coachId)));
     if (!athlete) {
       res.status(403).json({ error: { code: "FORBIDDEN", message: "Athlète introuvable ou non associé" } });
       return;
     }
-
-    const row = await db.transaction(async (tx) => {
-      const [inserted] = await tx
-        .insert(coachAppointmentsTable)
-        .values({
-          coachId,
-          athleteId: parsed.data.athleteId,
-          startAt: new Date(parsed.data.startAt),
-          durationMin: parsed.data.durationMin,
-          location: parsed.data.location,
-          notes: parsed.data.notes,
-          status: "confirmed",
-          requestedBy: "coach",
-        })
-        .returning();
-      await consumeCredits({ athleteId: parsed.data.athleteId, creditType: "individuel", quantity: 1, reason: "booking", relatedBookingId: inserted!.id }, tx);
-      return inserted!;
-    });
-
-    notifyUser({
-      userId: athlete.id,
-      type: "one_on_one_confirmed",
-      title: "1:1 confirmé ✓",
-      body: `Rendez-vous confirmé le ${formatWhenFr(row.startAt)}.`,
-    }).catch(() => {});
-    sendOneOnOneConfirmedEmail(athlete.email, athlete.firstName, formatWhenFr(row.startAt), athlete.language === "en" ? "en" : "fr").catch(() => {});
-
+    const [row] = await db
+      .insert(coachAppointmentsTable)
+      .values({
+        coachId,
+        athleteId: parsed.data.athleteId,
+        startAt: new Date(parsed.data.startAt),
+        durationMin: parsed.data.durationMin,
+        location: parsed.data.location,
+        notes: parsed.data.notes,
+      })
+      .returning();
     res.status(201).json({ ...row, startAt: row.startAt.toISOString(), createdAt: row.createdAt?.toISOString() ?? null });
-  } catch (err) {
-    if (err instanceof InsufficientCreditsError) {
-      res.status(402).json({ error: { code: "INSUFFICIENT_CREDITS", message: "Cet athlète n'a plus de crédit 1:1" } });
-      return;
-    }
-    console.error(err);
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
@@ -181,8 +146,6 @@ router.put("/coach/appointments/:id", authenticate, requireRole("coach"), async 
   }
 });
 
-// Soft-cancels (not a hard delete — a confirmed appointment may have a credit
-// tied to it, which this refunds automatically; see one-on-one.service.ts).
 router.delete("/coach/appointments/:id", authenticate, requireRole("coach"), async (req, res) => {
   try {
     const coachId = req.user!.userId;
@@ -195,14 +158,9 @@ router.delete("/coach/appointments/:id", authenticate, requireRole("coach"), asy
       res.status(404).json({ error: { code: "NOT_FOUND", message: "RDV introuvable" } });
       return;
     }
-    const result = await cancelOneOnOne(id, coachId);
-    res.json({ success: true, refunded: result.refunded });
-  } catch (err) {
-    if (err instanceof RequestNotFoundError) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "RDV introuvable" } });
-      return;
-    }
-    console.error(err);
+    await db.delete(coachAppointmentsTable).where(eq(coachAppointmentsTable.id, id));
+    res.json({ success: true });
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });

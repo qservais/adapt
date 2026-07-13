@@ -16,11 +16,6 @@ export const exercisesTable = pgTable("exercises", {
   demoGifUrl: varchar("demo_gif_url", { length: 500 }),
   level: varchar("level", { length: 20 }),
   createdBy: uuid("created_by").references(() => usersTable.id),
-  // Which metric PR detection should track for this exercise: load (max
-  // kg — the historical default, unchanged for every pre-existing
-  // exercise), bodyweight (max reps), time (best/lowest seconds), or
-  // distance (max meters). See prService.ts.
-  trackingType: varchar("tracking_type", { length: 20 }).notNull().default("load"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

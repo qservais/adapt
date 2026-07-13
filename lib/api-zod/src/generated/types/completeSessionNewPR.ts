@@ -5,12 +5,10 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { RecordType } from "./recordType";
 
 export interface CompleteSessionNewPR {
   exerciseId: string;
   exerciseName: string;
-  recordType: RecordType;
-  value: number;
-  previousValue?: number | null;
+  loadKg: number;
+  previousLoadKg?: number | null;
 }

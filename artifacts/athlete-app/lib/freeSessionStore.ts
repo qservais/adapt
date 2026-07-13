@@ -1,5 +1,3 @@
-import type { AthletePRItem } from "@workspace/api-client-react";
-
 export interface CompletedExerciseEntry {
   exerciseId: string;
   setsCompleted: number;
@@ -57,7 +55,7 @@ export interface FreeSessionData {
   estimatedDurationMin: number | null;
   exercises: FreeSessionExercise[];
   blocks?: FreeSessionBlock[];
-  athletePRs?: Record<string, AthletePRItem>;
+  athletePRs?: Record<string, number>;
   completedExercises?: CompletedExerciseEntry[];
 }
 

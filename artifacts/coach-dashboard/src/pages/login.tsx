@@ -63,7 +63,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md p-8 sm:p-12 bg-card/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl box-shadow-neon-primary">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-display text-white tracking-widest mb-2 text-shadow-neon-primary">
-            MOUV'UP <span className="text-primary">COACH</span>
+            ADAPT <span className="text-primary">COACH</span>
           </h1>
           <p className="text-muted-foreground font-mono text-sm">{t("auth.login.subtitle")}</p>
         </div>

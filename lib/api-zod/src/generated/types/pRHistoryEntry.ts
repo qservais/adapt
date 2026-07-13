@@ -8,7 +8,7 @@
 
 export interface PRHistoryEntry {
   id: string;
-  value: number;
-  reps?: number | null;
+  loadKg: number;
+  reps: number;
   achievedAt: string;
 }

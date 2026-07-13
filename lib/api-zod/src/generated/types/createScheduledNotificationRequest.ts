@@ -9,7 +9,7 @@ import type { CreateScheduledNotificationRequestRecurrenceConfig } from "./creat
 import type { CreateScheduledNotificationRequestRecurrenceType } from "./createScheduledNotificationRequestRecurrenceType";
 
 export interface CreateScheduledNotificationRequest {
-  athleteId: string | null;
+  athleteId: string;
   message: string;
   recurrenceType: CreateScheduledNotificationRequestRecurrenceType;
   recurrenceConfig?: CreateScheduledNotificationRequestRecurrenceConfig;
