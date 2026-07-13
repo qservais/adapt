@@ -1475,6 +1475,74 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /programs/{id}/insert-off-week:
+    post:
+      operationId: insertProgramOffWeek
+      tags: [programs]
+      summary: Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertOffWeekRequest"
+      responses:
+        "200":
+          description: Week inserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsertOffWeekResponse"
+        "400":
+          description: atWeek out of bounds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /programs/{id}/send-to-athletes:
+    post:
+      operationId: sendProgramToAthletes
+      tags: [programs]
+      summary: Broadcast a template program to several athletes at once (one transactional copy per athlete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendToAthletesRequest"
+      responses:
+        "201":
+          description: Per-athlete results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendToAthletesResponse"
+        "404":
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   # ATHLETE
   /athlete/upcoming-sessions:
     get:
@@ -4333,6 +4401,8 @@ components:
         coachNotes:
           type: string
           nullable: true
+        isTest:
+          type: boolean
         variants:
           type: array
           items:
@@ -4464,6 +4534,8 @@ components:
           type: integer
         coachNotes:
           type: string
+        isTest:
+          type: boolean
         variants:
           type: array
           items:
@@ -5571,4 +5643,69 @@ components:
         - reason
         - issuedAt
         - invoiceId
+
+    InsertOffWeekRequest:
+      type: object
+      properties:
+        atWeek:
+          type: integer
+          minimum: 1
+      required:
+        - atWeek
+
+    InsertOffWeekResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        insertedWeek:
+          type: integer
+        durationWeeks:
+          type: integer
+      required:
+        - success
+        - insertedWeek
+        - durationWeeks
+
+    SendToAthletesRequest:
+      type: object
+      properties:
+        athleteIds:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 100
+        startDate:
+          type: string
+      required:
+        - athleteIds
+
+    SendToAthletesResultItem:
+      type: object
+      properties:
+        athleteId:
+          type: string
+        status:
+          type: string
+          enum: [sent, failed]
+        programId:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+      required:
+        - athleteId
+        - status
+
+    SendToAthletesResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SendToAthletesResultItem"
+      required:
+        - results
 

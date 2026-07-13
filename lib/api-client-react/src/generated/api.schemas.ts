@@ -844,6 +844,7 @@ export interface SessionWithVariants {
   visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
+  isTest?: boolean;
   variants: VariantWithExercises[];
   blocks?: SessionBlockItem[];
 }
@@ -961,6 +962,7 @@ export interface CreateSessionRequest {
   visioLink?: string | null;
   estimatedDurationMin?: number;
   coachNotes?: string;
+  isTest?: boolean;
   variants?: CreateSessionRequestVariantsItem[];
   blocks?: CreateSessionRequestBlocksItem[];
 }
@@ -1509,6 +1511,45 @@ export interface CreditNoteListItem {
   reason: string;
   issuedAt: string;
   invoiceId: string;
+}
+
+export interface InsertOffWeekRequest {
+  /** @minimum 1 */
+  atWeek: number;
+}
+
+export interface InsertOffWeekResponse {
+  success: boolean;
+  insertedWeek: number;
+  durationWeeks: number;
+}
+
+export interface SendToAthletesRequest {
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  athleteIds: string[];
+  startDate?: string;
+}
+
+export type SendToAthletesResultItemStatus =
+  (typeof SendToAthletesResultItemStatus)[keyof typeof SendToAthletesResultItemStatus];
+
+export const SendToAthletesResultItemStatus = {
+  sent: "sent",
+  failed: "failed",
+} as const;
+
+export interface SendToAthletesResultItem {
+  athleteId: string;
+  status: SendToAthletesResultItemStatus;
+  programId?: string | null;
+  error?: string | null;
+}
+
+export interface SendToAthletesResponse {
+  results: SendToAthletesResultItem[];
 }
 
 export type GiftCredits201 = {

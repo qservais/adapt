@@ -1375,6 +1375,7 @@ export const GetProgramResponse = zod.object({
       visioLink: zod.string().nullish(),
       estimatedDurationMin: zod.number().nullish(),
       coachNotes: zod.string().nullish(),
+      isTest: zod.boolean().optional(),
       variants: zod.array(
         zod.object({
           id: zod.string(),
@@ -1498,6 +1499,7 @@ export const AddProgramSessionBody = zod.object({
   visioLink: zod.string().nullish(),
   estimatedDurationMin: zod.number().optional(),
   coachNotes: zod.string().optional(),
+  isTest: zod.boolean().optional(),
   variants: zod
     .array(
       zod.object({
@@ -1590,6 +1592,7 @@ export const UpdateProgramSessionBody = zod.object({
   visioLink: zod.string().nullish(),
   estimatedDurationMin: zod.number().optional(),
   coachNotes: zod.string().optional(),
+  isTest: zod.boolean().optional(),
   variants: zod
     .array(
       zod.object({
@@ -1646,6 +1649,40 @@ export const UpdateProgramSessionBody = zod.object({
 export const UpdateProgramSessionResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
+});
+
+/**
+ * @summary Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+ */
+export const InsertProgramOffWeekParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const InsertProgramOffWeekBody = zod.object({
+  atWeek: zod.number().min(1),
+});
+
+export const InsertProgramOffWeekResponse = zod.object({
+  success: zod.boolean(),
+  insertedWeek: zod.number(),
+  durationWeeks: zod.number(),
+});
+
+/**
+ * @summary Broadcast a template program to several athletes at once (one transactional copy per athlete)
+ */
+export const SendProgramToAthletesParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const sendProgramToAthletesBodyAthleteIdsMax = 100;
+
+export const SendProgramToAthletesBody = zod.object({
+  athleteIds: zod
+    .array(zod.string())
+    .min(1)
+    .max(sendProgramToAthletesBodyAthleteIdsMax),
+  startDate: zod.string().optional(),
 });
 
 /**
@@ -1755,6 +1792,7 @@ export const GetAthleteProgramPreviewResponse = zod.object({
       visioLink: zod.string().nullish(),
       estimatedDurationMin: zod.number().nullish(),
       coachNotes: zod.string().nullish(),
+      isTest: zod.boolean().optional(),
       variants: zod.array(
         zod.object({
           id: zod.string(),

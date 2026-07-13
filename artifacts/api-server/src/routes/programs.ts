@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { programsTable, sessionsTable, sessionVariantsTable, sessionExercisesTable, sessionBlocksTable, exercisesTable, usersTable, SESSION_BLOCK_TYPES } from "@workspace/db";
-import { eq, and, inArray, count, isNull } from "drizzle-orm";
+import { eq, and, inArray, count, isNull, gte, sql } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 import { notifyUser } from "../services/notify.service.js";
 import { t } from "../locales/index.js";
+import { copyProgramForAthlete } from "../services/program-copy.service.js";
+import { logger } from "../lib/logger.js";
 
 const ALL_SESSION_TYPES = [
   "strength", "cardio", "hybrid", "mobility", "athletic_development", "running", "conditioning",
@@ -286,86 +288,13 @@ router.post("/programs/templates/:id/apply", authenticate, requireRole("coach"),
       return;
     }
 
-    const [newProgram] = await db.insert(programsTable).values({
-      coachId: req.user!.userId,
-      athleteId: parsed.data.athleteId,
-      name: template.name,
-      description: template.description,
-      durationWeeks: template.durationWeeks,
-      startDate: parsed.data.startDate,
-      isTemplate: false,
-    }).returning();
-
-    const templateSessions = await db.select().from(sessionsTable)
-      .where(eq(sessionsTable.programId, templateId))
-      .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
-
-    for (const session of templateSessions) {
-      const [newSession] = await db.insert(sessionsTable).values({
-        programId: newProgram.id,
-        weekNumber: session.weekNumber,
-        dayNumber: session.dayNumber,
-        name: session.name,
-        type: session.type,
-        sessionType: session.sessionType,
-        scheduledTime: session.scheduledTime,
-        visioLink: session.visioLink,
-        estimatedDurationMin: session.estimatedDurationMin,
-        coachNotes: session.coachNotes,
-      }).returning();
-
-      const templateBlocks = await db.select().from(sessionBlocksTable)
-        .where(eq(sessionBlocksTable.sessionId, session.id))
-        .orderBy(sessionBlocksTable.orderIndex);
-
-      const blockIdMap = new Map<string, string>();
-      for (const block of templateBlocks) {
-        const [newBlock] = await db.insert(sessionBlocksTable).values({
-          sessionId: newSession.id,
-          type: block.type,
-          orderIndex: block.orderIndex,
-          name: block.name,
-          notes: block.notes,
-          estimatedDurationMin: block.estimatedDurationMin,
-          conditioningFormat: block.conditioningFormat,
-        }).returning();
-        blockIdMap.set(block.id, newBlock.id);
-      }
-
-      const templateVariants = await db.select().from(sessionVariantsTable)
-        .where(eq(sessionVariantsTable.sessionId, session.id));
-
-      for (const variant of templateVariants) {
-        const [newVariant] = await db.insert(sessionVariantsTable).values({
-          sessionId: newSession.id,
-          mode: variant.mode,
-          volumeModifier: variant.volumeModifier,
-          intensityModifier: variant.intensityModifier,
-          notes: variant.notes,
-        }).returning();
-
-        const templateExercises = await db.select().from(sessionExercisesTable)
-          .where(eq(sessionExercisesTable.variantId, variant.id))
-          .orderBy(sessionExercisesTable.orderIndex);
-
-        for (const ex of templateExercises) {
-          await db.insert(sessionExercisesTable).values({
-            variantId: newVariant.id,
-            blockId: ex.blockId ? (blockIdMap.get(ex.blockId) ?? null) : null,
-            exerciseId: ex.exerciseId,
-            orderIndex: ex.orderIndex,
-            sets: ex.sets,
-            reps: ex.reps,
-            loadKg: ex.loadKg,
-            restSeconds: ex.restSeconds,
-            coachCue: ex.coachCue,
-            tempo: ex.tempo,
-            supersetGroup: ex.supersetGroup,
-            supersetLabel: ex.supersetLabel,
-          });
-        }
-      }
-    }
+    const newProgram = await db.transaction((tx) =>
+      copyProgramForAthlete(tx, template, {
+        coachId: req.user!.userId,
+        athleteId: parsed.data.athleteId,
+        startDate: parsed.data.startDate,
+      })
+    );
 
     const notifTitle = "Nouveau programme disponible 🏋️";
     const notifBody = `Ton coach t'a attribué un nouveau programme : ${newProgram.name}`;
@@ -434,86 +363,13 @@ router.post("/programs/:id/duplicate-for-athlete", authenticate, requireRole("co
       return;
     }
 
-    const [newProgram] = await db.insert(programsTable).values({
-      coachId: req.user!.userId,
-      athleteId: parsed.data.athleteId,
-      name: sourceProgram.name,
-      description: sourceProgram.description,
-      durationWeeks: sourceProgram.durationWeeks,
-      startDate: parsed.data.startDate,
-      isTemplate: false,
-    }).returning();
-
-    const sourceSessions = await db.select().from(sessionsTable)
-      .where(eq(sessionsTable.programId, programId))
-      .orderBy(sessionsTable.weekNumber, sessionsTable.dayNumber);
-
-    for (const session of sourceSessions) {
-      const [newSession] = await db.insert(sessionsTable).values({
-        programId: newProgram.id,
-        weekNumber: session.weekNumber,
-        dayNumber: session.dayNumber,
-        name: session.name,
-        type: session.type,
-        sessionType: session.sessionType,
-        scheduledTime: session.scheduledTime,
-        visioLink: session.visioLink,
-        estimatedDurationMin: session.estimatedDurationMin,
-        coachNotes: session.coachNotes,
-      }).returning();
-
-      const sourceBlocks = await db.select().from(sessionBlocksTable)
-        .where(eq(sessionBlocksTable.sessionId, session.id))
-        .orderBy(sessionBlocksTable.orderIndex);
-
-      const blockIdMap = new Map<string, string>();
-      for (const block of sourceBlocks) {
-        const [newBlock] = await db.insert(sessionBlocksTable).values({
-          sessionId: newSession.id,
-          type: block.type,
-          orderIndex: block.orderIndex,
-          name: block.name,
-          notes: block.notes,
-          estimatedDurationMin: block.estimatedDurationMin,
-          conditioningFormat: block.conditioningFormat,
-        }).returning();
-        blockIdMap.set(block.id, newBlock.id);
-      }
-
-      const sourceVariants = await db.select().from(sessionVariantsTable)
-        .where(eq(sessionVariantsTable.sessionId, session.id));
-
-      for (const variant of sourceVariants) {
-        const [newVariant] = await db.insert(sessionVariantsTable).values({
-          sessionId: newSession.id,
-          mode: variant.mode,
-          volumeModifier: variant.volumeModifier,
-          intensityModifier: variant.intensityModifier,
-          notes: variant.notes,
-        }).returning();
-
-        const sourceExercises = await db.select().from(sessionExercisesTable)
-          .where(eq(sessionExercisesTable.variantId, variant.id))
-          .orderBy(sessionExercisesTable.orderIndex);
-
-        for (const ex of sourceExercises) {
-          await db.insert(sessionExercisesTable).values({
-            variantId: newVariant.id,
-            blockId: ex.blockId ? (blockIdMap.get(ex.blockId) ?? null) : null,
-            exerciseId: ex.exerciseId,
-            orderIndex: ex.orderIndex,
-            sets: ex.sets,
-            reps: ex.reps,
-            loadKg: ex.loadKg,
-            restSeconds: ex.restSeconds,
-            coachCue: ex.coachCue,
-            tempo: ex.tempo,
-            supersetGroup: ex.supersetGroup,
-            supersetLabel: ex.supersetLabel,
-          });
-        }
-      }
-    }
+    const newProgram = await db.transaction((tx) =>
+      copyProgramForAthlete(tx, sourceProgram, {
+        coachId: req.user!.userId,
+        athleteId: parsed.data.athleteId,
+        startDate: parsed.data.startDate,
+      })
+    );
 
     const notifTitle = "Nouveau programme disponible 🏋️";
     const notifBody = `Ton coach t'a attribué un nouveau programme : ${newProgram.name}`;
@@ -537,6 +393,75 @@ router.post("/programs/:id/duplicate-for-athlete", authenticate, requireRole("co
     });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const sendToAthletesSchema = z.object({
+  athleteIds: z.array(z.string().uuid()).min(1).max(100),
+  startDate: z.string().optional(),
+});
+
+// Broadcasts a template to several athletes at once — a thin loop around the
+// same copyProgramForAthlete() helper "duplicate-for-athlete" uses, one
+// transactional copy per athlete. One athlete's copy failing (e.g. a bad
+// reference caught mid-transaction) must not abort the others, so failures
+// are collected per-athlete in the response rather than aborting the batch.
+router.post("/programs/:id/send-to-athletes", authenticate, requireRole("coach"), async (req, res) => {
+  const parsed = sendToAthletesSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+
+  try {
+    const programId = String(req.params["id"]);
+
+    const [sourceProgram] = await db.select().from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId), eq(programsTable.isTemplate, true)));
+    if (!sourceProgram) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: t(req.locale, "errors.templateNotFound") } });
+      return;
+    }
+
+    const athletes = await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName })
+      .from(usersTable)
+      .where(and(inArray(usersTable.id, parsed.data.athleteIds), eq(usersTable.coachId, req.user!.userId)));
+    const athleteById = new Map(athletes.map((a) => [a.id, a]));
+
+    const results: { athleteId: string; status: "sent" | "failed"; programId?: string; error?: string }[] = [];
+
+    for (const athleteId of parsed.data.athleteIds) {
+      const athlete = athleteById.get(athleteId);
+      if (!athlete) {
+        results.push({ athleteId, status: "failed", error: t(req.locale, "errors.athleteNotLinkedCoach") });
+        continue;
+      }
+      try {
+        const newProgram = await db.transaction((tx) =>
+          copyProgramForAthlete(tx, sourceProgram, {
+            coachId: req.user!.userId,
+            athleteId,
+            startDate: parsed.data.startDate,
+          })
+        );
+        await notifyUser({
+          userId: athleteId,
+          type: "new_program",
+          title: "Nouveau programme disponible 🏋️",
+          body: `Ton coach t'a attribué un nouveau programme : ${newProgram.name}`,
+          link: "/(tabs)/session",
+        }).catch(() => {});
+        results.push({ athleteId, status: "sent", programId: newProgram.id });
+      } catch (err) {
+        logger.error({ err, athleteId, programId }, "send-to-athletes: copy failed for one athlete");
+        results.push({ athleteId, status: "failed", error: "copy failed" });
+      }
+    }
+
+    res.status(201).json({ results });
+  } catch (err) {
+    logger.error({ err }, "send-to-athletes: request failed");
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });
@@ -763,6 +688,7 @@ router.get("/programs/:programId", authenticate, requireRole("coach"), async (re
         visioLink: session.visioLink ?? null,
         estimatedDurationMin: session.estimatedDurationMin,
         coachNotes: session.coachNotes,
+        isTest: session.isTest,
         blocks: blocks.map(b => ({
           id: b.id,
           type: b.type,
@@ -932,6 +858,7 @@ const sessionBaseSchema = z.object({
   visioLink: z.string().url().optional().nullable().or(z.literal("")),
   estimatedDurationMin: z.number().int().optional(),
   coachNotes: z.string().optional(),
+  isTest: z.boolean().optional(),
   blocks: z.array(blockInputSchema).optional(),
   variants: z.array(z.object({
     mode: z.enum(["performance", "normal", "adapt", "recovery"]),
@@ -972,6 +899,7 @@ router.post("/programs/:programId/sessions", authenticate, requireRole("coach"),
       visioLink: parsed.data.visioLink || null,
       estimatedDurationMin: parsed.data.estimatedDurationMin,
       coachNotes: parsed.data.coachNotes,
+      isTest: parsed.data.isTest ?? false,
     }).returning();
 
     // Create blocks and collect all exercises for variant creation
@@ -1089,6 +1017,7 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
       visioLink?: string | null;
       estimatedDurationMin?: number;
       coachNotes?: string;
+      isTest?: boolean;
     } = {};
     if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
     if (parsed.data.weekNumber !== undefined) updateData.weekNumber = parsed.data.weekNumber;
@@ -1097,6 +1026,7 @@ router.put("/programs/:programId/sessions/:sessionId", authenticate, requireRole
     if (parsed.data.sessionType !== undefined) updateData.sessionType = parsed.data.sessionType;
     if (parsed.data.scheduledTime !== undefined) updateData.scheduledTime = parsed.data.scheduledTime ?? null;
     if (parsed.data.visioLink !== undefined) updateData.visioLink = parsed.data.visioLink || null;
+    if (parsed.data.isTest !== undefined) updateData.isTest = parsed.data.isTest;
     if (parsed.data.estimatedDurationMin !== undefined) updateData.estimatedDurationMin = parsed.data.estimatedDurationMin;
     if (parsed.data.coachNotes !== undefined) updateData.coachNotes = parsed.data.coachNotes;
 
@@ -1278,6 +1208,53 @@ router.patch("/programs/:programId/sessions/:sessionId/position", authenticate, 
 
     res.json({ success: true, weekNumber, dayNumber });
   } catch (err) {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
+  }
+});
+
+// POST /programs/:id/insert-off-week — insert an empty (deload/off) week at
+// atWeek, shifting every session at or after it +1 and growing durationWeeks
+// to match. Bulk shift + duration bump run in one transaction so a program
+// is never left with sessions numbered past its own durationWeeks.
+router.post("/programs/:id/insert-off-week", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const programId = String(req.params["id"]);
+
+    const schema = z.object({ atWeek: z.number().int().min(1) });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.weekDayRequired") } });
+      return;
+    }
+    const { atWeek } = parsed.data;
+
+    const [program] = await db.select({ id: programsTable.id, durationWeeks: programsTable.durationWeeks })
+      .from(programsTable)
+      .where(and(eq(programsTable.id, programId), eq(programsTable.coachId, req.user!.userId)));
+    if (!program) {
+      res.status(403).json({ error: { code: "AUTH_FORBIDDEN", message: t(req.locale, "errors.programNotFoundOrUnauthorized") } });
+      return;
+    }
+    // atWeek can be anywhere from week 1 up to right after the program's
+    // current last week (i.e. appending a new final week is allowed).
+    if (atWeek > program.durationWeeks + 1) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: t(req.locale, "errors.insertWeekOutOfBounds") } });
+      return;
+    }
+
+    const newDurationWeeks = program.durationWeeks + 1;
+    await db.transaction(async (tx) => {
+      await tx.update(sessionsTable)
+        .set({ weekNumber: sql`${sessionsTable.weekNumber} + 1` })
+        .where(and(eq(sessionsTable.programId, programId), gte(sessionsTable.weekNumber, atWeek)));
+      await tx.update(programsTable)
+        .set({ durationWeeks: newDurationWeeks, updatedAt: new Date() })
+        .where(eq(programsTable.id, programId));
+    });
+
+    res.json({ success: true, insertedWeek: atWeek, durationWeeks: newDurationWeeks });
+  } catch (err) {
+    logger.error({ err }, "insert-off-week: request failed");
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: t(req.locale, "errors.serverError") } });
   }
 });

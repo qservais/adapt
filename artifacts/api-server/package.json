@@ -11,7 +11,8 @@
     "test:library": "tsx tests/exercises-library.test.ts",
     "test:credit-ledger": "tsx tests/credit-ledger.test.ts",
     "test:booking": "tsx tests/booking.test.ts",
-    "test:invoicing": "tsx tests/invoicing.test.ts"
+    "test:invoicing": "tsx tests/invoicing.test.ts",
+    "test:date-utils": "tsx tests/date-utils.test.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",

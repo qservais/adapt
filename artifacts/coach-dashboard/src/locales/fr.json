@@ -1041,6 +1041,7 @@
       "optional": "(optionnel)",
       "label_coach_notes": "Notes coach",
       "placeholder_optional_notes": "Notes optionnelles...",
+      "label_is_test": "Séance test",
       "label_estimated_duration": "Durée estimée",
       "auto_variants": "<0>Variantes auto-générées</0> — Les variantes <1>Performance</1> (×1.05), <2>Adapt</2> (×0.75) et <3>Récupération</3> (×0.30) seront créées automatiquement.",
       "session_structure": "Structure de la séance",

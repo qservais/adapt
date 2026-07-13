@@ -1047,6 +1047,7 @@
       "label_format": "Format",
       "format_in_person": "🏋️ In-person",
       "placeholder_optional_notes": "Optional notes...",
+      "label_is_test": "Test session",
       "label_estimated_duration": "Estimated duration",
       "session_structure": "Session structure",
       "cancel": "Cancel",

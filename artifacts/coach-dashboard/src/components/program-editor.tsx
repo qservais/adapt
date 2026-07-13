@@ -25,7 +25,7 @@ import {
   ChevronDown, ChevronUp, Clock, Flame, Zap, Activity,
   Shield, Wind, GripVertical, Link as LinkIcon,
   Heart, Timer, PersonStanding, Radius, Crosshair, Layers,
-  Gauge, BarChart2, Copy, FileText,
+  Gauge, BarChart2, Copy, FileText, FlaskConical,
 } from "lucide-react";
 import { SessionImportModal } from "./session-import-modal";
 import { Button } from "@/components/ui/button";
@@ -175,6 +175,7 @@ export interface SessionDraft {
   visioLink: string;
   estimatedDurationMin: number;
   coachNotes: string;
+  isTest: boolean;
   blocks: BlockDraft[];
 }
 
@@ -196,6 +197,7 @@ export const emptySession = (): SessionDraft => ({
   visioLink: "",
   estimatedDurationMin: 60,
   coachNotes: "",
+  isTest: false,
   blocks: [emptyBlock(0, "warm_up"), emptyBlock(1, "strength")],
 });
 
@@ -272,6 +274,7 @@ export function sessionToDraft(session: SessionWithVariants): SessionDraft {
     visioLink: session.visioLink ?? "",
     estimatedDurationMin: session.estimatedDurationMin || 60,
     coachNotes: session.coachNotes || "",
+    isTest: session.isTest ?? false,
     blocks,
   };
 }
@@ -1062,6 +1065,7 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
         visioLink: draft.visioLink || null,
         estimatedDurationMin: autoDurationMin ?? draft.estimatedDurationMin,
         coachNotes: draft.coachNotes,
+        isTest: draft.isTest,
         blocks: blocksPayload,
       };
 
@@ -1174,6 +1178,22 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
               placeholder={t("components.program_editor.placeholder_optional_notes")}
               className="bg-background border-border"
             />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setDraft((d) => ({ ...d, isTest: !d.isTest }))}
+              className={cn(
+                "flex items-center gap-2 h-9 px-3 rounded-md border text-xs font-medium transition-colors",
+                draft.isTest
+                  ? "bg-orange-400/15 border-orange-400 text-orange-400"
+                  : "bg-background border-border text-muted-foreground hover:border-muted-foreground"
+              )}
+            >
+              <FlaskConical className="w-3.5 h-3.5" />
+              {t("components.program_editor.label_is_test")}
+            </button>
           </div>
 
           <div>
@@ -1340,13 +1360,24 @@ export function SessionCell({ session, weekNumber, dayNumber, programId, onRefet
         "group w-full rounded-lg border bg-card transition-all relative overflow-hidden",
         expanded ? "border-white/20" : "border-border hover:border-white/20"
       )}>
-        <div className={cn("absolute top-0 left-0 w-0.5 h-full", typeColor.dot)} />
+        <div className={cn("absolute top-0 left-0 w-0.5 h-full", typeColor.dot, session.isTest && "bg-orange-400")} />
         <div className="p-2 pl-3 cursor-pointer" onClick={() => setEditOpen(true)}>
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
           <p className="text-xs font-semibold text-white truncate leading-tight mb-1 pr-5">{session.name}</p>
-          <div className={cn("flex items-center gap-1 mb-1.5", typeColor.text)}>
-            <TypeIcon className="w-2.5 h-2.5 shrink-0" />
-            <span className="text-[10px] font-mono capitalize">{SESSION_TYPE_LABELS[session.type] ?? session.type}</span>
+          <div className="flex items-center gap-1 mb-1.5">
+            <div className={cn("flex items-center gap-1", typeColor.text)}>
+              <TypeIcon className="w-2.5 h-2.5 shrink-0" />
+              <span className="text-[10px] font-mono capitalize">{SESSION_TYPE_LABELS[session.type] ?? session.type}</span>
+            </div>
+            {session.isTest && (
+              <span
+                title="Séance test"
+                className="flex items-center gap-0.5 text-[8px] uppercase font-bold px-1 py-0.5 rounded-sm bg-orange-400/10 text-orange-400 border border-dashed border-orange-400/40"
+              >
+                <FlaskConical className="w-2 h-2" />
+                Test
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-between gap-1">
             <div className="flex gap-0.5 flex-wrap">

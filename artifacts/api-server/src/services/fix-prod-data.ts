@@ -376,6 +376,16 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – invoicing tables failed");
     throw err;
   }
+
+  // Mouv'Up Phase 7 — isTest flag on sessions (deload/test sessions, shown
+  // distinctly on the calendar but never excluded from PR detection)
+  try {
+    await db.execute(sql`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS is_test boolean NOT NULL DEFAULT false`);
+    logger.info("runSchemaMigrations: sessions.is_test column OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – sessions.is_test column failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

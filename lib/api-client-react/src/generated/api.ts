@@ -74,6 +74,8 @@ import type {
   GiftCredits201,
   GiftCreditsRequest,
   HealthStatus,
+  InsertOffWeekRequest,
+  InsertOffWeekResponse,
   InviteCodeResponse,
   InvoiceListItem,
   LibrarySession,
@@ -102,6 +104,8 @@ import type {
   ScheduleClassTemplate201,
   ScheduledNotification,
   SendMessageRequest,
+  SendToAthletesRequest,
+  SendToAthletesResponse,
   SessionDetail,
   SessionExerciseLog,
   SessionFeedbackRequest,
@@ -5883,6 +5887,180 @@ export const useUpdateProgramSession = <
   TContext
 > => {
   return useMutation(getUpdateProgramSessionMutationOptions(options));
+};
+
+/**
+ * @summary Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+ */
+export const getInsertProgramOffWeekUrl = (id: string) => {
+  return `/api/programs/${id}/insert-off-week`;
+};
+
+export const insertProgramOffWeek = async (
+  id: string,
+  insertOffWeekRequest: InsertOffWeekRequest,
+  options?: RequestInit,
+): Promise<InsertOffWeekResponse> => {
+  return customFetch<InsertOffWeekResponse>(getInsertProgramOffWeekUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(insertOffWeekRequest),
+  });
+};
+
+export const getInsertProgramOffWeekMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof insertProgramOffWeek>>,
+    TError,
+    { id: string; data: BodyType<InsertOffWeekRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof insertProgramOffWeek>>,
+  TError,
+  { id: string; data: BodyType<InsertOffWeekRequest> },
+  TContext
+> => {
+  const mutationKey = ["insertProgramOffWeek"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof insertProgramOffWeek>>,
+    { id: string; data: BodyType<InsertOffWeekRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return insertProgramOffWeek(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InsertProgramOffWeekMutationResult = NonNullable<
+  Awaited<ReturnType<typeof insertProgramOffWeek>>
+>;
+export type InsertProgramOffWeekMutationBody = BodyType<InsertOffWeekRequest>;
+export type InsertProgramOffWeekMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+ */
+export const useInsertProgramOffWeek = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof insertProgramOffWeek>>,
+    TError,
+    { id: string; data: BodyType<InsertOffWeekRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof insertProgramOffWeek>>,
+  TError,
+  { id: string; data: BodyType<InsertOffWeekRequest> },
+  TContext
+> => {
+  return useMutation(getInsertProgramOffWeekMutationOptions(options));
+};
+
+/**
+ * @summary Broadcast a template program to several athletes at once (one transactional copy per athlete)
+ */
+export const getSendProgramToAthletesUrl = (id: string) => {
+  return `/api/programs/${id}/send-to-athletes`;
+};
+
+export const sendProgramToAthletes = async (
+  id: string,
+  sendToAthletesRequest: SendToAthletesRequest,
+  options?: RequestInit,
+): Promise<SendToAthletesResponse> => {
+  return customFetch<SendToAthletesResponse>(getSendProgramToAthletesUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(sendToAthletesRequest),
+  });
+};
+
+export const getSendProgramToAthletesMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendProgramToAthletes>>,
+    TError,
+    { id: string; data: BodyType<SendToAthletesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendProgramToAthletes>>,
+  TError,
+  { id: string; data: BodyType<SendToAthletesRequest> },
+  TContext
+> => {
+  const mutationKey = ["sendProgramToAthletes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendProgramToAthletes>>,
+    { id: string; data: BodyType<SendToAthletesRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return sendProgramToAthletes(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendProgramToAthletesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendProgramToAthletes>>
+>;
+export type SendProgramToAthletesMutationBody = BodyType<SendToAthletesRequest>;
+export type SendProgramToAthletesMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Broadcast a template program to several athletes at once (one transactional copy per athlete)
+ */
+export const useSendProgramToAthletes = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendProgramToAthletes>>,
+    TError,
+    { id: string; data: BodyType<SendToAthletesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendProgramToAthletes>>,
+  TError,
+  { id: string; data: BodyType<SendToAthletesRequest> },
+  TContext
+> => {
+  return useMutation(getSendProgramToAthletesMutationOptions(options));
 };
 
 /**
