@@ -10,12 +10,11 @@ import { Input } from "@/components/ui/input";
 import {
   FileText, Loader2, CheckCircle2, AlertCircle,
   ChevronRight, X, Search, RotateCcw, ClipboardPaste,
-  Layers, Plus, Sparkles,
+  Layers, Plus,
 } from "lucide-react";
 import { cn } from "@/components/ui/mode-badge";
-import { useGetExercises, ExerciseData, useConvertSessionTextWithAi } from "@workspace/api-client-react";
+import { useGetExercises, ExerciseData } from "@workspace/api-client-react";
 import { BlockDraft, BlockType, ExerciseRow, emptyBlock, BLOCK_TYPE_META } from "./program-editor";
-import { useToast } from "@/hooks/use-toast";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -314,62 +313,6 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
   }
 
   return blocks.filter(b => b.exercises.length > 0);
-}
-
-// ─── Multi-session program parser ──────────────────────────────────────────────
-
-export interface ParsedProgramSession {
-  weekNumber: number;
-  dayNumber: number;
-  blocks: ParsedBlock[];
-}
-
-// A layer above parseSessionText, not a replacement for it — splits a
-// multi-week paste into per-session chunks on [SEMAINE N] / [SEANCE J]
-// headers, then delegates each chunk's body to parseSessionText (unchanged)
-// for the actual [BLOC]/exercice parsing and exercise-catalog matching. A
-// leading [PROGRAMME ...] line, if present, is skipped — it carries no
-// field this function needs (the caller already knows the target program
-// from context) and is only there so a pasted block reads naturally.
-export function parseProgramText(text: string, exercises: ExerciseData[]): ParsedProgramSession[] {
-  const lines = text.split("\n");
-  const chunks: { weekNumber: number; dayNumber: number; bodyLines: string[] }[] = [];
-
-  let currentWeek: number | null = null;
-  let currentDay: number | null = null;
-  let bodyLines: string[] = [];
-
-  const flush = () => {
-    if (currentWeek !== null && currentDay !== null && bodyLines.some(l => l.trim())) {
-      chunks.push({ weekNumber: currentWeek, dayNumber: currentDay, bodyLines });
-    }
-    bodyLines = [];
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    const weekMatch = line.match(/^\[SEMAINE\s+(\d+)\]$/i);
-    const dayMatch = line.match(/^\[SEANCE\s+(\d+)\]$/i);
-
-    if (weekMatch) {
-      flush();
-      currentWeek = parseInt(weekMatch[1], 10);
-      currentDay = null;
-    } else if (dayMatch) {
-      flush();
-      currentDay = parseInt(dayMatch[1], 10);
-    } else if (currentWeek !== null && currentDay !== null) {
-      bodyLines.push(rawLine);
-    }
-    // Lines before the first [SEMAINE]/[SEANCE] pair (e.g. a [PROGRAMME] title) are ignored.
-  }
-  flush();
-
-  return chunks.map(c => ({
-    weekNumber: c.weekNumber,
-    dayNumber: c.dayNumber,
-    blocks: parseSessionText(c.bodyLines.join("\n"), exercises),
-  }));
 }
 
 // ─── Convert to BlockDraft[] ──────────────────────────────────────────────────
@@ -711,8 +654,6 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
   const [text, setText] = useState("");
   const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
   const [isParsing, setIsParsing] = useState(false);
-  const { toast } = useToast();
-  const convertMutation = useConvertSessionTextWithAi();
 
   const { data: exercises } = useGetExercises(
     {},
@@ -730,22 +671,6 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
   const matchedCount = flatExercises.filter(e => e.matchedExercise).length;
   const totalCount = flatExercises.length;
   const unmatchedCount = totalCount - matchedCount;
-
-  const handleAiConvert = useCallback(async () => {
-    if (!text.trim()) return;
-    try {
-      const result = await convertMutation.mutateAsync({ data: { text } });
-      setText(result.convertedText);
-      toast({ title: "Texte reformaté par l'IA — vérifie le résultat avant d'analyser." });
-    } catch (err: any) {
-      const isNotConfigured = err?.status === 503;
-      toast({
-        title: isNotConfigured ? "Conversion IA indisponible sur ce serveur" : "Échec de la conversion IA",
-        description: isNotConfigured ? undefined : "Tu peux toujours coller ta séance au format attendu ci-dessous.",
-        variant: "destructive",
-      });
-    }
-  }, [text, convertMutation, toast]);
 
   const handleParse = useCallback(() => {
     if (!text.trim()) return;
@@ -825,23 +750,10 @@ Planche | 3x45s | repos 60s | Gainage serré`}</pre>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-muted-foreground uppercase tracking-wider">Colle ta séance ici</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleAiConvert}
-                    disabled={!text.trim() || convertMutation.isPending}
-                    className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {convertMutation.isPending
-                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <Sparkles className="w-3 h-3" />}
-                    Reformater avec l'IA
-                  </button>
-                  <button type="button" onClick={() => setText(EXAMPLE_TEXT)}
-                    className="text-[10px] text-primary hover:text-primary/80 transition-colors">
-                    Charger l'exemple
-                  </button>
-                </div>
+                <button type="button" onClick={() => setText(EXAMPLE_TEXT)}
+                  className="text-[10px] text-primary hover:text-primary/80 transition-colors">
+                  Charger l'exemple
+                </button>
               </div>
               <textarea
                 value={text}

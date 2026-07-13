@@ -1,8 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Loader2, BookOpen, Layers, FileText } from "lucide-react";
-import { ResourceFilesPanel } from "@/components/resources/ResourceFilesPanel";
+import { Plus, Pencil, Trash2, Loader2, BookOpen, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +62,7 @@ export default function ContentPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"guides" | "routines" | "files">("guides");
+  const [activeTab, setActiveTab] = useState<"guides" | "routines">("guides");
 
   const [guideDialog, setGuideDialog] = useState<{ open: boolean; guide?: Guide }>({ open: false });
   const [deleteGuideId, setDeleteGuideId] = useState<string | null>(null);
@@ -218,19 +217,17 @@ export default function ContentPage() {
             {t("content.subtitle")}
           </p>
         </div>
-        {activeTab !== "files" && (
-          <Button
-            onClick={activeTab === "guides" ? openNewGuide : openNewRoutine}
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            {activeTab === "guides" ? "Nouveau guide" : "Nouvelle routine"}
-          </Button>
-        )}
+        <Button
+          onClick={activeTab === "guides" ? openNewGuide : openNewRoutine}
+          className="gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          {activeTab === "guides" ? "Nouveau guide" : "Nouvelle routine"}
+        </Button>
       </div>
 
       <div className="flex gap-2 border-b border-border pb-1">
-        {(["guides", "routines", "files"] as const).map(tab => (
+        {(["guides", "routines"] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -240,13 +237,11 @@ export default function ContentPage() {
                 : "text-muted-foreground hover:text-white"
             }`}
           >
-            {tab === "guides" ? <BookOpen className="w-4 h-4" /> : tab === "routines" ? <Layers className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-            {tab === "guides" ? "Guides" : tab === "routines" ? "Routines" : t("resource_files.tab_label")}
+            {tab === "guides" ? <BookOpen className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
+            {tab === "guides" ? "Guides" : "Routines"}
           </button>
         ))}
       </div>
-
-      {activeTab === "files" && <ResourceFilesPanel />}
 
       {activeTab === "guides" && (
         <div className="space-y-3">

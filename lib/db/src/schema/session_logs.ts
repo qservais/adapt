@@ -31,8 +31,6 @@ export const exerciseLogsTable = pgTable("exercise_logs", {
   setsCompleted: integer("sets_completed"),
   repsPerSet: jsonb("reps_per_set"),
   loadKgUsed: decimal("load_kg_used", { precision: 6, scale: 2 }),
-  durationSecondsUsed: integer("duration_seconds_used"),
-  distanceMetersUsed: decimal("distance_meters_used", { precision: 8, scale: 2 }),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

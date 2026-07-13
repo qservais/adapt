@@ -5,7 +5,6 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { ExerciseDataTrackingType } from "./exerciseDataTrackingType";
 
 export interface ExerciseData {
   id: string;
@@ -14,5 +13,4 @@ export interface ExerciseData {
   muscleGroups?: string[] | null;
   equipment?: string[] | null;
   demoUrl?: string | null;
-  trackingType?: ExerciseDataTrackingType;
 }

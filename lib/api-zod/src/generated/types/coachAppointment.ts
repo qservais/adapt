@@ -5,7 +5,6 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { CoachAppointmentStatus } from "./coachAppointmentStatus";
 
 export interface CoachAppointment {
   id: string;
@@ -16,8 +15,6 @@ export interface CoachAppointment {
   location?: string | null;
   notes?: string | null;
   type: string;
-  status?: CoachAppointmentStatus;
-  requestedBy?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   athleteFirstName?: string | null;

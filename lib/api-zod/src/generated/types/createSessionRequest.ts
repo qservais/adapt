@@ -20,7 +20,6 @@ export interface CreateSessionRequest {
   visioLink?: string | null;
   estimatedDurationMin?: number;
   coachNotes?: string;
-  isTest?: boolean;
   variants?: CreateSessionRequestVariantsItem[];
   blocks?: CreateSessionRequestBlocksItem[];
 }

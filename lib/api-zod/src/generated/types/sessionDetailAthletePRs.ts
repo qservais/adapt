@@ -5,6 +5,5 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { AthletePRItem } from "./athletePRItem";
 
-export type SessionDetailAthletePRs = { [key: string]: AthletePRItem };
+export type SessionDetailAthletePRs = { [key: string]: number };

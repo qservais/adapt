@@ -4,7 +4,6 @@ import pinoHttp from "pino-http";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import router from "./routes/index.js";
-import stripeWebhookRouter from "./routes/webhooks.js";
 import { logger } from "./lib/logger.js";
 import { localeMiddleware } from "./middleware/locale.js";
 
@@ -35,11 +34,6 @@ app.use(cors({
   origin: process.env["CLIENT_URL"] || true,
   credentials: true,
 }));
-
-// Stripe webhook signature verification needs the untouched raw body, so this
-// route is mounted with express.raw() ahead of the global express.json() —
-// it must stay above that line, and is deliberately not part of ./routes/index.js.
-app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhookRouter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

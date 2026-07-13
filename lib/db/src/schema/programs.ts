@@ -35,10 +35,6 @@ export const sessionsTable = pgTable("sessions", {
   visioLink: text("visio_link"),
   estimatedDurationMin: integer("estimated_duration_min"),
   coachNotes: text("coach_notes"),
-  // A test/deload session — shown distinctly on the coach calendar, but
-  // still feeds PR detection and completion stats like any other session
-  // (deliberately not excluded anywhere — see prService.ts).
-  isTest: boolean("is_test").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
