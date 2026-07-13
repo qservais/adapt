@@ -17,12 +17,17 @@ import {
   joinWaitlist,
   leaveWaitlist,
   confirmWaitlistOffer,
+  manualRegisterForClass,
+  waiveLateCancellation,
+  getOccurrenceParticipants,
+  cancelClassOccurrence,
   ClassNotFoundError,
   ClassFullError,
   AlreadyBookedError,
   AlreadyWaitlistedError,
   BookingNotFoundError,
   WaitlistOfferExpiredError,
+  NothingToWaiveError,
 } from "../services/booking.service.js";
 import { notifyUser } from "../services/notify.service.js";
 import { InsufficientCreditsError } from "../services/credit-ledger.service.js";
@@ -37,6 +42,7 @@ function bookingErrorResponse(err: unknown): { status: number; code: string; mes
   if (err instanceof BookingNotFoundError) return { status: 404, code: "NOT_FOUND", message: "Réservation introuvable" };
   if (err instanceof WaitlistOfferExpiredError) return { status: 410, code: "OFFER_EXPIRED", message: "Ta fenêtre de confirmation est expirée" };
   if (err instanceof InsufficientCreditsError) return { status: 402, code: "INSUFFICIENT_CREDITS", message: "Crédits insuffisants" };
+  if (err instanceof NothingToWaiveError) return { status: 409, code: "NOTHING_TO_WAIVE", message: "Rien à offrir sur cette réservation" };
   return null;
 }
 
@@ -334,6 +340,128 @@ router.post("/coach/classes/templates/:id/schedule", authenticate, requireRole("
     res.status(201).json({ rule, occurrences });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+// ─── Coach: operational tools (Phase 5) ─────────────────────────────────────
+
+const manualRegisterSchema = z
+  .object({
+    athleteId: z.string().uuid().optional(),
+    guestName: z.string().min(1).max(150).optional(),
+    paymentMode: z.enum(["comped", "credit", "pay_on_site"]),
+  })
+  .refine((data) => !!data.athleteId || !!data.guestName, { message: "athleteId ou guestName requis" });
+
+router.post("/coach/classes/occurrences/:occurrenceId/register", authenticate, requireRole("coach"), async (req, res) => {
+  const parsed = manualRegisterSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const booking = await manualRegisterForClass(String(req.params["occurrenceId"]), req.user!.userId, parsed.data);
+    res.status(201).json(booking);
+  } catch (err) {
+    const mapped = bookingErrorResponse(err);
+    if (mapped) {
+      res.status(mapped.status).json({ error: { code: mapped.code, message: mapped.message } });
+      return;
+    }
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.post("/coach/classes/bookings/:bookingId/waive-late-cancellation", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    await waiveLateCancellation(String(req.params["bookingId"]), req.user!.userId);
+    res.json({ success: true, message: "Annulation offerte — non décomptée" });
+  } catch (err) {
+    const mapped = bookingErrorResponse(err);
+    if (mapped) {
+      res.status(mapped.status).json({ error: { code: mapped.code, message: mapped.message } });
+      return;
+    }
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/coach/classes/occurrences/:occurrenceId/participants", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const participants = await getOccurrenceParticipants(String(req.params["occurrenceId"]));
+    res.json(participants);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+const cancelOccurrenceSchema = z.object({
+  note: z.string().max(500).optional(),
+});
+
+router.post("/coach/classes/occurrences/:occurrenceId/cancel", authenticate, requireRole("coach"), async (req, res) => {
+  const parsed = cancelOccurrenceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: { code: "VALIDATION_ERROR", message: parsed.error.message } });
+    return;
+  }
+  try {
+    const result = await cancelClassOccurrence(String(req.params["occurrenceId"]), req.user!.userId, parsed.data.note);
+    res.json({ success: true, notifiedCount: result.notifiedCount });
+  } catch (err) {
+    const mapped = bookingErrorResponse(err);
+    if (mapped) {
+      res.status(mapped.status).json({ error: { code: mapped.code, message: mapped.message } });
+      return;
+    }
+    console.error(err);
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+// Coach-facing occurrence list with fill counts (vs. the member-facing
+// /classes/occurrences, which also carries the caller's own booking/waitlist
+// status) — used for the fill-rate view and week/month agenda.
+router.get("/coach/classes/occurrences", authenticate, requireRole("coach"), async (req, res) => {
+  try {
+    const coachId = req.user!.userId;
+    const from = req.query["from"] ? new Date(String(req.query["from"])) : new Date();
+    const to = req.query["to"] ? new Date(String(req.query["to"])) : new Date(from.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const occurrences = await db
+      .select({
+        id: classOccurrencesTable.id,
+        startAt: classOccurrencesTable.startAt,
+        durationMin: classOccurrencesTable.durationMin,
+        capacity: classOccurrencesTable.capacity,
+        status: classOccurrencesTable.status,
+        templateId: classOccurrencesTable.templateId,
+        name: classTemplatesTable.name,
+      })
+      .from(classOccurrencesTable)
+      .innerJoin(classTemplatesTable, eq(classOccurrencesTable.templateId, classTemplatesTable.id))
+      .where(and(eq(classOccurrencesTable.coachId, coachId), gte(classOccurrencesTable.startAt, from), lte(classOccurrencesTable.startAt, to)))
+      .orderBy(asc(classOccurrencesTable.startAt));
+
+    const enriched = await Promise.all(
+      occurrences.map(async (o) => {
+        const [{ value: booked }] = await db
+          .select({ value: count() })
+          .from(classBookingsTable)
+          .where(and(eq(classBookingsTable.occurrenceId, o.id), eq(classBookingsTable.status, "confirmed")));
+        const [{ value: waitlisted }] = await db
+          .select({ value: count() })
+          .from(classWaitlistEntriesTable)
+          .where(and(eq(classWaitlistEntriesTable.occurrenceId, o.id), eq(classWaitlistEntriesTable.status, "waiting")));
+        return { ...o, spotsBooked: booked, spotsAvailable: Math.max(0, o.capacity - booked), waitlistCount: waitlisted };
+      }),
+    );
+
+    res.json(enriched);
+  } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }
 });

@@ -5,13 +5,16 @@ import {
   classBookingsTable,
   classWaitlistEntriesTable,
   studioSettingsTable,
+  usersTable,
+  checkinsTable,
   type ClassBooking,
   type ClassWaitlistEntry,
 } from "@workspace/db";
-import { and, asc, count, eq, lt } from "drizzle-orm";
+import { and, asc, count, eq, inArray, lt } from "drizzle-orm";
 import { consumeCredits, refundByBookingId } from "./credit-ledger.service.js";
 import { notifyUser } from "./notify.service.js";
 import { isLateCancellation } from "../lib/cancellation-math.js";
+import { getTodayLocalDate } from "../lib/dateUtils.js";
 
 export class ClassNotFoundError extends Error {}
 export class ClassFullError extends Error {}
@@ -19,6 +22,7 @@ export class AlreadyBookedError extends Error {}
 export class AlreadyWaitlistedError extends Error {}
 export class BookingNotFoundError extends Error {}
 export class WaitlistOfferExpiredError extends Error {}
+export class NothingToWaiveError extends Error {}
 
 const WAITLIST_OFFER_WINDOW_MS = 30 * 60 * 1000;
 
@@ -258,4 +262,157 @@ export async function confirmWaitlistOffer(occurrenceId: string, athleteId: stri
 
     return booking!;
   });
+}
+
+// ─── Coach operational tools (Phase 5) ──────────────────────────────────────
+
+interface ManualRegisterParams {
+  athleteId?: string;
+  guestName?: string;
+  paymentMode: "comped" | "credit" | "pay_on_site";
+}
+
+// Coach adds a participant directly — an existing athlete or a name-only
+// guest/trial (no account). Capacity is still enforced (the reference mockup
+// explicitly does NOT check capacity on manual registration, which is a gap
+// this real implementation intentionally does not reproduce).
+export async function manualRegisterForClass(occurrenceId: string, coachId: string, params: ManualRegisterParams): Promise<ClassBooking> {
+  if (!params.athleteId && !params.guestName) throw new Error("athleteId or guestName is required");
+  if (params.paymentMode === "credit" && !params.athleteId) throw new Error("credit payment requires an athlete account");
+
+  return db.transaction(async (tx) => {
+    const [occurrence] = await tx.select().from(classOccurrencesTable).where(and(eq(classOccurrencesTable.id, occurrenceId), eq(classOccurrencesTable.coachId, coachId))).for("update");
+    if (!occurrence || occurrence.status !== "scheduled") throw new ClassNotFoundError();
+
+    const [{ value: confirmedCount }] = await tx
+      .select({ value: count() })
+      .from(classBookingsTable)
+      .where(and(eq(classBookingsTable.occurrenceId, occurrenceId), eq(classBookingsTable.status, "confirmed")));
+    if (confirmedCount >= occurrence.capacity) throw new ClassFullError();
+
+    const [booking] = await tx
+      .insert(classBookingsTable)
+      .values({
+        occurrenceId,
+        athleteId: params.athleteId ?? null,
+        guestName: params.guestName ?? null,
+        status: "confirmed",
+        paymentMode: params.paymentMode,
+        paymentStatus: params.paymentMode === "pay_on_site" ? "pending" : "paid",
+        registeredBy: "coach",
+      })
+      .returning();
+
+    if (params.paymentMode === "credit" && params.athleteId) {
+      const [template] = await tx.select({ creditCost: classTemplatesTable.creditCost }).from(classTemplatesTable).where(eq(classTemplatesTable.id, occurrence.templateId));
+      await consumeCredits({ athleteId: params.athleteId, creditType: "collectif", quantity: template?.creditCost ?? 1, reason: "booking", relatedBookingId: booking!.id }, tx);
+    }
+
+    return booking!;
+  });
+}
+
+// Coach forgives a late cancellation after the fact — refunds the credit that
+// stayed spent under the cancellation-window rule. No-op-safe guard: can only
+// waive a booking that was actually flagged late and not already waived.
+export async function waiveLateCancellation(bookingId: string, coachId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [booking] = await tx.select().from(classBookingsTable).where(eq(classBookingsTable.id, bookingId)).for("update");
+    if (!booking) throw new BookingNotFoundError();
+    const [occurrence] = await tx.select({ coachId: classOccurrencesTable.coachId }).from(classOccurrencesTable).where(eq(classOccurrencesTable.id, booking.occurrenceId));
+    if (!occurrence || occurrence.coachId !== coachId) throw new BookingNotFoundError();
+    if (!booking.lateCancellation || booking.lateCancellationWaived) throw new NothingToWaiveError();
+
+    await tx.update(classBookingsTable).set({ lateCancellationWaived: true }).where(eq(classBookingsTable.id, bookingId));
+    if (booking.paymentMode === "credit") {
+      await refundByBookingId(bookingId, "cancellation_refund", tx);
+    }
+  });
+}
+
+export interface ParticipantView {
+  bookingId: string;
+  athleteId: string | null;
+  guestName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  paymentMode: string;
+  todayScore: number | null;
+}
+
+// Fiche cours: who's in, plus today's ADAPT score for each (per spec — the
+// coach sees this at a glance in the class roster).
+export async function getOccurrenceParticipants(occurrenceId: string): Promise<ParticipantView[]> {
+  const bookings = await db
+    .select({
+      bookingId: classBookingsTable.id,
+      athleteId: classBookingsTable.athleteId,
+      guestName: classBookingsTable.guestName,
+      paymentMode: classBookingsTable.paymentMode,
+      firstName: usersTable.firstName,
+      lastName: usersTable.lastName,
+    })
+    .from(classBookingsTable)
+    .leftJoin(usersTable, eq(classBookingsTable.athleteId, usersTable.id))
+    .where(and(eq(classBookingsTable.occurrenceId, occurrenceId), eq(classBookingsTable.status, "confirmed")));
+
+  const athleteIds = bookings.map((b) => b.athleteId).filter((id): id is string => id !== null);
+
+  const scores = athleteIds.length
+    ? await db
+        .select({ athleteId: checkinsTable.athleteId, adaptScore: checkinsTable.adaptScore })
+        .from(checkinsTable)
+        .where(and(inArray(checkinsTable.athleteId, athleteIds), eq(checkinsTable.date, getTodayLocalDate())))
+    : [];
+  const scoreByAthlete = new Map(scores.map((s) => [s.athleteId, s.adaptScore]));
+
+  return bookings.map((b) => ({
+    ...b,
+    todayScore: b.athleteId ? (scoreByAthlete.get(b.athleteId) ?? null) : null,
+  }));
+}
+
+// Coach cancels the whole occurrence: every confirmed booking is refunded (if
+// paid by credit) and everyone gets a push + email, with an optional personal
+// note from the coach appended — matches the class-cancellation spec exactly
+// (SlotEditor in the reference mockup describes this same flow for 1:1s;
+// group classes get the equivalent here).
+export async function cancelClassOccurrence(occurrenceId: string, coachId: string, note?: string): Promise<{ notifiedCount: number }> {
+  const { bookings, occurrence } = await db.transaction(async (tx) => {
+    const [occ] = await tx.select().from(classOccurrencesTable).where(and(eq(classOccurrencesTable.id, occurrenceId), eq(classOccurrencesTable.coachId, coachId))).for("update");
+    if (!occ || occ.status !== "scheduled") throw new ClassNotFoundError();
+
+    const confirmedBookings = await tx
+      .select()
+      .from(classBookingsTable)
+      .where(and(eq(classBookingsTable.occurrenceId, occurrenceId), eq(classBookingsTable.status, "confirmed")));
+
+    await tx.update(classOccurrencesTable).set({ status: "cancelled", cancelledAt: new Date(), cancellationNote: note }).where(eq(classOccurrencesTable.id, occurrenceId));
+
+    for (const booking of confirmedBookings) {
+      await tx.update(classBookingsTable).set({ status: "cancelled", cancelledAt: new Date() }).where(eq(classBookingsTable.id, booking.id));
+      if (booking.paymentMode === "credit") {
+        await refundByBookingId(booking.id, "cancellation_refund", tx);
+      }
+    }
+
+    return { bookings: confirmedBookings, occurrence: occ };
+  });
+
+  const [template] = await db.select({ name: classTemplatesTable.name }).from(classTemplatesTable).where(eq(classTemplatesTable.id, occurrence.templateId));
+  const when = occurrence.startAt.toLocaleString("fr-BE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Brussels" });
+
+  let notifiedCount = 0;
+  for (const booking of bookings) {
+    if (!booking.athleteId) continue;
+    notifyUser({
+      userId: booking.athleteId,
+      type: "class_cancelled",
+      title: `${template?.name ?? "Cours"} annulé`,
+      body: note ? `Annulé — ${note}. Crédit restauré si applicable.` : `Le cours du ${when} est annulé. Crédit restauré si applicable.`,
+    }).catch(() => {});
+    notifiedCount++;
+  }
+
+  return { notifiedCount };
 }

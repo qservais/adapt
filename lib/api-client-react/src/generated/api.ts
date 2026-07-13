@@ -18,12 +18,15 @@ import type {
 
 import type {
   AddAvailabilitySlotRequest,
+  AgendaEntry,
   AlertData,
   AthleteLinkRequest,
   AthletePerformanceTest,
   AuthResponse,
   BadgesResponse,
   CancelBookingResponse,
+  CancelClassOccurrence200,
+  CancelClassOccurrenceBody,
   Challenge,
   CheckinData,
   CheckinRequest,
@@ -31,6 +34,7 @@ import type {
   CheckoutSessionResponse,
   ClassBooking,
   ClassOccurrenceWithAvailability,
+  ClassParticipant,
   ClassTemplate,
   ClassWaitlistEntry,
   ClientDetail,
@@ -38,6 +42,7 @@ import type {
   CoachAppointment,
   CoachAvailabilitySlot,
   CoachChallenge,
+  CoachClassOccurrence,
   CoachLinkRequest,
   CoachUnlinkRequest,
   CoachUpdateAthleteRequest,
@@ -59,6 +64,8 @@ import type {
   FreeCustomSessionRequest,
   GetAthleteCoachSlotsParams,
   GetClassOccurrencesParams,
+  GetCoachAgendaParams,
+  GetCoachClassOccurrencesParams,
   GetExercisesParams,
   GetNotificationsParams,
   GiftCredits201,
@@ -69,6 +76,7 @@ import type {
   LogExerciseRequest,
   LoginCodeRequest,
   LoginRequest,
+  ManualRegisterRequest,
   MessageData,
   MessageThread,
   MissedSessionsResponse,
@@ -2907,6 +2915,567 @@ export const useScheduleClassTemplate = <
 > => {
   return useMutation(getScheduleClassTemplateMutationOptions(options));
 };
+
+/**
+ * @summary Coach-facing occurrence list with fill counts and waitlist size
+ */
+export const getGetCoachClassOccurrencesUrl = (
+  params?: GetCoachClassOccurrencesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/classes/occurrences?${stringifiedParams}`
+    : `/api/coach/classes/occurrences`;
+};
+
+export const getCoachClassOccurrences = async (
+  params?: GetCoachClassOccurrencesParams,
+  options?: RequestInit,
+): Promise<CoachClassOccurrence[]> => {
+  return customFetch<CoachClassOccurrence[]>(
+    getGetCoachClassOccurrencesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCoachClassOccurrencesQueryKey = (
+  params?: GetCoachClassOccurrencesParams,
+) => {
+  return [
+    `/api/coach/classes/occurrences`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCoachClassOccurrencesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachClassOccurrencesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachClassOccurrences>>
+  > = ({ signal }) =>
+    getCoachClassOccurrences(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachClassOccurrencesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachClassOccurrences>>
+>;
+export type GetCoachClassOccurrencesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Coach-facing occurrence list with fill counts and waitlist size
+ */
+
+export function useGetCoachClassOccurrences<
+  TData = Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachClassOccurrencesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Manually register a participant (existing athlete or guest/trial name)
+ */
+export const getManualRegisterForClassUrl = (occurrenceId: string) => {
+  return `/api/coach/classes/occurrences/${occurrenceId}/register`;
+};
+
+export const manualRegisterForClass = async (
+  occurrenceId: string,
+  manualRegisterRequest: ManualRegisterRequest,
+  options?: RequestInit,
+): Promise<ClassBooking> => {
+  return customFetch<ClassBooking>(getManualRegisterForClassUrl(occurrenceId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(manualRegisterRequest),
+  });
+};
+
+export const getManualRegisterForClassMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof manualRegisterForClass>>,
+    TError,
+    { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof manualRegisterForClass>>,
+  TError,
+  { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+  TContext
+> => {
+  const mutationKey = ["manualRegisterForClass"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof manualRegisterForClass>>,
+    { occurrenceId: string; data: BodyType<ManualRegisterRequest> }
+  > = (props) => {
+    const { occurrenceId, data } = props ?? {};
+
+    return manualRegisterForClass(occurrenceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ManualRegisterForClassMutationResult = NonNullable<
+  Awaited<ReturnType<typeof manualRegisterForClass>>
+>;
+export type ManualRegisterForClassMutationBody =
+  BodyType<ManualRegisterRequest>;
+export type ManualRegisterForClassMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Manually register a participant (existing athlete or guest/trial name)
+ */
+export const useManualRegisterForClass = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof manualRegisterForClass>>,
+    TError,
+    { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof manualRegisterForClass>>,
+  TError,
+  { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+  TContext
+> => {
+  return useMutation(getManualRegisterForClassMutationOptions(options));
+};
+
+/**
+ * @summary List confirmed participants for a class, with today's ADAPT score
+ */
+export const getGetOccurrenceParticipantsUrl = (occurrenceId: string) => {
+  return `/api/coach/classes/occurrences/${occurrenceId}/participants`;
+};
+
+export const getOccurrenceParticipants = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassParticipant[]> => {
+  return customFetch<ClassParticipant[]>(
+    getGetOccurrenceParticipantsUrl(occurrenceId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetOccurrenceParticipantsQueryKey = (occurrenceId: string) => {
+  return [
+    `/api/coach/classes/occurrences/${occurrenceId}/participants`,
+  ] as const;
+};
+
+export const getGetOccurrenceParticipantsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+  TError = ErrorType<unknown>,
+>(
+  occurrenceId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetOccurrenceParticipantsQueryKey(occurrenceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOccurrenceParticipants>>
+  > = ({ signal }) =>
+    getOccurrenceParticipants(occurrenceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!occurrenceId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOccurrenceParticipantsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOccurrenceParticipants>>
+>;
+export type GetOccurrenceParticipantsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List confirmed participants for a class, with today's ADAPT score
+ */
+
+export function useGetOccurrenceParticipants<
+  TData = Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+  TError = ErrorType<unknown>,
+>(
+  occurrenceId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOccurrenceParticipantsQueryOptions(
+    occurrenceId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Cancel the whole class — refunds every confirmed booking and notifies everyone
+ */
+export const getCancelClassOccurrenceUrl = (occurrenceId: string) => {
+  return `/api/coach/classes/occurrences/${occurrenceId}/cancel`;
+};
+
+export const cancelClassOccurrence = async (
+  occurrenceId: string,
+  cancelClassOccurrenceBody: CancelClassOccurrenceBody,
+  options?: RequestInit,
+): Promise<CancelClassOccurrence200> => {
+  return customFetch<CancelClassOccurrence200>(
+    getCancelClassOccurrenceUrl(occurrenceId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(cancelClassOccurrenceBody),
+    },
+  );
+};
+
+export const getCancelClassOccurrenceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassOccurrence>>,
+    TError,
+    { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelClassOccurrence>>,
+  TError,
+  { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+  TContext
+> => {
+  const mutationKey = ["cancelClassOccurrence"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelClassOccurrence>>,
+    { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> }
+  > = (props) => {
+    const { occurrenceId, data } = props ?? {};
+
+    return cancelClassOccurrence(occurrenceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelClassOccurrenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelClassOccurrence>>
+>;
+export type CancelClassOccurrenceMutationBody =
+  BodyType<CancelClassOccurrenceBody>;
+export type CancelClassOccurrenceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel the whole class — refunds every confirmed booking and notifies everyone
+ */
+export const useCancelClassOccurrence = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassOccurrence>>,
+    TError,
+    { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelClassOccurrence>>,
+  TError,
+  { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+  TContext
+> => {
+  return useMutation(getCancelClassOccurrenceMutationOptions(options));
+};
+
+/**
+ * @summary Forgive a late cancellation after the fact (refunds the credit)
+ */
+export const getWaiveLateCancellationUrl = (bookingId: string) => {
+  return `/api/coach/classes/bookings/${bookingId}/waive-late-cancellation`;
+};
+
+export const waiveLateCancellation = async (
+  bookingId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getWaiveLateCancellationUrl(bookingId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getWaiveLateCancellationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof waiveLateCancellation>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof waiveLateCancellation>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  const mutationKey = ["waiveLateCancellation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof waiveLateCancellation>>,
+    { bookingId: string }
+  > = (props) => {
+    const { bookingId } = props ?? {};
+
+    return waiveLateCancellation(bookingId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WaiveLateCancellationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof waiveLateCancellation>>
+>;
+
+export type WaiveLateCancellationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Forgive a late cancellation after the fact (refunds the credit)
+ */
+export const useWaiveLateCancellation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof waiveLateCancellation>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof waiveLateCancellation>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  return useMutation(getWaiveLateCancellationMutationOptions(options));
+};
+
+/**
+ * @summary Unified week/month agenda — group classes and 1:1s merged and sorted
+ */
+export const getGetCoachAgendaUrl = (params?: GetCoachAgendaParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/agenda?${stringifiedParams}`
+    : `/api/coach/agenda`;
+};
+
+export const getCoachAgenda = async (
+  params?: GetCoachAgendaParams,
+  options?: RequestInit,
+): Promise<AgendaEntry[]> => {
+  return customFetch<AgendaEntry[]>(getGetCoachAgendaUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachAgendaQueryKey = (params?: GetCoachAgendaParams) => {
+  return [`/api/coach/agenda`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCoachAgendaQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachAgenda>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachAgendaParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachAgenda>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachAgendaQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCoachAgenda>>> = ({
+    signal,
+  }) => getCoachAgenda(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAgenda>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachAgendaQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachAgenda>>
+>;
+export type GetCoachAgendaQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Unified week/month agenda — group classes and 1:1s merged and sorted
+ */
+
+export function useGetCoachAgenda<
+  TData = Awaited<ReturnType<typeof getCoachAgenda>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachAgendaParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachAgenda>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachAgendaQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get current user profile

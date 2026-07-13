@@ -21,6 +21,7 @@ import studioSettingsRouter from "./studio-settings.js";
 import shopRouter from "./shop.js";
 import classesRouter from "./classes.js";
 import oneOnOneRouter from "./one-on-one.js";
+import coachAgendaRouter from "./coach-agenda.js";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(studioSettingsRouter);
 router.use(shopRouter);
 router.use(classesRouter);
 router.use(oneOnOneRouter);
+router.use(coachAgendaRouter);
 
 export default router;

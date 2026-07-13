@@ -390,6 +390,58 @@ export interface CreateOneOnOneRequest {
   time: string;
 }
 
+export type CoachClassOccurrence = ClassOccurrence & {
+  name: string;
+  spotsBooked: number;
+  spotsAvailable: number;
+  waitlistCount: number;
+};
+
+export type ManualRegisterRequestPaymentMode =
+  (typeof ManualRegisterRequestPaymentMode)[keyof typeof ManualRegisterRequestPaymentMode];
+
+export const ManualRegisterRequestPaymentMode = {
+  comped: "comped",
+  credit: "credit",
+  pay_on_site: "pay_on_site",
+} as const;
+
+export interface ManualRegisterRequest {
+  athleteId?: string;
+  guestName?: string;
+  paymentMode: ManualRegisterRequestPaymentMode;
+}
+
+export interface ClassParticipant {
+  bookingId: string;
+  athleteId?: string | null;
+  guestName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  paymentMode: string;
+  todayScore?: number | null;
+}
+
+export type AgendaEntryKind =
+  (typeof AgendaEntryKind)[keyof typeof AgendaEntryKind];
+
+export const AgendaEntryKind = {
+  class: "class",
+  individuel: "individuel",
+} as const;
+
+export interface AgendaEntry {
+  kind: AgendaEntryKind;
+  id: string;
+  startAt: string;
+  durationMin: number;
+  label: string;
+  status: string;
+  spotsBooked?: number;
+  capacity?: number;
+  athleteName?: string;
+}
+
 export interface RefreshRequest {
   refreshToken: string;
 }
@@ -1422,6 +1474,25 @@ export type GetClassOccurrencesParams = {
 
 export type ScheduleClassTemplate201 = {
   occurrences?: ClassOccurrence[];
+};
+
+export type GetCoachClassOccurrencesParams = {
+  from?: string;
+  to?: string;
+};
+
+export type CancelClassOccurrenceBody = {
+  note?: string;
+};
+
+export type CancelClassOccurrence200 = {
+  success?: boolean;
+  notifiedCount?: number;
+};
+
+export type GetCoachAgendaParams = {
+  from?: string;
+  to?: string;
 };
 
 export type GetAthleteCoachSlotsParams = {

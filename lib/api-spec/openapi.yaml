@@ -736,6 +736,151 @@ paths:
                     items:
                       $ref: "#/components/schemas/ClassOccurrence"
 
+  /coach/classes/occurrences:
+    get:
+      operationId: getCoachClassOccurrences
+      tags: [classes]
+      summary: Coach-facing occurrence list with fill counts and waitlist size
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Occurrences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachClassOccurrence"
+
+  /coach/classes/occurrences/{occurrenceId}/register:
+    post:
+      operationId: manualRegisterForClass
+      tags: [classes]
+      summary: Manually register a participant (existing athlete or guest/trial name)
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualRegisterRequest"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBooking"
+
+  /coach/classes/occurrences/{occurrenceId}/participants:
+    get:
+      operationId: getOccurrenceParticipants
+      tags: [classes]
+      summary: List confirmed participants for a class, with today's ADAPT score
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassParticipant"
+
+  /coach/classes/occurrences/{occurrenceId}/cancel:
+    post:
+      operationId: cancelClassOccurrence
+      tags: [classes]
+      summary: Cancel the whole class — refunds every confirmed booking and notifies everyone
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  notifiedCount:
+                    type: integer
+
+  /coach/classes/bookings/{bookingId}/waive-late-cancellation:
+    post:
+      operationId: waiveLateCancellation
+      tags: [classes]
+      summary: Forgive a late cancellation after the fact (refunds the credit)
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Waived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/agenda:
+    get:
+      operationId: getCoachAgenda
+      tags: [classes]
+      summary: Unified week/month agenda — group classes and 1:1s merged and sorted
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Agenda entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgendaEntry"
+
   # USERS
   /users/me:
     get:
@@ -3107,6 +3252,94 @@ components:
       required:
         - date
         - time
+
+    CoachClassOccurrence:
+      allOf:
+        - $ref: "#/components/schemas/ClassOccurrence"
+        - type: object
+          properties:
+            name:
+              type: string
+            spotsBooked:
+              type: integer
+            spotsAvailable:
+              type: integer
+            waitlistCount:
+              type: integer
+          required:
+            - name
+            - spotsBooked
+            - spotsAvailable
+            - waitlistCount
+
+    ManualRegisterRequest:
+      type: object
+      properties:
+        athleteId:
+          type: string
+        guestName:
+          type: string
+        paymentMode:
+          type: string
+          enum: [comped, credit, pay_on_site]
+      required:
+        - paymentMode
+
+    ClassParticipant:
+      type: object
+      properties:
+        bookingId:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+        guestName:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        paymentMode:
+          type: string
+        todayScore:
+          type: integer
+          nullable: true
+      required:
+        - bookingId
+        - paymentMode
+
+    AgendaEntry:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [class, individuel]
+        id:
+          type: string
+        startAt:
+          type: string
+        durationMin:
+          type: integer
+        label:
+          type: string
+        status:
+          type: string
+        spotsBooked:
+          type: integer
+        capacity:
+          type: integer
+        athleteName:
+          type: string
+      required:
+        - kind
+        - id
+        - startAt
+        - durationMin
+        - label
+        - status
 
     RefreshRequest:
       type: object

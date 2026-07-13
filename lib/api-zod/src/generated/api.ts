@@ -648,6 +648,118 @@ export const ScheduleClassTemplateBody = zod.object({
 });
 
 /**
+ * @summary Coach-facing occurrence list with fill counts and waitlist size
+ */
+export const GetCoachClassOccurrencesQueryParams = zod.object({
+  from: zod.coerce.string().optional(),
+  to: zod.coerce.string().optional(),
+});
+
+export const GetCoachClassOccurrencesResponseItem = zod
+  .object({
+    id: zod.string(),
+    templateId: zod.string(),
+    coachId: zod.string().optional(),
+    startAt: zod.string(),
+    durationMin: zod.number(),
+    capacity: zod.number(),
+    status: zod.enum(["scheduled", "cancelled"]),
+  })
+  .and(
+    zod.object({
+      name: zod.string(),
+      spotsBooked: zod.number(),
+      spotsAvailable: zod.number(),
+      waitlistCount: zod.number(),
+    }),
+  );
+export const GetCoachClassOccurrencesResponse = zod.array(
+  GetCoachClassOccurrencesResponseItem,
+);
+
+/**
+ * @summary Manually register a participant (existing athlete or guest/trial name)
+ */
+export const ManualRegisterForClassParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const ManualRegisterForClassBody = zod.object({
+  athleteId: zod.string().optional(),
+  guestName: zod.string().optional(),
+  paymentMode: zod.enum(["comped", "credit", "pay_on_site"]),
+});
+
+/**
+ * @summary List confirmed participants for a class, with today's ADAPT score
+ */
+export const GetOccurrenceParticipantsParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const GetOccurrenceParticipantsResponseItem = zod.object({
+  bookingId: zod.string(),
+  athleteId: zod.string().nullish(),
+  guestName: zod.string().nullish(),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+  paymentMode: zod.string(),
+  todayScore: zod.number().nullish(),
+});
+export const GetOccurrenceParticipantsResponse = zod.array(
+  GetOccurrenceParticipantsResponseItem,
+);
+
+/**
+ * @summary Cancel the whole class — refunds every confirmed booking and notifies everyone
+ */
+export const CancelClassOccurrenceParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const CancelClassOccurrenceBody = zod.object({
+  note: zod.string().optional(),
+});
+
+export const CancelClassOccurrenceResponse = zod.object({
+  success: zod.boolean().optional(),
+  notifiedCount: zod.number().optional(),
+});
+
+/**
+ * @summary Forgive a late cancellation after the fact (refunds the credit)
+ */
+export const WaiveLateCancellationParams = zod.object({
+  bookingId: zod.coerce.string(),
+});
+
+export const WaiveLateCancellationResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Unified week/month agenda — group classes and 1:1s merged and sorted
+ */
+export const GetCoachAgendaQueryParams = zod.object({
+  from: zod.coerce.string().optional(),
+  to: zod.coerce.string().optional(),
+});
+
+export const GetCoachAgendaResponseItem = zod.object({
+  kind: zod.enum(["class", "individuel"]),
+  id: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  label: zod.string(),
+  status: zod.string(),
+  spotsBooked: zod.number().optional(),
+  capacity: zod.number().optional(),
+  athleteName: zod.string().optional(),
+});
+export const GetCoachAgendaResponse = zod.array(GetCoachAgendaResponseItem);
+
+/**
  * @summary Get current user profile
  */
 export const GetMeResponse = zod.object({
