@@ -415,6 +415,18 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – generalized PR columns failed");
     throw err;
   }
+
+  // Mouv'Up Phase 8 — real source columns for scheduled-reminder dedup,
+  // replacing the previous `body LIKE '%[ref:<id>]%'` text-search anti-pattern.
+  try {
+    await db.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS source_type varchar(50)`);
+    await db.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS source_id uuid`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notifications_source ON notifications(user_id, source_type, source_id)`);
+    logger.info("runSchemaMigrations: notifications.source_type/source_id OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – notifications source columns failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

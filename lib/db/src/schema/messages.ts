@@ -24,6 +24,11 @@ export const notificationsTable = pgTable("notifications", {
   title: varchar("title", { length: 255 }).notNull(),
   body: text("body"),
   link: varchar("link", { length: 512 }),
+  // Identifies the row that triggered this notification (e.g. a
+  // scheduled_notifications.id), so idempotency/dedup checks can query a
+  // real column instead of grepping the rendered body text for a marker.
+  sourceType: varchar("source_type", { length: 50 }),
+  sourceId: uuid("source_id"),
   isRead: boolean("is_read").default(false),
   isSent: boolean("is_sent").default(false),
   sentAt: timestamp("sent_at", { withTimezone: true }),

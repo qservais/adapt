@@ -189,8 +189,8 @@ async function runScheduledReminders(currentHour: number): Promise<void> {
       .where(
         and(
           eq(notificationsTable.userId, notif.athleteId),
-          eq(notificationsTable.type, "scheduled_reminder"),
-          sql`body LIKE ${`%${notif.id}%`}`,
+          eq(notificationsTable.sourceType, "scheduled_notification"),
+          eq(notificationsTable.sourceId, notif.id),
           sql`date_trunc('day', created_at) = current_date`
         )
       );
@@ -200,8 +200,10 @@ async function runScheduledReminders(currentHour: number): Promise<void> {
       userId: notif.athleteId,
       type: "scheduled_reminder",
       title: "Rappel de ton coach",
-      body: `${notif.message}\n\n[ref:${notif.id}]`,
+      body: notif.message,
       link: "/(tabs)/session",
+      sourceType: "scheduled_notification",
+      sourceId: notif.id,
     });
 
     logger.info({ notifId: notif.id, athleteId: notif.athleteId }, "Scheduled reminder sent");
