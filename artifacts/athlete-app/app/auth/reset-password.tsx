@@ -13,15 +13,16 @@ import { Feather } from "@expo/vector-icons";
 import { COLORS, FONTS } from "@/constants/theme";
 import { InputField } from "@/components/ui/InputField";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { customFetch } from "@/lib/custom-fetch";
+import { useResetLoginCode } from "@workspace/api-client-react";
 import { useT } from "@/context/PreferencesContext";
 
 export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
   const t = useT();
   const { token } = useLocalSearchParams<{ token: string }>();
+  const resetMutation = useResetLoginCode();
 
-  const [newPassword, setNewPassword] = useState("");
+  const [newCode, setNewCode] = useState("");
   const [confirm, setConfirm] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -43,23 +44,20 @@ export default function ResetPasswordScreen() {
   }
 
   const handleSubmit = async () => {
-    if (!newPassword || newPassword.length < 8) {
-      setErrorMsg(t("pwd_min_8", "Le mot de passe doit contenir au moins 8 caractères"));
+    if (!/^\d{6}$/.test(newCode)) {
+      setErrorMsg(t("code_must_be_6_digits", "Ton code doit contenir exactement 6 chiffres"));
       setStatus("error");
       return;
     }
-    if (newPassword !== confirm) {
-      setErrorMsg(t("passwords_dont_match", "Les mots de passe ne correspondent pas"));
+    if (newCode !== confirm) {
+      setErrorMsg(t("codes_dont_match", "Les deux codes ne correspondent pas"));
       setStatus("error");
       return;
     }
     setStatus("loading");
     setErrorMsg("");
     try {
-      await customFetch("/api/auth/reset-password", {
-        method: "POST",
-        body: JSON.stringify({ token, newPassword }),
-      });
+      await resetMutation.mutateAsync({ data: { token, newLoginCode: newCode } });
       setStatus("success");
       setTimeout(() => router.replace("/auth/login"), 2500);
     } catch (err) {
@@ -74,7 +72,7 @@ export default function ResetPasswordScreen() {
       <View style={[styles.center, { backgroundColor: COLORS.bg, paddingTop: insets.top + 40 }]}>
         <Feather name="check-circle" size={48} color={COLORS.green} />
         <Text style={[styles.successTitle, { fontFamily: FONTS.bodySemiBold }]}>
-          {t("pwd_updated", "Mot de passe mis à jour !")}
+          {t("code_updated", "Code mis à jour !")}
         </Text>
         <Text style={[styles.successSubtitle, { fontFamily: FONTS.body }]}>
           {t("redirecting_login", "Redirection vers la connexion…")}
@@ -97,28 +95,30 @@ export default function ResetPasswordScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("new_pwd_title", "NOUVEAU")}</Text>
+          <Text style={[styles.title, { fontFamily: FONTS.title }]}>{t("new_code_title", "NOUVEAU")}</Text>
           <Text style={[styles.titleSub, { fontFamily: FONTS.title, color: COLORS.cyan }]}>
-            {t("new_pwd_title_sub", "MOT DE PASSE")}
+            {t("new_code_title_sub", "CODE")}
           </Text>
         </View>
 
         <View style={styles.form}>
           <InputField
-            label={t("new_password", "Nouveau mot de passe")}
-            value={newPassword}
-            onChangeText={setNewPassword}
-            placeholder="••••••••"
+            label={t("new_login_code", "Nouveau code à 6 chiffres")}
+            value={newCode}
+            onChangeText={(v) => setNewCode(v.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            keyboardType="number-pad"
+            maxLength={6}
             secureToggle
-            autoComplete="new-password"
           />
           <InputField
-            label={t("confirm_password_label", "Confirmer le mot de passe")}
+            label={t("confirm_login_code_label", "Confirmer le code")}
             value={confirm}
-            onChangeText={setConfirm}
-            placeholder="••••••••"
+            onChangeText={(v) => setConfirm(v.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            keyboardType="number-pad"
+            maxLength={6}
             secureToggle
-            autoComplete="new-password"
           />
           {status === "error" && errorMsg ? (
             <View style={styles.errorWrap}>
@@ -126,7 +126,7 @@ export default function ResetPasswordScreen() {
             </View>
           ) : null}
           <GradientButton
-            label={t("change_my_password", "CHANGER MON MOT DE PASSE")}
+            label={t("change_my_code", "CHANGER MON CODE")}
             onPress={handleSubmit}
             loading={status === "loading"}
           />
