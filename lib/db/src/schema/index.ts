@@ -18,3 +18,4 @@ export * from "./user_integrations";
 export * from "./body_metrics";
 export * from "./pr_history";
 export * from "./user_session_templates";
+export * from "./studio_settings";

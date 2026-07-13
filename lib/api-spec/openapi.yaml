@@ -34,6 +34,8 @@ tags:
     description: Coach appointments
   - name: athlete
     description: Athlete-specific endpoints
+  - name: studio
+    description: Studio settings (Mouv'Up — WhatsApp number, VAT regime, cancellation window...)
 
 security:
   - bearerAuth: []
@@ -81,6 +83,90 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register-athlete:
+    post:
+      operationId: registerAthlete
+      tags: [auth]
+      security: []
+      summary: Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterAthleteRequest"
+      responses:
+        "201":
+          description: Athlete account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login-code:
+    post:
+      operationId: loginWithCode
+      tags: [auth]
+      security: []
+      summary: Athlete-app login with email + 6-digit PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginCodeRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/reset-login-code:
+    post:
+      operationId: resetLoginCode
+      tags: [auth]
+      security: []
+      summary: Set a new 6-digit PIN using an emailed reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetLoginCodeRequest"
+      responses:
+        "200":
+          description: Login code updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid or expired token
           content:
             application/json:
               schema:
@@ -144,6 +230,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
+
+  # STUDIO SETTINGS
+  /studio-settings:
+    get:
+      operationId: getStudioSettings
+      tags: [studio]
+      summary: Get the coach's studio settings (defaults if none saved yet)
+      responses:
+        "200":
+          description: Studio settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioSettings"
+    put:
+      operationId: updateStudioSettings
+      tags: [studio]
+      summary: Create or update the coach's studio settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStudioSettingsRequest"
+      responses:
+        "200":
+          description: Updated studio settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioSettings"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # USERS
   /users/me:
@@ -1789,6 +1912,143 @@ components:
       required:
         - email
         - password
+
+    RegisterAthleteRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        loginCode:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: 6-digit PIN chosen by the athlete, used like a password
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        age:
+          type: integer
+        primaryGoal:
+          type: string
+        fitnessLevel:
+          type: string
+        trainingFrequency:
+          type: integer
+          description: Target sessions per week
+        hasInjuryHistory:
+          type: boolean
+        injuries:
+          type: string
+          description: Required when hasInjuryHistory is true
+        medicalContraindication:
+          type: boolean
+          description: PAR-Q-style safety triage flag, does not block signup
+        acquisitionSource:
+          type: string
+        consent:
+          type: boolean
+          description: Must be true — explicit GDPR consent for health-data processing
+      required:
+        - email
+        - loginCode
+        - firstName
+        - lastName
+        - phone
+        - hasInjuryHistory
+        - medicalContraindication
+        - consent
+
+    LoginCodeRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+      required:
+        - email
+        - code
+
+    ResetLoginCodeRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        newLoginCode:
+          type: string
+          pattern: "^[0-9]{6}$"
+      required:
+        - token
+        - newLoginCode
+
+    StudioSettings:
+      type: object
+      properties:
+        coachId:
+          type: string
+        studioName:
+          type: string
+        studioAddress:
+          type: string
+          nullable: true
+        whatsappNumber:
+          type: string
+          nullable: true
+        announcementLink:
+          type: string
+          nullable: true
+        defaultCancellationWindowHours:
+          type: integer
+        vatRegime:
+          type: string
+          enum: [franchise, assujetti]
+        vatNumber:
+          type: string
+          nullable: true
+        invoicePrefix:
+          type: string
+        accountantEmail:
+          type: string
+          nullable: true
+      required:
+        - coachId
+        - studioName
+        - defaultCancellationWindowHours
+        - vatRegime
+        - invoicePrefix
+
+    UpdateStudioSettingsRequest:
+      type: object
+      properties:
+        studioName:
+          type: string
+        studioAddress:
+          type: string
+          nullable: true
+        whatsappNumber:
+          type: string
+          nullable: true
+        announcementLink:
+          type: string
+          nullable: true
+        defaultCancellationWindowHours:
+          type: integer
+          minimum: 1
+          maximum: 168
+        vatRegime:
+          type: string
+          enum: [franchise, assujetti]
+        vatNumber:
+          type: string
+          nullable: true
+        invoicePrefix:
+          type: string
+        accountantEmail:
+          type: string
+          nullable: true
 
     RefreshRequest:
       type: object

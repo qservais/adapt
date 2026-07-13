@@ -71,6 +71,47 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – user_session_templates creation failed");
     throw err;
   }
+
+  // Mouv'Up Phase 1 — athlete PIN auth, extended sport intake, GDPR consent
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone varchar(30)`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_code_hash varchar(255)`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS has_injury_history boolean`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS medical_contraindication boolean`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_source varchar(50)`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_accepted_at timestamptz`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_version varchar(20)`);
+    logger.info("runSchemaMigrations: users Mouv'Up auth/intake columns OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – users Mouv'Up auth/intake columns failed");
+    throw err;
+  }
+
+  // Mouv'Up Phase 1 — studio_settings (one row per coach: WhatsApp number, VAT
+  // regime, default cancellation window, invoice prefix... — see lib/db/src/schema/studio_settings.ts)
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS studio_settings (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        coach_id uuid NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        studio_name varchar(150) NOT NULL DEFAULT 'Mouv''Up',
+        studio_address text,
+        whatsapp_number varchar(30),
+        announcement_link text,
+        default_cancellation_window_hours integer NOT NULL DEFAULT 24,
+        vat_regime varchar(20) NOT NULL DEFAULT 'franchise',
+        vat_number varchar(30),
+        invoice_prefix varchar(10) NOT NULL DEFAULT 'NH',
+        accountant_email varchar(255),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    logger.info("runSchemaMigrations: studio_settings OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – studio_settings creation failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =

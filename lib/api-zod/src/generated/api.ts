@@ -28,6 +28,96 @@ export const RegisterBody = zod.object({
 });
 
 /**
+ * @summary Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+ */
+export const registerAthleteBodyLoginCodeRegExp = new RegExp("^[0-9]{6}$");
+
+export const RegisterAthleteBody = zod.object({
+  email: zod.string(),
+  loginCode: zod
+    .string()
+    .regex(registerAthleteBodyLoginCodeRegExp)
+    .describe("6-digit PIN chosen by the athlete, used like a password"),
+  firstName: zod.string(),
+  lastName: zod.string(),
+  phone: zod.string(),
+  age: zod.number().optional(),
+  primaryGoal: zod.string().optional(),
+  fitnessLevel: zod.string().optional(),
+  trainingFrequency: zod
+    .number()
+    .optional()
+    .describe("Target sessions per week"),
+  hasInjuryHistory: zod.boolean(),
+  injuries: zod
+    .string()
+    .optional()
+    .describe("Required when hasInjuryHistory is true"),
+  medicalContraindication: zod
+    .boolean()
+    .describe("PAR-Q-style safety triage flag, does not block signup"),
+  acquisitionSource: zod.string().optional(),
+  consent: zod
+    .boolean()
+    .describe(
+      "Must be true — explicit GDPR consent for health-data processing",
+    ),
+});
+
+/**
+ * @summary Athlete-app login with email + 6-digit PIN
+ */
+export const loginWithCodeBodyCodeRegExp = new RegExp("^[0-9]{6}$");
+
+export const LoginWithCodeBody = zod.object({
+  email: zod.string(),
+  code: zod.string().regex(loginWithCodeBodyCodeRegExp),
+});
+
+export const LoginWithCodeResponse = zod.object({
+  accessToken: zod.string(),
+  refreshToken: zod.string(),
+  user: zod.object({
+    id: zod.string(),
+    email: zod.string(),
+    role: zod.string(),
+    firstName: zod.string(),
+    lastName: zod.string().nullish(),
+    gender: zod.string().nullish(),
+    birthDate: zod.string().nullish(),
+    age: zod.number().nullish(),
+    weightKg: zod.number().nullish(),
+    heightCm: zod.number().nullish(),
+    trainingFrequency: zod.number().nullish(),
+    injuries: zod.string().nullish(),
+    fitnessLevel: zod.string().nullish(),
+    primaryGoal: zod.string().nullish(),
+    cycleTracking: zod.boolean().optional(),
+    lastPeriodDate: zod.string().nullish(),
+    avgCycleDays: zod.number().nullish(),
+    coachId: zod.string().nullish(),
+    inviteCode: zod.string().nullish(),
+    coachName: zod.string().nullish(),
+    avatarUrl: zod.string().nullish(),
+  }),
+});
+
+/**
+ * @summary Set a new 6-digit PIN using an emailed reset token
+ */
+export const resetLoginCodeBodyNewLoginCodeRegExp = new RegExp("^[0-9]{6}$");
+
+export const ResetLoginCodeBody = zod.object({
+  token: zod.string(),
+  newLoginCode: zod.string().regex(resetLoginCodeBodyNewLoginCodeRegExp),
+});
+
+export const ResetLoginCodeResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Login
  */
 export const LoginBody = zod.object({
@@ -104,6 +194,56 @@ export const RefreshTokenResponse = zod.object({
 export const LogoutResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
+});
+
+/**
+ * @summary Get the coach's studio settings (defaults if none saved yet)
+ */
+export const GetStudioSettingsResponse = zod.object({
+  coachId: zod.string(),
+  studioName: zod.string(),
+  studioAddress: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  announcementLink: zod.string().nullish(),
+  defaultCancellationWindowHours: zod.number(),
+  vatRegime: zod.enum(["franchise", "assujetti"]),
+  vatNumber: zod.string().nullish(),
+  invoicePrefix: zod.string(),
+  accountantEmail: zod.string().nullish(),
+});
+
+/**
+ * @summary Create or update the coach's studio settings
+ */
+export const updateStudioSettingsBodyDefaultCancellationWindowHoursMax = 168;
+
+export const UpdateStudioSettingsBody = zod.object({
+  studioName: zod.string().optional(),
+  studioAddress: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  announcementLink: zod.string().nullish(),
+  defaultCancellationWindowHours: zod
+    .number()
+    .min(1)
+    .max(updateStudioSettingsBodyDefaultCancellationWindowHoursMax)
+    .optional(),
+  vatRegime: zod.enum(["franchise", "assujetti"]).optional(),
+  vatNumber: zod.string().nullish(),
+  invoicePrefix: zod.string().optional(),
+  accountantEmail: zod.string().nullish(),
+});
+
+export const UpdateStudioSettingsResponse = zod.object({
+  coachId: zod.string(),
+  studioName: zod.string(),
+  studioAddress: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  announcementLink: zod.string().nullish(),
+  defaultCancellationWindowHours: zod.number(),
+  vatRegime: zod.enum(["franchise", "assujetti"]),
+  vatNumber: zod.string().nullish(),
+  invoicePrefix: zod.string(),
+  accountantEmail: zod.string().nullish(),
 });
 
 /**

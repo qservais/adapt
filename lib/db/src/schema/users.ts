@@ -27,6 +27,15 @@ export const usersTable = pgTable("users", {
   coachId: uuid("coach_id"),
   inviteCode: varchar("invite_code", { length: 6 }).unique(),
   refreshToken: varchar("refresh_token", { length: 512 }),
+  phone: varchar("phone", { length: 30 }),
+  // 6-digit numeric login PIN (athlete-app passwordless auth), stored hashed like passwordHash.
+  loginCodeHash: varchar("login_code_hash", { length: 255 }),
+  // PAR-Q-style safety triage, distinct from the free-text `injuries` field above.
+  hasInjuryHistory: boolean("has_injury_history"),
+  medicalContraindication: boolean("medical_contraindication"),
+  acquisitionSource: varchar("acquisition_source", { length: 50 }),
+  consentAcceptedAt: timestamp("consent_accepted_at", { withTimezone: true }),
+  consentVersion: varchar("consent_version", { length: 20 }),
   notificationPrefs: jsonb("notification_prefs"),
   webPushSubscriptions: jsonb("web_push_subscriptions").$type<Array<{ endpoint: string; keys: { p256dh: string; auth: string }; createdAt?: string }>>().default([]),
   statsOrder: json("stats_order").$type<string[]>(),

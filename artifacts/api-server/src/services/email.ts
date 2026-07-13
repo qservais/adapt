@@ -109,15 +109,29 @@ const WELCOME_COPY = {
   },
 } as const;
 
+type Credential = "password" | "code";
+
+// Athletes authenticate with a 6-digit PIN, coaches with a password — the reset
+// email must not say "mot de passe" to someone who never had one.
 const RESET_COPY = {
   fr: {
-    subject: "Réinitialisation de ton mot de passe ADAPT",
-    h2: "Réinitialisation de ton mot de passe",
+    password: {
+      subject: "Réinitialisation de ton mot de passe ADAPT",
+      h2: "Réinitialisation de ton mot de passe",
+      instructions: 'Tu as demandé à réinitialiser ton mot de passe ADAPT. Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.',
+      instructionsText: "Tu as demandé à réinitialiser ton mot de passe ADAPT. Ce lien est valable 1 heure.",
+      cta: "RÉINITIALISER MON MOT DE PASSE",
+      ignore: "Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.",
+    },
+    code: {
+      subject: "Réinitialisation de ton code ADAPT",
+      h2: "Réinitialisation de ton code",
+      instructions: 'Tu as demandé à réinitialiser ton code de connexion ADAPT (les 6 chiffres). Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.',
+      instructionsText: "Tu as demandé à réinitialiser ton code de connexion ADAPT. Ce lien est valable 1 heure.",
+      cta: "CHOISIR UN NOUVEAU CODE",
+      ignore: "Si tu n'as pas fait cette demande, ignore cet email. Ton code ne changera pas.",
+    },
     hello: (name: string) => `Bonjour ${name},`,
-    instructions: 'Tu as demandé à réinitialiser ton mot de passe ADAPT. Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.',
-    instructionsText: "Tu as demandé à réinitialiser ton mot de passe ADAPT. Ce lien est valable 1 heure.",
-    cta: "RÉINITIALISER MON MOT DE PASSE",
-    ignore: "Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.",
     fallbackApp: (url: string) => `<p class="url-fallback">Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :<br />${url}</p>`,
     fallbackBtn: (url: string) => `<p class="url-fallback">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br />${url}</p>`,
     fallbackAppText: "Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :",
@@ -125,13 +139,23 @@ const RESET_COPY = {
     footer: "Vous recevez cet email car vous avez un compte sur ADAPT System.",
   },
   en: {
-    subject: "Reset your ADAPT password",
-    h2: "Reset your password",
+    password: {
+      subject: "Reset your ADAPT password",
+      h2: "Reset your password",
+      instructions: 'You requested to reset your ADAPT password. Click the button below — this link is valid for <span class="highlight">1 hour</span>.',
+      instructionsText: "You requested to reset your ADAPT password. This link is valid for 1 hour.",
+      cta: "RESET MY PASSWORD",
+      ignore: "If you didn't make this request, ignore this email. Your password won't change.",
+    },
+    code: {
+      subject: "Reset your ADAPT login code",
+      h2: "Reset your login code",
+      instructions: 'You requested to reset your ADAPT login code (the 6 digits). Click the button below — this link is valid for <span class="highlight">1 hour</span>.',
+      instructionsText: "You requested to reset your ADAPT login code. This link is valid for 1 hour.",
+      cta: "CHOOSE A NEW CODE",
+      ignore: "If you didn't make this request, ignore this email. Your code won't change.",
+    },
     hello: (name: string) => `Hello ${name},`,
-    instructions: 'You requested to reset your ADAPT password. Click the button below — this link is valid for <span class="highlight">1 hour</span>.',
-    instructionsText: "You requested to reset your ADAPT password. This link is valid for 1 hour.",
-    cta: "RESET MY PASSWORD",
-    ignore: "If you didn't make this request, ignore this email. Your password won't change.",
     fallbackApp: (url: string) => `<p class="url-fallback">If the app doesn't open, use this link in your browser:<br />${url}</p>`,
     fallbackBtn: (url: string) => `<p class="url-fallback">If the button doesn't work, copy this link into your browser:<br />${url}</p>`,
     fallbackAppText: "If the app doesn't open, use this link in your browser:",
@@ -190,19 +214,21 @@ export async function sendPasswordResetEmail(
   resetUrl: string,
   deepLinkUrl?: string,
   lang: Lang = "fr",
+  credentialType: Credential = "password",
 ) {
   const c = RESET_COPY[lang] ?? RESET_COPY.fr;
+  const copy = c[credentialType];
   const primaryUrl = deepLinkUrl ?? resetUrl;
   const fallbackSection = deepLinkUrl
     ? c.fallbackApp(resetUrl)
     : c.fallbackBtn(resetUrl);
 
   const html = baseTemplate(`
-    <h2>${c.h2}</h2>
+    <h2>${copy.h2}</h2>
     <p>${c.hello(firstName)}</p>
-    <p>${c.instructions}</p>
-    <a href="${primaryUrl}" class="cta">${c.cta}</a>
-    <p>${c.ignore}</p>
+    <p>${copy.instructions}</p>
+    <a href="${primaryUrl}" class="cta">${copy.cta}</a>
+    <p>${copy.ignore}</p>
     <div class="divider"></div>
     ${fallbackSection}
   `, lang, c.footer);
@@ -210,11 +236,11 @@ export async function sendPasswordResetEmail(
   const textLines = [
     `ADAPT — INTELLIGENCE PERFORMANCE`,
     ``,
-    c.h2,
+    copy.h2,
     ``,
     c.hello(firstName),
     ``,
-    c.instructionsText,
+    copy.instructionsText,
     ``,
     c.linkLabel,
     primaryUrl,
@@ -224,14 +250,14 @@ export async function sendPasswordResetEmail(
   }
   textLines.push(
     ``,
-    c.ignore,
+    copy.ignore,
     ``,
     `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
   );
 
   return sendEmail({
     to,
-    subject: c.subject,
+    subject: copy.subject,
     html,
     text: textLines.join("\n"),
   });

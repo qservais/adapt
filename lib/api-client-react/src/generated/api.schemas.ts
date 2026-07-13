@@ -45,6 +45,88 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterAthleteRequest {
+  email: string;
+  /**
+   * 6-digit PIN chosen by the athlete, used like a password
+   * @pattern ^[0-9]{6}$
+   */
+  loginCode: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  age?: number;
+  primaryGoal?: string;
+  fitnessLevel?: string;
+  /** Target sessions per week */
+  trainingFrequency?: number;
+  hasInjuryHistory: boolean;
+  /** Required when hasInjuryHistory is true */
+  injuries?: string;
+  /** PAR-Q-style safety triage flag, does not block signup */
+  medicalContraindication: boolean;
+  acquisitionSource?: string;
+  /** Must be true — explicit GDPR consent for health-data processing */
+  consent: boolean;
+}
+
+export interface LoginCodeRequest {
+  email: string;
+  /** @pattern ^[0-9]{6}$ */
+  code: string;
+}
+
+export interface ResetLoginCodeRequest {
+  token: string;
+  /** @pattern ^[0-9]{6}$ */
+  newLoginCode: string;
+}
+
+export type StudioSettingsVatRegime =
+  (typeof StudioSettingsVatRegime)[keyof typeof StudioSettingsVatRegime];
+
+export const StudioSettingsVatRegime = {
+  franchise: "franchise",
+  assujetti: "assujetti",
+} as const;
+
+export interface StudioSettings {
+  coachId: string;
+  studioName: string;
+  studioAddress?: string | null;
+  whatsappNumber?: string | null;
+  announcementLink?: string | null;
+  defaultCancellationWindowHours: number;
+  vatRegime: StudioSettingsVatRegime;
+  vatNumber?: string | null;
+  invoicePrefix: string;
+  accountantEmail?: string | null;
+}
+
+export type UpdateStudioSettingsRequestVatRegime =
+  (typeof UpdateStudioSettingsRequestVatRegime)[keyof typeof UpdateStudioSettingsRequestVatRegime];
+
+export const UpdateStudioSettingsRequestVatRegime = {
+  franchise: "franchise",
+  assujetti: "assujetti",
+} as const;
+
+export interface UpdateStudioSettingsRequest {
+  studioName?: string;
+  studioAddress?: string | null;
+  whatsappNumber?: string | null;
+  announcementLink?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 168
+   */
+  defaultCancellationWindowHours?: number;
+  vatRegime?: UpdateStudioSettingsRequestVatRegime;
+  vatNumber?: string | null;
+  invoicePrefix?: string;
+  accountantEmail?: string | null;
+}
+
 export interface RefreshRequest {
   refreshToken: string;
 }
@@ -414,8 +496,8 @@ export interface FreeCustomSessionRequest {
 export interface ProgramSummary {
   id: string;
   name: string;
-  athleteId?: string | null;
-  athleteName?: string | null;
+  athleteId: string;
+  athleteName: string;
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
@@ -471,7 +553,7 @@ export interface StartProgramNowResult {
 export interface CreateProgramRequest {
   name: string;
   description?: string;
-  athleteId?: string | null;
+  athleteId: string;
   durationWeeks: number;
   startDate?: string;
 }

@@ -51,6 +51,7 @@ import type {
   InviteCodeResponse,
   LibrarySession,
   LogExerciseRequest,
+  LoginCodeRequest,
   LoginRequest,
   MessageData,
   MessageThread,
@@ -65,7 +66,9 @@ import type {
   ProgramDetail,
   ProgramSummary,
   RefreshRequest,
+  RegisterAthleteRequest,
   RegisterRequest,
+  ResetLoginCodeRequest,
   ResolveAlertRequest,
   ScheduledNotification,
   SendMessageRequest,
@@ -74,6 +77,7 @@ import type {
   SessionFeedbackRequest,
   SessionLogSummary,
   StartProgramNowResult,
+  StudioSettings,
   SuccessResponse,
   UpcomingSession,
   UpdateAppointmentRequest,
@@ -82,6 +86,7 @@ import type {
   UpdateProgramRequest,
   UpdateProgressRequest,
   UpdateScheduledNotificationRequest,
+  UpdateStudioSettingsRequest,
   UploadDocumentRequest,
   UploadDocumentResponse,
   UploadMediaRequest,
@@ -258,6 +263,264 @@ export const useRegister = <
   TContext
 > => {
   return useMutation(getRegisterMutationOptions(options));
+};
+
+/**
+ * @summary Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+ */
+export const getRegisterAthleteUrl = () => {
+  return `/api/auth/register-athlete`;
+};
+
+export const registerAthlete = async (
+  registerAthleteRequest: RegisterAthleteRequest,
+  options?: RequestInit,
+): Promise<AuthResponse> => {
+  return customFetch<AuthResponse>(getRegisterAthleteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(registerAthleteRequest),
+  });
+};
+
+export const getRegisterAthleteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAthlete>>,
+    TError,
+    { data: BodyType<RegisterAthleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerAthlete>>,
+  TError,
+  { data: BodyType<RegisterAthleteRequest> },
+  TContext
+> => {
+  const mutationKey = ["registerAthlete"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerAthlete>>,
+    { data: BodyType<RegisterAthleteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerAthlete(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterAthleteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerAthlete>>
+>;
+export type RegisterAthleteMutationBody = BodyType<RegisterAthleteRequest>;
+export type RegisterAthleteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+ */
+export const useRegisterAthlete = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAthlete>>,
+    TError,
+    { data: BodyType<RegisterAthleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerAthlete>>,
+  TError,
+  { data: BodyType<RegisterAthleteRequest> },
+  TContext
+> => {
+  return useMutation(getRegisterAthleteMutationOptions(options));
+};
+
+/**
+ * @summary Athlete-app login with email + 6-digit PIN
+ */
+export const getLoginWithCodeUrl = () => {
+  return `/api/auth/login-code`;
+};
+
+export const loginWithCode = async (
+  loginCodeRequest: LoginCodeRequest,
+  options?: RequestInit,
+): Promise<AuthResponse> => {
+  return customFetch<AuthResponse>(getLoginWithCodeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(loginCodeRequest),
+  });
+};
+
+export const getLoginWithCodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginWithCode>>,
+    TError,
+    { data: BodyType<LoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loginWithCode>>,
+  TError,
+  { data: BodyType<LoginCodeRequest> },
+  TContext
+> => {
+  const mutationKey = ["loginWithCode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loginWithCode>>,
+    { data: BodyType<LoginCodeRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return loginWithCode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginWithCodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof loginWithCode>>
+>;
+export type LoginWithCodeMutationBody = BodyType<LoginCodeRequest>;
+export type LoginWithCodeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Athlete-app login with email + 6-digit PIN
+ */
+export const useLoginWithCode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginWithCode>>,
+    TError,
+    { data: BodyType<LoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof loginWithCode>>,
+  TError,
+  { data: BodyType<LoginCodeRequest> },
+  TContext
+> => {
+  return useMutation(getLoginWithCodeMutationOptions(options));
+};
+
+/**
+ * @summary Set a new 6-digit PIN using an emailed reset token
+ */
+export const getResetLoginCodeUrl = () => {
+  return `/api/auth/reset-login-code`;
+};
+
+export const resetLoginCode = async (
+  resetLoginCodeRequest: ResetLoginCodeRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getResetLoginCodeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resetLoginCodeRequest),
+  });
+};
+
+export const getResetLoginCodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetLoginCode>>,
+    TError,
+    { data: BodyType<ResetLoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetLoginCode>>,
+  TError,
+  { data: BodyType<ResetLoginCodeRequest> },
+  TContext
+> => {
+  const mutationKey = ["resetLoginCode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetLoginCode>>,
+    { data: BodyType<ResetLoginCodeRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resetLoginCode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetLoginCodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetLoginCode>>
+>;
+export type ResetLoginCodeMutationBody = BodyType<ResetLoginCodeRequest>;
+export type ResetLoginCodeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Set a new 6-digit PIN using an emailed reset token
+ */
+export const useResetLoginCode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetLoginCode>>,
+    TError,
+    { data: BodyType<ResetLoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resetLoginCode>>,
+  TError,
+  { data: BodyType<ResetLoginCodeRequest> },
+  TContext
+> => {
+  return useMutation(getResetLoginCodeMutationOptions(options));
 };
 
 /**
@@ -511,6 +774,168 @@ export const useLogout = <
   TContext
 > => {
   return useMutation(getLogoutMutationOptions(options));
+};
+
+/**
+ * @summary Get the coach's studio settings (defaults if none saved yet)
+ */
+export const getGetStudioSettingsUrl = () => {
+  return `/api/studio-settings`;
+};
+
+export const getStudioSettings = async (
+  options?: RequestInit,
+): Promise<StudioSettings> => {
+  return customFetch<StudioSettings>(getGetStudioSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStudioSettingsQueryKey = () => {
+  return [`/api/studio-settings`] as const;
+};
+
+export const getGetStudioSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStudioSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStudioSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStudioSettingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStudioSettings>>
+  > = ({ signal }) => getStudioSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStudioSettings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStudioSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStudioSettings>>
+>;
+export type GetStudioSettingsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the coach's studio settings (defaults if none saved yet)
+ */
+
+export function useGetStudioSettings<
+  TData = Awaited<ReturnType<typeof getStudioSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStudioSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStudioSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create or update the coach's studio settings
+ */
+export const getUpdateStudioSettingsUrl = () => {
+  return `/api/studio-settings`;
+};
+
+export const updateStudioSettings = async (
+  updateStudioSettingsRequest: UpdateStudioSettingsRequest,
+  options?: RequestInit,
+): Promise<StudioSettings> => {
+  return customFetch<StudioSettings>(getUpdateStudioSettingsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateStudioSettingsRequest),
+  });
+};
+
+export const getUpdateStudioSettingsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStudioSettings>>,
+    TError,
+    { data: BodyType<UpdateStudioSettingsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateStudioSettings>>,
+  TError,
+  { data: BodyType<UpdateStudioSettingsRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateStudioSettings"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateStudioSettings>>,
+    { data: BodyType<UpdateStudioSettingsRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateStudioSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateStudioSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateStudioSettings>>
+>;
+export type UpdateStudioSettingsMutationBody =
+  BodyType<UpdateStudioSettingsRequest>;
+export type UpdateStudioSettingsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create or update the coach's studio settings
+ */
+export const useUpdateStudioSettings = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStudioSettings>>,
+    TError,
+    { data: BodyType<UpdateStudioSettingsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateStudioSettings>>,
+  TError,
+  { data: BodyType<UpdateStudioSettingsRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateStudioSettingsMutationOptions(options));
 };
 
 /**

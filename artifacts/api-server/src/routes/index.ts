@@ -17,6 +17,7 @@ import scheduledNotificationsRouter from "./scheduled-notifications.js";
 import appointmentsRouter from "./appointments.js";
 import statsRouter from "./stats.js";
 import userRoutinesRouter from "./user-routines.js";
+import studioSettingsRouter from "./studio-settings.js";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(scheduledNotificationsRouter);
 router.use(appointmentsRouter);
 router.use(statsRouter);
 router.use(userRoutinesRouter);
+router.use(studioSettingsRouter);
 
 export default router;
