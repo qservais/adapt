@@ -167,6 +167,7 @@ export * from "./shopPackWithPrice";
 export * from "./shopPromo";
 export * from "./signedUrlResponse";
 export * from "./startProgramNowResult";
+export * from "./studioInfo";
 export * from "./studioSettings";
 export * from "./studioSettingsVatRegime";
 export * from "./subscriptionPlan";

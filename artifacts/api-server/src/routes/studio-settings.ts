@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { studioSettingsTable } from "@workspace/db";
+import { studioSettingsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
@@ -29,6 +29,30 @@ router.get("/studio-settings", authenticate, requireRole("coach"), async (req, r
       return;
     }
     res.json(row);
+  } catch {
+    res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
+  }
+});
+
+router.get("/athlete/studio-info", authenticate, requireRole("athlete"), async (req, res) => {
+  try {
+    const [athlete] = await db
+      .select({ coachId: usersTable.coachId })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.userId));
+    if (!athlete?.coachId) {
+      res.json({ studioName: DEFAULTS.studioName, whatsappNumber: null, announcementLink: null });
+      return;
+    }
+    const [row] = await db
+      .select({
+        studioName: studioSettingsTable.studioName,
+        whatsappNumber: studioSettingsTable.whatsappNumber,
+        announcementLink: studioSettingsTable.announcementLink,
+      })
+      .from(studioSettingsTable)
+      .where(eq(studioSettingsTable.coachId, athlete.coachId));
+    res.json(row ?? { studioName: DEFAULTS.studioName, whatsappNumber: null, announcementLink: null });
   } catch {
     res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Server error" } });
   }

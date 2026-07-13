@@ -2569,6 +2569,15 @@ export const RemoveCoachAvailabilitySlotResponse = zod.object({
 });
 
 /**
+ * @summary Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+ */
+export const GetAthleteStudioInfoResponse = zod.object({
+  studioName: zod.string(),
+  whatsappNumber: zod.string().nullable(),
+  announcementLink: zod.string().nullable(),
+});
+
+/**
  * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)
  */
 export const GetAthleteCoachSlotsQueryParams = zod.object({

@@ -123,6 +123,7 @@ import type {
   ShopPromo,
   SignedUrlResponse,
   StartProgramNowResult,
+  StudioInfo,
   StudioSettings,
   SubscriptionPlan,
   SuccessResponse,
@@ -8922,6 +8923,81 @@ export const useRemoveCoachAvailabilitySlot = <
 > => {
   return useMutation(getRemoveCoachAvailabilitySlotMutationOptions(options));
 };
+
+/**
+ * @summary Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+ */
+export const getGetAthleteStudioInfoUrl = () => {
+  return `/api/athlete/studio-info`;
+};
+
+export const getAthleteStudioInfo = async (
+  options?: RequestInit,
+): Promise<StudioInfo> => {
+  return customFetch<StudioInfo>(getGetAthleteStudioInfoUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAthleteStudioInfoQueryKey = () => {
+  return [`/api/athlete/studio-info`] as const;
+};
+
+export const getGetAthleteStudioInfoQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAthleteStudioInfoQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>
+  > = ({ signal }) => getAthleteStudioInfo({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAthleteStudioInfoQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAthleteStudioInfo>>
+>;
+export type GetAthleteStudioInfoQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+ */
+
+export function useGetAthleteStudioInfo<
+  TData = Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAthleteStudioInfoQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)

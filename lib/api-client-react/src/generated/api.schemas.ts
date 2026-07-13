@@ -103,6 +103,12 @@ export interface StudioSettings {
   accountantEmail?: string | null;
 }
 
+export interface StudioInfo {
+  studioName: string;
+  whatsappNumber: string | null;
+  announcementLink: string | null;
+}
+
 export type UpdateStudioSettingsRequestVatRegime =
   (typeof UpdateStudioSettingsRequestVatRegime)[keyof typeof UpdateStudioSettingsRequestVatRegime];
 

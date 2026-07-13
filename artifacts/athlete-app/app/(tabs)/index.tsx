@@ -20,6 +20,8 @@ import {
   useGetCheckinHistory,
   useGetAthleteUpcomingSessions,
   useGetActiveChallenges,
+  useGetAthletePrograms,
+  useGetAthleteStudioInfo,
 } from "@workspace/api-client-react";
 import type { CheckinData, SessionDetail, Challenge } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
@@ -33,6 +35,7 @@ import { GlowCard } from "@/components/ui/GlowCard";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { WeekCalendar } from "@/components/home/WeekCalendar";
 import { ChallengeCard } from "@/components/home/ChallengeCard";
+import { NoActiveProgramCard } from "@/components/home/NoActiveProgramCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -47,6 +50,11 @@ export default function HomeScreen() {
   const historyQuery = useGetCheckinHistory();
   const upcomingQuery = useGetAthleteUpcomingSessions();
   const challengesQuery = useGetActiveChallenges();
+  const programsQuery = useGetAthletePrograms();
+  const studioInfoQuery = useGetAthleteStudioInfo();
+
+  const hasActiveProgram = (programsQuery.data ?? []).some((p) => p.isActive && !p.isTemplate);
+  const showNoProgramCard = !programsQuery.isLoading && !hasActiveProgram;
 
   const todayCheckin = checkinQuery.data;
   const todaySessions = sessionsQuery.data ?? [];
@@ -59,6 +67,7 @@ export default function HomeScreen() {
     historyQuery.refetch();
     upcomingQuery.refetch();
     challengesQuery.refetch();
+    programsQuery.refetch();
   };
 
   useFocusEffect(
@@ -160,6 +169,10 @@ export default function HomeScreen() {
           upcomingSessions={upcomingQuery.data ?? []}
           activeChallenges={challengesQuery.data ?? []}
         />
+      )}
+
+      {showNoProgramCard && (
+        <NoActiveProgramCard whatsappNumber={studioInfoQuery.data?.whatsappNumber ?? null} />
       )}
 
       {!isLoading && (

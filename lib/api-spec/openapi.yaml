@@ -2194,6 +2194,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /athlete/studio-info:
+    get:
+      operationId: getAthleteStudioInfo
+      tags: [athlete]
+      summary: Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+      responses:
+        "200":
+          description: Studio info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioInfo"
+
   /athlete/coach-slots:
     get:
       operationId: getAthleteCoachSlots
@@ -3157,6 +3170,22 @@ components:
         - defaultCancellationWindowHours
         - vatRegime
         - invoicePrefix
+
+    StudioInfo:
+      type: object
+      properties:
+        studioName:
+          type: string
+        whatsappNumber:
+          type: string
+          nullable: true
+        announcementLink:
+          type: string
+          nullable: true
+      required:
+        - studioName
+        - whatsappNumber
+        - announcementLink
 
     UpdateStudioSettingsRequest:
       type: object
