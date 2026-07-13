@@ -36,6 +36,7 @@ import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { WeekCalendar } from "@/components/home/WeekCalendar";
 import { ChallengeCard } from "@/components/home/ChallengeCard";
 import { NoActiveProgramCard } from "@/components/home/NoActiveProgramCard";
+import { CreditsBalanceCard } from "@/components/home/CreditsBalanceCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -152,6 +153,8 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <CreditsBalanceCard />
 
       {isLoading ? (
         <LoadingSkeleton />

@@ -1249,6 +1249,23 @@ export default function ProfileScreen() {
       {activeTab === "profil" && (
         <View style={[styles.quickLinks, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <TouchableOpacity
+            onPress={() => router.push("/shop" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>🛍️</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Boutique</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
+                  Crédits et abonnements
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => router.push("/guides" as any)}
             style={styles.quickLinkRow}
             activeOpacity={0.7}
