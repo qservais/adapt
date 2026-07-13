@@ -46,7 +46,8 @@ function formatHour(h: number) {
   return `${String(h).padStart(2, "0")}:00`;
 }
 
-function athleteName(n: ScheduledNotification, fallback: string) {
+function athleteName(n: ScheduledNotification, fallback: string, allLabel: string) {
+  if (n.athleteId === null) return allLabel;
   const first = n.athleteFirstName ?? "";
   const last = n.athleteLastName ?? "";
   return `${first} ${last}`.trim() || fallback;
@@ -168,7 +169,7 @@ export default function NotificationsPage() {
       toast({ title: t("notifications_page.msg_required"), variant: "destructive" });
       return;
     }
-    if (!editItem && !form.athleteId) {
+    if (!editItem && form.athleteId === undefined) {
       toast({ title: t("notifications_page.athlete_required"), variant: "destructive" });
       return;
     }
@@ -190,7 +191,7 @@ export default function NotificationsPage() {
       } else {
         await createMutation.mutateAsync({
           data: {
-            athleteId: form.athleteId!,
+            athleteId: form.athleteId ?? null,
             message: form.message!,
             recurrenceType: form.recurrenceType as CreateScheduledNotificationRequest["recurrenceType"],
             recurrenceConfig: config,
@@ -379,11 +380,17 @@ export default function NotificationsPage() {
             {!editItem && (
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">{t("notifications_page.label_athlete")}</Label>
-                <Select value={form.athleteId ?? ""} onValueChange={(v) => setForm(f => ({ ...f, athleteId: v }))}>
+                <Select
+                  value={form.athleteId === null ? "__all__" : (form.athleteId ?? "")}
+                  onValueChange={(v) => setForm(f => ({ ...f, athleteId: v === "__all__" ? null : v }))}
+                >
                   <SelectTrigger className="bg-background border-border">
                     <SelectValue placeholder={t("notifications_page.select_athlete_placeholder")} />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__all__" className="font-bold text-primary">
+                      {t("notifications_page.all_athletes_option")}
+                    </SelectItem>
                     {(clients ?? []).map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.firstName} {c.lastName}
@@ -548,7 +555,7 @@ function NotificationCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-mono font-bold text-primary uppercase">
-              {athleteName(n, t("notifications_page.default_athlete_label"))}
+              {athleteName(n, t("notifications_page.default_athlete_label"), t("notifications_page.all_athletes_option"))}
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${n.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
               {n.active ? t("notifications_page.active") : t("notifications_page.inactive")}

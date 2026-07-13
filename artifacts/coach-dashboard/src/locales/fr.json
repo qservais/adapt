@@ -866,7 +866,8 @@
     "phrases_empty": "Aucune phrase personnalisée — les phrases par défaut sont utilisées.",
     "phrase_added": "Phrase ajoutée",
     "phrase_deleted": "Phrase supprimée",
-    "phrase_delete_confirm": "Supprimer cette phrase ?"
+    "phrase_delete_confirm": "Supprimer cette phrase ?",
+    "all_athletes_option": "Tous mes athlètes"
   },
   "alerts": {
     "title": "FLUX D'ALERTES",

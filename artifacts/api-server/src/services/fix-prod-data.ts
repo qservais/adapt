@@ -465,6 +465,19 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – motivation_phrases failed");
     throw err;
   }
+
+  // Mouv'Up Phase 8 — broadcast-to-all-athletes scheduled reminders.
+  // Direct precedent: programs.athlete_id was already made nullable above
+  // for the same "null = applies to everyone" convention.
+  try {
+    await db.execute(sql`ALTER TABLE scheduled_notifications ALTER COLUMN athlete_id DROP NOT NULL`);
+    logger.info("runSchemaMigrations: scheduled_notifications.athlete_id → nullable OK");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("does not have a not-null constraint")) {
+      logger.warn({ err }, "runSchemaMigrations: scheduled_notifications.athlete_id NOT NULL drop – non-fatal");
+    }
+  }
 }
 
 const LMJCOACH_HASH =

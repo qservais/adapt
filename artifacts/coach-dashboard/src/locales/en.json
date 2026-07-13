@@ -866,7 +866,8 @@
     "phrases_empty": "No custom phrases yet — the default phrases are used.",
     "phrase_added": "Phrase added",
     "phrase_deleted": "Phrase deleted",
-    "phrase_delete_confirm": "Delete this phrase?"
+    "phrase_delete_confirm": "Delete this phrase?",
+    "all_athletes_option": "All my athletes"
   },
   "alerts": {
     "title": "ALERTS FEED",

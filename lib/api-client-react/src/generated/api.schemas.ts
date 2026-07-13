@@ -1409,7 +1409,7 @@ export type ScheduledNotificationRecurrenceConfig = { [key: string]: unknown };
 export interface ScheduledNotification {
   id: string;
   coachId: string;
-  athleteId: string;
+  athleteId: string | null;
   message: string;
   recurrenceType: ScheduledNotificationRecurrenceType;
   recurrenceConfig?: ScheduledNotificationRecurrenceConfig;
@@ -1435,7 +1435,7 @@ export type CreateScheduledNotificationRequestRecurrenceConfig = {
 };
 
 export interface CreateScheduledNotificationRequest {
-  athleteId: string;
+  athleteId: string | null;
   message: string;
   recurrenceType: CreateScheduledNotificationRequestRecurrenceType;
   recurrenceConfig?: CreateScheduledNotificationRequestRecurrenceConfig;

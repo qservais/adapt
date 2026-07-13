@@ -8,6 +8,7 @@ import {
   programsTable,
   motivationPhrasesTable,
 } from "@workspace/db";
+import type { ScheduledNotification } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger.js";
 import { notifyUser } from "./notify.service.js";
@@ -150,6 +151,33 @@ async function runMorningNotifications(currentHour: number): Promise<void> {
   }
 }
 
+async function sendReminderToAthlete(notif: ScheduledNotification, athleteId: string): Promise<void> {
+  const existing = await db
+    .select({ id: notificationsTable.id })
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.userId, athleteId),
+        eq(notificationsTable.sourceType, "scheduled_notification"),
+        eq(notificationsTable.sourceId, notif.id),
+        sql`date_trunc('day', created_at) = current_date`
+      )
+    );
+  if (existing.length > 0) return;
+
+  await notifyUser({
+    userId: athleteId,
+    type: "scheduled_reminder",
+    title: "Rappel de ton coach",
+    body: notif.message,
+    link: "/(tabs)/session",
+    sourceType: "scheduled_notification",
+    sourceId: notif.id,
+  });
+
+  logger.info({ notifId: notif.id, athleteId }, "Scheduled reminder sent");
+}
+
 async function runScheduledReminders(currentHour: number): Promise<void> {
   logger.info({ currentHour }, "Checking scheduled reminders...");
 
@@ -170,30 +198,20 @@ async function runScheduledReminders(currentHour: number): Promise<void> {
     const config = (notif.recurrenceConfig ?? {}) as Record<string, unknown>;
     if (!shouldFireToday(notif.recurrenceType, config, now)) continue;
 
-    const existing = await db
-      .select({ id: notificationsTable.id })
-      .from(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.userId, notif.athleteId),
-          eq(notificationsTable.sourceType, "scheduled_notification"),
-          eq(notificationsTable.sourceId, notif.id),
-          sql`date_trunc('day', created_at) = current_date`
-        )
-      );
-    if (existing.length > 0) continue;
+    if (notif.athleteId) {
+      await sendReminderToAthlete(notif, notif.athleteId);
+      continue;
+    }
 
-    await notifyUser({
-      userId: notif.athleteId,
-      type: "scheduled_reminder",
-      title: "Rappel de ton coach",
-      body: notif.message,
-      link: "/(tabs)/session",
-      sourceType: "scheduled_notification",
-      sourceId: notif.id,
-    });
-
-    logger.info({ notifId: notif.id, athleteId: notif.athleteId }, "Scheduled reminder sent");
+    // Broadcast: resolved against the coach's *current* athlete roster at
+    // send time, not a snapshot frozen when the reminder was created.
+    const athletes = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.coachId, notif.coachId), eq(usersTable.role, "athlete")));
+    for (const athlete of athletes) {
+      await sendReminderToAthlete(notif, athlete.id);
+    }
   }
 }
 

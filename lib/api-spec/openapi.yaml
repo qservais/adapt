@@ -5551,6 +5551,7 @@ components:
           type: string
         athleteId:
           type: string
+          nullable: true
         message:
           type: string
         recurrenceType:
@@ -5589,6 +5590,7 @@ components:
       properties:
         athleteId:
           type: string
+          nullable: true
         message:
           type: string
         recurrenceType:

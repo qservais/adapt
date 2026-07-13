@@ -2606,7 +2606,7 @@ export const CreateOneOnOneRequestBody = zod.object({
 export const GetScheduledNotificationsResponseItem = zod.object({
   id: zod.string(),
   coachId: zod.string(),
-  athleteId: zod.string(),
+  athleteId: zod.string().nullable(),
   message: zod.string(),
   recurrenceType: zod.enum(["daily", "weekly", "custom"]),
   recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
@@ -2625,7 +2625,7 @@ export const GetScheduledNotificationsResponse = zod.array(
  * @summary Create a scheduled notification
  */
 export const CreateScheduledNotificationBody = zod.object({
-  athleteId: zod.string(),
+  athleteId: zod.string().nullable(),
   message: zod.string(),
   recurrenceType: zod.enum(["daily", "weekly", "custom"]),
   recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
@@ -2650,7 +2650,7 @@ export const UpdateScheduledNotificationBody = zod.object({
 export const UpdateScheduledNotificationResponse = zod.object({
   id: zod.string(),
   coachId: zod.string(),
-  athleteId: zod.string(),
+  athleteId: zod.string().nullable(),
   message: zod.string(),
   recurrenceType: zod.enum(["daily", "weekly", "custom"]),
   recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
