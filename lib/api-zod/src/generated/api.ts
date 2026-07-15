@@ -28,6 +28,96 @@ export const RegisterBody = zod.object({
 });
 
 /**
+ * @summary Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+ */
+export const registerAthleteBodyLoginCodeRegExp = new RegExp("^[0-9]{6}$");
+
+export const RegisterAthleteBody = zod.object({
+  email: zod.string(),
+  loginCode: zod
+    .string()
+    .regex(registerAthleteBodyLoginCodeRegExp)
+    .describe("6-digit PIN chosen by the athlete, used like a password"),
+  firstName: zod.string(),
+  lastName: zod.string(),
+  phone: zod.string(),
+  age: zod.number().optional(),
+  primaryGoal: zod.string().optional(),
+  fitnessLevel: zod.string().optional(),
+  trainingFrequency: zod
+    .number()
+    .optional()
+    .describe("Target sessions per week"),
+  hasInjuryHistory: zod.boolean(),
+  injuries: zod
+    .string()
+    .optional()
+    .describe("Required when hasInjuryHistory is true"),
+  medicalContraindication: zod
+    .boolean()
+    .describe("PAR-Q-style safety triage flag, does not block signup"),
+  acquisitionSource: zod.string().optional(),
+  consent: zod
+    .boolean()
+    .describe(
+      "Must be true — explicit GDPR consent for health-data processing",
+    ),
+});
+
+/**
+ * @summary Athlete-app login with email + 6-digit PIN
+ */
+export const loginWithCodeBodyCodeRegExp = new RegExp("^[0-9]{6}$");
+
+export const LoginWithCodeBody = zod.object({
+  email: zod.string(),
+  code: zod.string().regex(loginWithCodeBodyCodeRegExp),
+});
+
+export const LoginWithCodeResponse = zod.object({
+  accessToken: zod.string(),
+  refreshToken: zod.string(),
+  user: zod.object({
+    id: zod.string(),
+    email: zod.string(),
+    role: zod.string(),
+    firstName: zod.string(),
+    lastName: zod.string().nullish(),
+    gender: zod.string().nullish(),
+    birthDate: zod.string().nullish(),
+    age: zod.number().nullish(),
+    weightKg: zod.number().nullish(),
+    heightCm: zod.number().nullish(),
+    trainingFrequency: zod.number().nullish(),
+    injuries: zod.string().nullish(),
+    fitnessLevel: zod.string().nullish(),
+    primaryGoal: zod.string().nullish(),
+    cycleTracking: zod.boolean().optional(),
+    lastPeriodDate: zod.string().nullish(),
+    avgCycleDays: zod.number().nullish(),
+    coachId: zod.string().nullish(),
+    inviteCode: zod.string().nullish(),
+    coachName: zod.string().nullish(),
+    avatarUrl: zod.string().nullish(),
+  }),
+});
+
+/**
+ * @summary Set a new 6-digit PIN using an emailed reset token
+ */
+export const resetLoginCodeBodyNewLoginCodeRegExp = new RegExp("^[0-9]{6}$");
+
+export const ResetLoginCodeBody = zod.object({
+  token: zod.string(),
+  newLoginCode: zod.string().regex(resetLoginCodeBodyNewLoginCodeRegExp),
+});
+
+export const ResetLoginCodeResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Login
  */
 export const LoginBody = zod.object({
@@ -105,6 +195,624 @@ export const LogoutResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });
+
+/**
+ * @summary Get the coach's studio settings (defaults if none saved yet)
+ */
+export const GetStudioSettingsResponse = zod.object({
+  coachId: zod.string(),
+  studioName: zod.string(),
+  studioAddress: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  announcementLink: zod.string().nullish(),
+  defaultCancellationWindowHours: zod.number(),
+  vatRegime: zod.enum(["franchise", "assujetti"]),
+  vatNumber: zod.string().nullish(),
+  invoicePrefix: zod.string(),
+  accountantEmail: zod.string().nullish(),
+});
+
+/**
+ * @summary Create or update the coach's studio settings
+ */
+export const updateStudioSettingsBodyDefaultCancellationWindowHoursMax = 168;
+
+export const UpdateStudioSettingsBody = zod.object({
+  studioName: zod.string().optional(),
+  studioAddress: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  announcementLink: zod.string().nullish(),
+  defaultCancellationWindowHours: zod
+    .number()
+    .min(1)
+    .max(updateStudioSettingsBodyDefaultCancellationWindowHoursMax)
+    .optional(),
+  vatRegime: zod.enum(["franchise", "assujetti"]).optional(),
+  vatNumber: zod.string().nullish(),
+  invoicePrefix: zod.string().optional(),
+  accountantEmail: zod.string().nullish(),
+});
+
+export const UpdateStudioSettingsResponse = zod.object({
+  coachId: zod.string(),
+  studioName: zod.string(),
+  studioAddress: zod.string().nullish(),
+  whatsappNumber: zod.string().nullish(),
+  announcementLink: zod.string().nullish(),
+  defaultCancellationWindowHours: zod.number(),
+  vatRegime: zod.enum(["franchise", "assujetti"]),
+  vatNumber: zod.string().nullish(),
+  invoicePrefix: zod.string(),
+  accountantEmail: zod.string().nullish(),
+});
+
+/**
+ * @summary List active credit packs with resolved current price (promo-aware)
+ */
+export const GetShopPacksResponseItem = zod
+  .object({
+    id: zod.string(),
+    coachId: zod.string(),
+    creditType: zod.enum(["collectif", "individuel"]),
+    name: zod.string(),
+    credits: zod.number(),
+    priceCents: zod.number(),
+    validityMonths: zod.number().nullish(),
+    tag: zod.string().nullish(),
+    isActive: zod.boolean(),
+  })
+  .and(
+    zod.object({
+      currentPriceCents: zod
+        .number()
+        .describe(
+          "List price, or the active promo price if one currently applies",
+        ),
+      hasActivePromo: zod.boolean(),
+    }),
+  );
+export const GetShopPacksResponse = zod.array(GetShopPacksResponseItem);
+
+/**
+ * @summary List active subscription plans
+ */
+export const GetShopSubscriptionsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  priceCents: zod.number(),
+  presentialText: zod.string().nullish(),
+  tag: zod.string().nullish(),
+  engagementMonths: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+export const GetShopSubscriptionsResponse = zod.array(
+  GetShopSubscriptionsResponseItem,
+);
+
+/**
+ * @summary Start a Stripe Checkout session for a pack or subscription
+ */
+export const CreateCheckoutSessionBody = zod.object({
+  type: zod.enum(["pack", "subscription"]),
+  id: zod.string(),
+  successUrl: zod.string(),
+  cancelUrl: zod.string(),
+});
+
+export const CreateCheckoutSessionResponse = zod.object({
+  checkoutUrl: zod.string().nullable(),
+});
+
+/**
+ * @summary Get the current athlete's credit balances
+ */
+export const GetMyCreditsResponse = zod.object({
+  collectif: zod.number(),
+  individuel: zod.number(),
+});
+
+/**
+ * @summary List the coach's packs (including inactive), each with its active promo if any
+ */
+export const GetCoachShopPacksResponseItem = zod
+  .object({
+    id: zod.string(),
+    coachId: zod.string(),
+    creditType: zod.enum(["collectif", "individuel"]),
+    name: zod.string(),
+    credits: zod.number(),
+    priceCents: zod.number(),
+    validityMonths: zod.number().nullish(),
+    tag: zod.string().nullish(),
+    isActive: zod.boolean(),
+  })
+  .and(
+    zod.object({
+      activePromo: zod
+        .object({
+          id: zod.string(),
+          packId: zod.string(),
+          discountedPriceCents: zod.number(),
+          startsAt: zod.string(),
+          expiresAt: zod.string(),
+          createdBy: zod.string().optional(),
+        })
+        .nullable(),
+    }),
+  );
+export const GetCoachShopPacksResponse = zod.array(
+  GetCoachShopPacksResponseItem,
+);
+
+/**
+ * @summary Create a new credit pack
+ */
+
+export const createShopPackBodyPriceCentsMin = 0;
+
+export const CreateShopPackBody = zod.object({
+  creditType: zod.enum(["collectif", "individuel"]).optional(),
+  name: zod.string().optional(),
+  credits: zod.number().min(1).optional(),
+  priceCents: zod.number().min(createShopPackBodyPriceCentsMin).optional(),
+  validityMonths: zod.number().nullish(),
+  tag: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a credit pack
+ */
+export const UpdateShopPackParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateShopPackBodyPriceCentsMin = 0;
+
+export const UpdateShopPackBody = zod.object({
+  creditType: zod.enum(["collectif", "individuel"]).optional(),
+  name: zod.string().optional(),
+  credits: zod.number().min(1).optional(),
+  priceCents: zod.number().min(updateShopPackBodyPriceCentsMin).optional(),
+  validityMonths: zod.number().nullish(),
+  tag: zod.string().nullish(),
+});
+
+export const UpdateShopPackResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  creditType: zod.enum(["collectif", "individuel"]),
+  name: zod.string(),
+  credits: zod.number(),
+  priceCents: zod.number(),
+  validityMonths: zod.number().nullish(),
+  tag: zod.string().nullish(),
+  isActive: zod.boolean(),
+});
+
+/**
+ * @summary Deactivate a credit pack (soft delete — past purchases stay valid)
+ */
+export const DeleteShopPackParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteShopPackResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Launch a time-limited promo on a pack
+ */
+export const createShopPromoBodyDiscountedPriceCentsMin = 0;
+
+export const createShopPromoBodyDurationDaysMax = 90;
+
+export const CreateShopPromoBody = zod.object({
+  packId: zod.string(),
+  discountedPriceCents: zod
+    .number()
+    .min(createShopPromoBodyDiscountedPriceCentsMin),
+  durationDays: zod.number().min(1).max(createShopPromoBodyDurationDaysMax),
+});
+
+/**
+ * @summary End a promo immediately
+ */
+export const EndShopPromoParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const EndShopPromoResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary List the coach's subscription plans (including inactive)
+ */
+export const GetCoachShopSubscriptionsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  priceCents: zod.number(),
+  presentialText: zod.string().nullish(),
+  tag: zod.string().nullish(),
+  engagementMonths: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+export const GetCoachShopSubscriptionsResponse = zod.array(
+  GetCoachShopSubscriptionsResponseItem,
+);
+
+/**
+ * @summary Update a subscription plan's price/engagement
+ */
+export const UpdateSubscriptionPlanParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateSubscriptionPlanBodyPriceCentsMin = 0;
+
+export const UpdateSubscriptionPlanBody = zod.object({
+  priceCents: zod
+    .number()
+    .min(updateSubscriptionPlanBodyPriceCentsMin)
+    .optional(),
+  engagementMonths: zod.number().nullish(),
+});
+
+export const UpdateSubscriptionPlanResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  priceCents: zod.number(),
+  presentialText: zod.string().nullish(),
+  tag: zod.string().nullish(),
+  engagementMonths: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+
+/**
+ * @summary Gift credits to one or more athletes (no charge)
+ */
+export const giftCreditsBodyQuantityMax = 50;
+
+export const GiftCreditsBody = zod.object({
+  athleteIds: zod.array(zod.string()),
+  creditType: zod.enum(["collectif", "individuel"]),
+  quantity: zod.number().min(1).max(giftCreditsBodyQuantityMax),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Credit balances and recent transaction history for one athlete
+ */
+export const GetClientCreditsParams = zod.object({
+  athleteId: zod.coerce.string(),
+});
+
+export const GetClientCreditsResponse = zod.object({
+  balances: zod.object({
+    collectif: zod.number(),
+    individuel: zod.number(),
+  }),
+  transactions: zod.array(
+    zod.object({
+      id: zod.string(),
+      delta: zod.number(),
+      reason: zod.string(),
+      creditType: zod.enum(["collectif", "individuel"]),
+      createdAt: zod.string().nullable(),
+    }),
+  ),
+});
+
+/**
+ * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+ */
+export const GetClassOccurrencesQueryParams = zod.object({
+  from: zod.coerce.string().optional(),
+  to: zod.coerce.string().optional(),
+});
+
+export const GetClassOccurrencesResponseItem = zod
+  .object({
+    id: zod.string(),
+    templateId: zod.string(),
+    coachId: zod.string().optional(),
+    startAt: zod.string(),
+    durationMin: zod.number(),
+    capacity: zod.number(),
+    status: zod.enum(["scheduled", "cancelled"]),
+  })
+  .and(
+    zod.object({
+      name: zod.string(),
+      description: zod.string().nullish(),
+      priceCents: zod.number(),
+      creditCost: zod.number(),
+      coachFirstName: zod.string().optional(),
+      spotsBooked: zod.number(),
+      spotsAvailable: zod.number(),
+      isBooked: zod.boolean(),
+      bookingId: zod.string().nullish(),
+      waitlistStatus: zod.string().nullish(),
+    }),
+  );
+export const GetClassOccurrencesResponse = zod.array(
+  GetClassOccurrencesResponseItem,
+);
+
+/**
+ * @summary Book a class with 1 (or the class's) collective credit
+ */
+export const BookClassParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+/**
+ * @summary Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+ */
+export const CancelClassBookingParams = zod.object({
+  bookingId: zod.coerce.string(),
+});
+
+export const CancelClassBookingResponse = zod.object({
+  success: zod.boolean(),
+  refunded: zod.boolean(),
+  lateCancellation: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Join the waitlist for a full class
+ */
+export const JoinClassWaitlistParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+/**
+ * @summary Leave the waitlist
+ */
+export const LeaveClassWaitlistParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const LeaveClassWaitlistResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+ */
+export const ConfirmClassWaitlistOfferParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+/**
+ * @summary List the coach's class templates
+ */
+export const GetCoachClassTemplatesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  capacity: zod.number(),
+  priceCents: zod.number(),
+  creditCost: zod.number(),
+  durationMin: zod.number(),
+  cancellationWindowHours: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+export const GetCoachClassTemplatesResponse = zod.array(
+  GetCoachClassTemplatesResponseItem,
+);
+
+/**
+ * @summary Create a class template
+ */
+
+export const createClassTemplateBodyPriceCentsMin = 0;
+
+export const createClassTemplateBodyDurationMinMin = 5;
+
+export const CreateClassTemplateBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  capacity: zod.number().min(1).optional(),
+  priceCents: zod.number().min(createClassTemplateBodyPriceCentsMin).optional(),
+  creditCost: zod.number().min(1).optional(),
+  durationMin: zod
+    .number()
+    .min(createClassTemplateBodyDurationMinMin)
+    .optional(),
+  cancellationWindowHours: zod.number().nullish(),
+});
+
+/**
+ * @summary Update a class template
+ */
+export const UpdateClassTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const updateClassTemplateBodyPriceCentsMin = 0;
+
+export const updateClassTemplateBodyDurationMinMin = 5;
+
+export const UpdateClassTemplateBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  capacity: zod.number().min(1).optional(),
+  priceCents: zod.number().min(updateClassTemplateBodyPriceCentsMin).optional(),
+  creditCost: zod.number().min(1).optional(),
+  durationMin: zod
+    .number()
+    .min(updateClassTemplateBodyDurationMinMin)
+    .optional(),
+  cancellationWindowHours: zod.number().nullish(),
+});
+
+export const UpdateClassTemplateResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  capacity: zod.number(),
+  priceCents: zod.number(),
+  creditCost: zod.number(),
+  durationMin: zod.number(),
+  cancellationWindowHours: zod.number().nullish(),
+  isActive: zod.boolean(),
+});
+
+/**
+ * @summary Deactivate a class template
+ */
+export const DeleteClassTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteClassTemplateResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+ */
+export const ScheduleClassTemplateParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ScheduleClassTemplateBody = zod.object({
+  mode: zod.enum(["once", "weekly"]),
+  startAt: zod.string().optional().describe("Required when mode=once"),
+  dayOfWeek: zod
+    .number()
+    .optional()
+    .describe("Required when mode=weekly (0=Sunday..6=Saturday)"),
+  startTime: zod
+    .string()
+    .optional()
+    .describe("Required when mode=weekly, HH:MM"),
+  weeksAhead: zod.number().optional(),
+});
+
+/**
+ * @summary Coach-facing occurrence list with fill counts and waitlist size
+ */
+export const GetCoachClassOccurrencesQueryParams = zod.object({
+  from: zod.coerce.string().optional(),
+  to: zod.coerce.string().optional(),
+});
+
+export const GetCoachClassOccurrencesResponseItem = zod
+  .object({
+    id: zod.string(),
+    templateId: zod.string(),
+    coachId: zod.string().optional(),
+    startAt: zod.string(),
+    durationMin: zod.number(),
+    capacity: zod.number(),
+    status: zod.enum(["scheduled", "cancelled"]),
+  })
+  .and(
+    zod.object({
+      name: zod.string(),
+      spotsBooked: zod.number(),
+      spotsAvailable: zod.number(),
+      waitlistCount: zod.number(),
+    }),
+  );
+export const GetCoachClassOccurrencesResponse = zod.array(
+  GetCoachClassOccurrencesResponseItem,
+);
+
+/**
+ * @summary Manually register a participant (existing athlete or guest/trial name)
+ */
+export const ManualRegisterForClassParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const ManualRegisterForClassBody = zod.object({
+  athleteId: zod.string().optional(),
+  guestName: zod.string().optional(),
+  paymentMode: zod.enum(["comped", "credit", "pay_on_site"]),
+});
+
+/**
+ * @summary List confirmed participants for a class, with today's ADAPT score
+ */
+export const GetOccurrenceParticipantsParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const GetOccurrenceParticipantsResponseItem = zod.object({
+  bookingId: zod.string(),
+  athleteId: zod.string().nullish(),
+  guestName: zod.string().nullish(),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+  paymentMode: zod.string(),
+  todayScore: zod.number().nullish(),
+});
+export const GetOccurrenceParticipantsResponse = zod.array(
+  GetOccurrenceParticipantsResponseItem,
+);
+
+/**
+ * @summary Cancel the whole class — refunds every confirmed booking and notifies everyone
+ */
+export const CancelClassOccurrenceParams = zod.object({
+  occurrenceId: zod.coerce.string(),
+});
+
+export const CancelClassOccurrenceBody = zod.object({
+  note: zod.string().optional(),
+});
+
+export const CancelClassOccurrenceResponse = zod.object({
+  success: zod.boolean().optional(),
+  notifiedCount: zod.number().optional(),
+});
+
+/**
+ * @summary Forgive a late cancellation after the fact (refunds the credit)
+ */
+export const WaiveLateCancellationParams = zod.object({
+  bookingId: zod.coerce.string(),
+});
+
+export const WaiveLateCancellationResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Unified week/month agenda — group classes and 1:1s merged and sorted
+ */
+export const GetCoachAgendaQueryParams = zod.object({
+  from: zod.coerce.string().optional(),
+  to: zod.coerce.string().optional(),
+});
+
+export const GetCoachAgendaResponseItem = zod.object({
+  kind: zod.enum(["class", "individuel"]),
+  id: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  label: zod.string(),
+  status: zod.string(),
+  spotsBooked: zod.number().optional(),
+  capacity: zod.number().optional(),
+  athleteName: zod.string().optional(),
+});
+export const GetCoachAgendaResponse = zod.array(GetCoachAgendaResponseItem);
 
 /**
  * @summary Get current user profile
@@ -205,9 +913,10 @@ export const GetPersonalRecordsResponse = zod.object({
     zod.object({
       exerciseId: zod.string(),
       exerciseName: zod.string(),
-      loadKg: zod.number(),
-      reps: zod.number(),
-      previousLoadKg: zod.number().nullish(),
+      recordType: zod.enum(["load", "reps", "time", "distance"]),
+      value: zod.number(),
+      reps: zod.number().nullish(),
+      previousValue: zod.number().nullish(),
       achievedAt: zod.string().optional(),
       isRecent: zod.boolean().optional(),
     }),
@@ -225,11 +934,12 @@ export const GetExercisePRHistoryParams = zod.object({
 export const GetExercisePRHistoryResponse = zod.object({
   exerciseId: zod.string(),
   exerciseName: zod.string(),
+  recordType: zod.enum(["load", "reps", "time", "distance"]),
   history: zod.array(
     zod.object({
       id: zod.string(),
-      loadKg: zod.number(),
-      reps: zod.number(),
+      value: zod.number(),
+      reps: zod.number().nullish(),
       achievedAt: zod.string(),
     }),
   ),
@@ -380,7 +1090,15 @@ export const GetTodaySessionResponse = zod.object({
     .optional(),
   adaptScore: zod.number(),
   overriddenByCoach: zod.boolean().optional(),
-  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  athletePRs: zod
+    .record(
+      zod.string(),
+      zod.object({
+        recordType: zod.enum(["load", "reps", "time", "distance"]),
+        value: zod.number(),
+      }),
+    )
+    .optional(),
   completedAt: zod.string().nullish(),
   durationMin: zod.number().nullish(),
   rpe: zod.number().nullish(),
@@ -448,7 +1166,15 @@ export const GetTodaySessionAllResponseItem = zod.object({
     .optional(),
   adaptScore: zod.number(),
   overriddenByCoach: zod.boolean().optional(),
-  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  athletePRs: zod
+    .record(
+      zod.string(),
+      zod.object({
+        recordType: zod.enum(["load", "reps", "time", "distance"]),
+        value: zod.number(),
+      }),
+    )
+    .optional(),
   completedAt: zod.string().nullish(),
   durationMin: zod.number().nullish(),
   rpe: zod.number().nullish(),
@@ -561,6 +1287,8 @@ export const CompleteSessionBody = zod.object({
       setsCompleted: zod.number().optional(),
       repsPerSet: zod.array(zod.number()).optional(),
       loadKgUsed: zod.number().optional(),
+      durationSecondsUsed: zod.number().optional(),
+      distanceMetersUsed: zod.number().optional(),
     }),
   ),
 });
@@ -572,8 +1300,9 @@ export const CompleteSessionResponse = zod.object({
     zod.object({
       exerciseId: zod.string(),
       exerciseName: zod.string(),
-      loadKg: zod.number(),
-      previousLoadKg: zod.number().nullish(),
+      recordType: zod.enum(["load", "reps", "time", "distance"]),
+      value: zod.number(),
+      previousValue: zod.number().nullish(),
     }),
   ),
   newBadges: zod.array(
@@ -664,6 +1393,19 @@ export const DeleteExerciseLogResponse = zod.object({
 });
 
 /**
+ * @summary Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+ */
+export const convertSessionTextWithAiBodyTextMax = 20000;
+
+export const ConvertSessionTextWithAiBody = zod.object({
+  text: zod.string().min(1).max(convertSessionTextWithAiBodyTextMax),
+});
+
+export const ConvertSessionTextWithAiResponse = zod.object({
+  convertedText: zod.string(),
+});
+
+/**
  * @summary Get coach programs
  */
 export const GetProgramsResponseItem = zod.object({
@@ -689,7 +1431,7 @@ export const GetProgramsResponse = zod.array(GetProgramsResponseItem);
 export const CreateProgramBody = zod.object({
   name: zod.string(),
   description: zod.string().optional(),
-  athleteId: zod.string(),
+  athleteId: zod.string().optional(),
   durationWeeks: zod.number(),
   startDate: zod.string().optional(),
 });
@@ -722,6 +1464,7 @@ export const GetProgramResponse = zod.object({
       visioLink: zod.string().nullish(),
       estimatedDurationMin: zod.number().nullish(),
       coachNotes: zod.string().nullish(),
+      isTest: zod.boolean().optional(),
       variants: zod.array(
         zod.object({
           id: zod.string(),
@@ -845,6 +1588,7 @@ export const AddProgramSessionBody = zod.object({
   visioLink: zod.string().nullish(),
   estimatedDurationMin: zod.number().optional(),
   coachNotes: zod.string().optional(),
+  isTest: zod.boolean().optional(),
   variants: zod
     .array(
       zod.object({
@@ -937,6 +1681,7 @@ export const UpdateProgramSessionBody = zod.object({
   visioLink: zod.string().nullish(),
   estimatedDurationMin: zod.number().optional(),
   coachNotes: zod.string().optional(),
+  isTest: zod.boolean().optional(),
   variants: zod
     .array(
       zod.object({
@@ -993,6 +1738,40 @@ export const UpdateProgramSessionBody = zod.object({
 export const UpdateProgramSessionResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
+});
+
+/**
+ * @summary Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+ */
+export const InsertProgramOffWeekParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const InsertProgramOffWeekBody = zod.object({
+  atWeek: zod.number().min(1),
+});
+
+export const InsertProgramOffWeekResponse = zod.object({
+  success: zod.boolean(),
+  insertedWeek: zod.number(),
+  durationWeeks: zod.number(),
+});
+
+/**
+ * @summary Broadcast a template program to several athletes at once (one transactional copy per athlete)
+ */
+export const SendProgramToAthletesParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const sendProgramToAthletesBodyAthleteIdsMax = 100;
+
+export const SendProgramToAthletesBody = zod.object({
+  athleteIds: zod
+    .array(zod.string())
+    .min(1)
+    .max(sendProgramToAthletesBodyAthleteIdsMax),
+  startDate: zod.string().optional(),
 });
 
 /**
@@ -1102,6 +1881,7 @@ export const GetAthleteProgramPreviewResponse = zod.object({
       visioLink: zod.string().nullish(),
       estimatedDurationMin: zod.number().nullish(),
       coachNotes: zod.string().nullish(),
+      isTest: zod.boolean().optional(),
       variants: zod.array(
         zod.object({
           id: zod.string(),
@@ -1544,7 +2324,15 @@ export const GetClientSessionDetailResponse = zod.object({
     .optional(),
   adaptScore: zod.number(),
   overriddenByCoach: zod.boolean().optional(),
-  athletePRs: zod.record(zod.string(), zod.number()).optional(),
+  athletePRs: zod
+    .record(
+      zod.string(),
+      zod.object({
+        recordType: zod.enum(["load", "reps", "time", "distance"]),
+        value: zod.number(),
+      }),
+    )
+    .optional(),
   completedAt: zod.string().nullish(),
   durationMin: zod.number().nullish(),
   rpe: zod.number().nullish(),
@@ -1668,6 +2456,10 @@ export const GetCoachAppointmentsResponseItem = zod.object({
   location: zod.string().nullish(),
   notes: zod.string().nullish(),
   type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
   createdAt: zod.string().nullish(),
   updatedAt: zod.string().nullish(),
   athleteFirstName: zod.string().nullish(),
@@ -1711,6 +2503,10 @@ export const UpdateCoachAppointmentResponse = zod.object({
   location: zod.string().nullish(),
   notes: zod.string().nullish(),
   type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
   createdAt: zod.string().nullish(),
   updatedAt: zod.string().nullish(),
   athleteFirstName: zod.string().nullish(),
@@ -1730,12 +2526,151 @@ export const DeleteCoachAppointmentResponse = zod.object({
 });
 
 /**
+ * @summary Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+ */
+export const ConfirmOneOnOneRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ConfirmOneOnOneRequestResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  location: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+
+/**
+ * @summary Decline an athlete-requested 1:1
+ */
+export const DeclineOneOnOneRequestParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeclineOneOnOneRequestResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string(),
+  startAt: zod.string(),
+  durationMin: zod.number(),
+  location: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  type: zod.string(),
+  status: zod
+    .enum(["pending", "confirmed", "declined", "cancelled"])
+    .optional(),
+  requestedBy: zod.string().nullish(),
+  createdAt: zod.string().nullish(),
+  updatedAt: zod.string().nullish(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+
+/**
+ * @summary List the coach's recurring 1:1 availability template
+ */
+export const getCoachAvailabilityResponseDayOfWeekMin = 0;
+export const getCoachAvailabilityResponseDayOfWeekMax = 6;
+
+export const GetCoachAvailabilityResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  dayOfWeek: zod
+    .number()
+    .min(getCoachAvailabilityResponseDayOfWeekMin)
+    .max(getCoachAvailabilityResponseDayOfWeekMax),
+  startTime: zod.string(),
+  isActive: zod.boolean().optional(),
+});
+export const GetCoachAvailabilityResponse = zod.array(
+  GetCoachAvailabilityResponseItem,
+);
+
+/**
+ * @summary Open a recurring weekly slot
+ */
+export const addCoachAvailabilitySlotBodyDayOfWeekMin = 0;
+export const addCoachAvailabilitySlotBodyDayOfWeekMax = 6;
+
+export const AddCoachAvailabilitySlotBody = zod.object({
+  dayOfWeek: zod
+    .number()
+    .min(addCoachAvailabilitySlotBodyDayOfWeekMin)
+    .max(addCoachAvailabilitySlotBodyDayOfWeekMax),
+  startTime: zod.string(),
+});
+
+/**
+ * @summary Close a recurring slot
+ */
+export const RemoveCoachAvailabilitySlotParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const RemoveCoachAvailabilitySlotResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+ */
+export const GetAthleteStudioInfoResponse = zod.object({
+  studioName: zod.string(),
+  whatsappNumber: zod.string().nullable(),
+  announcementLink: zod.string().nullable(),
+});
+
+/**
+ * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)
+ */
+export const GetAthleteCoachSlotsQueryParams = zod.object({
+  date: zod.coerce.string(),
+});
+
+export const getAthleteCoachSlotsResponseDayOfWeekMin = 0;
+export const getAthleteCoachSlotsResponseDayOfWeekMax = 6;
+
+export const GetAthleteCoachSlotsResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  dayOfWeek: zod
+    .number()
+    .min(getAthleteCoachSlotsResponseDayOfWeekMin)
+    .max(getAthleteCoachSlotsResponseDayOfWeekMax),
+  startTime: zod.string(),
+  isActive: zod.boolean().optional(),
+});
+export const GetAthleteCoachSlotsResponse = zod.array(
+  GetAthleteCoachSlotsResponseItem,
+);
+
+/**
+ * @summary Request a 1:1 slot (no credit debited until the coach confirms)
+ */
+export const CreateOneOnOneRequestBody = zod.object({
+  date: zod.string(),
+  time: zod.string(),
+});
+
+/**
  * @summary Get scheduled notifications
  */
 export const GetScheduledNotificationsResponseItem = zod.object({
   id: zod.string(),
   coachId: zod.string(),
-  athleteId: zod.string(),
+  athleteId: zod.string().nullable(),
   message: zod.string(),
   recurrenceType: zod.enum(["daily", "weekly", "custom"]),
   recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
@@ -1754,7 +2689,7 @@ export const GetScheduledNotificationsResponse = zod.array(
  * @summary Create a scheduled notification
  */
 export const CreateScheduledNotificationBody = zod.object({
-  athleteId: zod.string(),
+  athleteId: zod.string().nullable(),
   message: zod.string(),
   recurrenceType: zod.enum(["daily", "weekly", "custom"]),
   recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
@@ -1779,7 +2714,7 @@ export const UpdateScheduledNotificationBody = zod.object({
 export const UpdateScheduledNotificationResponse = zod.object({
   id: zod.string(),
   coachId: zod.string(),
-  athleteId: zod.string(),
+  athleteId: zod.string().nullable(),
   message: zod.string(),
   recurrenceType: zod.enum(["daily", "weekly", "custom"]),
   recurrenceConfig: zod.record(zod.string(), zod.unknown()).optional(),
@@ -1801,6 +2736,132 @@ export const DeleteScheduledNotificationParams = zod.object({
 export const DeleteScheduledNotificationResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
+});
+
+/**
+ * @summary Get the coach's motivation phrase bank
+ */
+export const GetMotivationPhrasesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  text: zod.string(),
+  active: zod.boolean(),
+  createdAt: zod.string().nullish(),
+});
+export const GetMotivationPhrasesResponse = zod.array(
+  GetMotivationPhrasesResponseItem,
+);
+
+/**
+ * @summary Add a motivation phrase
+ */
+export const CreateMotivationPhraseBody = zod.object({
+  text: zod.string(),
+});
+
+/**
+ * @summary Update a motivation phrase
+ */
+export const UpdateMotivationPhraseParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateMotivationPhraseBody = zod.object({
+  text: zod.string().optional(),
+  active: zod.boolean().optional(),
+});
+
+export const UpdateMotivationPhraseResponse = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  text: zod.string(),
+  active: zod.boolean(),
+  createdAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a motivation phrase
+ */
+export const DeleteMotivationPhraseParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteMotivationPhraseResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get a signed upload URL for a new resource file
+ */
+export const GetResourceFileUploadUrlResponse = zod.object({
+  uploadUrl: zod.string(),
+  objectPath: zod.string(),
+  metadataEndpoint: zod.string(),
+});
+
+/**
+ * @summary List resource files
+ */
+export const GetCoachResourceFilesQueryParams = zod.object({
+  athleteId: zod.coerce.string().optional(),
+});
+
+export const GetCoachResourceFilesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string().nullable(),
+  title: zod.string(),
+  objectPath: zod.string(),
+  uploadedAt: zod.string(),
+});
+export const GetCoachResourceFilesResponse = zod.array(
+  GetCoachResourceFilesResponseItem,
+);
+
+/**
+ * @summary Attach metadata to an uploaded resource file
+ */
+export const CreateResourceFileBody = zod.object({
+  title: zod.string(),
+  objectPath: zod.string(),
+  athleteId: zod.string().nullable(),
+});
+
+/**
+ * @summary Delete a resource file
+ */
+export const DeleteResourceFileParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteResourceFileResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary List resource files shared with the current athlete
+ */
+export const GetResourceFilesResponseItem = zod.object({
+  id: zod.string(),
+  coachId: zod.string(),
+  athleteId: zod.string().nullable(),
+  title: zod.string(),
+  objectPath: zod.string(),
+  uploadedAt: zod.string(),
+});
+export const GetResourceFilesResponse = zod.array(GetResourceFilesResponseItem);
+
+/**
+ * @summary Get a signed download URL for a resource file
+ */
+export const GetResourceFileSignedUrlParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetResourceFileSignedUrlResponse = zod.object({
+  signedUrl: zod.string(),
 });
 
 /**
@@ -1967,6 +3028,7 @@ export const GetExercisesResponseItem = zod.object({
   muscleGroups: zod.array(zod.string()).nullish(),
   equipment: zod.array(zod.string()).nullish(),
   demoUrl: zod.string().nullish(),
+  trackingType: zod.enum(["load", "bodyweight", "time", "distance"]).optional(),
 });
 export const GetExercisesResponse = zod.array(GetExercisesResponseItem);
 
@@ -1981,6 +3043,7 @@ export const CreateExerciseBody = zod.object({
   muscleGroups: zod.array(zod.string()).optional(),
   equipment: zod.array(zod.string()).optional(),
   demoUrl: zod.string().optional(),
+  trackingType: zod.enum(["load", "bodyweight", "time", "distance"]).optional(),
 });
 
 /**
@@ -2148,3 +3211,66 @@ export const UpdateNotificationPreferencesResponse = zod.object({
   encouragements: zod.boolean(),
   performance: zod.boolean(),
 });
+
+/**
+ * @summary List invoices issued by the coach (most recent 200)
+ */
+export const GetCoachInvoicesResponseItem = zod.object({
+  id: zod.string(),
+  invoiceNumber: zod.string(),
+  athleteId: zod.string(),
+  description: zod.string(),
+  regime: zod.enum(["franchise", "assujetti"]),
+  amountHtCents: zod.number(),
+  vatCents: zod.number(),
+  amountTtcCents: zod.number(),
+  paymentMethod: zod.string(),
+  status: zod.enum(["issued", "credited"]),
+  issuedAt: zod.string(),
+  athleteFirstName: zod.string().nullish(),
+  athleteLastName: zod.string().nullish(),
+});
+export const GetCoachInvoicesResponse = zod.array(GetCoachInvoicesResponseItem);
+
+/**
+ * @summary Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+ */
+export const CreateInvoiceCreditNoteParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const createInvoiceCreditNoteBodyReasonMax = 500;
+
+export const CreateInvoiceCreditNoteBody = zod.object({
+  reason: zod.string().min(1).max(createInvoiceCreditNoteBodyReasonMax),
+});
+
+/**
+ * @summary Monthly accounting export (CSV) for the accountant
+ */
+export const ExportCoachInvoicesCsvQueryParams = zod.object({
+  year: zod.coerce.number().optional(),
+  month: zod.coerce.number().optional(),
+});
+
+/**
+ * @summary Download an invoice or credit note PDF (owner athlete or issuing coach only)
+ */
+export const GetInvoicePdfParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary List credit notes issued by the coach
+ */
+export const GetCoachCreditNotesResponseItem = zod.object({
+  id: zod.string(),
+  creditNoteNumber: zod.string(),
+  amountCents: zod.number(),
+  reason: zod.string(),
+  issuedAt: zod.string(),
+  invoiceId: zod.string(),
+});
+export const GetCoachCreditNotesResponse = zod.array(
+  GetCoachCreditNotesResponseItem,
+);

@@ -1,14 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { scheduledNotificationsTable, usersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, isNull } from "drizzle-orm";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { z } from "zod";
 
 const router = Router();
 
 const createSchema = z.object({
-  athleteId: z.string().uuid(),
+  // null = broadcast to every athlete of this coach
+  athleteId: z.string().uuid().nullable(),
   message: z.string().min(1).max(1000),
   recurrenceType: z.enum(["daily", "weekly", "custom"]).default("daily"),
   recurrenceConfig: z.record(z.unknown()).default({}),
@@ -68,7 +69,12 @@ router.get("/coach/scheduled-notifications", authenticate, requireRole("coach"),
         athleteIdFilter
           ? and(
               eq(scheduledNotificationsTable.coachId, coachId),
-              eq(scheduledNotificationsTable.athleteId, athleteIdFilter)
+              // A broadcast (athleteId=null) reminder applies to this
+              // athlete too, so it belongs in their filtered view.
+              or(
+                eq(scheduledNotificationsTable.athleteId, athleteIdFilter),
+                isNull(scheduledNotificationsTable.athleteId)
+              )
             )
           : eq(scheduledNotificationsTable.coachId, coachId)
       )
@@ -93,13 +99,15 @@ router.post("/coach/scheduled-notifications", authenticate, requireRole("coach")
   }
   try {
     const coachId = req.user!.userId;
-    const [athlete] = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, coachId)));
-    if (!athlete) {
-      res.status(403).json({ error: { code: "FORBIDDEN", message: "Athlète introuvable ou non associé" } });
-      return;
+    if (parsed.data.athleteId) {
+      const [athlete] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(and(eq(usersTable.id, parsed.data.athleteId), eq(usersTable.coachId, coachId)));
+      if (!athlete) {
+        res.status(403).json({ error: { code: "FORBIDDEN", message: "Athlète introuvable ou non associé" } });
+        return;
+      }
     }
     const [row] = await db
       .insert(scheduledNotificationsTable)

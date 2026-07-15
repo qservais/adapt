@@ -14,6 +14,8 @@ import {
   GetExercisePRHistoryParams,
   GetExercisePRHistoryResponse,
 } from "@workspace/api-zod";
+import { currentValueOf } from "../services/prService.js";
+import { recordTypeForTracking, type RecordType } from "../lib/pr-math.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -405,9 +407,15 @@ router.get("/users/prs", authenticate, async (req, res) => {
     const prs = await db.select({
       exerciseId: personalRecordsTable.exerciseId,
       exerciseName: exercisesTable.name,
+      recordType: personalRecordsTable.recordType,
       loadKg: personalRecordsTable.loadKg,
       reps: personalRecordsTable.reps,
+      durationSeconds: personalRecordsTable.durationSeconds,
+      distanceMeters: personalRecordsTable.distanceMeters,
       previousLoadKg: personalRecordsTable.previousLoadKg,
+      previousReps: personalRecordsTable.previousReps,
+      previousDurationSeconds: personalRecordsTable.previousDurationSeconds,
+      previousDistanceMeters: personalRecordsTable.previousDistanceMeters,
       achievedAt: personalRecordsTable.achievedAt,
     })
       .from(personalRecordsTable)
@@ -416,15 +424,24 @@ router.get("/users/prs", authenticate, async (req, res) => {
       .orderBy(desc(personalRecordsTable.achievedAt));
 
     const payload = GetPersonalRecordsResponse.parse({
-      personalRecords: prs.map(pr => ({
-        exerciseId: pr.exerciseId,
-        exerciseName: pr.exerciseName,
-        loadKg: parseFloat(pr.loadKg),
-        reps: pr.reps,
-        previousLoadKg: pr.previousLoadKg ? parseFloat(pr.previousLoadKg) : null,
-        achievedAt: pr.achievedAt?.toISOString(),
-        isRecent: pr.achievedAt ? pr.achievedAt > sevenDaysAgo : false,
-      })),
+      personalRecords: prs.map(pr => {
+        const recordType = pr.recordType as RecordType;
+        return {
+          exerciseId: pr.exerciseId,
+          exerciseName: pr.exerciseName,
+          recordType,
+          value: currentValueOf(recordType, pr) ?? 0,
+          reps: pr.reps,
+          previousValue: currentValueOf(recordType, {
+            loadKg: pr.previousLoadKg,
+            reps: pr.previousReps,
+            durationSeconds: pr.previousDurationSeconds,
+            distanceMeters: pr.previousDistanceMeters,
+          }),
+          achievedAt: pr.achievedAt?.toISOString(),
+          isRecent: pr.achievedAt ? pr.achievedAt > sevenDaysAgo : false,
+        };
+      }),
       total: prs.length,
     });
 
@@ -445,7 +462,7 @@ router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
     const userId = req.user!.userId;
     const { exerciseId } = paramsResult.data;
 
-    const [exercise] = await db.select({ name: exercisesTable.name })
+    const [exercise] = await db.select({ name: exercisesTable.name, trackingType: exercisesTable.trackingType })
       .from(exercisesTable)
       .where(eq(exercisesTable.id, exerciseId));
 
@@ -456,8 +473,11 @@ router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
 
     const history = await db.select({
       id: prHistoryTable.id,
+      recordType: prHistoryTable.recordType,
       loadKg: prHistoryTable.loadKg,
       reps: prHistoryTable.reps,
+      durationSeconds: prHistoryTable.durationSeconds,
+      distanceMeters: prHistoryTable.distanceMeters,
       achievedAt: prHistoryTable.achievedAt,
     })
       .from(prHistoryTable)
@@ -470,9 +490,10 @@ router.get("/users/prs/:exerciseId/history", authenticate, async (req, res) => {
     const payload = GetExercisePRHistoryResponse.parse({
       exerciseId,
       exerciseName: exercise.name,
+      recordType: recordTypeForTracking(exercise.trackingType),
       history: history.map(h => ({
         id: h.id,
-        loadKg: parseFloat(h.loadKg),
+        value: currentValueOf(h.recordType as RecordType, h) ?? 0,
         reps: h.reps,
         achievedAt: h.achievedAt.toISOString(),
       })),

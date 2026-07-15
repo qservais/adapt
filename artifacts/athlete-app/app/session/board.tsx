@@ -27,7 +27,7 @@ import { BLOCK_TYPE_COLORS, BLOCK_TYPE_LABELS } from "@/constants/blockTypes";
 import { useFormatWeight } from "@/context/PreferencesContext";
 import { getFreeSession, clearFreeSession } from "@/lib/freeSessionStore";
 
-type SetState = { load: string; reps: string; done: boolean };
+type SetState = { load: string; reps: string; durationSeconds: string; done: boolean };
 type ExState = SetState[];
 
 function groupByBlock(
@@ -60,9 +60,11 @@ function initialSetState(ex: SessionExerciseItem): ExState {
     ex.adaptedLoadKg ?? ex.nominalLoadKg ?? ex.lastUsedLoadKg ?? ""
   );
   const defaultReps = ex.reps ?? "";
+  const defaultDuration = ex.durationSeconds != null && ex.durationSeconds > 0 ? String(ex.durationSeconds) : "";
   return Array.from({ length: ex.sets }, () => ({
     load: defaultLoad,
     reps: defaultReps,
+    durationSeconds: defaultDuration,
     done: false,
   }));
 }
@@ -157,7 +159,7 @@ export default function BoardScreen() {
   }, [activeTimers.length]);
 
   const updateSetField = useCallback(
-    (exId: string, setIdx: number, field: "load" | "reps", value: string) => {
+    (exId: string, setIdx: number, field: "load" | "reps" | "durationSeconds", value: string) => {
       setExState((prev) => {
         const arr = [...(prev[exId] ?? [])];
         if (arr[setIdx]) {
@@ -215,6 +217,7 @@ export default function BoardScreen() {
       arr.push({
         load: last?.load ?? String(ex.adaptedLoadKg ?? ex.nominalLoadKg ?? ex.lastUsedLoadKg ?? ""),
         reps: last?.reps ?? (ex.reps ?? ""),
+        durationSeconds: last?.durationSeconds ?? (ex.durationSeconds != null && ex.durationSeconds > 0 ? String(ex.durationSeconds) : ""),
         done: false,
       });
       return { ...prev, [ex.id]: arr };
@@ -238,11 +241,17 @@ export default function BoardScreen() {
         const loads = doneSets.map((s) => parseFloat(s.load)).filter((n) => !isNaN(n) && n > 0);
         const avgLoad = loads.length > 0 ? loads.reduce((a, b) => a + b, 0) / loads.length : undefined;
         const repsArr = doneSets.map((s) => parseInt(s.reps, 10)).filter((n) => !isNaN(n) && n > 0);
+        // "time" PRs are the athlete's BEST (lowest) time — unlike load, an
+        // average would blur out their actual best effort, so this takes
+        // the fastest completed set instead.
+        const durations = doneSets.map((s) => parseFloat(s.durationSeconds)).filter((n) => !isNaN(n) && n > 0);
+        const bestDuration = durations.length > 0 ? Math.min(...durations) : undefined;
         return {
           exerciseId: ex.exerciseId,
           setsCompleted: doneSets.length,
           loadKgUsed: avgLoad,
           repsPerSet: repsArr.length > 0 ? repsArr : undefined,
+          durationSecondsUsed: bestDuration,
         };
       });
 
@@ -367,6 +376,7 @@ export default function BoardScreen() {
                   const prescribedLoad = ex.adaptedLoadKg ?? ex.nominalLoadKg ?? null;
                   const hasLoad = ((prescribedLoad ?? ex.lastUsedLoadKg) != null)
                     && ((prescribedLoad ?? ex.lastUsedLoadKg)! > 0);
+                  const hasDuration = (ex.durationSeconds ?? 0) > 0;
                   return (
                     <View key={ex.id} style={[s.exCard, allExDone && { opacity: 0.7 }]}>
                       <View style={s.exHeader}>
@@ -390,6 +400,7 @@ export default function BoardScreen() {
                           <Text style={[s.setsHeaderCell, s.colSerie, { fontFamily: FONTS.mono }]}>SÉRIE</Text>
                           <Text style={[s.setsHeaderCell, s.colPrev, { fontFamily: FONTS.mono }]}>PRÉC.</Text>
                           {hasLoad && <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>CHARGE</Text>}
+                          {hasDuration && <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>DURÉE</Text>}
                           <Text style={[s.setsHeaderCell, hasLoad ? s.colReps : s.colRepsWide, { fontFamily: FONTS.mono }]}>REPS</Text>
                           <View style={s.colCheck} />
                         </View>
@@ -448,6 +459,20 @@ export default function BoardScreen() {
                                       onChangeText={(v) => updateSetField(ex.id, idx, "load", v)}
                                       keyboardType="decimal-pad"
                                       placeholder="—"
+                                      placeholderTextColor={COLORS.textMuted}
+                                      editable={!st.done}
+                                      selectTextOnFocus
+                                    />
+                                  </View>
+                                )}
+                                {hasDuration && (
+                                  <View style={s.colLoad}>
+                                    <TextInput
+                                      style={[s.input, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.white, borderColor: st.done ? `${cfg.color}50` : COLORS.border }]}
+                                      value={st.durationSeconds}
+                                      onChangeText={(v) => updateSetField(ex.id, idx, "durationSeconds", v)}
+                                      keyboardType="number-pad"
+                                      placeholder="s"
                                       placeholderTextColor={COLORS.textMuted}
                                       editable={!st.done}
                                       selectTextOnFocus

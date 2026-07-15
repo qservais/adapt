@@ -11,4 +11,6 @@ export type CompleteSessionRequestExercisesItem = {
   setsCompleted?: number;
   repsPerSet?: number[];
   loadKgUsed?: number;
+  durationSecondsUsed?: number;
+  distanceMetersUsed?: number;
 };

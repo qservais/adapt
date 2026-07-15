@@ -45,6 +45,439 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterAthleteRequest {
+  email: string;
+  /**
+   * 6-digit PIN chosen by the athlete, used like a password
+   * @pattern ^[0-9]{6}$
+   */
+  loginCode: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  age?: number;
+  primaryGoal?: string;
+  fitnessLevel?: string;
+  /** Target sessions per week */
+  trainingFrequency?: number;
+  hasInjuryHistory: boolean;
+  /** Required when hasInjuryHistory is true */
+  injuries?: string;
+  /** PAR-Q-style safety triage flag, does not block signup */
+  medicalContraindication: boolean;
+  acquisitionSource?: string;
+  /** Must be true — explicit GDPR consent for health-data processing */
+  consent: boolean;
+}
+
+export interface LoginCodeRequest {
+  email: string;
+  /** @pattern ^[0-9]{6}$ */
+  code: string;
+}
+
+export interface ResetLoginCodeRequest {
+  token: string;
+  /** @pattern ^[0-9]{6}$ */
+  newLoginCode: string;
+}
+
+export type StudioSettingsVatRegime =
+  (typeof StudioSettingsVatRegime)[keyof typeof StudioSettingsVatRegime];
+
+export const StudioSettingsVatRegime = {
+  franchise: "franchise",
+  assujetti: "assujetti",
+} as const;
+
+export interface StudioSettings {
+  coachId: string;
+  studioName: string;
+  studioAddress?: string | null;
+  whatsappNumber?: string | null;
+  announcementLink?: string | null;
+  defaultCancellationWindowHours: number;
+  vatRegime: StudioSettingsVatRegime;
+  vatNumber?: string | null;
+  invoicePrefix: string;
+  accountantEmail?: string | null;
+}
+
+export interface StudioInfo {
+  studioName: string;
+  whatsappNumber: string | null;
+  announcementLink: string | null;
+}
+
+export type UpdateStudioSettingsRequestVatRegime =
+  (typeof UpdateStudioSettingsRequestVatRegime)[keyof typeof UpdateStudioSettingsRequestVatRegime];
+
+export const UpdateStudioSettingsRequestVatRegime = {
+  franchise: "franchise",
+  assujetti: "assujetti",
+} as const;
+
+export interface UpdateStudioSettingsRequest {
+  studioName?: string;
+  studioAddress?: string | null;
+  whatsappNumber?: string | null;
+  announcementLink?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 168
+   */
+  defaultCancellationWindowHours?: number;
+  vatRegime?: UpdateStudioSettingsRequestVatRegime;
+  vatNumber?: string | null;
+  invoicePrefix?: string;
+  accountantEmail?: string | null;
+}
+
+export type ShopPackCreditType =
+  (typeof ShopPackCreditType)[keyof typeof ShopPackCreditType];
+
+export const ShopPackCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface ShopPack {
+  id: string;
+  coachId: string;
+  creditType: ShopPackCreditType;
+  name: string;
+  credits: number;
+  priceCents: number;
+  validityMonths?: number | null;
+  tag?: string | null;
+  isActive: boolean;
+}
+
+export type ShopPackWithPrice = ShopPack & {
+  /** List price, or the active promo price if one currently applies */
+  currentPriceCents: number;
+  hasActivePromo: boolean;
+};
+
+export interface ShopPromo {
+  id: string;
+  packId: string;
+  discountedPriceCents: number;
+  startsAt: string;
+  expiresAt: string;
+  createdBy?: string;
+}
+
+export type CoachShopPack = ShopPack & {
+  activePromo: ShopPromo | null;
+};
+
+export type UpsertShopPackRequestCreditType =
+  (typeof UpsertShopPackRequestCreditType)[keyof typeof UpsertShopPackRequestCreditType];
+
+export const UpsertShopPackRequestCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface UpsertShopPackRequest {
+  creditType?: UpsertShopPackRequestCreditType;
+  name?: string;
+  /** @minimum 1 */
+  credits?: number;
+  /** @minimum 0 */
+  priceCents?: number;
+  validityMonths?: number | null;
+  tag?: string | null;
+}
+
+export interface CreateShopPromoRequest {
+  packId: string;
+  /** @minimum 0 */
+  discountedPriceCents: number;
+  /**
+   * @minimum 1
+   * @maximum 90
+   */
+  durationDays: number;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  coachId: string;
+  name: string;
+  priceCents: number;
+  presentialText?: string | null;
+  tag?: string | null;
+  engagementMonths?: number | null;
+  isActive: boolean;
+}
+
+export interface UpdateSubscriptionPlanRequest {
+  /** @minimum 0 */
+  priceCents?: number;
+  engagementMonths?: number | null;
+}
+
+export type CreateCheckoutSessionRequestType =
+  (typeof CreateCheckoutSessionRequestType)[keyof typeof CreateCheckoutSessionRequestType];
+
+export const CreateCheckoutSessionRequestType = {
+  pack: "pack",
+  subscription: "subscription",
+} as const;
+
+export interface CreateCheckoutSessionRequest {
+  type: CreateCheckoutSessionRequestType;
+  id: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export interface CheckoutSessionResponse {
+  checkoutUrl: string | null;
+}
+
+export interface CreditBalances {
+  collectif: number;
+  individuel: number;
+}
+
+export type GiftCreditsRequestCreditType =
+  (typeof GiftCreditsRequestCreditType)[keyof typeof GiftCreditsRequestCreditType];
+
+export const GiftCreditsRequestCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface GiftCreditsRequest {
+  athleteIds: string[];
+  creditType: GiftCreditsRequestCreditType;
+  /**
+   * @minimum 1
+   * @maximum 50
+   */
+  quantity: number;
+  message?: string;
+}
+
+export type AthleteCreditTransactionCreditType =
+  (typeof AthleteCreditTransactionCreditType)[keyof typeof AthleteCreditTransactionCreditType];
+
+export const AthleteCreditTransactionCreditType = {
+  collectif: "collectif",
+  individuel: "individuel",
+} as const;
+
+export interface AthleteCreditTransaction {
+  id: string;
+  delta: number;
+  reason: string;
+  creditType: AthleteCreditTransactionCreditType;
+  createdAt: string | null;
+}
+
+export type AthleteCreditsDetailBalances = {
+  collectif: number;
+  individuel: number;
+};
+
+export interface AthleteCreditsDetail {
+  balances: AthleteCreditsDetailBalances;
+  transactions: AthleteCreditTransaction[];
+}
+
+export interface ClassTemplate {
+  id: string;
+  coachId: string;
+  name: string;
+  description?: string | null;
+  capacity: number;
+  priceCents: number;
+  creditCost: number;
+  durationMin: number;
+  cancellationWindowHours?: number | null;
+  isActive: boolean;
+}
+
+export interface UpsertClassTemplateRequest {
+  name?: string;
+  description?: string;
+  /** @minimum 1 */
+  capacity?: number;
+  /** @minimum 0 */
+  priceCents?: number;
+  /** @minimum 1 */
+  creditCost?: number;
+  /** @minimum 5 */
+  durationMin?: number;
+  cancellationWindowHours?: number | null;
+}
+
+export type ScheduleClassRequestMode =
+  (typeof ScheduleClassRequestMode)[keyof typeof ScheduleClassRequestMode];
+
+export const ScheduleClassRequestMode = {
+  once: "once",
+  weekly: "weekly",
+} as const;
+
+export interface ScheduleClassRequest {
+  mode: ScheduleClassRequestMode;
+  /** Required when mode=once */
+  startAt?: string;
+  /** Required when mode=weekly (0=Sunday..6=Saturday) */
+  dayOfWeek?: number;
+  /** Required when mode=weekly, HH:MM */
+  startTime?: string;
+  weeksAhead?: number;
+}
+
+export type ClassOccurrenceStatus =
+  (typeof ClassOccurrenceStatus)[keyof typeof ClassOccurrenceStatus];
+
+export const ClassOccurrenceStatus = {
+  scheduled: "scheduled",
+  cancelled: "cancelled",
+} as const;
+
+export interface ClassOccurrence {
+  id: string;
+  templateId: string;
+  coachId?: string;
+  startAt: string;
+  durationMin: number;
+  capacity: number;
+  status: ClassOccurrenceStatus;
+}
+
+export type ClassOccurrenceWithAvailability = ClassOccurrence & {
+  name: string;
+  description?: string | null;
+  priceCents: number;
+  creditCost: number;
+  coachFirstName?: string;
+  spotsBooked: number;
+  spotsAvailable: number;
+  isBooked: boolean;
+  bookingId?: string | null;
+  waitlistStatus?: string | null;
+};
+
+export interface ClassBooking {
+  id: string;
+  occurrenceId: string;
+  athleteId?: string | null;
+  status: string;
+  paymentMode: string;
+  paymentStatus?: string;
+}
+
+export interface CancelBookingResponse {
+  success: boolean;
+  refunded: boolean;
+  lateCancellation: boolean;
+  message?: string;
+}
+
+export type ClassWaitlistEntryStatus =
+  (typeof ClassWaitlistEntryStatus)[keyof typeof ClassWaitlistEntryStatus];
+
+export const ClassWaitlistEntryStatus = {
+  waiting: "waiting",
+  offered: "offered",
+  expired: "expired",
+  confirmed: "confirmed",
+  withdrawn: "withdrawn",
+} as const;
+
+export interface ClassWaitlistEntry {
+  id: string;
+  occurrenceId: string;
+  athleteId: string;
+  status: ClassWaitlistEntryStatus;
+  offerExpiresAt?: string | null;
+}
+
+export interface CoachAvailabilitySlot {
+  id: string;
+  coachId: string;
+  /**
+   * @minimum 0
+   * @maximum 6
+   */
+  dayOfWeek: number;
+  startTime: string;
+  isActive?: boolean;
+}
+
+export interface AddAvailabilitySlotRequest {
+  /**
+   * @minimum 0
+   * @maximum 6
+   */
+  dayOfWeek: number;
+  startTime: string;
+}
+
+export interface CreateOneOnOneRequest {
+  date: string;
+  time: string;
+}
+
+export type CoachClassOccurrence = ClassOccurrence & {
+  name: string;
+  spotsBooked: number;
+  spotsAvailable: number;
+  waitlistCount: number;
+};
+
+export type ManualRegisterRequestPaymentMode =
+  (typeof ManualRegisterRequestPaymentMode)[keyof typeof ManualRegisterRequestPaymentMode];
+
+export const ManualRegisterRequestPaymentMode = {
+  comped: "comped",
+  credit: "credit",
+  pay_on_site: "pay_on_site",
+} as const;
+
+export interface ManualRegisterRequest {
+  athleteId?: string;
+  guestName?: string;
+  paymentMode: ManualRegisterRequestPaymentMode;
+}
+
+export interface ClassParticipant {
+  bookingId: string;
+  athleteId?: string | null;
+  guestName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  paymentMode: string;
+  todayScore?: number | null;
+}
+
+export type AgendaEntryKind =
+  (typeof AgendaEntryKind)[keyof typeof AgendaEntryKind];
+
+export const AgendaEntryKind = {
+  class: "class",
+  individuel: "individuel",
+} as const;
+
+export interface AgendaEntry {
+  kind: AgendaEntryKind;
+  id: string;
+  startAt: string;
+  durationMin: number;
+  label: string;
+  status: string;
+  spotsBooked?: number;
+  capacity?: number;
+  athleteName?: string;
+}
+
 export interface RefreshRequest {
   refreshToken: string;
 }
@@ -210,7 +643,21 @@ export interface SessionBlockItem {
   conditioningFormat?: string | null;
 }
 
-export type SessionDetailAthletePRs = { [key: string]: number };
+export type RecordType = (typeof RecordType)[keyof typeof RecordType];
+
+export const RecordType = {
+  load: "load",
+  reps: "reps",
+  time: "time",
+  distance: "distance",
+} as const;
+
+export interface AthletePRItem {
+  recordType: RecordType;
+  value: number;
+}
+
+export type SessionDetailAthletePRs = { [key: string]: AthletePRItem };
 
 export interface SessionDetail {
   sessionLogId: string;
@@ -240,8 +687,9 @@ export interface SessionDetail {
 export interface CompleteSessionNewPR {
   exerciseId: string;
   exerciseName: string;
-  loadKg: number;
-  previousLoadKg?: number | null;
+  recordType: RecordType;
+  value: number;
+  previousValue?: number | null;
 }
 
 export interface CompleteSessionResult {
@@ -283,9 +731,10 @@ export interface BadgesResponse {
 export interface PersonalRecord {
   exerciseId: string;
   exerciseName: string;
-  loadKg: number;
-  reps: number;
-  previousLoadKg?: number | null;
+  recordType: RecordType;
+  value: number;
+  reps?: number | null;
+  previousValue?: number | null;
   achievedAt?: string;
   isRecent?: boolean;
 }
@@ -371,6 +820,8 @@ export type CompleteSessionRequestExercisesItem = {
   setsCompleted?: number;
   repsPerSet?: number[];
   loadKgUsed?: number;
+  durationSecondsUsed?: number;
+  distanceMetersUsed?: number;
 };
 
 export interface CompleteSessionRequest {
@@ -414,8 +865,8 @@ export interface FreeCustomSessionRequest {
 export interface ProgramSummary {
   id: string;
   name: string;
-  athleteId?: string | null;
-  athleteName?: string | null;
+  athleteId: string;
+  athleteName: string;
   durationWeeks: number;
   startDate?: string | null;
   isActive: boolean;
@@ -447,6 +898,7 @@ export interface SessionWithVariants {
   visioLink?: string | null;
   estimatedDurationMin?: number | null;
   coachNotes?: string | null;
+  isTest?: boolean;
   variants: VariantWithExercises[];
   blocks?: SessionBlockItem[];
 }
@@ -471,7 +923,7 @@ export interface StartProgramNowResult {
 export interface CreateProgramRequest {
   name: string;
   description?: string;
-  athleteId?: string | null;
+  athleteId?: string;
   durationWeeks: number;
   startDate?: string;
 }
@@ -564,6 +1016,7 @@ export interface CreateSessionRequest {
   visioLink?: string | null;
   estimatedDurationMin?: number;
   coachNotes?: string;
+  isTest?: boolean;
   variants?: CreateSessionRequestVariantsItem[];
   blocks?: CreateSessionRequestBlocksItem[];
 }
@@ -741,6 +1194,16 @@ export interface CreatePerformanceTestRequest {
   notes?: string;
 }
 
+export type ExerciseDataTrackingType =
+  (typeof ExerciseDataTrackingType)[keyof typeof ExerciseDataTrackingType];
+
+export const ExerciseDataTrackingType = {
+  load: "load",
+  bodyweight: "bodyweight",
+  time: "time",
+  distance: "distance",
+} as const;
+
 export interface ExerciseData {
   id: string;
   name: string;
@@ -748,6 +1211,7 @@ export interface ExerciseData {
   muscleGroups?: string[] | null;
   equipment?: string[] | null;
   demoUrl?: string | null;
+  trackingType?: ExerciseDataTrackingType;
 }
 
 export type CreateExerciseRequestCategory =
@@ -760,12 +1224,23 @@ export const CreateExerciseRequestCategory = {
   mobility: "mobility",
 } as const;
 
+export type CreateExerciseRequestTrackingType =
+  (typeof CreateExerciseRequestTrackingType)[keyof typeof CreateExerciseRequestTrackingType];
+
+export const CreateExerciseRequestTrackingType = {
+  load: "load",
+  bodyweight: "bodyweight",
+  time: "time",
+  distance: "distance",
+} as const;
+
 export interface CreateExerciseRequest {
   name: string;
   category?: CreateExerciseRequestCategory;
   muscleGroups?: string[];
   equipment?: string[];
   demoUrl?: string;
+  trackingType?: CreateExerciseRequestTrackingType;
 }
 
 export interface MessageThread {
@@ -884,14 +1359,15 @@ export interface UpdateNotificationPreferencesRequest {
 
 export interface PRHistoryEntry {
   id: string;
-  loadKg: number;
-  reps: number;
+  value: number;
+  reps?: number | null;
   achievedAt: string;
 }
 
 export interface PRHistoryResponse {
   exerciseId: string;
   exerciseName: string;
+  recordType: RecordType;
   history: PRHistoryEntry[];
 }
 
@@ -969,7 +1445,7 @@ export type ScheduledNotificationRecurrenceConfig = { [key: string]: unknown };
 export interface ScheduledNotification {
   id: string;
   coachId: string;
-  athleteId: string;
+  athleteId: string | null;
   message: string;
   recurrenceType: ScheduledNotificationRecurrenceType;
   recurrenceConfig?: ScheduledNotificationRecurrenceConfig;
@@ -995,7 +1471,7 @@ export type CreateScheduledNotificationRequestRecurrenceConfig = {
 };
 
 export interface CreateScheduledNotificationRequest {
-  athleteId: string;
+  athleteId: string | null;
   message: string;
   recurrenceType: CreateScheduledNotificationRequestRecurrenceType;
   recurrenceConfig?: CreateScheduledNotificationRequestRecurrenceConfig;
@@ -1023,6 +1499,58 @@ export interface UpdateScheduledNotificationRequest {
   active?: boolean;
 }
 
+export interface MotivationPhrase {
+  id: string;
+  coachId: string;
+  text: string;
+  active: boolean;
+  createdAt?: string | null;
+}
+
+export interface CreateMotivationPhraseRequest {
+  text: string;
+}
+
+export interface UpdateMotivationPhraseRequest {
+  text?: string;
+  active?: boolean;
+}
+
+export interface ResourceFile {
+  id: string;
+  coachId: string;
+  athleteId: string | null;
+  title: string;
+  objectPath: string;
+  uploadedAt: string;
+}
+
+export interface CreateResourceFileRequest {
+  title: string;
+  objectPath: string;
+  athleteId: string | null;
+}
+
+export interface ResourceFileUploadUrlResponse {
+  uploadUrl: string;
+  objectPath: string;
+  metadataEndpoint: string;
+}
+
+export interface SignedUrlResponse {
+  signedUrl: string;
+}
+
+export type CoachAppointmentStatus =
+  (typeof CoachAppointmentStatus)[keyof typeof CoachAppointmentStatus];
+
+export const CoachAppointmentStatus = {
+  pending: "pending",
+  confirmed: "confirmed",
+  declined: "declined",
+  cancelled: "cancelled",
+} as const;
+
 export interface CoachAppointment {
   id: string;
   coachId: string;
@@ -1032,6 +1560,8 @@ export interface CoachAppointment {
   location?: string | null;
   notes?: string | null;
   type: string;
+  status?: CoachAppointmentStatus;
+  requestedBy?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   athleteFirstName?: string | null;
@@ -1053,6 +1583,147 @@ export interface UpdateAppointmentRequest {
   notes?: string;
 }
 
+export type InvoiceListItemRegime =
+  (typeof InvoiceListItemRegime)[keyof typeof InvoiceListItemRegime];
+
+export const InvoiceListItemRegime = {
+  franchise: "franchise",
+  assujetti: "assujetti",
+} as const;
+
+export type InvoiceListItemStatus =
+  (typeof InvoiceListItemStatus)[keyof typeof InvoiceListItemStatus];
+
+export const InvoiceListItemStatus = {
+  issued: "issued",
+  credited: "credited",
+} as const;
+
+export interface InvoiceListItem {
+  id: string;
+  invoiceNumber: string;
+  athleteId: string;
+  description: string;
+  regime: InvoiceListItemRegime;
+  amountHtCents: number;
+  vatCents: number;
+  amountTtcCents: number;
+  paymentMethod: string;
+  status: InvoiceListItemStatus;
+  issuedAt: string;
+  athleteFirstName?: string | null;
+  athleteLastName?: string | null;
+}
+
+export interface CreateCreditNoteRequest {
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  reason: string;
+}
+
+export interface CreditNoteListItem {
+  id: string;
+  creditNoteNumber: string;
+  amountCents: number;
+  reason: string;
+  issuedAt: string;
+  invoiceId: string;
+}
+
+export interface InsertOffWeekRequest {
+  /** @minimum 1 */
+  atWeek: number;
+}
+
+export interface InsertOffWeekResponse {
+  success: boolean;
+  insertedWeek: number;
+  durationWeeks: number;
+}
+
+export interface SendToAthletesRequest {
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  athleteIds: string[];
+  startDate?: string;
+}
+
+export type SendToAthletesResultItemStatus =
+  (typeof SendToAthletesResultItemStatus)[keyof typeof SendToAthletesResultItemStatus];
+
+export const SendToAthletesResultItemStatus = {
+  sent: "sent",
+  failed: "failed",
+} as const;
+
+export interface SendToAthletesResultItem {
+  athleteId: string;
+  status: SendToAthletesResultItemStatus;
+  programId?: string | null;
+  error?: string | null;
+}
+
+export interface SendToAthletesResponse {
+  results: SendToAthletesResultItem[];
+}
+
+export interface ConvertSessionTextRequest {
+  /**
+   * @minLength 1
+   * @maxLength 20000
+   */
+  text: string;
+}
+
+export interface ConvertSessionTextResponse {
+  convertedText: string;
+}
+
+export type GiftCredits201 = {
+  success?: boolean;
+  recipientCount?: number;
+};
+
+export type GetClassOccurrencesParams = {
+  from?: string;
+  to?: string;
+};
+
+export type ScheduleClassTemplate201 = {
+  occurrences?: ClassOccurrence[];
+};
+
+export type GetCoachClassOccurrencesParams = {
+  from?: string;
+  to?: string;
+};
+
+export type CancelClassOccurrenceBody = {
+  note?: string;
+};
+
+export type CancelClassOccurrence200 = {
+  success?: boolean;
+  notifiedCount?: number;
+};
+
+export type GetCoachAgendaParams = {
+  from?: string;
+  to?: string;
+};
+
+export type GetAthleteCoachSlotsParams = {
+  date: string;
+};
+
+export type GetCoachResourceFilesParams = {
+  athleteId?: string;
+};
+
 export type GetExercisesParams = {
   category?: string;
   q?: string;
@@ -1061,4 +1732,9 @@ export type GetExercisesParams = {
 export type GetNotificationsParams = {
   offset?: number;
   limit?: number;
+};
+
+export type ExportCoachInvoicesCsvParams = {
+  year?: number;
+  month?: number;
 };

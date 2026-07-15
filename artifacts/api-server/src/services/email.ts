@@ -15,7 +15,13 @@ type Lang = "fr" | "en";
 
 type SendEmailResult = { ok: true } | { ok: false; error: string };
 
-async function sendEmail(opts: { to: string; subject: string; html: string; text: string }): Promise<SendEmailResult> {
+async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  attachments?: { filename: string; content: Buffer; contentType?: string }[];
+}): Promise<SendEmailResult> {
   if (!resend) {
     logger.info({ to: opts.to, subject: opts.subject }, "[EMAIL-MOCK] Would send email");
     return { ok: true };
@@ -27,6 +33,7 @@ async function sendEmail(opts: { to: string; subject: string; html: string; text
       subject: opts.subject,
       html: opts.html,
       text: opts.text,
+      attachments: opts.attachments,
     });
     if (error) {
       logger.error({ error, to: opts.to }, "Resend error");
@@ -109,15 +116,29 @@ const WELCOME_COPY = {
   },
 } as const;
 
+type Credential = "password" | "code";
+
+// Athletes authenticate with a 6-digit PIN, coaches with a password — the reset
+// email must not say "mot de passe" to someone who never had one.
 const RESET_COPY = {
   fr: {
-    subject: "Réinitialisation de ton mot de passe ADAPT",
-    h2: "Réinitialisation de ton mot de passe",
+    password: {
+      subject: "Réinitialisation de ton mot de passe ADAPT",
+      h2: "Réinitialisation de ton mot de passe",
+      instructions: 'Tu as demandé à réinitialiser ton mot de passe ADAPT. Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.',
+      instructionsText: "Tu as demandé à réinitialiser ton mot de passe ADAPT. Ce lien est valable 1 heure.",
+      cta: "RÉINITIALISER MON MOT DE PASSE",
+      ignore: "Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.",
+    },
+    code: {
+      subject: "Réinitialisation de ton code ADAPT",
+      h2: "Réinitialisation de ton code",
+      instructions: 'Tu as demandé à réinitialiser ton code de connexion ADAPT (les 6 chiffres). Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.',
+      instructionsText: "Tu as demandé à réinitialiser ton code de connexion ADAPT. Ce lien est valable 1 heure.",
+      cta: "CHOISIR UN NOUVEAU CODE",
+      ignore: "Si tu n'as pas fait cette demande, ignore cet email. Ton code ne changera pas.",
+    },
     hello: (name: string) => `Bonjour ${name},`,
-    instructions: 'Tu as demandé à réinitialiser ton mot de passe ADAPT. Clique sur le bouton ci-dessous — ce lien est valable <span class="highlight">1 heure</span>.',
-    instructionsText: "Tu as demandé à réinitialiser ton mot de passe ADAPT. Ce lien est valable 1 heure.",
-    cta: "RÉINITIALISER MON MOT DE PASSE",
-    ignore: "Si tu n'as pas fait cette demande, ignore cet email. Ton mot de passe ne changera pas.",
     fallbackApp: (url: string) => `<p class="url-fallback">Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :<br />${url}</p>`,
     fallbackBtn: (url: string) => `<p class="url-fallback">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br />${url}</p>`,
     fallbackAppText: "Si l'app ne s'ouvre pas, utilise ce lien dans ton navigateur :",
@@ -125,13 +146,23 @@ const RESET_COPY = {
     footer: "Vous recevez cet email car vous avez un compte sur ADAPT System.",
   },
   en: {
-    subject: "Reset your ADAPT password",
-    h2: "Reset your password",
+    password: {
+      subject: "Reset your ADAPT password",
+      h2: "Reset your password",
+      instructions: 'You requested to reset your ADAPT password. Click the button below — this link is valid for <span class="highlight">1 hour</span>.',
+      instructionsText: "You requested to reset your ADAPT password. This link is valid for 1 hour.",
+      cta: "RESET MY PASSWORD",
+      ignore: "If you didn't make this request, ignore this email. Your password won't change.",
+    },
+    code: {
+      subject: "Reset your ADAPT login code",
+      h2: "Reset your login code",
+      instructions: 'You requested to reset your ADAPT login code (the 6 digits). Click the button below — this link is valid for <span class="highlight">1 hour</span>.',
+      instructionsText: "You requested to reset your ADAPT login code. This link is valid for 1 hour.",
+      cta: "CHOOSE A NEW CODE",
+      ignore: "If you didn't make this request, ignore this email. Your code won't change.",
+    },
     hello: (name: string) => `Hello ${name},`,
-    instructions: 'You requested to reset your ADAPT password. Click the button below — this link is valid for <span class="highlight">1 hour</span>.',
-    instructionsText: "You requested to reset your ADAPT password. This link is valid for 1 hour.",
-    cta: "RESET MY PASSWORD",
-    ignore: "If you didn't make this request, ignore this email. Your password won't change.",
     fallbackApp: (url: string) => `<p class="url-fallback">If the app doesn't open, use this link in your browser:<br />${url}</p>`,
     fallbackBtn: (url: string) => `<p class="url-fallback">If the button doesn't work, copy this link into your browser:<br />${url}</p>`,
     fallbackAppText: "If the app doesn't open, use this link in your browser:",
@@ -190,19 +221,21 @@ export async function sendPasswordResetEmail(
   resetUrl: string,
   deepLinkUrl?: string,
   lang: Lang = "fr",
+  credentialType: Credential = "password",
 ) {
   const c = RESET_COPY[lang] ?? RESET_COPY.fr;
+  const copy = c[credentialType];
   const primaryUrl = deepLinkUrl ?? resetUrl;
   const fallbackSection = deepLinkUrl
     ? c.fallbackApp(resetUrl)
     : c.fallbackBtn(resetUrl);
 
   const html = baseTemplate(`
-    <h2>${c.h2}</h2>
+    <h2>${copy.h2}</h2>
     <p>${c.hello(firstName)}</p>
-    <p>${c.instructions}</p>
-    <a href="${primaryUrl}" class="cta">${c.cta}</a>
-    <p>${c.ignore}</p>
+    <p>${copy.instructions}</p>
+    <a href="${primaryUrl}" class="cta">${copy.cta}</a>
+    <p>${copy.ignore}</p>
     <div class="divider"></div>
     ${fallbackSection}
   `, lang, c.footer);
@@ -210,11 +243,11 @@ export async function sendPasswordResetEmail(
   const textLines = [
     `ADAPT — INTELLIGENCE PERFORMANCE`,
     ``,
-    c.h2,
+    copy.h2,
     ``,
     c.hello(firstName),
     ``,
-    c.instructionsText,
+    copy.instructionsText,
     ``,
     c.linkLabel,
     primaryUrl,
@@ -224,15 +257,70 @@ export async function sendPasswordResetEmail(
   }
   textLines.push(
     ``,
-    c.ignore,
+    copy.ignore,
     ``,
     `© ${new Date().getFullYear()} ADAPT System · hello@adapt-system.be`,
   );
 
   return sendEmail({
     to,
-    subject: c.subject,
+    subject: copy.subject,
     html,
     text: textLines.join("\n"),
+  });
+}
+
+const ONE_ON_ONE_COPY = {
+  fr: {
+    subject: "Ton 1:1 est confirmé",
+    h2: "Ton 1:1 est confirmé ✓",
+    body: (when: string) => `Rendez-vous <span class="highlight">${when}</span>. À bientôt !`,
+    bodyText: (when: string) => `Rendez-vous ${when}. À bientôt !`,
+    footer: "Vous recevez cet email car vous avez un compte sur ADAPT System.",
+  },
+  en: {
+    subject: "Your 1:1 is confirmed",
+    h2: "Your 1:1 is confirmed ✓",
+    body: (when: string) => `See you <span class="highlight">${when}</span>.`,
+    bodyText: (when: string) => `See you ${when}.`,
+    footer: "You're receiving this email because you have an account on ADAPT System.",
+  },
+} as const;
+
+// "Confirmation = push + email" per spec, for the coach-direct booking flow
+// (Fiche athlète 360° → "Planifier un 1:1"). The athlete-requested flow
+// (member picks from open availability, coach confirms) is push-only per
+// spec — see one-on-one.service.ts.
+export async function sendOneOnOneConfirmedEmail(to: string, firstName: string, whenFormatted: string, lang: Lang = "fr") {
+  const c = ONE_ON_ONE_COPY[lang] ?? ONE_ON_ONE_COPY.fr;
+  const html = baseTemplate(`
+    <h2>${c.h2}</h2>
+    <p>Bonjour ${firstName},</p>
+    <p>${c.body(whenFormatted)}</p>
+  `, lang, c.footer);
+  const text = [`ADAPT — INTELLIGENCE PERFORMANCE`, ``, c.h2, ``, `Bonjour ${firstName},`, ``, c.bodyText(whenFormatted)].join("\n");
+  return sendEmail({ to, subject: c.subject, html, text });
+}
+
+const MONTH_NAMES_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+// Monthly accounting export — the CSV itself is the deliverable, the email
+// body is just a wrapper. No lang variants: the accountant's language isn't
+// tracked anywhere, and French is the studio's operating language.
+export async function sendAccountingExportEmail(to: string, studioName: string, year: number, month: number, csv: string): Promise<SendEmailResult> {
+  const monthLabel = `${MONTH_NAMES_FR[month - 1] ?? month} ${year}`;
+  const html = baseTemplate(`
+    <h2>Export comptable — ${monthLabel}</h2>
+    <p>Bonjour,</p>
+    <p>Vous trouverez ci-joint l'export des factures et notes de crédit de <span class="highlight">${studioName}</span> pour <span class="highlight">${monthLabel}</span>, au format CSV.</p>
+  `, "fr", "Cet email est envoyé automatiquement chaque mois.");
+  const text = [`ADAPT — INTELLIGENCE PERFORMANCE`, ``, `Export comptable — ${monthLabel}`, ``, `Bonjour,`, ``, `Vous trouverez ci-joint l'export des factures et notes de crédit de ${studioName} pour ${monthLabel}, au format CSV.`].join("\n");
+  const filename = `export-${year}-${String(month).padStart(2, "0")}.csv`;
+  return sendEmail({
+    to,
+    subject: `Export comptable — ${monthLabel}`,
+    html,
+    text,
+    attachments: [{ filename, content: Buffer.from(csv, "utf-8"), contentType: "text/csv" }],
   });
 }

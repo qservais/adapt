@@ -17,46 +17,85 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddAvailabilitySlotRequest,
+  AgendaEntry,
   AlertData,
+  AthleteCreditsDetail,
   AthleteLinkRequest,
   AthletePerformanceTest,
   AuthResponse,
   BadgesResponse,
+  CancelBookingResponse,
+  CancelClassOccurrence200,
+  CancelClassOccurrenceBody,
   Challenge,
   CheckinData,
   CheckinRequest,
   CheckinResponse,
+  CheckoutSessionResponse,
+  ClassBooking,
+  ClassOccurrenceWithAvailability,
+  ClassParticipant,
+  ClassTemplate,
+  ClassWaitlistEntry,
   ClientDetail,
   ClientSummary,
   CoachAppointment,
+  CoachAvailabilitySlot,
   CoachChallenge,
+  CoachClassOccurrence,
   CoachLinkRequest,
+  CoachShopPack,
   CoachUnlinkRequest,
   CoachUpdateAthleteRequest,
   CompleteSessionRequest,
   CompleteSessionResult,
+  ConvertSessionTextRequest,
+  ConvertSessionTextResponse,
   CreateAppointmentRequest,
   CreateChallengeRequest,
+  CreateCheckoutSessionRequest,
+  CreateCreditNoteRequest,
   CreateExerciseRequest,
+  CreateMotivationPhraseRequest,
+  CreateOneOnOneRequest,
   CreatePerformanceTestRequest,
   CreateProgramRequest,
+  CreateResourceFileRequest,
   CreateScheduledNotificationRequest,
   CreateSessionRequest,
+  CreateShopPromoRequest,
+  CreditBalances,
+  CreditNoteListItem,
   ErrorResponse,
   ExerciseData,
+  ExportCoachInvoicesCsvParams,
   FreeCustomSessionRequest,
+  GetAthleteCoachSlotsParams,
+  GetClassOccurrencesParams,
+  GetCoachAgendaParams,
+  GetCoachClassOccurrencesParams,
+  GetCoachResourceFilesParams,
   GetExercisesParams,
   GetNotificationsParams,
+  GiftCredits201,
+  GiftCreditsRequest,
   HealthStatus,
+  InsertOffWeekRequest,
+  InsertOffWeekResponse,
   InviteCodeResponse,
+  InvoiceListItem,
   LibrarySession,
   LogExerciseRequest,
+  LoginCodeRequest,
   LoginRequest,
+  ManualRegisterRequest,
   MessageData,
   MessageThread,
   MissedSessionsResponse,
   MorningNotifHourBody,
   MorningNotifHourResponse,
+  MotivationPhrase,
   NotificationPreferences,
   NotificationsResponse,
   OverrideRequest,
@@ -65,27 +104,47 @@ import type {
   ProgramDetail,
   ProgramSummary,
   RefreshRequest,
+  RegisterAthleteRequest,
   RegisterRequest,
+  ResetLoginCodeRequest,
   ResolveAlertRequest,
+  ResourceFile,
+  ResourceFileUploadUrlResponse,
+  ScheduleClassRequest,
+  ScheduleClassTemplate201,
   ScheduledNotification,
   SendMessageRequest,
+  SendToAthletesRequest,
+  SendToAthletesResponse,
   SessionDetail,
   SessionExerciseLog,
   SessionFeedbackRequest,
   SessionLogSummary,
+  ShopPack,
+  ShopPackWithPrice,
+  ShopPromo,
+  SignedUrlResponse,
   StartProgramNowResult,
+  StudioInfo,
+  StudioSettings,
+  SubscriptionPlan,
   SuccessResponse,
   UpcomingSession,
   UpdateAppointmentRequest,
+  UpdateMotivationPhraseRequest,
   UpdateNotificationPreferencesRequest,
   UpdateProfileRequest,
   UpdateProgramRequest,
   UpdateProgressRequest,
   UpdateScheduledNotificationRequest,
+  UpdateStudioSettingsRequest,
+  UpdateSubscriptionPlanRequest,
   UploadDocumentRequest,
   UploadDocumentResponse,
   UploadMediaRequest,
   UploadMediaResponse,
+  UpsertClassTemplateRequest,
+  UpsertShopPackRequest,
   UserProfile,
   WeeklyRecapResponse,
 } from "./api.schemas";
@@ -258,6 +317,264 @@ export const useRegister = <
   TContext
 > => {
   return useMutation(getRegisterMutationOptions(options));
+};
+
+/**
+ * @summary Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+ */
+export const getRegisterAthleteUrl = () => {
+  return `/api/auth/register-athlete`;
+};
+
+export const registerAthlete = async (
+  registerAthleteRequest: RegisterAthleteRequest,
+  options?: RequestInit,
+): Promise<AuthResponse> => {
+  return customFetch<AuthResponse>(getRegisterAthleteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(registerAthleteRequest),
+  });
+};
+
+export const getRegisterAthleteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAthlete>>,
+    TError,
+    { data: BodyType<RegisterAthleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerAthlete>>,
+  TError,
+  { data: BodyType<RegisterAthleteRequest> },
+  TContext
+> => {
+  const mutationKey = ["registerAthlete"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerAthlete>>,
+    { data: BodyType<RegisterAthleteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerAthlete(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterAthleteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerAthlete>>
+>;
+export type RegisterAthleteMutationBody = BodyType<RegisterAthleteRequest>;
+export type RegisterAthleteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+ */
+export const useRegisterAthlete = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerAthlete>>,
+    TError,
+    { data: BodyType<RegisterAthleteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerAthlete>>,
+  TError,
+  { data: BodyType<RegisterAthleteRequest> },
+  TContext
+> => {
+  return useMutation(getRegisterAthleteMutationOptions(options));
+};
+
+/**
+ * @summary Athlete-app login with email + 6-digit PIN
+ */
+export const getLoginWithCodeUrl = () => {
+  return `/api/auth/login-code`;
+};
+
+export const loginWithCode = async (
+  loginCodeRequest: LoginCodeRequest,
+  options?: RequestInit,
+): Promise<AuthResponse> => {
+  return customFetch<AuthResponse>(getLoginWithCodeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(loginCodeRequest),
+  });
+};
+
+export const getLoginWithCodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginWithCode>>,
+    TError,
+    { data: BodyType<LoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loginWithCode>>,
+  TError,
+  { data: BodyType<LoginCodeRequest> },
+  TContext
+> => {
+  const mutationKey = ["loginWithCode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loginWithCode>>,
+    { data: BodyType<LoginCodeRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return loginWithCode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginWithCodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof loginWithCode>>
+>;
+export type LoginWithCodeMutationBody = BodyType<LoginCodeRequest>;
+export type LoginWithCodeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Athlete-app login with email + 6-digit PIN
+ */
+export const useLoginWithCode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginWithCode>>,
+    TError,
+    { data: BodyType<LoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof loginWithCode>>,
+  TError,
+  { data: BodyType<LoginCodeRequest> },
+  TContext
+> => {
+  return useMutation(getLoginWithCodeMutationOptions(options));
+};
+
+/**
+ * @summary Set a new 6-digit PIN using an emailed reset token
+ */
+export const getResetLoginCodeUrl = () => {
+  return `/api/auth/reset-login-code`;
+};
+
+export const resetLoginCode = async (
+  resetLoginCodeRequest: ResetLoginCodeRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getResetLoginCodeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(resetLoginCodeRequest),
+  });
+};
+
+export const getResetLoginCodeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetLoginCode>>,
+    TError,
+    { data: BodyType<ResetLoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetLoginCode>>,
+  TError,
+  { data: BodyType<ResetLoginCodeRequest> },
+  TContext
+> => {
+  const mutationKey = ["resetLoginCode"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetLoginCode>>,
+    { data: BodyType<ResetLoginCodeRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resetLoginCode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetLoginCodeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetLoginCode>>
+>;
+export type ResetLoginCodeMutationBody = BodyType<ResetLoginCodeRequest>;
+export type ResetLoginCodeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Set a new 6-digit PIN using an emailed reset token
+ */
+export const useResetLoginCode = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetLoginCode>>,
+    TError,
+    { data: BodyType<ResetLoginCodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resetLoginCode>>,
+  TError,
+  { data: BodyType<ResetLoginCodeRequest> },
+  TContext
+> => {
+  return useMutation(getResetLoginCodeMutationOptions(options));
 };
 
 /**
@@ -512,6 +829,2839 @@ export const useLogout = <
 > => {
   return useMutation(getLogoutMutationOptions(options));
 };
+
+/**
+ * @summary Get the coach's studio settings (defaults if none saved yet)
+ */
+export const getGetStudioSettingsUrl = () => {
+  return `/api/studio-settings`;
+};
+
+export const getStudioSettings = async (
+  options?: RequestInit,
+): Promise<StudioSettings> => {
+  return customFetch<StudioSettings>(getGetStudioSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStudioSettingsQueryKey = () => {
+  return [`/api/studio-settings`] as const;
+};
+
+export const getGetStudioSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStudioSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStudioSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStudioSettingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStudioSettings>>
+  > = ({ signal }) => getStudioSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStudioSettings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStudioSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStudioSettings>>
+>;
+export type GetStudioSettingsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the coach's studio settings (defaults if none saved yet)
+ */
+
+export function useGetStudioSettings<
+  TData = Awaited<ReturnType<typeof getStudioSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStudioSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStudioSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create or update the coach's studio settings
+ */
+export const getUpdateStudioSettingsUrl = () => {
+  return `/api/studio-settings`;
+};
+
+export const updateStudioSettings = async (
+  updateStudioSettingsRequest: UpdateStudioSettingsRequest,
+  options?: RequestInit,
+): Promise<StudioSettings> => {
+  return customFetch<StudioSettings>(getUpdateStudioSettingsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateStudioSettingsRequest),
+  });
+};
+
+export const getUpdateStudioSettingsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStudioSettings>>,
+    TError,
+    { data: BodyType<UpdateStudioSettingsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateStudioSettings>>,
+  TError,
+  { data: BodyType<UpdateStudioSettingsRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateStudioSettings"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateStudioSettings>>,
+    { data: BodyType<UpdateStudioSettingsRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateStudioSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateStudioSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateStudioSettings>>
+>;
+export type UpdateStudioSettingsMutationBody =
+  BodyType<UpdateStudioSettingsRequest>;
+export type UpdateStudioSettingsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create or update the coach's studio settings
+ */
+export const useUpdateStudioSettings = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStudioSettings>>,
+    TError,
+    { data: BodyType<UpdateStudioSettingsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateStudioSettings>>,
+  TError,
+  { data: BodyType<UpdateStudioSettingsRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateStudioSettingsMutationOptions(options));
+};
+
+/**
+ * @summary List active credit packs with resolved current price (promo-aware)
+ */
+export const getGetShopPacksUrl = () => {
+  return `/api/shop/packs`;
+};
+
+export const getShopPacks = async (
+  options?: RequestInit,
+): Promise<ShopPackWithPrice[]> => {
+  return customFetch<ShopPackWithPrice[]>(getGetShopPacksUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetShopPacksQueryKey = () => {
+  return [`/api/shop/packs`] as const;
+};
+
+export const getGetShopPacksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getShopPacks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getShopPacks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetShopPacksQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getShopPacks>>> = ({
+    signal,
+  }) => getShopPacks({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getShopPacks>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetShopPacksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getShopPacks>>
+>;
+export type GetShopPacksQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List active credit packs with resolved current price (promo-aware)
+ */
+
+export function useGetShopPacks<
+  TData = Awaited<ReturnType<typeof getShopPacks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getShopPacks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetShopPacksQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List active subscription plans
+ */
+export const getGetShopSubscriptionsUrl = () => {
+  return `/api/shop/subscriptions`;
+};
+
+export const getShopSubscriptions = async (
+  options?: RequestInit,
+): Promise<SubscriptionPlan[]> => {
+  return customFetch<SubscriptionPlan[]>(getGetShopSubscriptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetShopSubscriptionsQueryKey = () => {
+  return [`/api/shop/subscriptions`] as const;
+};
+
+export const getGetShopSubscriptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getShopSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getShopSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetShopSubscriptionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getShopSubscriptions>>
+  > = ({ signal }) => getShopSubscriptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getShopSubscriptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetShopSubscriptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getShopSubscriptions>>
+>;
+export type GetShopSubscriptionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List active subscription plans
+ */
+
+export function useGetShopSubscriptions<
+  TData = Awaited<ReturnType<typeof getShopSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getShopSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetShopSubscriptionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Start a Stripe Checkout session for a pack or subscription
+ */
+export const getCreateCheckoutSessionUrl = () => {
+  return `/api/shop/checkout-session`;
+};
+
+export const createCheckoutSession = async (
+  createCheckoutSessionRequest: CreateCheckoutSessionRequest,
+  options?: RequestInit,
+): Promise<CheckoutSessionResponse> => {
+  return customFetch<CheckoutSessionResponse>(getCreateCheckoutSessionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCheckoutSessionRequest),
+  });
+};
+
+export const getCreateCheckoutSessionMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<CreateCheckoutSessionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<CreateCheckoutSessionRequest> },
+  TContext
+> => {
+  const mutationKey = ["createCheckoutSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    { data: BodyType<CreateCheckoutSessionRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCheckoutSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCheckoutSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCheckoutSession>>
+>;
+export type CreateCheckoutSessionMutationBody =
+  BodyType<CreateCheckoutSessionRequest>;
+export type CreateCheckoutSessionMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Start a Stripe Checkout session for a pack or subscription
+ */
+export const useCreateCheckoutSession = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<CreateCheckoutSessionRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<CreateCheckoutSessionRequest> },
+  TContext
+> => {
+  return useMutation(getCreateCheckoutSessionMutationOptions(options));
+};
+
+/**
+ * @summary Get the current athlete's credit balances
+ */
+export const getGetMyCreditsUrl = () => {
+  return `/api/users/me/credits`;
+};
+
+export const getMyCredits = async (
+  options?: RequestInit,
+): Promise<CreditBalances> => {
+  return customFetch<CreditBalances>(getGetMyCreditsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyCreditsQueryKey = () => {
+  return [`/api/users/me/credits`] as const;
+};
+
+export const getGetMyCreditsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyCredits>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyCredits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyCreditsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyCredits>>> = ({
+    signal,
+  }) => getMyCredits({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyCredits>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyCreditsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyCredits>>
+>;
+export type GetMyCreditsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the current athlete's credit balances
+ */
+
+export function useGetMyCredits<
+  TData = Awaited<ReturnType<typeof getMyCredits>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyCredits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyCreditsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List the coach's packs (including inactive), each with its active promo if any
+ */
+export const getGetCoachShopPacksUrl = () => {
+  return `/api/coach/shop/packs`;
+};
+
+export const getCoachShopPacks = async (
+  options?: RequestInit,
+): Promise<CoachShopPack[]> => {
+  return customFetch<CoachShopPack[]>(getGetCoachShopPacksUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachShopPacksQueryKey = () => {
+  return [`/api/coach/shop/packs`] as const;
+};
+
+export const getGetCoachShopPacksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachShopPacks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopPacks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachShopPacksQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachShopPacks>>
+  > = ({ signal }) => getCoachShopPacks({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopPacks>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachShopPacksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachShopPacks>>
+>;
+export type GetCoachShopPacksQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the coach's packs (including inactive), each with its active promo if any
+ */
+
+export function useGetCoachShopPacks<
+  TData = Awaited<ReturnType<typeof getCoachShopPacks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopPacks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachShopPacksQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new credit pack
+ */
+export const getCreateShopPackUrl = () => {
+  return `/api/coach/shop/packs`;
+};
+
+export const createShopPack = async (
+  upsertShopPackRequest: UpsertShopPackRequest,
+  options?: RequestInit,
+): Promise<ShopPack> => {
+  return customFetch<ShopPack>(getCreateShopPackUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertShopPackRequest),
+  });
+};
+
+export const getCreateShopPackMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShopPack>>,
+    TError,
+    { data: BodyType<UpsertShopPackRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createShopPack>>,
+  TError,
+  { data: BodyType<UpsertShopPackRequest> },
+  TContext
+> => {
+  const mutationKey = ["createShopPack"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createShopPack>>,
+    { data: BodyType<UpsertShopPackRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createShopPack(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateShopPackMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createShopPack>>
+>;
+export type CreateShopPackMutationBody = BodyType<UpsertShopPackRequest>;
+export type CreateShopPackMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new credit pack
+ */
+export const useCreateShopPack = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShopPack>>,
+    TError,
+    { data: BodyType<UpsertShopPackRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createShopPack>>,
+  TError,
+  { data: BodyType<UpsertShopPackRequest> },
+  TContext
+> => {
+  return useMutation(getCreateShopPackMutationOptions(options));
+};
+
+/**
+ * @summary Update a credit pack
+ */
+export const getUpdateShopPackUrl = (id: string) => {
+  return `/api/coach/shop/packs/${id}`;
+};
+
+export const updateShopPack = async (
+  id: string,
+  upsertShopPackRequest: UpsertShopPackRequest,
+  options?: RequestInit,
+): Promise<ShopPack> => {
+  return customFetch<ShopPack>(getUpdateShopPackUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertShopPackRequest),
+  });
+};
+
+export const getUpdateShopPackMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateShopPack>>,
+    TError,
+    { id: string; data: BodyType<UpsertShopPackRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateShopPack>>,
+  TError,
+  { id: string; data: BodyType<UpsertShopPackRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateShopPack"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateShopPack>>,
+    { id: string; data: BodyType<UpsertShopPackRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateShopPack(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateShopPackMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateShopPack>>
+>;
+export type UpdateShopPackMutationBody = BodyType<UpsertShopPackRequest>;
+export type UpdateShopPackMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a credit pack
+ */
+export const useUpdateShopPack = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateShopPack>>,
+    TError,
+    { id: string; data: BodyType<UpsertShopPackRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateShopPack>>,
+  TError,
+  { id: string; data: BodyType<UpsertShopPackRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateShopPackMutationOptions(options));
+};
+
+/**
+ * @summary Deactivate a credit pack (soft delete — past purchases stay valid)
+ */
+export const getDeleteShopPackUrl = (id: string) => {
+  return `/api/coach/shop/packs/${id}`;
+};
+
+export const deleteShopPack = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteShopPackUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteShopPackMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteShopPack>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteShopPack>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteShopPack"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteShopPack>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteShopPack(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteShopPackMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteShopPack>>
+>;
+
+export type DeleteShopPackMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Deactivate a credit pack (soft delete — past purchases stay valid)
+ */
+export const useDeleteShopPack = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteShopPack>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteShopPack>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteShopPackMutationOptions(options));
+};
+
+/**
+ * @summary Launch a time-limited promo on a pack
+ */
+export const getCreateShopPromoUrl = () => {
+  return `/api/coach/shop/promos`;
+};
+
+export const createShopPromo = async (
+  createShopPromoRequest: CreateShopPromoRequest,
+  options?: RequestInit,
+): Promise<ShopPromo> => {
+  return customFetch<ShopPromo>(getCreateShopPromoUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createShopPromoRequest),
+  });
+};
+
+export const getCreateShopPromoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShopPromo>>,
+    TError,
+    { data: BodyType<CreateShopPromoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createShopPromo>>,
+  TError,
+  { data: BodyType<CreateShopPromoRequest> },
+  TContext
+> => {
+  const mutationKey = ["createShopPromo"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createShopPromo>>,
+    { data: BodyType<CreateShopPromoRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createShopPromo(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateShopPromoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createShopPromo>>
+>;
+export type CreateShopPromoMutationBody = BodyType<CreateShopPromoRequest>;
+export type CreateShopPromoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Launch a time-limited promo on a pack
+ */
+export const useCreateShopPromo = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShopPromo>>,
+    TError,
+    { data: BodyType<CreateShopPromoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createShopPromo>>,
+  TError,
+  { data: BodyType<CreateShopPromoRequest> },
+  TContext
+> => {
+  return useMutation(getCreateShopPromoMutationOptions(options));
+};
+
+/**
+ * @summary End a promo immediately
+ */
+export const getEndShopPromoUrl = (id: string) => {
+  return `/api/coach/shop/promos/${id}`;
+};
+
+export const endShopPromo = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getEndShopPromoUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getEndShopPromoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof endShopPromo>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof endShopPromo>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["endShopPromo"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof endShopPromo>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return endShopPromo(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EndShopPromoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof endShopPromo>>
+>;
+
+export type EndShopPromoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary End a promo immediately
+ */
+export const useEndShopPromo = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof endShopPromo>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof endShopPromo>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getEndShopPromoMutationOptions(options));
+};
+
+/**
+ * @summary List the coach's subscription plans (including inactive)
+ */
+export const getGetCoachShopSubscriptionsUrl = () => {
+  return `/api/coach/shop/subscriptions`;
+};
+
+export const getCoachShopSubscriptions = async (
+  options?: RequestInit,
+): Promise<SubscriptionPlan[]> => {
+  return customFetch<SubscriptionPlan[]>(getGetCoachShopSubscriptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachShopSubscriptionsQueryKey = () => {
+  return [`/api/coach/shop/subscriptions`] as const;
+};
+
+export const getGetCoachShopSubscriptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachShopSubscriptionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>
+  > = ({ signal }) => getCoachShopSubscriptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachShopSubscriptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachShopSubscriptions>>
+>;
+export type GetCoachShopSubscriptionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the coach's subscription plans (including inactive)
+ */
+
+export function useGetCoachShopSubscriptions<
+  TData = Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachShopSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachShopSubscriptionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a subscription plan's price/engagement
+ */
+export const getUpdateSubscriptionPlanUrl = (id: string) => {
+  return `/api/coach/shop/subscriptions/${id}`;
+};
+
+export const updateSubscriptionPlan = async (
+  id: string,
+  updateSubscriptionPlanRequest: UpdateSubscriptionPlanRequest,
+  options?: RequestInit,
+): Promise<SubscriptionPlan> => {
+  return customFetch<SubscriptionPlan>(getUpdateSubscriptionPlanUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateSubscriptionPlanRequest),
+  });
+};
+
+export const getUpdateSubscriptionPlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSubscriptionPlan>>,
+    TError,
+    { id: string; data: BodyType<UpdateSubscriptionPlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSubscriptionPlan>>,
+  TError,
+  { id: string; data: BodyType<UpdateSubscriptionPlanRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateSubscriptionPlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSubscriptionPlan>>,
+    { id: string; data: BodyType<UpdateSubscriptionPlanRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSubscriptionPlan(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSubscriptionPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSubscriptionPlan>>
+>;
+export type UpdateSubscriptionPlanMutationBody =
+  BodyType<UpdateSubscriptionPlanRequest>;
+export type UpdateSubscriptionPlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a subscription plan's price/engagement
+ */
+export const useUpdateSubscriptionPlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSubscriptionPlan>>,
+    TError,
+    { id: string; data: BodyType<UpdateSubscriptionPlanRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateSubscriptionPlan>>,
+  TError,
+  { id: string; data: BodyType<UpdateSubscriptionPlanRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateSubscriptionPlanMutationOptions(options));
+};
+
+/**
+ * @summary Gift credits to one or more athletes (no charge)
+ */
+export const getGiftCreditsUrl = () => {
+  return `/api/coach/credits/gift`;
+};
+
+export const giftCredits = async (
+  giftCreditsRequest: GiftCreditsRequest,
+  options?: RequestInit,
+): Promise<GiftCredits201> => {
+  return customFetch<GiftCredits201>(getGiftCreditsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(giftCreditsRequest),
+  });
+};
+
+export const getGiftCreditsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof giftCredits>>,
+    TError,
+    { data: BodyType<GiftCreditsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof giftCredits>>,
+  TError,
+  { data: BodyType<GiftCreditsRequest> },
+  TContext
+> => {
+  const mutationKey = ["giftCredits"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof giftCredits>>,
+    { data: BodyType<GiftCreditsRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return giftCredits(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GiftCreditsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof giftCredits>>
+>;
+export type GiftCreditsMutationBody = BodyType<GiftCreditsRequest>;
+export type GiftCreditsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Gift credits to one or more athletes (no charge)
+ */
+export const useGiftCredits = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof giftCredits>>,
+    TError,
+    { data: BodyType<GiftCreditsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof giftCredits>>,
+  TError,
+  { data: BodyType<GiftCreditsRequest> },
+  TContext
+> => {
+  return useMutation(getGiftCreditsMutationOptions(options));
+};
+
+/**
+ * @summary Credit balances and recent transaction history for one athlete
+ */
+export const getGetClientCreditsUrl = (athleteId: string) => {
+  return `/api/coach/clients/${athleteId}/credits`;
+};
+
+export const getClientCredits = async (
+  athleteId: string,
+  options?: RequestInit,
+): Promise<AthleteCreditsDetail> => {
+  return customFetch<AthleteCreditsDetail>(getGetClientCreditsUrl(athleteId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetClientCreditsQueryKey = (athleteId: string) => {
+  return [`/api/coach/clients/${athleteId}/credits`] as const;
+};
+
+export const getGetClientCreditsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClientCredits>>,
+  TError = ErrorType<unknown>,
+>(
+  athleteId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClientCredits>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetClientCreditsQueryKey(athleteId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getClientCredits>>
+  > = ({ signal }) =>
+    getClientCredits(athleteId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!athleteId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getClientCredits>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetClientCreditsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClientCredits>>
+>;
+export type GetClientCreditsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Credit balances and recent transaction history for one athlete
+ */
+
+export function useGetClientCredits<
+  TData = Awaited<ReturnType<typeof getClientCredits>>,
+  TError = ErrorType<unknown>,
+>(
+  athleteId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClientCredits>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetClientCreditsQueryOptions(athleteId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+ */
+export const getGetClassOccurrencesUrl = (
+  params?: GetClassOccurrencesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/classes/occurrences?${stringifiedParams}`
+    : `/api/classes/occurrences`;
+};
+
+export const getClassOccurrences = async (
+  params?: GetClassOccurrencesParams,
+  options?: RequestInit,
+): Promise<ClassOccurrenceWithAvailability[]> => {
+  return customFetch<ClassOccurrenceWithAvailability[]>(
+    getGetClassOccurrencesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetClassOccurrencesQueryKey = (
+  params?: GetClassOccurrencesParams,
+) => {
+  return [`/api/classes/occurrences`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetClassOccurrencesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetClassOccurrencesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getClassOccurrences>>
+  > = ({ signal }) =>
+    getClassOccurrences(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getClassOccurrences>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetClassOccurrencesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClassOccurrences>>
+>;
+export type GetClassOccurrencesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+ */
+
+export function useGetClassOccurrences<
+  TData = Awaited<ReturnType<typeof getClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetClassOccurrencesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Book a class with 1 (or the class's) collective credit
+ */
+export const getBookClassUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/book`;
+};
+
+export const bookClass = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassBooking> => {
+  return customFetch<ClassBooking>(getBookClassUrl(occurrenceId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getBookClassMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bookClass>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bookClass>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["bookClass"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bookClass>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return bookClass(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BookClassMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bookClass>>
+>;
+
+export type BookClassMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Book a class with 1 (or the class's) collective credit
+ */
+export const useBookClass = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bookClass>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bookClass>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getBookClassMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+ */
+export const getCancelClassBookingUrl = (bookingId: string) => {
+  return `/api/classes/bookings/${bookingId}/cancel`;
+};
+
+export const cancelClassBooking = async (
+  bookingId: string,
+  options?: RequestInit,
+): Promise<CancelBookingResponse> => {
+  return customFetch<CancelBookingResponse>(
+    getCancelClassBookingUrl(bookingId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getCancelClassBookingMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassBooking>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelClassBooking>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  const mutationKey = ["cancelClassBooking"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelClassBooking>>,
+    { bookingId: string }
+  > = (props) => {
+    const { bookingId } = props ?? {};
+
+    return cancelClassBooking(bookingId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelClassBookingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelClassBooking>>
+>;
+
+export type CancelClassBookingMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+ */
+export const useCancelClassBooking = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassBooking>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelClassBooking>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  return useMutation(getCancelClassBookingMutationOptions(options));
+};
+
+/**
+ * @summary Join the waitlist for a full class
+ */
+export const getJoinClassWaitlistUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/waitlist`;
+};
+
+export const joinClassWaitlist = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassWaitlistEntry> => {
+  return customFetch<ClassWaitlistEntry>(
+    getJoinClassWaitlistUrl(occurrenceId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getJoinClassWaitlistMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof joinClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["joinClassWaitlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof joinClassWaitlist>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return joinClassWaitlist(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type JoinClassWaitlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof joinClassWaitlist>>
+>;
+
+export type JoinClassWaitlistMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Join the waitlist for a full class
+ */
+export const useJoinClassWaitlist = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof joinClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getJoinClassWaitlistMutationOptions(options));
+};
+
+/**
+ * @summary Leave the waitlist
+ */
+export const getLeaveClassWaitlistUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/waitlist`;
+};
+
+export const leaveClassWaitlist = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getLeaveClassWaitlistUrl(occurrenceId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getLeaveClassWaitlistMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof leaveClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof leaveClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["leaveClassWaitlist"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof leaveClassWaitlist>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return leaveClassWaitlist(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LeaveClassWaitlistMutationResult = NonNullable<
+  Awaited<ReturnType<typeof leaveClassWaitlist>>
+>;
+
+export type LeaveClassWaitlistMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Leave the waitlist
+ */
+export const useLeaveClassWaitlist = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof leaveClassWaitlist>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof leaveClassWaitlist>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getLeaveClassWaitlistMutationOptions(options));
+};
+
+/**
+ * @summary Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+ */
+export const getConfirmClassWaitlistOfferUrl = (occurrenceId: string) => {
+  return `/api/classes/${occurrenceId}/waitlist/confirm`;
+};
+
+export const confirmClassWaitlistOffer = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassBooking> => {
+  return customFetch<ClassBooking>(
+    getConfirmClassWaitlistOfferUrl(occurrenceId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getConfirmClassWaitlistOfferMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  const mutationKey = ["confirmClassWaitlistOffer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+    { occurrenceId: string }
+  > = (props) => {
+    const { occurrenceId } = props ?? {};
+
+    return confirmClassWaitlistOffer(occurrenceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmClassWaitlistOfferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmClassWaitlistOffer>>
+>;
+
+export type ConfirmClassWaitlistOfferMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+ */
+export const useConfirmClassWaitlistOffer = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+    TError,
+    { occurrenceId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmClassWaitlistOffer>>,
+  TError,
+  { occurrenceId: string },
+  TContext
+> => {
+  return useMutation(getConfirmClassWaitlistOfferMutationOptions(options));
+};
+
+/**
+ * @summary List the coach's class templates
+ */
+export const getGetCoachClassTemplatesUrl = () => {
+  return `/api/coach/classes/templates`;
+};
+
+export const getCoachClassTemplates = async (
+  options?: RequestInit,
+): Promise<ClassTemplate[]> => {
+  return customFetch<ClassTemplate[]>(getGetCoachClassTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachClassTemplatesQueryKey = () => {
+  return [`/api/coach/classes/templates`] as const;
+};
+
+export const getGetCoachClassTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachClassTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachClassTemplatesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>
+  > = ({ signal }) => getCoachClassTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachClassTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachClassTemplates>>
+>;
+export type GetCoachClassTemplatesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the coach's class templates
+ */
+
+export function useGetCoachClassTemplates<
+  TData = Awaited<ReturnType<typeof getCoachClassTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachClassTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a class template
+ */
+export const getCreateClassTemplateUrl = () => {
+  return `/api/coach/classes/templates`;
+};
+
+export const createClassTemplate = async (
+  upsertClassTemplateRequest: UpsertClassTemplateRequest,
+  options?: RequestInit,
+): Promise<ClassTemplate> => {
+  return customFetch<ClassTemplate>(getCreateClassTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertClassTemplateRequest),
+  });
+};
+
+export const getCreateClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClassTemplate>>,
+    TError,
+    { data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createClassTemplate>>,
+  TError,
+  { data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  const mutationKey = ["createClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createClassTemplate>>,
+    { data: BodyType<UpsertClassTemplateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createClassTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createClassTemplate>>
+>;
+export type CreateClassTemplateMutationBody =
+  BodyType<UpsertClassTemplateRequest>;
+export type CreateClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a class template
+ */
+export const useCreateClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClassTemplate>>,
+    TError,
+    { data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createClassTemplate>>,
+  TError,
+  { data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  return useMutation(getCreateClassTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Update a class template
+ */
+export const getUpdateClassTemplateUrl = (id: string) => {
+  return `/api/coach/classes/templates/${id}`;
+};
+
+export const updateClassTemplate = async (
+  id: string,
+  upsertClassTemplateRequest: UpsertClassTemplateRequest,
+  options?: RequestInit,
+): Promise<ClassTemplate> => {
+  return customFetch<ClassTemplate>(getUpdateClassTemplateUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertClassTemplateRequest),
+  });
+};
+
+export const getUpdateClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateClassTemplate>>,
+    { id: string; data: BodyType<UpsertClassTemplateRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateClassTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateClassTemplate>>
+>;
+export type UpdateClassTemplateMutationBody =
+  BodyType<UpsertClassTemplateRequest>;
+export type UpdateClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a class template
+ */
+export const useUpdateClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<UpsertClassTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<UpsertClassTemplateRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateClassTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Deactivate a class template
+ */
+export const getDeleteClassTemplateUrl = (id: string) => {
+  return `/api/coach/classes/templates/${id}`;
+};
+
+export const deleteClassTemplate = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteClassTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteClassTemplate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteClassTemplate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteClassTemplate>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteClassTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteClassTemplate>>
+>;
+
+export type DeleteClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Deactivate a class template
+ */
+export const useDeleteClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteClassTemplate>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteClassTemplate>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteClassTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+ */
+export const getScheduleClassTemplateUrl = (id: string) => {
+  return `/api/coach/classes/templates/${id}/schedule`;
+};
+
+export const scheduleClassTemplate = async (
+  id: string,
+  scheduleClassRequest: ScheduleClassRequest,
+  options?: RequestInit,
+): Promise<ScheduleClassTemplate201> => {
+  return customFetch<ScheduleClassTemplate201>(
+    getScheduleClassTemplateUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(scheduleClassRequest),
+    },
+  );
+};
+
+export const getScheduleClassTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<ScheduleClassRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scheduleClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<ScheduleClassRequest> },
+  TContext
+> => {
+  const mutationKey = ["scheduleClassTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scheduleClassTemplate>>,
+    { id: string; data: BodyType<ScheduleClassRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return scheduleClassTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScheduleClassTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scheduleClassTemplate>>
+>;
+export type ScheduleClassTemplateMutationBody = BodyType<ScheduleClassRequest>;
+export type ScheduleClassTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+ */
+export const useScheduleClassTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleClassTemplate>>,
+    TError,
+    { id: string; data: BodyType<ScheduleClassRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof scheduleClassTemplate>>,
+  TError,
+  { id: string; data: BodyType<ScheduleClassRequest> },
+  TContext
+> => {
+  return useMutation(getScheduleClassTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Coach-facing occurrence list with fill counts and waitlist size
+ */
+export const getGetCoachClassOccurrencesUrl = (
+  params?: GetCoachClassOccurrencesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/classes/occurrences?${stringifiedParams}`
+    : `/api/coach/classes/occurrences`;
+};
+
+export const getCoachClassOccurrences = async (
+  params?: GetCoachClassOccurrencesParams,
+  options?: RequestInit,
+): Promise<CoachClassOccurrence[]> => {
+  return customFetch<CoachClassOccurrence[]>(
+    getGetCoachClassOccurrencesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCoachClassOccurrencesQueryKey = (
+  params?: GetCoachClassOccurrencesParams,
+) => {
+  return [
+    `/api/coach/classes/occurrences`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetCoachClassOccurrencesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachClassOccurrencesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachClassOccurrences>>
+  > = ({ signal }) =>
+    getCoachClassOccurrences(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachClassOccurrencesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachClassOccurrences>>
+>;
+export type GetCoachClassOccurrencesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Coach-facing occurrence list with fill counts and waitlist size
+ */
+
+export function useGetCoachClassOccurrences<
+  TData = Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachClassOccurrencesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachClassOccurrences>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachClassOccurrencesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Manually register a participant (existing athlete or guest/trial name)
+ */
+export const getManualRegisterForClassUrl = (occurrenceId: string) => {
+  return `/api/coach/classes/occurrences/${occurrenceId}/register`;
+};
+
+export const manualRegisterForClass = async (
+  occurrenceId: string,
+  manualRegisterRequest: ManualRegisterRequest,
+  options?: RequestInit,
+): Promise<ClassBooking> => {
+  return customFetch<ClassBooking>(getManualRegisterForClassUrl(occurrenceId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(manualRegisterRequest),
+  });
+};
+
+export const getManualRegisterForClassMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof manualRegisterForClass>>,
+    TError,
+    { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof manualRegisterForClass>>,
+  TError,
+  { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+  TContext
+> => {
+  const mutationKey = ["manualRegisterForClass"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof manualRegisterForClass>>,
+    { occurrenceId: string; data: BodyType<ManualRegisterRequest> }
+  > = (props) => {
+    const { occurrenceId, data } = props ?? {};
+
+    return manualRegisterForClass(occurrenceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ManualRegisterForClassMutationResult = NonNullable<
+  Awaited<ReturnType<typeof manualRegisterForClass>>
+>;
+export type ManualRegisterForClassMutationBody =
+  BodyType<ManualRegisterRequest>;
+export type ManualRegisterForClassMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Manually register a participant (existing athlete or guest/trial name)
+ */
+export const useManualRegisterForClass = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof manualRegisterForClass>>,
+    TError,
+    { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof manualRegisterForClass>>,
+  TError,
+  { occurrenceId: string; data: BodyType<ManualRegisterRequest> },
+  TContext
+> => {
+  return useMutation(getManualRegisterForClassMutationOptions(options));
+};
+
+/**
+ * @summary List confirmed participants for a class, with today's ADAPT score
+ */
+export const getGetOccurrenceParticipantsUrl = (occurrenceId: string) => {
+  return `/api/coach/classes/occurrences/${occurrenceId}/participants`;
+};
+
+export const getOccurrenceParticipants = async (
+  occurrenceId: string,
+  options?: RequestInit,
+): Promise<ClassParticipant[]> => {
+  return customFetch<ClassParticipant[]>(
+    getGetOccurrenceParticipantsUrl(occurrenceId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetOccurrenceParticipantsQueryKey = (occurrenceId: string) => {
+  return [
+    `/api/coach/classes/occurrences/${occurrenceId}/participants`,
+  ] as const;
+};
+
+export const getGetOccurrenceParticipantsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+  TError = ErrorType<unknown>,
+>(
+  occurrenceId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetOccurrenceParticipantsQueryKey(occurrenceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getOccurrenceParticipants>>
+  > = ({ signal }) =>
+    getOccurrenceParticipants(occurrenceId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!occurrenceId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetOccurrenceParticipantsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOccurrenceParticipants>>
+>;
+export type GetOccurrenceParticipantsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List confirmed participants for a class, with today's ADAPT score
+ */
+
+export function useGetOccurrenceParticipants<
+  TData = Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+  TError = ErrorType<unknown>,
+>(
+  occurrenceId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getOccurrenceParticipants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetOccurrenceParticipantsQueryOptions(
+    occurrenceId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Cancel the whole class — refunds every confirmed booking and notifies everyone
+ */
+export const getCancelClassOccurrenceUrl = (occurrenceId: string) => {
+  return `/api/coach/classes/occurrences/${occurrenceId}/cancel`;
+};
+
+export const cancelClassOccurrence = async (
+  occurrenceId: string,
+  cancelClassOccurrenceBody: CancelClassOccurrenceBody,
+  options?: RequestInit,
+): Promise<CancelClassOccurrence200> => {
+  return customFetch<CancelClassOccurrence200>(
+    getCancelClassOccurrenceUrl(occurrenceId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(cancelClassOccurrenceBody),
+    },
+  );
+};
+
+export const getCancelClassOccurrenceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassOccurrence>>,
+    TError,
+    { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelClassOccurrence>>,
+  TError,
+  { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+  TContext
+> => {
+  const mutationKey = ["cancelClassOccurrence"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelClassOccurrence>>,
+    { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> }
+  > = (props) => {
+    const { occurrenceId, data } = props ?? {};
+
+    return cancelClassOccurrence(occurrenceId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelClassOccurrenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelClassOccurrence>>
+>;
+export type CancelClassOccurrenceMutationBody =
+  BodyType<CancelClassOccurrenceBody>;
+export type CancelClassOccurrenceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel the whole class — refunds every confirmed booking and notifies everyone
+ */
+export const useCancelClassOccurrence = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelClassOccurrence>>,
+    TError,
+    { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelClassOccurrence>>,
+  TError,
+  { occurrenceId: string; data: BodyType<CancelClassOccurrenceBody> },
+  TContext
+> => {
+  return useMutation(getCancelClassOccurrenceMutationOptions(options));
+};
+
+/**
+ * @summary Forgive a late cancellation after the fact (refunds the credit)
+ */
+export const getWaiveLateCancellationUrl = (bookingId: string) => {
+  return `/api/coach/classes/bookings/${bookingId}/waive-late-cancellation`;
+};
+
+export const waiveLateCancellation = async (
+  bookingId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getWaiveLateCancellationUrl(bookingId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getWaiveLateCancellationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof waiveLateCancellation>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof waiveLateCancellation>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  const mutationKey = ["waiveLateCancellation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof waiveLateCancellation>>,
+    { bookingId: string }
+  > = (props) => {
+    const { bookingId } = props ?? {};
+
+    return waiveLateCancellation(bookingId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WaiveLateCancellationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof waiveLateCancellation>>
+>;
+
+export type WaiveLateCancellationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Forgive a late cancellation after the fact (refunds the credit)
+ */
+export const useWaiveLateCancellation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof waiveLateCancellation>>,
+    TError,
+    { bookingId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof waiveLateCancellation>>,
+  TError,
+  { bookingId: string },
+  TContext
+> => {
+  return useMutation(getWaiveLateCancellationMutationOptions(options));
+};
+
+/**
+ * @summary Unified week/month agenda — group classes and 1:1s merged and sorted
+ */
+export const getGetCoachAgendaUrl = (params?: GetCoachAgendaParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/agenda?${stringifiedParams}`
+    : `/api/coach/agenda`;
+};
+
+export const getCoachAgenda = async (
+  params?: GetCoachAgendaParams,
+  options?: RequestInit,
+): Promise<AgendaEntry[]> => {
+  return customFetch<AgendaEntry[]>(getGetCoachAgendaUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachAgendaQueryKey = (params?: GetCoachAgendaParams) => {
+  return [`/api/coach/agenda`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCoachAgendaQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachAgenda>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachAgendaParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachAgenda>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachAgendaQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCoachAgenda>>> = ({
+    signal,
+  }) => getCoachAgenda(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAgenda>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachAgendaQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachAgenda>>
+>;
+export type GetCoachAgendaQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Unified week/month agenda — group classes and 1:1s merged and sorted
+ */
+
+export function useGetCoachAgenda<
+  TData = Awaited<ReturnType<typeof getCoachAgenda>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachAgendaParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachAgenda>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachAgendaQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get current user profile
@@ -2207,6 +5357,96 @@ export const useDeleteExerciseLog = <
 };
 
 /**
+ * @summary Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+ */
+export const getConvertSessionTextWithAiUrl = () => {
+  return `/api/programs/convert-session-text`;
+};
+
+export const convertSessionTextWithAi = async (
+  convertSessionTextRequest: ConvertSessionTextRequest,
+  options?: RequestInit,
+): Promise<ConvertSessionTextResponse> => {
+  return customFetch<ConvertSessionTextResponse>(
+    getConvertSessionTextWithAiUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(convertSessionTextRequest),
+    },
+  );
+};
+
+export const getConvertSessionTextWithAiMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+    TError,
+    { data: BodyType<ConvertSessionTextRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+  TError,
+  { data: BodyType<ConvertSessionTextRequest> },
+  TContext
+> => {
+  const mutationKey = ["convertSessionTextWithAi"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+    { data: BodyType<ConvertSessionTextRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return convertSessionTextWithAi(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConvertSessionTextWithAiMutationResult = NonNullable<
+  Awaited<ReturnType<typeof convertSessionTextWithAi>>
+>;
+export type ConvertSessionTextWithAiMutationBody =
+  BodyType<ConvertSessionTextRequest>;
+export type ConvertSessionTextWithAiMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+ */
+export const useConvertSessionTextWithAi = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+    TError,
+    { data: BodyType<ConvertSessionTextRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof convertSessionTextWithAi>>,
+  TError,
+  { data: BodyType<ConvertSessionTextRequest> },
+  TContext
+> => {
+  return useMutation(getConvertSessionTextWithAiMutationOptions(options));
+};
+
+/**
  * @summary Get coach programs
  */
 export const getGetProgramsUrl = () => {
@@ -2915,6 +6155,180 @@ export const useUpdateProgramSession = <
   TContext
 > => {
   return useMutation(getUpdateProgramSessionMutationOptions(options));
+};
+
+/**
+ * @summary Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+ */
+export const getInsertProgramOffWeekUrl = (id: string) => {
+  return `/api/programs/${id}/insert-off-week`;
+};
+
+export const insertProgramOffWeek = async (
+  id: string,
+  insertOffWeekRequest: InsertOffWeekRequest,
+  options?: RequestInit,
+): Promise<InsertOffWeekResponse> => {
+  return customFetch<InsertOffWeekResponse>(getInsertProgramOffWeekUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(insertOffWeekRequest),
+  });
+};
+
+export const getInsertProgramOffWeekMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof insertProgramOffWeek>>,
+    TError,
+    { id: string; data: BodyType<InsertOffWeekRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof insertProgramOffWeek>>,
+  TError,
+  { id: string; data: BodyType<InsertOffWeekRequest> },
+  TContext
+> => {
+  const mutationKey = ["insertProgramOffWeek"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof insertProgramOffWeek>>,
+    { id: string; data: BodyType<InsertOffWeekRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return insertProgramOffWeek(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InsertProgramOffWeekMutationResult = NonNullable<
+  Awaited<ReturnType<typeof insertProgramOffWeek>>
+>;
+export type InsertProgramOffWeekMutationBody = BodyType<InsertOffWeekRequest>;
+export type InsertProgramOffWeekMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+ */
+export const useInsertProgramOffWeek = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof insertProgramOffWeek>>,
+    TError,
+    { id: string; data: BodyType<InsertOffWeekRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof insertProgramOffWeek>>,
+  TError,
+  { id: string; data: BodyType<InsertOffWeekRequest> },
+  TContext
+> => {
+  return useMutation(getInsertProgramOffWeekMutationOptions(options));
+};
+
+/**
+ * @summary Broadcast a template program to several athletes at once (one transactional copy per athlete)
+ */
+export const getSendProgramToAthletesUrl = (id: string) => {
+  return `/api/programs/${id}/send-to-athletes`;
+};
+
+export const sendProgramToAthletes = async (
+  id: string,
+  sendToAthletesRequest: SendToAthletesRequest,
+  options?: RequestInit,
+): Promise<SendToAthletesResponse> => {
+  return customFetch<SendToAthletesResponse>(getSendProgramToAthletesUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(sendToAthletesRequest),
+  });
+};
+
+export const getSendProgramToAthletesMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendProgramToAthletes>>,
+    TError,
+    { id: string; data: BodyType<SendToAthletesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendProgramToAthletes>>,
+  TError,
+  { id: string; data: BodyType<SendToAthletesRequest> },
+  TContext
+> => {
+  const mutationKey = ["sendProgramToAthletes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendProgramToAthletes>>,
+    { id: string; data: BodyType<SendToAthletesRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return sendProgramToAthletes(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendProgramToAthletesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendProgramToAthletes>>
+>;
+export type SendProgramToAthletesMutationBody = BodyType<SendToAthletesRequest>;
+export type SendProgramToAthletesMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Broadcast a template program to several athletes at once (one transactional copy per athlete)
+ */
+export const useSendProgramToAthletes = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendProgramToAthletes>>,
+    TError,
+    { id: string; data: BodyType<SendToAthletesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendProgramToAthletes>>,
+  TError,
+  { id: string; data: BodyType<SendToAthletesRequest> },
+  TContext
+> => {
+  return useMutation(getSendProgramToAthletesMutationOptions(options));
 };
 
 /**
@@ -5264,6 +8678,684 @@ export const useDeleteCoachAppointment = <
 };
 
 /**
+ * @summary Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+ */
+export const getConfirmOneOnOneRequestUrl = (id: string) => {
+  return `/api/coach/appointments/${id}/confirm`;
+};
+
+export const confirmOneOnOneRequest = async (
+  id: string,
+  options?: RequestInit,
+): Promise<CoachAppointment> => {
+  return customFetch<CoachAppointment>(getConfirmOneOnOneRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConfirmOneOnOneRequestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["confirmOneOnOneRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return confirmOneOnOneRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmOneOnOneRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmOneOnOneRequest>>
+>;
+
+export type ConfirmOneOnOneRequestMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+ */
+export const useConfirmOneOnOneRequest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getConfirmOneOnOneRequestMutationOptions(options));
+};
+
+/**
+ * @summary Decline an athlete-requested 1:1
+ */
+export const getDeclineOneOnOneRequestUrl = (id: string) => {
+  return `/api/coach/appointments/${id}/decline`;
+};
+
+export const declineOneOnOneRequest = async (
+  id: string,
+  options?: RequestInit,
+): Promise<CoachAppointment> => {
+  return customFetch<CoachAppointment>(getDeclineOneOnOneRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDeclineOneOnOneRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["declineOneOnOneRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return declineOneOnOneRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeclineOneOnOneRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof declineOneOnOneRequest>>
+>;
+
+export type DeclineOneOnOneRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Decline an athlete-requested 1:1
+ */
+export const useDeclineOneOnOneRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof declineOneOnOneRequest>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeclineOneOnOneRequestMutationOptions(options));
+};
+
+/**
+ * @summary List the coach's recurring 1:1 availability template
+ */
+export const getGetCoachAvailabilityUrl = () => {
+  return `/api/coach/availability`;
+};
+
+export const getCoachAvailability = async (
+  options?: RequestInit,
+): Promise<CoachAvailabilitySlot[]> => {
+  return customFetch<CoachAvailabilitySlot[]>(getGetCoachAvailabilityUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachAvailabilityQueryKey = () => {
+  return [`/api/coach/availability`] as const;
+};
+
+export const getGetCoachAvailabilityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachAvailability>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAvailability>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachAvailabilityQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachAvailability>>
+  > = ({ signal }) => getCoachAvailability({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAvailability>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachAvailabilityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachAvailability>>
+>;
+export type GetCoachAvailabilityQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the coach's recurring 1:1 availability template
+ */
+
+export function useGetCoachAvailability<
+  TData = Awaited<ReturnType<typeof getCoachAvailability>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachAvailability>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachAvailabilityQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Open a recurring weekly slot
+ */
+export const getAddCoachAvailabilitySlotUrl = () => {
+  return `/api/coach/availability`;
+};
+
+export const addCoachAvailabilitySlot = async (
+  addAvailabilitySlotRequest: AddAvailabilitySlotRequest,
+  options?: RequestInit,
+): Promise<CoachAvailabilitySlot> => {
+  return customFetch<CoachAvailabilitySlot>(getAddCoachAvailabilitySlotUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addAvailabilitySlotRequest),
+  });
+};
+
+export const getAddCoachAvailabilitySlotMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+    TError,
+    { data: BodyType<AddAvailabilitySlotRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+  TError,
+  { data: BodyType<AddAvailabilitySlotRequest> },
+  TContext
+> => {
+  const mutationKey = ["addCoachAvailabilitySlot"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+    { data: BodyType<AddAvailabilitySlotRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return addCoachAvailabilitySlot(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddCoachAvailabilitySlotMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addCoachAvailabilitySlot>>
+>;
+export type AddCoachAvailabilitySlotMutationBody =
+  BodyType<AddAvailabilitySlotRequest>;
+export type AddCoachAvailabilitySlotMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Open a recurring weekly slot
+ */
+export const useAddCoachAvailabilitySlot = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+    TError,
+    { data: BodyType<AddAvailabilitySlotRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addCoachAvailabilitySlot>>,
+  TError,
+  { data: BodyType<AddAvailabilitySlotRequest> },
+  TContext
+> => {
+  return useMutation(getAddCoachAvailabilitySlotMutationOptions(options));
+};
+
+/**
+ * @summary Close a recurring slot
+ */
+export const getRemoveCoachAvailabilitySlotUrl = (id: string) => {
+  return `/api/coach/availability/${id}`;
+};
+
+export const removeCoachAvailabilitySlot = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getRemoveCoachAvailabilitySlotUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveCoachAvailabilitySlotMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["removeCoachAvailabilitySlot"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return removeCoachAvailabilitySlot(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveCoachAvailabilitySlotMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>
+>;
+
+export type RemoveCoachAvailabilitySlotMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Close a recurring slot
+ */
+export const useRemoveCoachAvailabilitySlot = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeCoachAvailabilitySlot>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getRemoveCoachAvailabilitySlotMutationOptions(options));
+};
+
+/**
+ * @summary Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+ */
+export const getGetAthleteStudioInfoUrl = () => {
+  return `/api/athlete/studio-info`;
+};
+
+export const getAthleteStudioInfo = async (
+  options?: RequestInit,
+): Promise<StudioInfo> => {
+  return customFetch<StudioInfo>(getGetAthleteStudioInfoUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAthleteStudioInfoQueryKey = () => {
+  return [`/api/athlete/studio-info`] as const;
+};
+
+export const getGetAthleteStudioInfoQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAthleteStudioInfoQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>
+  > = ({ signal }) => getAthleteStudioInfo({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAthleteStudioInfoQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAthleteStudioInfo>>
+>;
+export type GetAthleteStudioInfoQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+ */
+
+export function useGetAthleteStudioInfo<
+  TData = Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteStudioInfo>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAthleteStudioInfoQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)
+ */
+export const getGetAthleteCoachSlotsUrl = (
+  params: GetAthleteCoachSlotsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/athlete/coach-slots?${stringifiedParams}`
+    : `/api/athlete/coach-slots`;
+};
+
+export const getAthleteCoachSlots = async (
+  params: GetAthleteCoachSlotsParams,
+  options?: RequestInit,
+): Promise<CoachAvailabilitySlot[]> => {
+  return customFetch<CoachAvailabilitySlot[]>(
+    getGetAthleteCoachSlotsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAthleteCoachSlotsQueryKey = (
+  params?: GetAthleteCoachSlotsParams,
+) => {
+  return [`/api/athlete/coach-slots`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAthleteCoachSlotsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetAthleteCoachSlotsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAthleteCoachSlotsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAthleteCoachSlots>>
+  > = ({ signal }) =>
+    getAthleteCoachSlots(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAthleteCoachSlotsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAthleteCoachSlots>>
+>;
+export type GetAthleteCoachSlotsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Open 1:1 slots for a specific date (recurring template minus already-taken times)
+ */
+
+export function useGetAthleteCoachSlots<
+  TData = Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetAthleteCoachSlotsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAthleteCoachSlots>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAthleteCoachSlotsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Request a 1:1 slot (no credit debited until the coach confirms)
+ */
+export const getCreateOneOnOneRequestUrl = () => {
+  return `/api/athlete/1on1-requests`;
+};
+
+export const createOneOnOneRequest = async (
+  createOneOnOneRequest: CreateOneOnOneRequest,
+  options?: RequestInit,
+): Promise<CoachAppointment> => {
+  return customFetch<CoachAppointment>(getCreateOneOnOneRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createOneOnOneRequest),
+  });
+};
+
+export const getCreateOneOnOneRequestMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOneOnOneRequest>>,
+    TError,
+    { data: BodyType<CreateOneOnOneRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOneOnOneRequest>>,
+  TError,
+  { data: BodyType<CreateOneOnOneRequest> },
+  TContext
+> => {
+  const mutationKey = ["createOneOnOneRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOneOnOneRequest>>,
+    { data: BodyType<CreateOneOnOneRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createOneOnOneRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateOneOnOneRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOneOnOneRequest>>
+>;
+export type CreateOneOnOneRequestMutationBody = BodyType<CreateOneOnOneRequest>;
+export type CreateOneOnOneRequestMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Request a 1:1 slot (no credit debited until the coach confirms)
+ */
+export const useCreateOneOnOneRequest = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOneOnOneRequest>>,
+    TError,
+    { data: BodyType<CreateOneOnOneRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createOneOnOneRequest>>,
+  TError,
+  { data: BodyType<CreateOneOnOneRequest> },
+  TContext
+> => {
+  return useMutation(getCreateOneOnOneRequestMutationOptions(options));
+};
+
+/**
  * @summary Get scheduled notifications
  */
 export const getGetScheduledNotificationsUrl = () => {
@@ -5606,6 +9698,859 @@ export const useDeleteScheduledNotification = <
 > => {
   return useMutation(getDeleteScheduledNotificationMutationOptions(options));
 };
+
+/**
+ * @summary Get the coach's motivation phrase bank
+ */
+export const getGetMotivationPhrasesUrl = () => {
+  return `/api/coach/motivation-phrases`;
+};
+
+export const getMotivationPhrases = async (
+  options?: RequestInit,
+): Promise<MotivationPhrase[]> => {
+  return customFetch<MotivationPhrase[]>(getGetMotivationPhrasesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMotivationPhrasesQueryKey = () => {
+  return [`/api/coach/motivation-phrases`] as const;
+};
+
+export const getGetMotivationPhrasesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMotivationPhrases>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMotivationPhrases>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMotivationPhrasesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMotivationPhrases>>
+  > = ({ signal }) => getMotivationPhrases({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMotivationPhrases>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMotivationPhrasesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMotivationPhrases>>
+>;
+export type GetMotivationPhrasesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the coach's motivation phrase bank
+ */
+
+export function useGetMotivationPhrases<
+  TData = Awaited<ReturnType<typeof getMotivationPhrases>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMotivationPhrases>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMotivationPhrasesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a motivation phrase
+ */
+export const getCreateMotivationPhraseUrl = () => {
+  return `/api/coach/motivation-phrases`;
+};
+
+export const createMotivationPhrase = async (
+  createMotivationPhraseRequest: CreateMotivationPhraseRequest,
+  options?: RequestInit,
+): Promise<MotivationPhrase> => {
+  return customFetch<MotivationPhrase>(getCreateMotivationPhraseUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createMotivationPhraseRequest),
+  });
+};
+
+export const getCreateMotivationPhraseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMotivationPhrase>>,
+    TError,
+    { data: BodyType<CreateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createMotivationPhrase>>,
+  TError,
+  { data: BodyType<CreateMotivationPhraseRequest> },
+  TContext
+> => {
+  const mutationKey = ["createMotivationPhrase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMotivationPhrase>>,
+    { data: BodyType<CreateMotivationPhraseRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createMotivationPhrase(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateMotivationPhraseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createMotivationPhrase>>
+>;
+export type CreateMotivationPhraseMutationBody =
+  BodyType<CreateMotivationPhraseRequest>;
+export type CreateMotivationPhraseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a motivation phrase
+ */
+export const useCreateMotivationPhrase = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMotivationPhrase>>,
+    TError,
+    { data: BodyType<CreateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createMotivationPhrase>>,
+  TError,
+  { data: BodyType<CreateMotivationPhraseRequest> },
+  TContext
+> => {
+  return useMutation(getCreateMotivationPhraseMutationOptions(options));
+};
+
+/**
+ * @summary Update a motivation phrase
+ */
+export const getUpdateMotivationPhraseUrl = (id: string) => {
+  return `/api/coach/motivation-phrases/${id}`;
+};
+
+export const updateMotivationPhrase = async (
+  id: string,
+  updateMotivationPhraseRequest: UpdateMotivationPhraseRequest,
+  options?: RequestInit,
+): Promise<MotivationPhrase> => {
+  return customFetch<MotivationPhrase>(getUpdateMotivationPhraseUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateMotivationPhraseRequest),
+  });
+};
+
+export const getUpdateMotivationPhraseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMotivationPhrase>>,
+    TError,
+    { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMotivationPhrase>>,
+  TError,
+  { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateMotivationPhrase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMotivationPhrase>>,
+    { id: string; data: BodyType<UpdateMotivationPhraseRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateMotivationPhrase(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMotivationPhraseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMotivationPhrase>>
+>;
+export type UpdateMotivationPhraseMutationBody =
+  BodyType<UpdateMotivationPhraseRequest>;
+export type UpdateMotivationPhraseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a motivation phrase
+ */
+export const useUpdateMotivationPhrase = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMotivationPhrase>>,
+    TError,
+    { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMotivationPhrase>>,
+  TError,
+  { id: string; data: BodyType<UpdateMotivationPhraseRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateMotivationPhraseMutationOptions(options));
+};
+
+/**
+ * @summary Delete a motivation phrase
+ */
+export const getDeleteMotivationPhraseUrl = (id: string) => {
+  return `/api/coach/motivation-phrases/${id}`;
+};
+
+export const deleteMotivationPhrase = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteMotivationPhraseUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteMotivationPhraseMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteMotivationPhrase"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteMotivationPhrase(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteMotivationPhraseMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteMotivationPhrase>>
+>;
+
+export type DeleteMotivationPhraseMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a motivation phrase
+ */
+export const useDeleteMotivationPhrase = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteMotivationPhrase>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteMotivationPhraseMutationOptions(options));
+};
+
+/**
+ * @summary Get a signed upload URL for a new resource file
+ */
+export const getGetResourceFileUploadUrlUrl = () => {
+  return `/api/coach/resource-files/upload-url`;
+};
+
+export const getResourceFileUploadUrl = async (
+  options?: RequestInit,
+): Promise<ResourceFileUploadUrlResponse> => {
+  return customFetch<ResourceFileUploadUrlResponse>(
+    getGetResourceFileUploadUrlUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getGetResourceFileUploadUrlMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["getResourceFileUploadUrl"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+    void
+  > = () => {
+    return getResourceFileUploadUrl(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetResourceFileUploadUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getResourceFileUploadUrl>>
+>;
+
+export type GetResourceFileUploadUrlMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get a signed upload URL for a new resource file
+ */
+export const useGetResourceFileUploadUrl = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getResourceFileUploadUrl>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getGetResourceFileUploadUrlMutationOptions(options));
+};
+
+/**
+ * @summary List resource files
+ */
+export const getGetCoachResourceFilesUrl = (
+  params?: GetCoachResourceFilesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/resource-files?${stringifiedParams}`
+    : `/api/coach/resource-files`;
+};
+
+export const getCoachResourceFiles = async (
+  params?: GetCoachResourceFilesParams,
+  options?: RequestInit,
+): Promise<ResourceFile[]> => {
+  return customFetch<ResourceFile[]>(getGetCoachResourceFilesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachResourceFilesQueryKey = (
+  params?: GetCoachResourceFilesParams,
+) => {
+  return [`/api/coach/resource-files`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCoachResourceFilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachResourceFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachResourceFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoachResourceFilesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachResourceFiles>>
+  > = ({ signal }) =>
+    getCoachResourceFiles(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachResourceFiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachResourceFilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachResourceFiles>>
+>;
+export type GetCoachResourceFilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List resource files
+ */
+
+export function useGetCoachResourceFiles<
+  TData = Awaited<ReturnType<typeof getCoachResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetCoachResourceFilesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoachResourceFiles>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachResourceFilesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Attach metadata to an uploaded resource file
+ */
+export const getCreateResourceFileUrl = () => {
+  return `/api/coach/resource-files`;
+};
+
+export const createResourceFile = async (
+  createResourceFileRequest: CreateResourceFileRequest,
+  options?: RequestInit,
+): Promise<ResourceFile> => {
+  return customFetch<ResourceFile>(getCreateResourceFileUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createResourceFileRequest),
+  });
+};
+
+export const getCreateResourceFileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResourceFile>>,
+    TError,
+    { data: BodyType<CreateResourceFileRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createResourceFile>>,
+  TError,
+  { data: BodyType<CreateResourceFileRequest> },
+  TContext
+> => {
+  const mutationKey = ["createResourceFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createResourceFile>>,
+    { data: BodyType<CreateResourceFileRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createResourceFile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateResourceFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createResourceFile>>
+>;
+export type CreateResourceFileMutationBody =
+  BodyType<CreateResourceFileRequest>;
+export type CreateResourceFileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Attach metadata to an uploaded resource file
+ */
+export const useCreateResourceFile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResourceFile>>,
+    TError,
+    { data: BodyType<CreateResourceFileRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createResourceFile>>,
+  TError,
+  { data: BodyType<CreateResourceFileRequest> },
+  TContext
+> => {
+  return useMutation(getCreateResourceFileMutationOptions(options));
+};
+
+/**
+ * @summary Delete a resource file
+ */
+export const getDeleteResourceFileUrl = (id: string) => {
+  return `/api/coach/resource-files/${id}`;
+};
+
+export const deleteResourceFile = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteResourceFileUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteResourceFileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResourceFile>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteResourceFile>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteResourceFile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteResourceFile>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteResourceFile(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteResourceFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteResourceFile>>
+>;
+
+export type DeleteResourceFileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a resource file
+ */
+export const useDeleteResourceFile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResourceFile>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteResourceFile>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteResourceFileMutationOptions(options));
+};
+
+/**
+ * @summary List resource files shared with the current athlete
+ */
+export const getGetResourceFilesUrl = () => {
+  return `/api/resource-files`;
+};
+
+export const getResourceFiles = async (
+  options?: RequestInit,
+): Promise<ResourceFile[]> => {
+  return customFetch<ResourceFile[]>(getGetResourceFilesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResourceFilesQueryKey = () => {
+  return [`/api/resource-files`] as const;
+};
+
+export const getGetResourceFilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetResourceFilesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getResourceFiles>>
+  > = ({ signal }) => getResourceFiles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetResourceFilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResourceFiles>>
+>;
+export type GetResourceFilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List resource files shared with the current athlete
+ */
+
+export function useGetResourceFiles<
+  TData = Awaited<ReturnType<typeof getResourceFiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetResourceFilesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a signed download URL for a resource file
+ */
+export const getGetResourceFileSignedUrlUrl = (id: string) => {
+  return `/api/resource-files/${id}/signed-url`;
+};
+
+export const getResourceFileSignedUrl = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SignedUrlResponse> => {
+  return customFetch<SignedUrlResponse>(getGetResourceFileSignedUrlUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResourceFileSignedUrlQueryKey = (id: string) => {
+  return [`/api/resource-files/${id}/signed-url`] as const;
+};
+
+export const getGetResourceFileSignedUrlQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetResourceFileSignedUrlQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getResourceFileSignedUrl>>
+  > = ({ signal }) =>
+    getResourceFileSignedUrl(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetResourceFileSignedUrlQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResourceFileSignedUrl>>
+>;
+export type GetResourceFileSignedUrlQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get a signed download URL for a resource file
+ */
+
+export function useGetResourceFileSignedUrl<
+  TData = Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResourceFileSignedUrl>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetResourceFileSignedUrlQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get coach challenges
@@ -7304,3 +12249,431 @@ export const useUpdateNotificationPreferences = <
 > => {
   return useMutation(getUpdateNotificationPreferencesMutationOptions(options));
 };
+
+/**
+ * @summary List invoices issued by the coach (most recent 200)
+ */
+export const getGetCoachInvoicesUrl = () => {
+  return `/api/coach/invoices`;
+};
+
+export const getCoachInvoices = async (
+  options?: RequestInit,
+): Promise<InvoiceListItem[]> => {
+  return customFetch<InvoiceListItem[]>(getGetCoachInvoicesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachInvoicesQueryKey = () => {
+  return [`/api/coach/invoices`] as const;
+};
+
+export const getGetCoachInvoicesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachInvoices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachInvoices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachInvoicesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachInvoices>>
+  > = ({ signal }) => getCoachInvoices({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachInvoices>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachInvoicesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachInvoices>>
+>;
+export type GetCoachInvoicesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List invoices issued by the coach (most recent 200)
+ */
+
+export function useGetCoachInvoices<
+  TData = Awaited<ReturnType<typeof getCoachInvoices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachInvoices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachInvoicesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+ */
+export const getCreateInvoiceCreditNoteUrl = (id: string) => {
+  return `/api/coach/invoices/${id}/credit-note`;
+};
+
+export const createInvoiceCreditNote = async (
+  id: string,
+  createCreditNoteRequest: CreateCreditNoteRequest,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getCreateInvoiceCreditNoteUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCreditNoteRequest),
+  });
+};
+
+export const getCreateInvoiceCreditNoteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+    TError,
+    { id: string; data: BodyType<CreateCreditNoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+  TError,
+  { id: string; data: BodyType<CreateCreditNoteRequest> },
+  TContext
+> => {
+  const mutationKey = ["createInvoiceCreditNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+    { id: string; data: BodyType<CreateCreditNoteRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createInvoiceCreditNote(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateInvoiceCreditNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createInvoiceCreditNote>>
+>;
+export type CreateInvoiceCreditNoteMutationBody =
+  BodyType<CreateCreditNoteRequest>;
+export type CreateInvoiceCreditNoteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+ */
+export const useCreateInvoiceCreditNote = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+    TError,
+    { id: string; data: BodyType<CreateCreditNoteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createInvoiceCreditNote>>,
+  TError,
+  { id: string; data: BodyType<CreateCreditNoteRequest> },
+  TContext
+> => {
+  return useMutation(getCreateInvoiceCreditNoteMutationOptions(options));
+};
+
+/**
+ * @summary Monthly accounting export (CSV) for the accountant
+ */
+export const getExportCoachInvoicesCsvUrl = (
+  params?: ExportCoachInvoicesCsvParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/coach/invoices/export.csv?${stringifiedParams}`
+    : `/api/coach/invoices/export.csv`;
+};
+
+export const exportCoachInvoicesCsv = async (
+  params?: ExportCoachInvoicesCsvParams,
+  options?: RequestInit,
+): Promise<string> => {
+  return customFetch<string>(getExportCoachInvoicesCsvUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportCoachInvoicesCsvQueryKey = (
+  params?: ExportCoachInvoicesCsvParams,
+) => {
+  return [
+    `/api/coach/invoices/export.csv`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getExportCoachInvoicesCsvQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportCoachInvoicesCsvParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getExportCoachInvoicesCsvQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof exportCoachInvoicesCsv>>
+  > = ({ signal }) =>
+    exportCoachInvoicesCsv(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportCoachInvoicesCsvQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportCoachInvoicesCsv>>
+>;
+export type ExportCoachInvoicesCsvQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Monthly accounting export (CSV) for the accountant
+ */
+
+export function useExportCoachInvoicesCsv<
+  TData = Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ExportCoachInvoicesCsvParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportCoachInvoicesCsv>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportCoachInvoicesCsvQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Download an invoice or credit note PDF (owner athlete or issuing coach only)
+ */
+export const getGetInvoicePdfUrl = (id: string) => {
+  return `/api/invoices/${id}/pdf`;
+};
+
+export const getInvoicePdf = async (
+  id: string,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getGetInvoicePdfUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInvoicePdfQueryKey = (id: string) => {
+  return [`/api/invoices/${id}/pdf`] as const;
+};
+
+export const getGetInvoicePdfQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInvoicePdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvoicePdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetInvoicePdfQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvoicePdf>>> = ({
+    signal,
+  }) => getInvoicePdf(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInvoicePdf>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetInvoicePdfQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInvoicePdf>>
+>;
+export type GetInvoicePdfQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Download an invoice or credit note PDF (owner athlete or issuing coach only)
+ */
+
+export function useGetInvoicePdf<
+  TData = Awaited<ReturnType<typeof getInvoicePdf>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvoicePdf>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetInvoicePdfQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List credit notes issued by the coach
+ */
+export const getGetCoachCreditNotesUrl = () => {
+  return `/api/coach/credit-notes`;
+};
+
+export const getCoachCreditNotes = async (
+  options?: RequestInit,
+): Promise<CreditNoteListItem[]> => {
+  return customFetch<CreditNoteListItem[]>(getGetCoachCreditNotesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCoachCreditNotesQueryKey = () => {
+  return [`/api/coach/credit-notes`] as const;
+};
+
+export const getGetCoachCreditNotesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoachCreditNotes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCoachCreditNotesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>
+  > = ({ signal }) => getCoachCreditNotes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoachCreditNotesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoachCreditNotes>>
+>;
+export type GetCoachCreditNotesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List credit notes issued by the coach
+ */
+
+export function useGetCoachCreditNotes<
+  TData = Awaited<ReturnType<typeof getCoachCreditNotes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCoachCreditNotes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoachCreditNotesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreateExerciseRequestCategory } from "./createExerciseRequestCategory";
+import type { CreateExerciseRequestTrackingType } from "./createExerciseRequestTrackingType";
 
 export interface CreateExerciseRequest {
   name: string;
@@ -13,4 +14,5 @@ export interface CreateExerciseRequest {
   muscleGroups?: string[];
   equipment?: string[];
   demoUrl?: string;
+  trackingType?: CreateExerciseRequestTrackingType;
 }
