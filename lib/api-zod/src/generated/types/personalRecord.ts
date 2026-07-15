@@ -5,13 +5,15 @@
  * ADAPT by LMJ API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { RecordType } from "./recordType";
 
 export interface PersonalRecord {
   exerciseId: string;
   exerciseName: string;
-  loadKg: number;
-  reps: number;
-  previousLoadKg?: number | null;
+  recordType: RecordType;
+  value: number;
+  reps?: number | null;
+  previousValue?: number | null;
   achievedAt?: string;
   isRecent?: boolean;
 }

@@ -28,6 +28,7 @@ import { useThemeColors, useFormatWeight } from "@/context/PreferencesContext";
 import { useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
 import type { ExerciseLoadHistory } from "@workspace/api-client-react";
+import { formatRecordValue } from "@/lib/formatRecord";
 
 const { width } = Dimensions.get("window");
 const CHART_WIDTH = width - 80;
@@ -654,7 +655,7 @@ export default function StatsScreen() {
                   <Text style={[{ fontSize: 9, color: COLORS.cyan, fontFamily: FONTS.mono }]}>NEW</Text>
                 </View>
               )}
-              <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>{formatWeight(pr.loadKg)}</Text>
+              <Text style={[styles.prItemLoad, { fontFamily: FONTS.monoBold, color: COLORS.cyan }]}>{formatRecordValue(pr.recordType, pr.value, formatWeight)}</Text>
             </View>
           </View>
         ))}

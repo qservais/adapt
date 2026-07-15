@@ -11,6 +11,12 @@ export const coachAppointmentsTable = pgTable("coach_appointments", {
   location: varchar("location", { length: 255 }),
   notes: text("notes"),
   type: varchar("type", { length: 20 }).notNull().default("presentiel"),
+  // pending (athlete-requested, awaiting coach) | confirmed | declined | cancelled
+  status: varchar("status", { length: 20 }).notNull().default("confirmed"),
+  // athlete (via /athlete/1on1-requests) | coach (direct booking, the pre-existing flow) | null for legacy rows
+  requestedBy: varchar("requested_by", { length: 20 }),
+  availabilitySlotId: uuid("availability_slot_id"),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

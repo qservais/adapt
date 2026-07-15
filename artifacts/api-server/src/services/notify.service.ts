@@ -13,6 +13,9 @@ export interface NotifyUserOptions {
   body: string;
   link?: string;
   data?: Record<string, unknown>;
+  /** Identifies the row that triggered this notification, for dedup/lookup queries. */
+  sourceType?: string;
+  sourceId?: string;
 }
 
 export interface NotifyResult {
@@ -28,7 +31,7 @@ export interface NotifyResult {
  * in-app insert.
  */
 export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult> {
-  const { userId, type, title, body, link, data } = opts;
+  const { userId, type, title, body, link, data, sourceType, sourceId } = opts;
   const meta: NotificationTypeMeta | undefined = NOTIFICATION_TYPES[type];
   if (!meta) {
     logger.warn({ type }, "notifyUser: unknown notification type");
@@ -70,6 +73,8 @@ export async function notifyUser(opts: NotifyUserOptions): Promise<NotifyResult>
     title,
     body,
     link: link ?? meta.defaultLink ?? null,
+    sourceType: sourceType ?? null,
+    sourceId: sourceId ?? null,
   });
   const inAppDone = true;
 

@@ -58,6 +58,7 @@ const messages = {
     programNotFoundOrUnauthorized: { fr: "Programme introuvable ou non autorisé", en: "Program not found or not authorized" },
     weekOutOfBounds: { fr: "Semaine hors limites du programme", en: "Week out of program bounds" },
     sessionNotFoundInProgram: { fr: "Séance introuvable dans ce programme", en: "Session not found in this program" },
+    insertWeekOutOfBounds: { fr: "Impossible d'insérer une semaine à cette position", en: "Cannot insert a week at that position" },
     checkinAlreadyExists: { fr: "Tu as déjà fait ton check-in aujourd'hui", en: "You have already checked in today" },
     contentOrMediaRequired: { fr: "Contenu ou média requis", en: "Content or media required" },
     mediaUrlInvalid: { fr: "URL média invalide", en: "Invalid media URL" },

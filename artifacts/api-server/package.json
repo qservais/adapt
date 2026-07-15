@@ -8,9 +8,15 @@
     "build": "tsx ./build.ts",
     "seed": "tsx ./src/scripts/seed-prod.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:library": "tsx tests/exercises-library.test.ts"
+    "test:library": "tsx tests/exercises-library.test.ts",
+    "test:credit-ledger": "tsx tests/credit-ledger.test.ts",
+    "test:booking": "tsx tests/booking.test.ts",
+    "test:invoicing": "tsx tests/invoicing.test.ts",
+    "test:date-utils": "tsx tests/date-utils.test.ts",
+    "test:pr-math": "tsx tests/pr-math.test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
     "@google-cloud/storage": "^7.19.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
@@ -25,10 +31,12 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.1.1",
     "node-cron": "^3.0.3",
+    "pdfkit": "^0.17.2",
     "pino": "^9",
     "pino-http": "^10",
     "resend": "^6.12.2",
     "sharp": "^0.34.5",
+    "stripe": "^22.3.1",
     "web-push": "^3.6.7",
     "zod": "catalog:"
   },
@@ -41,6 +49,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "catalog:",
     "@types/node-cron": "^3.0.11",
+    "@types/pdfkit": "^0.13.9",
     "@types/sharp": "^0.32.0",
     "@types/web-push": "^3.6.4",
     "esbuild": "^0.27.3",

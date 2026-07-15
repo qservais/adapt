@@ -43,6 +43,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useFormatWeight, useThemeColors, useT, usePreferences } from "@/context/PreferencesContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import ExtendedProfileSections from "@/components/profile/ExtendedProfileSections";
+import { formatRecordValue, recordGain } from "@/lib/formatRecord";
 import { PRHistoryModal } from "@/components/profile/PRHistoryModal";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -626,10 +627,9 @@ export default function ProfileScreen() {
                 {prsQuery.data!.total} RECORD{prsQuery.data!.total > 1 ? "S" : ""} PERSONNEL{prsQuery.data!.total > 1 ? "S" : ""}
               </Text>
               {prsQuery.data!.personalRecords.map((pr, idx) => {
-                const gain =
-                  pr.previousLoadKg != null && pr.loadKg != null
-                    ? pr.loadKg - pr.previousLoadKg
-                    : null;
+                const gain = pr.previousValue != null
+                  ? recordGain(pr.recordType, pr.value, pr.previousValue)
+                  : null;
                 const dateStr = pr.achievedAt
                   ? new Date(pr.achievedAt).toLocaleDateString("fr-FR", {
                       day: "numeric",
@@ -660,8 +660,8 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.prLoadBox}>
                         <Text style={[styles.prLoad, { fontFamily: FONTS.monoBold }]}>
-                          {pr.loadKg != null ? `${pr.loadKg} kg` : "—"}
-                          {pr.reps != null ? ` × ${pr.reps}` : ""}
+                          {formatRecordValue(pr.recordType, pr.value, formatWeight)}
+                          {pr.recordType !== "reps" && pr.reps != null ? ` × ${pr.reps}` : ""}
                         </Text>
                       </View>
                     </View>
@@ -675,13 +675,13 @@ export default function ProfileScreen() {
                         <View style={styles.prGainRow}>
                           <Feather name="trending-up" size={12} color={COLORS.cyan} />
                           <Text style={[styles.prGainText, { fontFamily: FONTS.mono }]}>
-                            +{gain % 1 === 0 ? gain : gain.toFixed(1)} kg vs précédent
+                            +{formatRecordValue(pr.recordType, Math.round(gain * 100) / 100, formatWeight)} vs précédent
                           </Text>
                         </View>
                       )}
-                      {pr.previousLoadKg != null && (
+                      {pr.previousValue != null && (
                         <Text style={[styles.prPrev, { fontFamily: FONTS.body }]}>
-                          Précédent : {pr.previousLoadKg} kg
+                          Précédent : {formatRecordValue(pr.recordType, pr.previousValue, formatWeight)}
                         </Text>
                       )}
                       <View style={{ flex: 1, alignItems: "flex-end" }}>
@@ -1249,6 +1249,57 @@ export default function ProfileScreen() {
       {activeTab === "profil" && (
         <View style={[styles.quickLinks, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <TouchableOpacity
+            onPress={() => router.push("/shop" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>🛍️</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Boutique</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
+                  Crédits et abonnements
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/classes" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>🧘</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Cours collectifs</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
+                  Réserver un cours
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/one-on-one" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>🤝</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Rendez-vous 1:1</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
+                  Demander une séance avec ton coach
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => router.push("/guides" as any)}
             style={styles.quickLinkRow}
             activeOpacity={0.7}
@@ -1296,6 +1347,40 @@ export default function ProfileScreen() {
                     {badgesQuery.data?.unlockedCount} / {badgesQuery.data?.total} débloqués
                   </Text>
                 )}
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/progression" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>📈</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Ta progression</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
+                  Score ADAPT et derniers records
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push("/resource-files" as any)}
+            style={styles.quickLinkRow}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickLinkLeft}>
+              <Text style={styles.quickLinkIcon}>📄</Text>
+              <View>
+                <Text style={[styles.quickLinkTitle, { fontFamily: FONTS.bodyMedium, color: colors.textPrimary }]}>Mes documents</Text>
+                <Text style={[styles.quickLinkSub, { fontFamily: FONTS.body, color: colors.textMuted }]}>
+                  Documents partagés par ton coach
+                </Text>
               </View>
             </View>
             <Feather name="chevron-right" size={18} color={COLORS.textMuted} />

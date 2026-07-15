@@ -16,7 +16,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
-import { useLogin } from "@workspace/api-client-react";
+import { useLoginWithCode } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { COLORS, FONTS } from "@/constants/theme";
 import { getLoginErrorMessage } from "@/lib/errors";
@@ -27,11 +27,11 @@ import { useT } from "@/context/PreferencesContext";
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
-  const loginMutation = useLogin();
+  const loginMutation = useLoginWithCode();
   const t = useT();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
   const logoOpacity = useSharedValue(0);
@@ -58,13 +58,13 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     setError("");
-    if (!email.trim() || !password) {
-      setError(t("email_password_required", "L'email et le mot de passe sont requis"));
+    if (!email.trim() || !/^\d{6}$/.test(code)) {
+      setError(t("email_code_required", "L'email et le code à 6 chiffres sont requis"));
       return;
     }
     try {
       const res = await loginMutation.mutateAsync({
-        data: { email: email.trim().toLowerCase(), password },
+        data: { email: email.trim().toLowerCase(), code },
       });
       await login(res.accessToken, res.refreshToken, res.user);
       router.replace("/");
@@ -107,10 +107,12 @@ export default function LoginScreen() {
             autoComplete="email"
           />
           <InputField
-            label={t("password", "Mot de passe")}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
+            label={t("login_code", "Ton code à 6 chiffres")}
+            value={code}
+            onChangeText={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            keyboardType="number-pad"
+            maxLength={6}
             secureToggle
           />
           {error ? (
@@ -138,7 +140,7 @@ export default function LoginScreen() {
           </Pressable>
           <Pressable onPress={() => router.push("/auth/forgot-password")} style={{ marginTop: 16 }}>
             <Text style={[styles.footerText, { fontFamily: FONTS.body, color: COLORS.textMuted }]}>
-              {t("forgot_password", "Mot de passe oublié ?")}
+              {t("forgot_code", "Code oublié ?")}
             </Text>
           </Pressable>
         </Animated.View>

@@ -34,6 +34,14 @@ tags:
     description: Coach appointments
   - name: athlete
     description: Athlete-specific endpoints
+  - name: studio
+    description: Studio settings (Mouv'Up — WhatsApp number, VAT regime, cancellation window...)
+  - name: shop
+    description: Credit packs, subscriptions, promos, and the athlete credit ledger
+  - name: classes
+    description: Bookable group classes, capacity, and waitlist
+  - name: invoicing
+    description: Legal invoices, credit notes, and accountant CSV export
 
 security:
   - bearerAuth: []
@@ -81,6 +89,90 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register-athlete:
+    post:
+      operationId: registerAthlete
+      tags: [auth]
+      security: []
+      summary: Open 2-step athlete signup (identity + sport profile/PAR-Q/consent), PIN-based auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterAthleteRequest"
+      responses:
+        "201":
+          description: Athlete account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login-code:
+    post:
+      operationId: loginWithCode
+      tags: [auth]
+      security: []
+      summary: Athlete-app login with email + 6-digit PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginCodeRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/reset-login-code:
+    post:
+      operationId: resetLoginCode
+      tags: [auth]
+      security: []
+      summary: Set a new 6-digit PIN using an emailed reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetLoginCodeRequest"
+      responses:
+        "200":
+          description: Login code updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid or expired token
           content:
             application/json:
               schema:
@@ -144,6 +236,686 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
+
+  # STUDIO SETTINGS
+  /studio-settings:
+    get:
+      operationId: getStudioSettings
+      tags: [studio]
+      summary: Get the coach's studio settings (defaults if none saved yet)
+      responses:
+        "200":
+          description: Studio settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioSettings"
+    put:
+      operationId: updateStudioSettings
+      tags: [studio]
+      summary: Create or update the coach's studio settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStudioSettingsRequest"
+      responses:
+        "200":
+          description: Updated studio settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioSettings"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # SHOP
+  /shop/packs:
+    get:
+      operationId: getShopPacks
+      tags: [shop]
+      summary: List active credit packs with resolved current price (promo-aware)
+      responses:
+        "200":
+          description: Packs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopPackWithPrice"
+
+  /shop/subscriptions:
+    get:
+      operationId: getShopSubscriptions
+      tags: [shop]
+      summary: List active subscription plans
+      responses:
+        "200":
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionPlan"
+
+  /shop/checkout-session:
+    post:
+      operationId: createCheckoutSession
+      tags: [shop]
+      summary: Start a Stripe Checkout session for a pack or subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "503":
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/credits:
+    get:
+      operationId: getMyCredits
+      tags: [shop]
+      summary: Get the current athlete's credit balances
+      responses:
+        "200":
+          description: Balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditBalances"
+
+  /coach/shop/packs:
+    get:
+      operationId: getCoachShopPacks
+      tags: [shop]
+      summary: List the coach's packs (including inactive), each with its active promo if any
+      responses:
+        "200":
+          description: Packs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachShopPack"
+    post:
+      operationId: createShopPack
+      tags: [shop]
+      summary: Create a new credit pack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertShopPackRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPack"
+
+  /coach/shop/packs/{id}:
+    put:
+      operationId: updateShopPack
+      tags: [shop]
+      summary: Update a credit pack
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertShopPackRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPack"
+    delete:
+      operationId: deleteShopPack
+      tags: [shop]
+      summary: Deactivate a credit pack (soft delete — past purchases stay valid)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/shop/promos:
+    post:
+      operationId: createShopPromo
+      tags: [shop]
+      summary: Launch a time-limited promo on a pack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShopPromoRequest"
+      responses:
+        "201":
+          description: Promo created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopPromo"
+
+  /coach/shop/promos/{id}:
+    delete:
+      operationId: endShopPromo
+      tags: [shop]
+      summary: End a promo immediately
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/shop/subscriptions:
+    get:
+      operationId: getCoachShopSubscriptions
+      tags: [shop]
+      summary: List the coach's subscription plans (including inactive)
+      responses:
+        "200":
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionPlan"
+
+  /coach/shop/subscriptions/{id}:
+    put:
+      operationId: updateSubscriptionPlan
+      tags: [shop]
+      summary: Update a subscription plan's price/engagement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubscriptionPlanRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionPlan"
+
+  /coach/credits/gift:
+    post:
+      operationId: giftCredits
+      tags: [shop]
+      summary: Gift credits to one or more athletes (no charge)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GiftCreditsRequest"
+      responses:
+        "201":
+          description: Credits gifted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  recipientCount:
+                    type: integer
+
+  /coach/clients/{athleteId}/credits:
+    get:
+      operationId: getClientCredits
+      tags: [shop]
+      summary: Credit balances and recent transaction history for one athlete
+      parameters:
+        - name: athleteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Credits detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteCreditsDetail"
+
+  # CLASSES
+  /classes/occurrences:
+    get:
+      operationId: getClassOccurrences
+      tags: [classes]
+      summary: List upcoming scheduled classes with live capacity and the caller's booking/waitlist status
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Occurrences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassOccurrenceWithAvailability"
+
+  /classes/{occurrenceId}/book:
+    post:
+      operationId: bookClass
+      tags: [classes]
+      summary: Book a class with 1 (or the class's) collective credit
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBooking"
+        "409":
+          description: Class is full or already booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /classes/bookings/{bookingId}/cancel:
+    post:
+      operationId: cancelClassBooking
+      tags: [classes]
+      summary: Cancel a booking (auto-refunds the credit unless inside the cancellation window)
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelBookingResponse"
+
+  /classes/{occurrenceId}/waitlist:
+    post:
+      operationId: joinClassWaitlist
+      tags: [classes]
+      summary: Join the waitlist for a full class
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassWaitlistEntry"
+    delete:
+      operationId: leaveClassWaitlist
+      tags: [classes]
+      summary: Leave the waitlist
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Left
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /classes/{occurrenceId}/waitlist/confirm:
+    post:
+      operationId: confirmClassWaitlistOffer
+      tags: [classes]
+      summary: Confirm an offered waitlist spot within the 30-minute window (debits 1 credit)
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Confirmed and booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBooking"
+        "410":
+          description: Offer expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/classes/templates:
+    get:
+      operationId: getCoachClassTemplates
+      tags: [classes]
+      summary: List the coach's class templates
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassTemplate"
+    post:
+      operationId: createClassTemplate
+      tags: [classes]
+      summary: Create a class template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertClassTemplateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassTemplate"
+
+  /coach/classes/templates/{id}:
+    put:
+      operationId: updateClassTemplate
+      tags: [classes]
+      summary: Update a class template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertClassTemplateRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassTemplate"
+    delete:
+      operationId: deleteClassTemplate
+      tags: [classes]
+      summary: Deactivate a class template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/classes/templates/{id}/schedule:
+    post:
+      operationId: scheduleClassTemplate
+      tags: [classes]
+      summary: Schedule a template onto the calendar — one-off (real date) or weekly-recurring
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleClassRequest"
+      responses:
+        "201":
+          description: Occurrence(s) created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  occurrences:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ClassOccurrence"
+
+  /coach/classes/occurrences:
+    get:
+      operationId: getCoachClassOccurrences
+      tags: [classes]
+      summary: Coach-facing occurrence list with fill counts and waitlist size
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Occurrences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachClassOccurrence"
+
+  /coach/classes/occurrences/{occurrenceId}/register:
+    post:
+      operationId: manualRegisterForClass
+      tags: [classes]
+      summary: Manually register a participant (existing athlete or guest/trial name)
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualRegisterRequest"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassBooking"
+
+  /coach/classes/occurrences/{occurrenceId}/participants:
+    get:
+      operationId: getOccurrenceParticipants
+      tags: [classes]
+      summary: List confirmed participants for a class, with today's ADAPT score
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassParticipant"
+
+  /coach/classes/occurrences/{occurrenceId}/cancel:
+    post:
+      operationId: cancelClassOccurrence
+      tags: [classes]
+      summary: Cancel the whole class — refunds every confirmed booking and notifies everyone
+      parameters:
+        - name: occurrenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  notifiedCount:
+                    type: integer
+
+  /coach/classes/bookings/{bookingId}/waive-late-cancellation:
+    post:
+      operationId: waiveLateCancellation
+      tags: [classes]
+      summary: Forgive a late cancellation after the fact (refunds the credit)
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Waived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/agenda:
+    get:
+      operationId: getCoachAgenda
+      tags: [classes]
+      summary: Unified week/month agenda — group classes and 1:1s merged and sorted
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Agenda entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgendaEntry"
 
   # USERS
   /users/me:
@@ -545,6 +1317,31 @@ paths:
                 $ref: "#/components/schemas/SuccessResponse"
 
   # PROGRAMS
+  /programs/convert-session-text:
+    post:
+      operationId: convertSessionTextWithAi
+      tags: [programs]
+      summary: Convert free-form pasted session text (WhatsApp, Word, ad-hoc notes) into the [BLOC]/exercise syntax the session importer parses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertSessionTextRequest"
+      responses:
+        "200":
+          description: Converted text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvertSessionTextResponse"
+        "503":
+          description: AI conversion not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /programs:
     get:
       operationId: getPrograms
@@ -736,6 +1533,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
+
+  /programs/{id}/insert-off-week:
+    post:
+      operationId: insertProgramOffWeek
+      tags: [programs]
+      summary: Insert an empty (deload/off) week, shifting every later session +1 and growing durationWeeks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertOffWeekRequest"
+      responses:
+        "200":
+          description: Week inserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsertOffWeekResponse"
+        "400":
+          description: atWeek out of bounds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /programs/{id}/send-to-athletes:
+    post:
+      operationId: sendProgramToAthletes
+      tags: [programs]
+      summary: Broadcast a template program to several athletes at once (one transactional copy per athlete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendToAthletesRequest"
+      responses:
+        "201":
+          description: Per-athlete results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendToAthletesResponse"
+        "404":
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ATHLETE
   /athlete/upcoming-sessions:
@@ -1268,6 +2133,160 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /coach/appointments/{id}/confirm:
+    post:
+      operationId: confirmOneOnOneRequest
+      tags: [appointments]
+      summary: Confirm an athlete-requested (or create a direct) 1:1 — debits 1 individuel credit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+        "402":
+          description: Insufficient individuel credits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/appointments/{id}/decline:
+    post:
+      operationId: declineOneOnOneRequest
+      tags: [appointments]
+      summary: Decline an athlete-requested 1:1
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Declined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+
+  /coach/availability:
+    get:
+      operationId: getCoachAvailability
+      tags: [appointments]
+      summary: List the coach's recurring 1:1 availability template
+      responses:
+        "200":
+          description: Slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachAvailabilitySlot"
+    post:
+      operationId: addCoachAvailabilitySlot
+      tags: [appointments]
+      summary: Open a recurring weekly slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAvailabilitySlotRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAvailabilitySlot"
+
+  /coach/availability/{id}:
+    delete:
+      operationId: removeCoachAvailabilitySlot
+      tags: [appointments]
+      summary: Close a recurring slot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /athlete/studio-info:
+    get:
+      operationId: getAthleteStudioInfo
+      tags: [athlete]
+      summary: Public-safe studio info (name, WhatsApp, announcement link) for the athlete's coach
+      responses:
+        "200":
+          description: Studio info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioInfo"
+
+  /athlete/coach-slots:
+    get:
+      operationId: getAthleteCoachSlots
+      tags: [athlete]
+      summary: Open 1:1 slots for a specific date (recurring template minus already-taken times)
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Available slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachAvailabilitySlot"
+
+  /athlete/1on1-requests:
+    post:
+      operationId: createOneOnOneRequest
+      tags: [athlete]
+      summary: Request a 1:1 slot (no credit debited until the coach confirms)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOneOnOneRequest"
+      responses:
+        "201":
+          description: Requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachAppointment"
+        "409":
+          description: Slot no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /coach/scheduled-notifications:
     get:
       operationId: getScheduledNotifications
@@ -1341,6 +2360,184 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/motivation-phrases:
+    get:
+      operationId: getMotivationPhrases
+      tags: [coach]
+      summary: Get the coach's motivation phrase bank
+      responses:
+        "200":
+          description: Motivation phrases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MotivationPhrase"
+    post:
+      operationId: createMotivationPhrase
+      tags: [coach]
+      summary: Add a motivation phrase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMotivationPhraseRequest"
+      responses:
+        "201":
+          description: Phrase created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MotivationPhrase"
+
+  /coach/motivation-phrases/{id}:
+    put:
+      operationId: updateMotivationPhrase
+      tags: [coach]
+      summary: Update a motivation phrase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMotivationPhraseRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MotivationPhrase"
+    delete:
+      operationId: deleteMotivationPhrase
+      tags: [coach]
+      summary: Delete a motivation phrase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /coach/resource-files/upload-url:
+    post:
+      operationId: getResourceFileUploadUrl
+      tags: [coach]
+      summary: Get a signed upload URL for a new resource file
+      responses:
+        "200":
+          description: Signed upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceFileUploadUrlResponse"
+
+  /coach/resource-files:
+    get:
+      operationId: getCoachResourceFiles
+      tags: [coach]
+      summary: List resource files
+      parameters:
+        - name: athleteId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resource files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResourceFile"
+    post:
+      operationId: createResourceFile
+      tags: [coach]
+      summary: Attach metadata to an uploaded resource file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceFileRequest"
+      responses:
+        "201":
+          description: Resource file created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceFile"
+
+  /coach/resource-files/{id}:
+    delete:
+      operationId: deleteResourceFile
+      tags: [coach]
+      summary: Delete a resource file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /resource-files:
+    get:
+      operationId: getResourceFiles
+      tags: [athlete]
+      summary: List resource files shared with the current athlete
+      responses:
+        "200":
+          description: Resource files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResourceFile"
+
+  /resource-files/{id}/signed-url:
+    get:
+      operationId: getResourceFileSignedUrl
+      tags: [athlete]
+      summary: Get a signed download URL for a resource file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Signed URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedUrlResponse"
 
   /coach/challenges:
     get:
@@ -1713,6 +2910,117 @@ paths:
               schema:
                 $ref: "#/components/schemas/NotificationPreferences"
 
+  /coach/invoices:
+    get:
+      operationId: getCoachInvoices
+      tags: [invoicing]
+      summary: List invoices issued by the coach (most recent 200)
+      responses:
+        "200":
+          description: Invoices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceListItem"
+
+  /coach/invoices/{id}/credit-note:
+    post:
+      operationId: createInvoiceCreditNote
+      tags: [invoicing]
+      summary: Issue a credit note against an invoice (corrections only — invoices are never edited or deleted)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCreditNoteRequest"
+      responses:
+        "201":
+          description: Credit note issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "409":
+          description: Invoice already credited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/invoices/export.csv:
+    get:
+      operationId: exportCoachInvoicesCsv
+      tags: [invoicing]
+      summary: Monthly accounting export (CSV) for the accountant
+      parameters:
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /invoices/{id}/pdf:
+    get:
+      operationId: getInvoicePdf
+      tags: [invoicing]
+      summary: Download an invoice or credit note PDF (owner athlete or issuing coach only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /coach/credit-notes:
+    get:
+      operationId: getCoachCreditNotes
+      tags: [invoicing]
+      summary: List credit notes issued by the coach
+      responses:
+        "200":
+          description: Credit notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditNoteListItem"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1789,6 +3097,751 @@ components:
       required:
         - email
         - password
+
+    RegisterAthleteRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        loginCode:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: 6-digit PIN chosen by the athlete, used like a password
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        age:
+          type: integer
+        primaryGoal:
+          type: string
+        fitnessLevel:
+          type: string
+        trainingFrequency:
+          type: integer
+          description: Target sessions per week
+        hasInjuryHistory:
+          type: boolean
+        injuries:
+          type: string
+          description: Required when hasInjuryHistory is true
+        medicalContraindication:
+          type: boolean
+          description: PAR-Q-style safety triage flag, does not block signup
+        acquisitionSource:
+          type: string
+        consent:
+          type: boolean
+          description: Must be true — explicit GDPR consent for health-data processing
+      required:
+        - email
+        - loginCode
+        - firstName
+        - lastName
+        - phone
+        - hasInjuryHistory
+        - medicalContraindication
+        - consent
+
+    LoginCodeRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+      required:
+        - email
+        - code
+
+    ResetLoginCodeRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        newLoginCode:
+          type: string
+          pattern: "^[0-9]{6}$"
+      required:
+        - token
+        - newLoginCode
+
+    StudioSettings:
+      type: object
+      properties:
+        coachId:
+          type: string
+        studioName:
+          type: string
+        studioAddress:
+          type: string
+          nullable: true
+        whatsappNumber:
+          type: string
+          nullable: true
+        announcementLink:
+          type: string
+          nullable: true
+        defaultCancellationWindowHours:
+          type: integer
+        vatRegime:
+          type: string
+          enum: [franchise, assujetti]
+        vatNumber:
+          type: string
+          nullable: true
+        invoicePrefix:
+          type: string
+        accountantEmail:
+          type: string
+          nullable: true
+      required:
+        - coachId
+        - studioName
+        - defaultCancellationWindowHours
+        - vatRegime
+        - invoicePrefix
+
+    StudioInfo:
+      type: object
+      properties:
+        studioName:
+          type: string
+        whatsappNumber:
+          type: string
+          nullable: true
+        announcementLink:
+          type: string
+          nullable: true
+      required:
+        - studioName
+        - whatsappNumber
+        - announcementLink
+
+    UpdateStudioSettingsRequest:
+      type: object
+      properties:
+        studioName:
+          type: string
+        studioAddress:
+          type: string
+          nullable: true
+        whatsappNumber:
+          type: string
+          nullable: true
+        announcementLink:
+          type: string
+          nullable: true
+        defaultCancellationWindowHours:
+          type: integer
+          minimum: 1
+          maximum: 168
+        vatRegime:
+          type: string
+          enum: [franchise, assujetti]
+        vatNumber:
+          type: string
+          nullable: true
+        invoicePrefix:
+          type: string
+        accountantEmail:
+          type: string
+          nullable: true
+
+    ShopPack:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        name:
+          type: string
+        credits:
+          type: integer
+        priceCents:
+          type: integer
+        validityMonths:
+          type: integer
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - creditType
+        - name
+        - credits
+        - priceCents
+        - isActive
+
+    ShopPackWithPrice:
+      allOf:
+        - $ref: "#/components/schemas/ShopPack"
+        - type: object
+          properties:
+            currentPriceCents:
+              type: integer
+              description: List price, or the active promo price if one currently applies
+            hasActivePromo:
+              type: boolean
+          required:
+            - currentPriceCents
+            - hasActivePromo
+
+    CoachShopPack:
+      allOf:
+        - $ref: "#/components/schemas/ShopPack"
+        - type: object
+          properties:
+            activePromo:
+              nullable: true
+              allOf:
+                - $ref: "#/components/schemas/ShopPromo"
+          required:
+            - activePromo
+
+    UpsertShopPackRequest:
+      type: object
+      properties:
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        name:
+          type: string
+        credits:
+          type: integer
+          minimum: 1
+        priceCents:
+          type: integer
+          minimum: 0
+        validityMonths:
+          type: integer
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+
+    ShopPromo:
+      type: object
+      properties:
+        id:
+          type: string
+        packId:
+          type: string
+        discountedPriceCents:
+          type: integer
+        startsAt:
+          type: string
+        expiresAt:
+          type: string
+        createdBy:
+          type: string
+      required:
+        - id
+        - packId
+        - discountedPriceCents
+        - startsAt
+        - expiresAt
+
+    CreateShopPromoRequest:
+      type: object
+      properties:
+        packId:
+          type: string
+        discountedPriceCents:
+          type: integer
+          minimum: 0
+        durationDays:
+          type: integer
+          minimum: 1
+          maximum: 90
+      required:
+        - packId
+        - discountedPriceCents
+        - durationDays
+
+    SubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        name:
+          type: string
+        priceCents:
+          type: integer
+        presentialText:
+          type: string
+          nullable: true
+        tag:
+          type: string
+          nullable: true
+        engagementMonths:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - name
+        - priceCents
+        - isActive
+
+    UpdateSubscriptionPlanRequest:
+      type: object
+      properties:
+        priceCents:
+          type: integer
+          minimum: 0
+        engagementMonths:
+          type: integer
+          nullable: true
+
+    CreateCheckoutSessionRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [pack, subscription]
+        id:
+          type: string
+        successUrl:
+          type: string
+        cancelUrl:
+          type: string
+      required:
+        - type
+        - id
+        - successUrl
+        - cancelUrl
+
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        checkoutUrl:
+          type: string
+          nullable: true
+      required:
+        - checkoutUrl
+
+    CreditBalances:
+      type: object
+      properties:
+        collectif:
+          type: integer
+        individuel:
+          type: integer
+      required:
+        - collectif
+        - individuel
+
+    GiftCreditsRequest:
+      type: object
+      properties:
+        athleteIds:
+          type: array
+          items:
+            type: string
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 50
+        message:
+          type: string
+      required:
+        - athleteIds
+        - creditType
+        - quantity
+
+    AthleteCreditTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        delta:
+          type: integer
+        reason:
+          type: string
+        creditType:
+          type: string
+          enum: [collectif, individuel]
+        createdAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - delta
+        - reason
+        - creditType
+        - createdAt
+
+    AthleteCreditsDetail:
+      type: object
+      properties:
+        balances:
+          type: object
+          properties:
+            collectif:
+              type: integer
+            individuel:
+              type: integer
+          required:
+            - collectif
+            - individuel
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AthleteCreditTransaction"
+      required:
+        - balances
+        - transactions
+
+    ClassTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        priceCents:
+          type: integer
+        creditCost:
+          type: integer
+        durationMin:
+          type: integer
+        cancellationWindowHours:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - name
+        - capacity
+        - priceCents
+        - creditCost
+        - durationMin
+        - isActive
+
+    UpsertClassTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        priceCents:
+          type: integer
+          minimum: 0
+        creditCost:
+          type: integer
+          minimum: 1
+        durationMin:
+          type: integer
+          minimum: 5
+        cancellationWindowHours:
+          type: integer
+          nullable: true
+
+    ScheduleClassRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [once, weekly]
+        startAt:
+          type: string
+          description: Required when mode=once
+        dayOfWeek:
+          type: integer
+          description: Required when mode=weekly (0=Sunday..6=Saturday)
+        startTime:
+          type: string
+          description: "Required when mode=weekly, HH:MM"
+        weeksAhead:
+          type: integer
+      required:
+        - mode
+
+    ClassOccurrence:
+      type: object
+      properties:
+        id:
+          type: string
+        templateId:
+          type: string
+        coachId:
+          type: string
+        startAt:
+          type: string
+        durationMin:
+          type: integer
+        capacity:
+          type: integer
+        status:
+          type: string
+          enum: [scheduled, cancelled]
+      required:
+        - id
+        - templateId
+        - startAt
+        - durationMin
+        - capacity
+        - status
+
+    ClassOccurrenceWithAvailability:
+      allOf:
+        - $ref: "#/components/schemas/ClassOccurrence"
+        - type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+              nullable: true
+            priceCents:
+              type: integer
+            creditCost:
+              type: integer
+            coachFirstName:
+              type: string
+            spotsBooked:
+              type: integer
+            spotsAvailable:
+              type: integer
+            isBooked:
+              type: boolean
+            bookingId:
+              type: string
+              nullable: true
+            waitlistStatus:
+              type: string
+              nullable: true
+          required:
+            - name
+            - priceCents
+            - creditCost
+            - spotsBooked
+            - spotsAvailable
+            - isBooked
+
+    ClassBooking:
+      type: object
+      properties:
+        id:
+          type: string
+        occurrenceId:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+        status:
+          type: string
+        paymentMode:
+          type: string
+        paymentStatus:
+          type: string
+      required:
+        - id
+        - occurrenceId
+        - status
+        - paymentMode
+
+    CancelBookingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        refunded:
+          type: boolean
+        lateCancellation:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+        - refunded
+        - lateCancellation
+
+    ClassWaitlistEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        occurrenceId:
+          type: string
+        athleteId:
+          type: string
+        status:
+          type: string
+          enum: [waiting, offered, expired, confirmed, withdrawn]
+        offerExpiresAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - occurrenceId
+        - athleteId
+        - status
+
+    CoachAvailabilitySlot:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        startTime:
+          type: string
+        isActive:
+          type: boolean
+      required:
+        - id
+        - coachId
+        - dayOfWeek
+        - startTime
+
+    AddAvailabilitySlotRequest:
+      type: object
+      properties:
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        startTime:
+          type: string
+      required:
+        - dayOfWeek
+        - startTime
+
+    CreateOneOnOneRequest:
+      type: object
+      properties:
+        date:
+          type: string
+        time:
+          type: string
+      required:
+        - date
+        - time
+
+    CoachClassOccurrence:
+      allOf:
+        - $ref: "#/components/schemas/ClassOccurrence"
+        - type: object
+          properties:
+            name:
+              type: string
+            spotsBooked:
+              type: integer
+            spotsAvailable:
+              type: integer
+            waitlistCount:
+              type: integer
+          required:
+            - name
+            - spotsBooked
+            - spotsAvailable
+            - waitlistCount
+
+    ManualRegisterRequest:
+      type: object
+      properties:
+        athleteId:
+          type: string
+        guestName:
+          type: string
+        paymentMode:
+          type: string
+          enum: [comped, credit, pay_on_site]
+      required:
+        - paymentMode
+
+    ClassParticipant:
+      type: object
+      properties:
+        bookingId:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+        guestName:
+          type: string
+          nullable: true
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        paymentMode:
+          type: string
+        todayScore:
+          type: integer
+          nullable: true
+      required:
+        - bookingId
+        - paymentMode
+
+    AgendaEntry:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [class, individuel]
+        id:
+          type: string
+        startAt:
+          type: string
+        durationMin:
+          type: integer
+        label:
+          type: string
+        status:
+          type: string
+        spotsBooked:
+          type: integer
+        capacity:
+          type: integer
+        athleteName:
+          type: string
+      required:
+        - kind
+        - id
+        - startAt
+        - durationMin
+        - label
+        - status
 
     RefreshRequest:
       type: object
@@ -2182,7 +4235,7 @@ components:
         athletePRs:
           type: object
           additionalProperties:
-            type: number
+            $ref: "#/components/schemas/AthletePRItem"
         completedAt:
           type: string
           nullable: true
@@ -2207,6 +4260,21 @@ components:
         - exercises
         - adaptScore
 
+    RecordType:
+      type: string
+      enum: [load, reps, time, distance]
+
+    AthletePRItem:
+      type: object
+      properties:
+        recordType:
+          $ref: "#/components/schemas/RecordType"
+        value:
+          type: number
+      required:
+        - recordType
+        - value
+
     CompleteSessionNewPR:
       type: object
       properties:
@@ -2214,15 +4282,18 @@ components:
           type: string
         exerciseName:
           type: string
-        loadKg:
+        recordType:
+          $ref: "#/components/schemas/RecordType"
+        value:
           type: number
-        previousLoadKg:
+        previousValue:
           type: number
           nullable: true
       required:
         - exerciseId
         - exerciseName
-        - loadKg
+        - recordType
+        - value
 
     CompleteSessionResult:
       type: object
@@ -2326,11 +4397,14 @@ components:
           type: string
         exerciseName:
           type: string
-        loadKg:
+        recordType:
+          $ref: "#/components/schemas/RecordType"
+        value:
           type: number
         reps:
           type: integer
-        previousLoadKg:
+          nullable: true
+        previousValue:
           type: number
           nullable: true
         achievedAt:
@@ -2340,8 +4414,8 @@ components:
       required:
         - exerciseId
         - exerciseName
-        - loadKg
-        - reps
+        - recordType
+        - value
 
     PersonalRecordsResponse:
       type: object
@@ -2541,6 +4615,10 @@ components:
                   type: integer
               loadKgUsed:
                 type: number
+              durationSecondsUsed:
+                type: integer
+              distanceMetersUsed:
+                type: number
       required:
         - exercises
 
@@ -2669,6 +4747,8 @@ components:
         coachNotes:
           type: string
           nullable: true
+        isTest:
+          type: boolean
         variants:
           type: array
           items:
@@ -2745,7 +4825,6 @@ components:
           type: string
       required:
         - name
-        - athleteId
         - durationWeeks
 
     UpdateProgramRequest:
@@ -2800,6 +4879,8 @@ components:
           type: integer
         coachNotes:
           type: string
+        isTest:
+          type: boolean
         variants:
           type: array
           items:
@@ -3272,6 +5353,9 @@ components:
         demoUrl:
           type: string
           nullable: true
+        trackingType:
+          type: string
+          enum: [load, bodyweight, time, distance]
       required:
         - id
         - name
@@ -3294,6 +5378,9 @@ components:
             type: string
         demoUrl:
           type: string
+        trackingType:
+          type: string
+          enum: [load, bodyweight, time, distance]
       required:
         - name
 
@@ -3513,16 +5600,16 @@ components:
       properties:
         id:
           type: string
-        loadKg:
+        value:
           type: number
         reps:
           type: integer
+          nullable: true
         achievedAt:
           type: string
       required:
         - id
-        - loadKg
-        - reps
+        - value
         - achievedAt
 
     PRHistoryResponse:
@@ -3532,6 +5619,8 @@ components:
           type: string
         exerciseName:
           type: string
+        recordType:
+          $ref: "#/components/schemas/RecordType"
         history:
           type: array
           items:
@@ -3539,6 +5628,7 @@ components:
       required:
         - exerciseId
         - exerciseName
+        - recordType
         - history
 
     Challenge:
@@ -3683,6 +5773,7 @@ components:
           type: string
         athleteId:
           type: string
+          nullable: true
         message:
           type: string
         recurrenceType:
@@ -3721,6 +5812,7 @@ components:
       properties:
         athleteId:
           type: string
+          nullable: true
         message:
           type: string
         recurrenceType:
@@ -3753,6 +5845,103 @@ components:
         active:
           type: boolean
 
+    MotivationPhrase:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        text:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - coachId
+        - text
+        - active
+
+    CreateMotivationPhraseRequest:
+      type: object
+      properties:
+        text:
+          type: string
+      required:
+        - text
+
+    UpdateMotivationPhraseRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        active:
+          type: boolean
+
+    ResourceFile:
+      type: object
+      properties:
+        id:
+          type: string
+        coachId:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+        title:
+          type: string
+        objectPath:
+          type: string
+        uploadedAt:
+          type: string
+      required:
+        - id
+        - coachId
+        - athleteId
+        - title
+        - objectPath
+        - uploadedAt
+
+    CreateResourceFileRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        objectPath:
+          type: string
+        athleteId:
+          type: string
+          nullable: true
+      required:
+        - title
+        - objectPath
+        - athleteId
+
+    ResourceFileUploadUrlResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+        objectPath:
+          type: string
+        metadataEndpoint:
+          type: string
+      required:
+        - uploadUrl
+        - objectPath
+        - metadataEndpoint
+
+    SignedUrlResponse:
+      type: object
+      properties:
+        signedUrl:
+          type: string
+      required:
+        - signedUrl
+
     CoachAppointment:
       type: object
       properties:
@@ -3774,6 +5963,12 @@ components:
           nullable: true
         type:
           type: string
+        status:
+          type: string
+          enum: [pending, confirmed, declined, cancelled]
+        requestedBy:
+          type: string
+          nullable: true
         createdAt:
           type: string
           nullable: true
@@ -3822,4 +6017,166 @@ components:
           type: string
         notes:
           type: string
+
+    InvoiceListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        invoiceNumber:
+          type: string
+        athleteId:
+          type: string
+        description:
+          type: string
+        regime:
+          type: string
+          enum: [franchise, assujetti]
+        amountHtCents:
+          type: integer
+        vatCents:
+          type: integer
+        amountTtcCents:
+          type: integer
+        paymentMethod:
+          type: string
+        status:
+          type: string
+          enum: [issued, credited]
+        issuedAt:
+          type: string
+        athleteFirstName:
+          type: string
+          nullable: true
+        athleteLastName:
+          type: string
+          nullable: true
+      required:
+        - id
+        - invoiceNumber
+        - athleteId
+        - description
+        - regime
+        - amountHtCents
+        - vatCents
+        - amountTtcCents
+        - paymentMethod
+        - status
+        - issuedAt
+
+    CreateCreditNoteRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - reason
+
+    CreditNoteListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        creditNoteNumber:
+          type: string
+        amountCents:
+          type: integer
+        reason:
+          type: string
+        issuedAt:
+          type: string
+        invoiceId:
+          type: string
+      required:
+        - id
+        - creditNoteNumber
+        - amountCents
+        - reason
+        - issuedAt
+        - invoiceId
+
+    InsertOffWeekRequest:
+      type: object
+      properties:
+        atWeek:
+          type: integer
+          minimum: 1
+      required:
+        - atWeek
+
+    InsertOffWeekResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        insertedWeek:
+          type: integer
+        durationWeeks:
+          type: integer
+      required:
+        - success
+        - insertedWeek
+        - durationWeeks
+
+    SendToAthletesRequest:
+      type: object
+      properties:
+        athleteIds:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 100
+        startDate:
+          type: string
+      required:
+        - athleteIds
+
+    SendToAthletesResultItem:
+      type: object
+      properties:
+        athleteId:
+          type: string
+        status:
+          type: string
+          enum: [sent, failed]
+        programId:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+      required:
+        - athleteId
+        - status
+
+    SendToAthletesResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SendToAthletesResultItem"
+      required:
+        - results
+
+    ConvertSessionTextRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 20000
+      required:
+        - text
+
+    ConvertSessionTextResponse:
+      type: object
+      properties:
+        convertedText:
+          type: string
+      required:
+        - convertedText
 
