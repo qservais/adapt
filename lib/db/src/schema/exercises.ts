@@ -21,6 +21,12 @@ export const exercisesTable = pgTable("exercises", {
   // exercise), bodyweight (max reps), time (best/lowest seconds), or
   // distance (max meters). See prService.ts.
   trackingType: varchar("tracking_type", { length: 20 }).notNull().default("load"),
+  // Provenance for bulk-imported catalogue entries (e.g. the exercises-dataset
+  // seed) — lets the importer upsert idempotently on re-run instead of
+  // duplicating rows, and keeps required attribution traceable. Null for
+  // exercises a coach created by hand.
+  externalSource: varchar("external_source", { length: 50 }),
+  externalId: varchar("external_id", { length: 20 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
