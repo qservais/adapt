@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed": "tsx ./src/seed.ts",
+    "import:exercises-dataset": "tsx ./src/import-exercises-dataset.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

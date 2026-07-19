@@ -499,6 +499,19 @@ export async function runSchemaMigrations(): Promise<void> {
     logger.error({ err }, "runSchemaMigrations: FATAL – resource_files failed");
     throw err;
   }
+
+  // Provenance columns for bulk-imported exercise catalogue entries (e.g.
+  // scripts/src/import-exercises-dataset.ts) — lets the importer upsert
+  // idempotently instead of duplicating rows on re-run.
+  try {
+    await db.execute(sql`ALTER TABLE exercises ADD COLUMN IF NOT EXISTS external_source varchar(50)`);
+    await db.execute(sql`ALTER TABLE exercises ADD COLUMN IF NOT EXISTS external_id varchar(20)`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_exercises_external ON exercises(external_source, external_id) WHERE external_source IS NOT NULL`);
+    logger.info("runSchemaMigrations: exercises.external_source/external_id OK");
+  } catch (err) {
+    logger.error({ err }, "runSchemaMigrations: FATAL – exercises external columns failed");
+    throw err;
+  }
 }
 
 const LMJCOACH_HASH =
