@@ -51,13 +51,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProgramGrid, SessionModal } from "@/components/program-editor";
 
-// `isTest` isn't projected onto the UpcomingSession API type yet (the
-// route handler / OpenAPI schema that build it need a matching additive
-// field — out of scope for this change). Read it defensively so the
-// calendar flag below lights up the moment the API starts sending it,
-// without breaking the current type.
 function sessionIsTest(s: UpcomingSession): boolean {
-  return (s as UpcomingSession & { isTest?: boolean }).isTest === true;
+  return s.isTest === true;
 }
 
 interface PerformanceTest {

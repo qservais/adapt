@@ -557,6 +557,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
       scheduledDate: string;
       estimatedDurationMin: number | null;
       isCompleted: boolean;
+      isTest: boolean;
     }> = [];
 
     if (activeProgram?.startDate) {
@@ -586,6 +587,7 @@ router.get("/coach/clients/:clientId", authenticate, requireRole("coach"), async
           scheduledDate: sessionDateStr(activeProgram.startDate as string, session.weekNumber, session.dayNumber),
           estimatedDurationMin: session.estimatedDurationMin,
           isCompleted: completedSessionIds.has(session.id),
+          isTest: session.isTest,
         });
       }
 

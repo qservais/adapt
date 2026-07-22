@@ -5005,6 +5005,8 @@ components:
           type: boolean
         isAppointment:
           type: boolean
+        isTest:
+          type: boolean
       required:
         - sessionId
         - sessionName

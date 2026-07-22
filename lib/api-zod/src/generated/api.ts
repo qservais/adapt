@@ -1801,6 +1801,7 @@ export const GetAthleteUpcomingSessionsResponseItem = zod.object({
   visioLink: zod.string().nullish(),
   isPreview: zod.boolean().optional(),
   isAppointment: zod.boolean().optional(),
+  isTest: zod.boolean().optional(),
 });
 export const GetAthleteUpcomingSessionsResponse = zod.array(
   GetAthleteUpcomingSessionsResponseItem,
@@ -2127,6 +2128,7 @@ export const GetClientDetailResponse = zod.object({
         visioLink: zod.string().nullish(),
         isPreview: zod.boolean().optional(),
         isAppointment: zod.boolean().optional(),
+        isTest: zod.boolean().optional(),
       }),
     )
     .optional(),

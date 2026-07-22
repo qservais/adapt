@@ -820,6 +820,7 @@ router.get("/athlete/upcoming-sessions", authenticate, requireRole("athlete"), a
           visioLink: session.visioLink ?? null,
           isAppointment: false,
           isPreview: isProgramInPreview,
+          isTest: session.isTest,
         });
       }
     }

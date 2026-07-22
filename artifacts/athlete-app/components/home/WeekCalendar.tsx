@@ -56,13 +56,8 @@ const SESSION_TYPE_ICON: Record<string, React.ComponentProps<typeof Feather>["na
   technique: "target",
 };
 
-// `isTest` isn't projected onto the UpcomingSession API type yet (the
-// backend route / OpenAPI schema that build it need a matching additive
-// field — out of scope for this change). Read it defensively so the TEST
-// badge below lights up the moment the API starts sending it, without
-// breaking the current type.
 function sessionIsTest(session: UpcomingSession): boolean {
-  return (session as UpcomingSession & { isTest?: boolean }).isTest === true;
+  return session.isTest === true;
 }
 
 function getSessionTypeColor(session: UpcomingSession): string {

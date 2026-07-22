@@ -1051,6 +1051,7 @@ export interface UpcomingSession {
   visioLink?: string | null;
   isPreview?: boolean;
   isAppointment?: boolean;
+  isTest?: boolean;
 }
 
 export interface LibrarySession {
