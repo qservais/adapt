@@ -56,7 +56,17 @@ const SESSION_TYPE_ICON: Record<string, React.ComponentProps<typeof Feather>["na
   technique: "target",
 };
 
+// `isTest` isn't projected onto the UpcomingSession API type yet (the
+// backend route / OpenAPI schema that build it need a matching additive
+// field — out of scope for this change). Read it defensively so the TEST
+// badge below lights up the moment the API starts sending it, without
+// breaking the current type.
+function sessionIsTest(session: UpcomingSession): boolean {
+  return (session as UpcomingSession & { isTest?: boolean }).isTest === true;
+}
+
 function getSessionTypeColor(session: UpcomingSession): string {
+  if (sessionIsTest(session)) return COLORS.amber;
   if (session.isCompleted) return COLORS.green;
   const typeColor = SESSION_TYPE_COLOR[session.sessionType];
   if (typeColor) return typeColor;
@@ -64,6 +74,7 @@ function getSessionTypeColor(session: UpcomingSession): string {
 }
 
 function getSessionTypeIcon(session: UpcomingSession): React.ComponentProps<typeof Feather>["name"] {
+  if (sessionIsTest(session)) return "flag";
   if (session.isCompleted) return "check";
   if (session.sessionLocation === "presentiel") return "map-pin";
   return SESSION_TYPE_ICON[session.sessionType] ?? "zap";
@@ -191,6 +202,7 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
               const typeColor = getSessionTypeColor(session);
               const iconName = getSessionTypeIcon(session);
               const trainingType = SESSION_TYPE_FR[session.sessionType] ?? session.sessionType;
+              const isTest = sessionIsTest(session);
               return (
                 <View key={session.sessionId} style={styles.sheetSessionItem}>
                   <View style={[styles.sheetSessionDot, {
@@ -204,6 +216,17 @@ export function WeekCalendar({ sessions }: WeekCalendarProps) {
                       {session.sessionName}
                     </Text>
                     <View style={styles.sheetSessionMeta}>
+                      {isTest ? (
+                        <View style={[styles.sheetLocationBadge, {
+                          borderColor: `${COLORS.amber}50`,
+                          backgroundColor: `${COLORS.amber}20`,
+                        }]}>
+                          <Feather name="flag" size={10} color={COLORS.amber} />
+                          <Text style={[styles.sheetLocationText, { fontFamily: FONTS.mono, color: COLORS.amber }]}>
+                            TEST
+                          </Text>
+                        </View>
+                      ) : null}
                       {trainingType ? (
                         <View style={[styles.sheetLocationBadge, {
                           borderColor: `${typeColor}40`,

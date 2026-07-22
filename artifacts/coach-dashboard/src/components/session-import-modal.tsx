@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import {
   FileText, Loader2, CheckCircle2, AlertCircle,
   ChevronRight, X, Search, RotateCcw, ClipboardPaste,
-  Layers, Plus, Sparkles,
+  Layers, Plus, Sparkles, FlaskConical, Video, MessageSquare, Info,
 } from "lucide-react";
 import { cn } from "@/components/ui/mode-badge";
 import { useGetExercises, ExerciseData, useConvertSessionTextWithAi } from "@workspace/api-client-react";
@@ -28,6 +28,7 @@ interface ParsedExercise {
   restSeconds: number;
   tempo: string;
   coachCue: string;
+  videoUrl: string;
   matchedExercise: ExerciseData | null;
   matchCandidates: ExerciseData[];
   status: "matched" | "ambiguous" | "unmatched";
@@ -37,7 +38,29 @@ interface ParsedBlock {
   blockType: BlockType;
   blockLabel: string;
   durationMin: number;
+  isTest: boolean;
+  notes: string[];
   exercises: ParsedExercise[];
+}
+
+// Session-level metadata lifted from an optional [PROGRAMME]/[SEMAINE]/
+// [SEANCE] wrapper around the pasted text (grammar: "[PROGRAMME] [SEMAINE]
+// [SEANCE] nom | durée | jour"). All optional — a bare [BLOC]/exercice
+// paste with no wrapper at all is the common case and still parses fine.
+export interface SessionImportMeta {
+  isTest: boolean;
+  sessionName?: string;
+  sessionDurationMin?: number;
+  sessionDay?: string;
+  sessionNote?: string;
+  programName?: string;
+  // How many additional [SEANCE] blocks were found (and skipped) after the
+  // first one — this modal imports one session at a time.
+  extraSessionsSkipped: number;
+}
+
+interface ParsedSessionText extends SessionImportMeta {
+  blocks: ParsedBlock[];
 }
 
 // ─── Matching helpers ─────────────────────────────────────────────────────────
@@ -206,27 +229,132 @@ function parseDosage(raw: string): Dosage {
 }
 
 // ─── Main parser ──────────────────────────────────────────────────────────────
-
-function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[] {
+//
+// Handles the full grammar from the scope PDF:
+//   [PROGRAMME] [SEMAINE] [SEANCE] nom | durée | jour
+//   [BLOC] nom libre | durée
+//   Exercice | prescription | repos | note | lien vidéo
+//   > lignes de notes libres
+//
+// [PROGRAMME]/[SEMAINE]/[SEANCE] are all optional — the common case is a
+// coach pasting a single session, which may start directly with [BLOC] or
+// directly with [SEANCE]. If the pasted text contains more than one
+// [SEANCE] (a full multi-week program paste), only the FIRST session's
+// blocks are parsed/imported here — this modal imports one session at a
+// time into one calendar cell — and the number of skipped sessions is
+// reported back via `extraSessionsSkipped` so the UI can tell the coach.
+function parseSessionText(text: string, exercises: ExerciseData[]): ParsedSessionText {
   const lines = text.split("\n").map(l => l.trim());
   const blocks: ParsedBlock[] = [];
   let currentBlock: ParsedBlock | null = null;
+  // Most recently parsed exercise in the current line-group — used to
+  // attach a following `>` note line to it. Reset on every section header.
+  let lastExercise: ParsedExercise | null = null;
+
+  let isTest = false;
+  let sessionName: string | undefined;
+  let sessionDurationMin: number | undefined;
+  let sessionDay: string | undefined;
+  let sessionNote: string | undefined;
+  let programName: string | undefined;
+
+  let seenSeance = false;
+  let stopParsing = false;
+  let extraSessionsSkipped = 0;
 
   for (const line of lines) {
     if (!line) continue;
 
-    // ── [BLOC] header ──
-    const blocMatch = line.match(/^\[BLOC\]\s*(.+?)(?:\s*\|\s*(\d+(?:[.,]\d+)?)\s*min)?$/i);
+    if (stopParsing) {
+      if (/^\[SEANCE\]/i.test(line)) extraSessionsSkipped++;
+      continue;
+    }
+
+    // ── [PROGRAMME] — free-text program title, only meaningful for a
+    // multi-week/multi-session paste. Captured but not otherwise used by
+    // this single-session-at-a-time import modal. ──
+    const programmeMatch = line.match(/^\[PROGRAMME\]\s*(.*)$/i);
+    if (programmeMatch) {
+      programName = programmeMatch[1].trim() || undefined;
+      currentBlock = null;
+      lastExercise = null;
+      continue;
+    }
+
+    // ── [SEMAINE] N — week marker, informational only at this granularity. ──
+    if (/^\[SEMAINE\]/i.test(line)) {
+      currentBlock = null;
+      lastExercise = null;
+      continue;
+    }
+
+    // ── [SEANCE] nom | durée | jour (+ optional trailing `| test` tag) ──
+    const seanceMatch = line.match(/^\[SEANCE\]\s*(.*)$/i);
+    if (seanceMatch) {
+      if (seenSeance) {
+        // A second session in the same paste — stop here, this modal
+        // imports one session at a time (see report to the coach below).
+        stopParsing = true;
+        extraSessionsSkipped++;
+        continue;
+      }
+      seenSeance = true;
+      let fields = seanceMatch[1].split("|").map(p => p.trim());
+      if (fields.length > 0 && /^test$/i.test(fields[fields.length - 1])) {
+        isTest = true;
+        fields = fields.slice(0, -1);
+      }
+      sessionName = fields[0] || undefined;
+      if (fields[1]) {
+        const m = fields[1].match(/(\d+(?:[.,]\d+)?)/);
+        if (m) sessionDurationMin = parseFloat(m[1].replace(",", "."));
+      }
+      sessionDay = fields[2] || undefined;
+      currentBlock = null;
+      lastExercise = null;
+      continue;
+    }
+
+    // ── `>` free-note line — attach to whatever precedes it: the exercise
+    // just parsed in this line-group, else the current block, else the
+    // session itself (e.g. a note right after [SEANCE], before any block). ──
+    if (line.startsWith(">")) {
+      const noteText = line.slice(1).trim();
+      if (!noteText) continue;
+      if (lastExercise) {
+        lastExercise.coachCue = lastExercise.coachCue ? `${lastExercise.coachCue} ${noteText}` : noteText;
+      } else if (currentBlock) {
+        currentBlock.notes.push(noteText);
+      } else {
+        sessionNote = sessionNote ? `${sessionNote} ${noteText}` : noteText;
+      }
+      continue;
+    }
+
+    // ── [BLOC] header (unchanged matching, extended with a `| test` tag) ──
+    const blocMatch = line.match(/^\[BLOC\]\s*(.+)$/i);
     if (blocMatch) {
-      const label = blocMatch[1].trim();
-      const durationMin = blocMatch[2] ? parseFloat(blocMatch[2].replace(",", ".")) : 15;
+      let rest = blocMatch[1].trim();
+      let blockIsTest = false;
+      const testTagMatch = rest.match(/^(.*?)\|\s*test\s*$/i);
+      if (testTagMatch) {
+        blockIsTest = true;
+        rest = testTagMatch[1].trim();
+      }
+      const durMatch = rest.match(/^(.+?)(?:\s*\|\s*(\d+(?:[.,]\d+)?)\s*min)?$/i);
+      const label = (durMatch ? durMatch[1] : rest).trim();
+      const durationMin = durMatch && durMatch[2] ? parseFloat(durMatch[2].replace(",", ".")) : 15;
+      if (blockIsTest) isTest = true;
       currentBlock = {
         blockType: detectBlockType(label),
         blockLabel: label,
         durationMin,
+        isTest: blockIsTest,
+        notes: [],
         exercises: [],
       };
       blocks.push(currentBlock);
+      lastExercise = null;
       continue;
     }
 
@@ -234,7 +362,7 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
     // Skip lines that look like section headers without [BLOC] prefix but contain no pipe
     if (!currentBlock) {
       // Create an implicit "strength" block
-      currentBlock = { blockType: "strength", blockLabel: "Force", durationMin: 20, exercises: [] };
+      currentBlock = { blockType: "strength", blockLabel: "Force", durationMin: 20, isTest: false, notes: [], exercises: [] };
       blocks.push(currentBlock);
     }
 
@@ -250,6 +378,7 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
     let restSeconds = 90;
     let tempo = "";
     let coachCue = "";
+    let videoUrl = "";
 
     if (parts.length >= 2) {
       // Field 1: dosage
@@ -262,8 +391,17 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
       for (let i = 2; i < parts.length; i++) {
         const f = parts[i].trim();
 
+        // Video link: a field containing a URL is captured as the video
+        // link, separately from the free-text note (never conflated).
+        const urlMatch = f.match(/https?:\/\/\S+/i);
+
+        if (urlMatch) {
+          videoUrl = urlMatch[0];
+          const remainder = f.replace(urlMatch[0], "").trim();
+          if (remainder) coachCue = coachCue ? `${coachCue} ${remainder}` : remainder;
+
         // Load: "80kg", "60%", "PDC", "poids de corps"
-        if (/^(?:pdc|poids\s*de\s*corps)$/i.test(f)) {
+        } else if (/^(?:pdc|poids\s*de\s*corps)$/i.test(f)) {
           loadKg = 0;
         } else if (/^\d+(?:[.,]\d+)?\s*kg$/i.test(f)) {
           loadKg = parseFloat(f.replace(",", "."));
@@ -282,9 +420,9 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
         } else if (/^(?:tempo\s*)?\d+-\d+-\d+-\d+$/i.test(f)) {
           tempo = f.replace(/^tempo\s*/i, "").trim();
 
-        // Anything else is a coach cue / indication
+        // Anything else is a coach cue / free note
         } else if (f.length > 0) {
-          coachCue = f;
+          coachCue = coachCue ? `${coachCue} ${f}` : f;
         }
       }
     } else {
@@ -300,7 +438,7 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
 
     const match = matchExercise(rawName, exercises);
 
-    currentBlock.exercises.push({
+    const parsedExercise: ParsedExercise = {
       rawName,
       sets: isNaN(sets) ? 1 : sets,
       reps: reps || "8",
@@ -309,67 +447,23 @@ function parseSessionText(text: string, exercises: ExerciseData[]): ParsedBlock[
       restSeconds: isNaN(restSeconds) ? 90 : restSeconds,
       tempo,
       coachCue,
+      videoUrl,
       ...match,
-    });
+    };
+    currentBlock.exercises.push(parsedExercise);
+    lastExercise = parsedExercise;
   }
 
-  return blocks.filter(b => b.exercises.length > 0);
-}
-
-// ─── Multi-session program parser ──────────────────────────────────────────────
-
-export interface ParsedProgramSession {
-  weekNumber: number;
-  dayNumber: number;
-  blocks: ParsedBlock[];
-}
-
-// A layer above parseSessionText, not a replacement for it — splits a
-// multi-week paste into per-session chunks on [SEMAINE N] / [SEANCE J]
-// headers, then delegates each chunk's body to parseSessionText (unchanged)
-// for the actual [BLOC]/exercice parsing and exercise-catalog matching. A
-// leading [PROGRAMME ...] line, if present, is skipped — it carries no
-// field this function needs (the caller already knows the target program
-// from context) and is only there so a pasted block reads naturally.
-export function parseProgramText(text: string, exercises: ExerciseData[]): ParsedProgramSession[] {
-  const lines = text.split("\n");
-  const chunks: { weekNumber: number; dayNumber: number; bodyLines: string[] }[] = [];
-
-  let currentWeek: number | null = null;
-  let currentDay: number | null = null;
-  let bodyLines: string[] = [];
-
-  const flush = () => {
-    if (currentWeek !== null && currentDay !== null && bodyLines.some(l => l.trim())) {
-      chunks.push({ weekNumber: currentWeek, dayNumber: currentDay, bodyLines });
-    }
-    bodyLines = [];
+  return {
+    blocks: blocks.filter(b => b.exercises.length > 0),
+    isTest,
+    sessionName,
+    sessionDurationMin,
+    sessionDay,
+    sessionNote,
+    programName,
+    extraSessionsSkipped,
   };
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    const weekMatch = line.match(/^\[SEMAINE\s+(\d+)\]$/i);
-    const dayMatch = line.match(/^\[SEANCE\s+(\d+)\]$/i);
-
-    if (weekMatch) {
-      flush();
-      currentWeek = parseInt(weekMatch[1], 10);
-      currentDay = null;
-    } else if (dayMatch) {
-      flush();
-      currentDay = parseInt(dayMatch[1], 10);
-    } else if (currentWeek !== null && currentDay !== null) {
-      bodyLines.push(rawLine);
-    }
-    // Lines before the first [SEMAINE]/[SEANCE] pair (e.g. a [PROGRAMME] title) are ignored.
-  }
-  flush();
-
-  return chunks.map(c => ({
-    weekNumber: c.weekNumber,
-    dayNumber: c.dayNumber,
-    blocks: parseSessionText(c.bodyLines.join("\n"), exercises),
-  }));
 }
 
 // ─── Convert to BlockDraft[] ──────────────────────────────────────────────────
@@ -518,6 +612,18 @@ function ExerciseMatchRow({ item, blockType, globalIndex, allExercises, onChange
             </div>
           ) : (
             <p className="text-xs text-muted-foreground mt-0.5">Aucun exercice trouvé</p>
+          )}
+          {item.videoUrl && (
+            <a
+              href={item.videoUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="flex items-center gap-1 w-fit mt-0.5 text-[10px] text-primary/80 hover:text-primary transition-colors"
+            >
+              <Video className="w-3 h-3 shrink-0" />
+              <span className="truncate max-w-[240px]">{item.videoUrl}</span>
+            </a>
           )}
         </div>
       </div>
@@ -690,18 +796,23 @@ function InlineField({ label, suffix, children }: { label: string; suffix?: stri
 interface SessionImportModalProps {
   open: boolean;
   onClose: () => void;
-  onImport: (blocks: BlockDraft[]) => void;
+  onImport: (blocks: BlockDraft[], meta?: SessionImportMeta) => void;
 }
 
 type Step = "input" | "review";
 
-const EXAMPLE_TEXT = `[BLOC] Échauffement | 6min
+const EMPTY_SESSION_META: SessionImportMeta = { isTest: false, extraSessionsSkipped: 0 };
+
+const EXAMPLE_TEXT = `[SEANCE] Force Bas du corps | 45 min | LUN
+> Focus : rester strict sur l'exécution.
+
+[BLOC] Échauffement | 6min
 Montées de genoux sur place | 30s | Respiration ample
 Talons-fesses | 30s
 
 [BLOC] Force | 18min
 Squat | 4x8 | 80kg | repos 90s | tempo 3-1-1-0
-Fente bulgare | 3x10 | PDC | repos 60s
+Fente bulgare | 3x10 | PDC | repos 60s | https://youtu.be/exemple
 
 [BLOC] Gainage/Core | 6min
 Planche | 3x45s | repos 60s | Gainage serré`;
@@ -710,6 +821,7 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
   const [step, setStep] = useState<Step>("input");
   const [text, setText] = useState("");
   const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
+  const [sessionMeta, setSessionMeta] = useState<SessionImportMeta>(EMPTY_SESSION_META);
   const [isParsing, setIsParsing] = useState(false);
   const { toast } = useToast();
   const convertMutation = useConvertSessionTextWithAi();
@@ -751,8 +863,9 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
     if (!text.trim()) return;
     setIsParsing(true);
     setTimeout(() => {
-      const result = parseSessionText(text, allExercises);
-      setParsedBlocks(result);
+      const { blocks, ...meta } = parseSessionText(text, allExercises);
+      setParsedBlocks(blocks);
+      setSessionMeta(meta);
       setStep("review");
       setIsParsing(false);
     }, 200);
@@ -774,7 +887,7 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
 
   const handleConfirm = () => {
     const blocks = parsedBlocksToBlockDrafts(parsedBlocks);
-    onImport(blocks);
+    onImport(blocks, sessionMeta);
     handleClose();
   };
 
@@ -782,6 +895,7 @@ export function SessionImportModal({ open, onClose, onImport }: SessionImportMod
     setStep("input");
     setText("");
     setParsedBlocks([]);
+    setSessionMeta(EMPTY_SESSION_META);
     setExtraExercises([]);
     onClose();
   };
@@ -819,6 +933,9 @@ Squat | 4x8 | 80kg | repos 90s | tempo 3-1-1-0
 Planche | 3x45s | repos 60s | Gainage serré`}</pre>
               <p className="text-muted-foreground text-[10px]">
                 Blocs disponibles : Échauffement · Force · Puissance · Conditioning · Gainage/Core · Mobilité · Activation · Technique · Pliométrie · HIIT · Récupération
+              </p>
+              <p className="text-muted-foreground text-[10px]">
+                Optionnel : commence par <span className="font-mono text-primary/70">[SEANCE] Nom | durée | jour</span> pour une séance complète, ajoute une ligne <span className="font-mono text-primary/70">&gt; note libre</span> pour un commentaire, colle un lien vidéo dans un champ d'exercice, ou termine une ligne [SEANCE]/[BLOC] par <span className="font-mono text-primary/70">| test</span> pour marquer une séance test.
               </p>
             </div>
 
@@ -889,12 +1006,45 @@ Planche | 3x45s | repos 60s | Gainage serré`}</pre>
                   <span className="text-xs text-amber-400 font-medium">{unmatchedCount} à corriger</span>
                 </div>
               )}
+              {sessionMeta.isTest && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-400/10 border border-orange-400/30">
+                  <FlaskConical className="w-3.5 h-3.5 text-orange-400" />
+                  <span className="text-xs text-orange-400 font-medium">Séance test détectée</span>
+                </div>
+              )}
               <button type="button" onClick={() => setStep("input")}
                 className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-white transition-colors">
                 <RotateCcw className="w-3 h-3" />
                 Modifier le texte
               </button>
             </div>
+
+            {(sessionMeta.sessionName || sessionMeta.sessionDay || sessionMeta.sessionDurationMin != null) && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Info className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Séance détectée : <span className="text-white font-medium">{sessionMeta.sessionName ?? "—"}</span>
+                  {sessionMeta.sessionDurationMin != null && <> · {sessionMeta.sessionDurationMin} min</>}
+                  {sessionMeta.sessionDay && <> · {sessionMeta.sessionDay}</>}
+                </span>
+              </div>
+            )}
+
+            {sessionMeta.sessionNote && (
+              <div className="flex items-start gap-1.5 text-xs text-muted-foreground italic">
+                <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{sessionMeta.sessionNote}</span>
+              </div>
+            )}
+
+            {sessionMeta.extraSessionsSkipped > 0 && (
+              <div className="flex items-start gap-1.5 px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs text-amber-400/90">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  Le texte collé contient {sessionMeta.extraSessionsSkipped} autre{sessionMeta.extraSessionsSkipped > 1 ? "s" : ""} séance{sessionMeta.extraSessionsSkipped > 1 ? "s" : ""} ([SEANCE]) — seule la première a été analysée. Importe les autres une par une.
+                </span>
+              </div>
+            )}
 
             {/* Blocks */}
             <div className="space-y-4">
@@ -909,10 +1059,26 @@ Planche | 3x45s | repos 60s | Gainage serré`}</pre>
                       <Icon className={cn("w-4 h-4 shrink-0", meta.color)} />
                       <span className={cn("text-sm font-semibold", meta.color)}>{pb.blockLabel}</span>
                       <span className="text-xs text-muted-foreground">{pb.durationMin}min</span>
+                      {pb.isTest && (
+                        <span className="flex items-center gap-0.5 text-[8px] uppercase font-bold px-1 py-0.5 rounded-sm bg-orange-400/10 text-orange-400 border border-dashed border-orange-400/40">
+                          <FlaskConical className="w-2 h-2" />
+                          Test
+                        </span>
+                      )}
                       <span className="ml-auto text-xs text-muted-foreground">
                         {blockMatched}/{pb.exercises.length}
                       </span>
                     </div>
+                    {pb.notes.length > 0 && (
+                      <div className="px-3 pb-1.5 -mt-1 space-y-0.5">
+                        {pb.notes.map((n, ni) => (
+                          <p key={ni} className="flex items-start gap-1 text-[10px] text-muted-foreground italic">
+                            <MessageSquare className="w-2.5 h-2.5 mt-0.5 shrink-0" />
+                            {n}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                     <div className="px-3 pb-3 pt-1 space-y-2">
                       {pb.exercises.map((ex, eIdx) => (
                         <ExerciseMatchRow

@@ -1267,8 +1267,8 @@ export function SessionModal({ programId, weekNumber, dayNumber, session, open, 
       <SessionImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        onImport={(blocks) => {
-          setDraft(d => ({ ...d, blocks }));
+        onImport={(blocks, meta) => {
+          setDraft(d => ({ ...d, blocks, isTest: meta?.isTest ?? d.isTest }));
           setImportOpen(false);
         }}
       />
@@ -1571,12 +1571,15 @@ function QuickImportSession({ programId, weekNumber, dayNumber, open, onClose, o
   const [step, setStep] = useState<"import" | "name">("import");
   const [blocks, setBlocks] = useState<BlockDraft[]>([]);
   const [name, setName] = useState("");
+  const [isTest, setIsTest] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const addMutation = useAddProgramSession();
   const { toast } = useToast();
 
-  const handleImport = (importedBlocks: BlockDraft[]) => {
+  const handleImport: React.ComponentProps<typeof SessionImportModal>["onImport"] = (importedBlocks, meta) => {
     setBlocks(importedBlocks);
+    setIsTest(meta?.isTest ?? false);
+    setName(meta?.sessionName ?? "");
     setStep("name");
   };
 
@@ -1613,6 +1616,7 @@ function QuickImportSession({ programId, weekNumber, dayNumber, open, onClose, o
           visioLink: null,
           estimatedDurationMin: 60,
           coachNotes: "",
+          isTest,
           blocks: blocksPayload,
         },
       });
@@ -1629,6 +1633,7 @@ function QuickImportSession({ programId, weekNumber, dayNumber, open, onClose, o
     setStep("import");
     setBlocks([]);
     setName("");
+    setIsTest(false);
     onClose();
   };
 
