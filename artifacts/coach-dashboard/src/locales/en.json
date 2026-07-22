@@ -195,6 +195,12 @@
     "item_messages_subtitle": "Athlete communication",
     "item_settings_title": "Settings",
     "item_settings_subtitle": "Profile and preferences",
+    "item_create_title": "Create",
+    "item_create_subtitle": "Build a program",
+    "item_notifs_title": "Notifs",
+    "item_notifs_subtitle": "Reminders and motivation",
+    "item_profile_title": "Profile",
+    "item_profile_subtitle": "Account and billing",
     "logout": "Log out"
   },
   "dashboard": {

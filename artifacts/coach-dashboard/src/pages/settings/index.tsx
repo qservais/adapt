@@ -43,7 +43,13 @@ async function updateLanguagePreference(lang: SupportedLanguage): Promise<void> 
   }).catch(() => {});
 }
 
-export default function SettingsPage() {
+/**
+ * Everything from the old standalone Settings page (avatar, profile, language,
+ * web push, logout) — extracted so it can be embedded inside the new Profil
+ * page without duplicating logic. The /settings route (unlinked from nav but
+ * kept intact) still renders this via the default export below.
+ */
+export function SettingsSections() {
   const { t } = useTranslation();
   const { user, refetchUser, logout } = useAuth();
   const { toast } = useToast();
@@ -138,14 +144,7 @@ export default function SettingsPage() {
   const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-display text-white flex items-center gap-3">
-          <Settings className="w-8 h-8 text-primary" /> {t("settings.title")}
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">{t("settings.subtitle")}</p>
-      </div>
-
+    <div className="space-y-8">
       <div className="bg-card border border-border rounded-xl p-6 space-y-6">
         <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
           {t("settings.avatar.section")}
@@ -275,6 +274,26 @@ export default function SettingsPage() {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Standalone /settings route. Kept intact (not linked from the top-level nav
+ * anymore — superseded by /profile) so nothing is deleted and the route stays
+ * reachable/re-linkable later.
+ */
+export default function SettingsPage() {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-display text-white flex items-center gap-3">
+          <Settings className="w-8 h-8 text-primary" /> {t("settings.title")}
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("settings.subtitle")}</p>
+      </div>
+      <SettingsSections />
     </div>
   );
 }
