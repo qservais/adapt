@@ -276,17 +276,12 @@ export default function SessionTab() {
     }
   };
 
-  const handlePickSessionMode = (sessionId: string, sessionName: string) => {
+  // Guided vs. Tableau is no longer a choice — there is one unified
+  // session-logging flow (board.tsx). handleStartCoachedGuided is kept but
+  // no longer called from here (dead code, per the non-destructive policy).
+  const handlePickSessionMode = (sessionId: string, _sessionName: string) => {
     if (startingSessionId) return;
-    Alert.alert(
-      sessionName,
-      "Comment veux-tu lancer cette séance ?",
-      [
-        { text: "Mode Guidé", onPress: () => handleStartCoachedGuided(sessionId, sessionName) },
-        { text: "Mode Tableau", onPress: () => handleStartCoachedBoard(sessionId) },
-        { text: "Annuler", style: "cancel" },
-      ],
-    );
+    handleStartCoachedBoard(sessionId);
   };
 
   const handleStartCoachedBoard = async (sessionId: string) => {

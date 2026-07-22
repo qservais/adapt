@@ -537,33 +537,20 @@ export default function ExerciseDetailScreen() {
         )}
       </ScrollView>
 
-      {exercise != null && (
+      {/* "Faire maintenant" (do-now / free-session start) hidden for V1 —
+          see openDoNowSheet/handleConfirmDoNow, kept but unused, out of
+          scope. "Reprendre ma séance" (resume today's program session,
+          unrelated to the free-session feature) stays. */}
+      {exercise != null && hasSession && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
-          {hasSession && (
-            <TouchableOpacity
-              onPress={() => router.replace("/(tabs)/session")}
-              style={styles.sessionBtn}
-              activeOpacity={0.85}
-            >
-              <Feather name="zap" size={18} color={COLORS.bg} />
-              <Text style={[styles.sessionBtnText, { fontFamily: FONTS.bodyBold }]}>
-                Reprendre ma séance
-              </Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
-            onPress={openDoNowSheet}
-            disabled={isStarting}
-            style={[styles.doNowBtn, isStarting && { opacity: 0.7 }]}
+            onPress={() => router.replace("/(tabs)/session")}
+            style={styles.sessionBtn}
             activeOpacity={0.85}
           >
-            {isStarting ? (
-              <ActivityIndicator size="small" color={COLORS.bg} />
-            ) : (
-              <Feather name="play" size={20} color={COLORS.bg} />
-            )}
-            <Text style={[styles.doNowText, { fontFamily: FONTS.bodyBold }]}>
-              {isStarting ? "Préparation..." : "Faire maintenant"}
+            <Feather name="zap" size={18} color={COLORS.bg} />
+            <Text style={[styles.sessionBtnText, { fontFamily: FONTS.bodyBold }]}>
+              Reprendre ma séance
             </Text>
           </TouchableOpacity>
         </View>

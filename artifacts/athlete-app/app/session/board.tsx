@@ -3,7 +3,9 @@ import { getGenericErrorMessage } from "@/lib/errors";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -12,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -21,11 +24,14 @@ import {
   useGetTodaySession,
   useCompleteSession,
 } from "@workspace/api-client-react";
-import type { SessionBlockItem, SessionExerciseItem } from "@workspace/api-client-react";
+import type { AthletePRItem, SessionBlockItem, SessionExerciseItem } from "@workspace/api-client-react";
 import { COLORS, FONTS, MODE_CONFIG, type SessionMode } from "@/constants/theme";
 import { BLOCK_TYPE_COLORS, BLOCK_TYPE_LABELS } from "@/constants/blockTypes";
 import { useFormatWeight } from "@/context/PreferencesContext";
 import { getFreeSession, clearFreeSession } from "@/lib/freeSessionStore";
+import { Stepper } from "@/components/ui/Stepper";
+import { CircularTimer } from "@/components/ui/CircularTimer";
+import { PRToast, type PRToastData } from "@/components/ui/PRToast";
 
 type SetState = { load: string; reps: string; durationSeconds: string; done: boolean };
 type ExState = SetState[];
@@ -69,6 +75,28 @@ function initialSetState(ex: SessionExerciseItem): ExState {
   }));
 }
 
+// Exact copy/format ported verbatim from exercise.tsx's `lastUsedLabel` —
+// always shown in kg regardless of the athlete's unit preference, per the
+// spec's "match the exact copy" requirement.
+function lastUsedLabelFor(ex: { lastUsedLoadKg?: number | null; lastUsedDate?: string | null }): string | null {
+  if (ex.lastUsedLoadKg == null) return null;
+  if (!ex.lastUsedDate) return `Dernière fois : ${ex.lastUsedLoadKg} kg`;
+  const d = new Date(ex.lastUsedDate);
+  const day = d.getDate();
+  const month = d.toLocaleDateString("fr-FR", { month: "short" });
+  return `Dernière fois : ${ex.lastUsedLoadKg} kg · ${day} ${month}`;
+}
+
+// Mirrors api-server/src/lib/pr-math.ts's `isNewRecord` — a small, pure,
+// stateless rule duplicated here on purpose for the optimistic set-time
+// celebration only (Part 2). The server's own copy is untouched and stays
+// the sole source of truth when the session is actually completed.
+function isNewRecordClient(recordType: string, value: number, previous: number | null): boolean {
+  if (previous === null) return true;
+  if (recordType === "time") return value < previous;
+  return value > previous;
+}
+
 export default function BoardScreen() {
   const insets = useSafeAreaInsets();
   const formatWeight = useFormatWeight();
@@ -94,6 +122,10 @@ export default function BoardScreen() {
   const sessionLogId = isFromFreeStore ? freeSessionSnapshot!.sessionLogId : (apiSession?.sessionLogId ?? "");
   const sessionName = isFromFreeStore ? freeSessionSnapshot!.name : (apiSession?.name ?? "");
 
+  const athletePRs: Record<string, AthletePRItem> = isFromFreeStore
+    ? (freeSessionSnapshot!.athletePRs ?? {})
+    : (apiSession?.athletePRs ?? {});
+
   const grouped = groupByBlock(exercises, blocks);
 
   const [exState, setExState] = useState<Record<string, ExState>>(() => {
@@ -116,47 +148,83 @@ export default function BoardScreen() {
     });
   }, [exerciseIdsKey]);
 
-  const [restTimers, setRestTimers] = useState<Record<string, number>>({});
-  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Card expand/collapse — first exercise starts expanded, the rest
+  // collapsed; auto-collapses a card when all of its sets are validated and
+  // auto-expands the next incomplete one so the athlete can keep moving
+  // down the list without extra taps (this auto-advance is an interpretive
+  // addition on top of the mockup's explicit auto-collapse requirement).
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (exercises.length === 0) return;
+    setExpanded((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      const next: Record<string, boolean> = {};
+      exercises.forEach((ex, i) => {
+        next[ex.id] = i === 0;
+      });
+      return next;
+    });
+  }, [exerciseIdsKey]);
+
+  const toggleExpanded = useCallback((exId: string) => {
+    setExpanded((prev) => ({ ...prev, [exId]: !prev[exId] }));
+  }, []);
+
+  // Rest timer — a real countdown ring (CircularTimer, ported from
+  // exercise.tsx) per resting set, replacing the old plain text countdown.
+  const [activeRest, setActiveRest] = useState<Record<string, boolean>>({});
+
   const [completing, setCompleting] = useState(false);
   const [error, setError] = useState("");
 
-  const activeTimers = Object.entries(restTimers).filter(([, v]) => v > 0);
+  const [demoExercise, setDemoExercise] = useState<SessionExerciseItem | null>(null);
 
-  useEffect(() => {
-    if (activeTimers.length === 0) {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
+  // Part 2 — PR celebration at set-log time. `athletePRs` is the athlete's
+  // current records, already fetched once with today's session (no extra
+  // round-trip needed). `sessionBestRef` seeds from that snapshot once and
+  // is then updated in-session so a second, even-better set later in the
+  // same session still compares against the athlete's latest logged best,
+  // not the now-stale server value.
+  const sessionBestRef = useRef<Record<string, number> | null>(null);
+  if (sessionBestRef.current === null) {
+    const seed: Record<string, number> = {};
+    for (const [exId, pr] of Object.entries(athletePRs)) seed[exId] = pr.value;
+    sessionBestRef.current = seed;
+  }
+  const [prToast, setPrToast] = useState<PRToastData | null>(null);
+
+  const maybeCelebratePR = useCallback(
+    (ex: SessionExerciseItem, set: SetState) => {
+      const pr = athletePRs[ex.exerciseId];
+      // Only celebrate genuine improvements on an existing record — mirrors
+      // exercise.tsx's own PRPulse gate (`currentPR != null`), so a first-
+      // ever log of a brand-new exercise doesn't pop a toast for every
+      // single exercise in a fresh program.
+      if (!pr) return;
+
+      let value: number | null = null;
+      if (pr.recordType === "load") {
+        const v = parseFloat(set.load);
+        value = !isNaN(v) && v > 0 ? v : null;
+      } else if (pr.recordType === "time") {
+        const v = parseFloat(set.durationSeconds);
+        value = !isNaN(v) && v > 0 ? v : null;
+      } else if (pr.recordType === "reps") {
+        const v = parseInt(set.reps, 10);
+        value = !isNaN(v) && v > 0 ? v : null;
       }
-      return;
-    }
-    if (!timerIntervalRef.current) {
-      timerIntervalRef.current = setInterval(() => {
-        setRestTimers((prev) => {
-          const next = { ...prev };
-          let anyActive = false;
-          for (const key of Object.keys(next)) {
-            if ((next[key] ?? 0) > 0) {
-              next[key] = (next[key] ?? 0) - 1;
-              anyActive = true;
-            }
-          }
-          if (!anyActive && timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-            timerIntervalRef.current = null;
-          }
-          return next;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-    };
-  }, [activeTimers.length]);
+      // "distance" isn't a metric board.tsx's set rows collect, so it's
+      // left to the authoritative batch check at session-complete.
+      if (value == null) return;
+
+      const best = sessionBestRef.current![ex.exerciseId] ?? pr.value;
+      if (!isNewRecordClient(pr.recordType, value, best)) return;
+
+      sessionBestRef.current![ex.exerciseId] = value;
+      setPrToast({ exerciseName: ex.exerciseName, recordType: pr.recordType, value });
+    },
+    [athletePRs]
+  );
 
   const updateSetField = useCallback(
     (exId: string, setIdx: number, field: "load" | "reps" | "durationSeconds", value: string) => {
@@ -173,26 +241,46 @@ export default function BoardScreen() {
 
   const toggleSet = useCallback(
     (ex: SessionExerciseItem, setIdx: number) => {
-      setExState((prev) => {
-        const arr = [...(prev[ex.id] ?? [])];
-        const current = arr[setIdx];
-        if (!current) return prev;
-        const nowDone = !current.done;
-        arr[setIdx] = { ...current, done: nowDone };
+      const arr = exState[ex.id] ?? [];
+      const current = arr[setIdx];
+      if (!current) return;
+      const nowDone = !current.done;
+      const newArr = [...arr];
+      newArr[setIdx] = { ...current, done: nowDone };
+      const newExState = { ...exState, [ex.id]: newArr };
+      setExState(newExState);
 
-        if (nowDone && (ex.restSeconds ?? 0) > 0) {
-          const timerKey = `${ex.id}:${setIdx}`;
-          setRestTimers((t) => ({ ...t, [timerKey]: ex.restSeconds! }));
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (nowDone) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        if ((ex.restSeconds ?? 0) > 0) {
+          setActiveRest((t) => ({ ...t, [`${ex.id}:${setIdx}`]: true }));
         }
-        return { ...prev, [ex.id]: arr };
-      });
+        maybeCelebratePR(ex, current);
+      }
+
+      const allExDoneNow = newArr.every((s) => s.done);
+      if (allExDoneNow) {
+        setExpanded((prevExpanded) => {
+          const next: Record<string, boolean> = { ...prevExpanded, [ex.id]: false };
+          const order = exercises.map((e) => e.id);
+          const idx = order.indexOf(ex.id);
+          for (let i = idx + 1; i < order.length; i++) {
+            const nid = order[i]!;
+            const sets = nid === ex.id ? newArr : (exState[nid] ?? []);
+            if (!(sets.length > 0 && sets.every((s) => s.done))) {
+              next[nid] = true;
+              break;
+            }
+          }
+          return next;
+        });
+      }
     },
-    []
+    [exState, exercises, maybeCelebratePR]
   );
 
-  const skipTimer = useCallback((key: string) => {
-    setRestTimers((t) => ({ ...t, [key]: 0 }));
+  const skipRest = useCallback((key: string) => {
+    setActiveRest((t) => ({ ...t, [key]: false }));
   }, []);
 
   const deleteSet = useCallback((exId: string, setIdx: number) => {
@@ -202,7 +290,7 @@ export default function BoardScreen() {
       const next = arr.filter((_, i) => i !== setIdx);
       return { ...prev, [exId]: next };
     });
-    setRestTimers((prev) => {
+    setActiveRest((prev) => {
       const next = { ...prev };
       delete next[`${exId}:${setIdx}`];
       return next;
@@ -230,8 +318,9 @@ export default function BoardScreen() {
     return sets.length > 0 && sets.every((s) => s.done);
   });
 
-  const handleComplete = async () => {
+  const handleComplete = async (force = false) => {
     if (completing || !sessionLogId) return;
+    if (!allDone && !force) return;
     setCompleting(true);
     setError("");
     try {
@@ -255,9 +344,13 @@ export default function BoardScreen() {
         };
       });
 
+      // No `rpe` here: RPE is collected once, for the whole session, on the
+      // shared complete.tsx screen right after this call — sending a fake
+      // value here would just get overwritten there. The field is optional
+      // server-side (completeSchema), so omitting it is safe.
       await completeMutation.mutateAsync({
         sessionId: sessionLogId,
-        data: { rpe: 5, exercises: exercisePayload },
+        data: { exercises: exercisePayload },
       });
 
       if (isFromFreeStore && freeSessionSnapshot!.isFreeSession) {
@@ -282,7 +375,7 @@ export default function BoardScreen() {
 
   const handleQuit = () => {
     Alert.alert(
-      "Quitter le mode Tableau ?",
+      "Quitter la séance ?",
       "Ta progression non enregistrée sera perdue.",
       [
         { text: "Continuer", style: "cancel" },
@@ -326,6 +419,8 @@ export default function BoardScreen() {
 
   return (
     <View style={[s.flex, { backgroundColor: COLORS.bg }]}>
+      <PRToast pr={prToast} formatWeight={formatWeight} onDismiss={() => setPrToast(null)} />
+
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={handleQuit} style={s.backBtn}>
           <Feather name="x" size={20} color={COLORS.white} />
@@ -337,10 +432,6 @@ export default function BoardScreen() {
           <Text style={[s.headerSub, { fontFamily: FONTS.mono }]}>
             {completedCount}/{totalSets} séries
           </Text>
-        </View>
-        <View style={[s.modePill, { borderColor: `${cfg.color}50`, backgroundColor: `${cfg.color}12` }]}>
-          <Feather name="grid" size={11} color={cfg.color} />
-          <Text style={[s.modePillText, { fontFamily: FONTS.mono, color: cfg.color }]}>TABLEAU</Text>
         </View>
       </View>
 
@@ -373,17 +464,25 @@ export default function BoardScreen() {
                 {groupExs.map((ex) => {
                   const sets = exState[ex.id] ?? initialSetState(ex);
                   const allExDone = sets.every((s) => s.done);
+                  const doneCount = sets.filter((s) => s.done).length;
                   const prescribedLoad = ex.adaptedLoadKg ?? ex.nominalLoadKg ?? null;
                   const hasLoad = ((prescribedLoad ?? ex.lastUsedLoadKg) != null)
                     && ((prescribedLoad ?? ex.lastUsedLoadKg)! > 0);
                   const hasDuration = (ex.durationSeconds ?? 0) > 0;
+                  const hasDemo = (ex.gifUrl != null && ex.gifUrl.length > 0) || (ex.demoUrl != null && ex.demoUrl.length > 0);
+                  const lastUsedLabel = lastUsedLabelFor(ex);
+                  const isExpanded = expanded[ex.id] ?? false;
+
                   return (
-                    <View key={ex.id} style={[s.exCard, allExDone && { opacity: 0.7 }]}>
-                      <View style={s.exHeader}>
+                    <View key={ex.id} style={[s.exCard, allExDone && { opacity: 0.85, borderColor: `${cfg.color}40` }]}>
+                      <TouchableOpacity
+                        style={s.exHeader}
+                        onPress={() => toggleExpanded(ex.id)}
+                        activeOpacity={0.75}
+                      >
                         <View style={s.exHeaderLeft}>
                           <Text style={[s.exName, { fontFamily: FONTS.bodyMedium, color: allExDone ? cfg.color : COLORS.white }]}>
-                            {allExDone && <Feather name="check-circle" size={13} color={cfg.color} />}
-                            {allExDone ? "  " : ""}{ex.exerciseName}
+                            {allExDone ? "✓  " : ""}{ex.exerciseName}
                           </Text>
                           <Text style={[s.exTarget, { fontFamily: FONTS.mono }]}>
                             {ex.sets} × {ex.reps ?? "–"}
@@ -392,77 +491,105 @@ export default function BoardScreen() {
                               : ""}
                             {(ex.restSeconds ?? 0) > 0 ? `  ·  ${ex.restSeconds}s repos` : ""}
                           </Text>
+                          {lastUsedLabel != null && (
+                            <Text style={[s.exLastUsed, { fontFamily: FONTS.mono }]}>{lastUsedLabel}</Text>
+                          )}
                         </View>
-                      </View>
-
-                      <View style={s.setsContainer}>
-                        <View style={s.setsHeaderRow}>
-                          <Text style={[s.setsHeaderCell, s.colSerie, { fontFamily: FONTS.mono }]}>SÉRIE</Text>
-                          <Text style={[s.setsHeaderCell, s.colPrev, { fontFamily: FONTS.mono }]}>PRÉC.</Text>
-                          {hasLoad && <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>CHARGE</Text>}
-                          {hasDuration && <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>DURÉE</Text>}
-                          <Text style={[s.setsHeaderCell, hasLoad ? s.colReps : s.colRepsWide, { fontFamily: FONTS.mono }]}>REPS</Text>
-                          <View style={s.colCheck} />
+                        <View style={s.exHeaderRight}>
+                          <View
+                            style={[
+                              s.doneBadge,
+                              allExDone
+                                ? { backgroundColor: `${cfg.color}20`, borderColor: cfg.color }
+                                : doneCount > 0
+                                ? { backgroundColor: `${cfg.color}10`, borderColor: `${cfg.color}40` }
+                                : { borderColor: COLORS.border },
+                            ]}
+                          >
+                            {allExDone ? (
+                              <Feather name="check" size={12} color={cfg.color} />
+                            ) : (
+                              <Text style={[s.doneBadgeText, { fontFamily: FONTS.mono, color: doneCount > 0 ? cfg.color : COLORS.textMuted }]}>
+                                {doneCount}/{sets.length}
+                              </Text>
+                            )}
+                          </View>
+                          <Feather
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={18}
+                            color={COLORS.textMuted}
+                          />
                         </View>
+                      </TouchableOpacity>
 
-                        {(sets as SetState[]).map((st, idx) => {
-                          const timerKey = `${ex.id}:${idx}`;
-                          const remaining = restTimers[timerKey] ?? 0;
-                          const showTimer = st.done && remaining > 0;
-                          const mins = Math.floor(remaining / 60);
-                          const secs = remaining % 60;
-                          const canDelete = (sets as SetState[]).length > 1;
-                          const renderRightActions = () => (
+                      {isExpanded && (
+                        <View style={s.setsContainer}>
+                          {hasDemo && (
                             <TouchableOpacity
-                              onPress={() => {
-                                Alert.alert(
-                                  "Supprimer la série ?",
-                                  `Série S${idx + 1}`,
-                                  [
-                                    { text: "Annuler", style: "cancel" },
-                                    { text: "Supprimer", style: "destructive", onPress: () => deleteSet(ex.id, idx) },
-                                  ],
-                                );
-                              }}
-                              style={s.swipeDeleteAction}
-                              activeOpacity={0.85}
+                              onPress={() => setDemoExercise(ex)}
+                              style={[s.demoBtn, { borderColor: `${cfg.color}50` }]}
                             >
-                              <Feather name="trash-2" size={18} color={COLORS.white} />
+                              <Feather name="play-circle" size={13} color={cfg.color} />
+                              <Text style={[s.demoBtnText, { fontFamily: FONTS.bodyMedium, color: cfg.color }]}>
+                                Voir la démo
+                              </Text>
                             </TouchableOpacity>
-                          );
-                          const rowContent = (
-                            <View style={[s.setRow, st.done && { backgroundColor: `${cfg.color}08` }]}>
+                          )}
+
+                          <View style={s.setsHeaderRow}>
+                            <Text style={[s.setsHeaderCell, s.colSerie, { fontFamily: FONTS.mono }]}>SÉRIE</Text>
+                            {hasLoad && <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>CHARGE</Text>}
+                            {hasDuration && <Text style={[s.setsHeaderCell, s.colLoad, { fontFamily: FONTS.mono }]}>DURÉE</Text>}
+                            <Text style={[s.setsHeaderCell, hasLoad ? s.colReps : s.colRepsWide, { fontFamily: FONTS.mono }]}>REPS</Text>
+                            <View style={s.colCheck} />
+                          </View>
+
+                          {(sets as SetState[]).map((st, idx) => {
+                            const timerKey = `${ex.id}:${idx}`;
+                            const showTimer = !!activeRest[timerKey];
+                            const canDelete = (sets as SetState[]).length > 1;
+                            const renderRightActions = () => (
+                              <TouchableOpacity
+                                onPress={() => {
+                                  Alert.alert(
+                                    "Supprimer la série ?",
+                                    `Série S${idx + 1}`,
+                                    [
+                                      { text: "Annuler", style: "cancel" },
+                                      { text: "Supprimer", style: "destructive", onPress: () => deleteSet(ex.id, idx) },
+                                    ],
+                                  );
+                                }}
+                                style={s.swipeDeleteAction}
+                                activeOpacity={0.85}
+                              >
+                                <Feather name="trash-2" size={18} color={COLORS.white} />
+                              </TouchableOpacity>
+                            );
+                            const loadValue = parseFloat(st.load);
+                            const rowContent = (
+                              <View style={[s.setRow, st.done && { backgroundColor: `${cfg.color}08` }]}>
                                 <Text style={[s.colSerie, s.setLabel, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.textMuted }]}>
                                   S{idx + 1}
                                 </Text>
-                                <View style={s.colPrev}>
-                                  {(() => {
-                                    const prevLoad = ex.lastUsedLoadKg;
-                                    const prevRepsArr = ex.lastUsedRepsPerSet ?? [];
-                                    const prevReps = prevRepsArr[idx] ?? prevRepsArr[prevRepsArr.length - 1];
-                                    if (prevLoad == null) {
-                                      return <Text style={[s.prevCell, { fontFamily: FONTS.mono }]}>—</Text>;
-                                    }
-                                    const loadStr = prevLoad % 1 === 0 ? `${prevLoad}` : prevLoad.toFixed(1);
-                                    return (
-                                      <Text style={[s.prevCell, { fontFamily: FONTS.mono }]} numberOfLines={1}>
-                                        {loadStr}kg{prevReps != null ? ` × ${prevReps}` : ""}
-                                      </Text>
-                                    );
-                                  })()}
-                                </View>
                                 {hasLoad && (
                                   <View style={s.colLoad}>
-                                    <TextInput
-                                      style={[s.input, { fontFamily: FONTS.mono, color: st.done ? cfg.color : COLORS.white, borderColor: st.done ? `${cfg.color}50` : COLORS.border }]}
-                                      value={st.load}
-                                      onChangeText={(v) => updateSetField(ex.id, idx, "load", v)}
-                                      keyboardType="decimal-pad"
-                                      placeholder="—"
-                                      placeholderTextColor={COLORS.textMuted}
-                                      editable={!st.done}
-                                      selectTextOnFocus
-                                    />
+                                    {st.done ? (
+                                      <Text style={[s.doneValueText, { fontFamily: FONTS.monoBold, color: cfg.color }]}>
+                                        {st.load ? `${st.load} kg` : "—"}
+                                      </Text>
+                                    ) : (
+                                      <Stepper
+                                        value={!isNaN(loadValue) ? loadValue : 0}
+                                        onChange={(v) => updateSetField(ex.id, idx, "load", String(v))}
+                                        min={0}
+                                        max={500}
+                                        step={2.5}
+                                        decimals={1}
+                                        unit="kg"
+                                        size="sm"
+                                      />
+                                    )}
                                   </View>
                                 )}
                                 {hasDuration && (
@@ -502,41 +629,47 @@ export default function BoardScreen() {
                                     color={st.done ? cfg.color : COLORS.border}
                                   />
                                 </TouchableOpacity>
-                            </View>
-                          );
-                          return (
-                            <View key={idx}>
-                              {canDelete ? (
-                                <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
-                                  {rowContent}
-                                </Swipeable>
-                              ) : rowContent}
-                              {showTimer && (
-                                <View style={[s.restRow, { backgroundColor: `${cfg.color}08`, borderColor: `${cfg.color}20` }]}>
-                                  <Feather name="clock" size={12} color={cfg.color} />
-                                  <Text style={[s.restText, { fontFamily: FONTS.mono, color: cfg.color }]}>
-                                    REPOS {mins > 0 ? `${mins}:` : ""}{String(secs).padStart(2, "0")}
-                                  </Text>
-                                  <TouchableOpacity onPress={() => skipTimer(timerKey)} style={s.skipBtn}>
-                                    <Text style={[s.skipText, { fontFamily: FONTS.body, color: cfg.color }]}>Passer</Text>
-                                  </TouchableOpacity>
-                                </View>
-                              )}
-                            </View>
-                          );
-                        })}
-                        <TouchableOpacity
-                          style={s.addSetBtn}
-                          onPress={() => addSet(ex)}
-                          activeOpacity={0.7}
-                        >
-                          <Feather name="plus" size={12} color={COLORS.textMuted} />
-                          <Text style={[s.addSetText, { fontFamily: FONTS.mono }]}>
-                            {"AJOUTER UNE SÉRIE"}
-                            {(ex.restSeconds ?? 0) > 0 ? `  ·  ${ex.restSeconds}s` : ""}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                              </View>
+                            );
+                            return (
+                              <View key={idx}>
+                                {canDelete ? (
+                                  <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
+                                    {rowContent}
+                                  </Swipeable>
+                                ) : rowContent}
+                                {showTimer && (ex.restSeconds ?? 0) > 0 && (
+                                  <View style={[s.restRow, { backgroundColor: `${cfg.color}08`, borderColor: `${cfg.color}20` }]}>
+                                    <CircularTimer
+                                      durationSeconds={ex.restSeconds!}
+                                      onComplete={() => skipRest(timerKey)}
+                                      autoStart
+                                      size={64}
+                                    />
+                                    <Text style={[s.restText, { fontFamily: FONTS.mono, color: cfg.color }]}>
+                                      REPOS
+                                    </Text>
+                                    <TouchableOpacity onPress={() => skipRest(timerKey)} style={s.skipBtn}>
+                                      <Text style={[s.skipText, { fontFamily: FONTS.body, color: cfg.color }]}>Passer</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          })}
+                          <TouchableOpacity
+                            style={s.addSetBtn}
+                            onPress={() => addSet(ex)}
+                            activeOpacity={0.7}
+                          >
+                            <Feather name="plus" size={12} color={COLORS.textMuted} />
+                            <Text style={[s.addSetText, { fontFamily: FONTS.mono }]}>
+                              {"AJOUTER UNE SÉRIE"}
+                              {(ex.restSeconds ?? 0) > 0 ? `  ·  ${ex.restSeconds}s` : ""}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -551,7 +684,7 @@ export default function BoardScreen() {
           <Text style={[s.errorText, { fontFamily: FONTS.body }]}>{error}</Text>
         ) : null}
         <TouchableOpacity
-          onPress={handleComplete}
+          onPress={() => handleComplete(false)}
           disabled={!allDone || completing}
           activeOpacity={0.85}
           style={[
@@ -575,7 +708,70 @@ export default function BoardScreen() {
               : `${completedCount}/${totalSets} SÉRIES VALIDÉES`}
           </Text>
         </TouchableOpacity>
+        {!allDone && (
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                "Terminer quand même ?",
+                "Certaines séries ne sont pas encore validées. Tu peux terminer la séance maintenant, elles ne seront pas comptabilisées.",
+                [
+                  { text: "Continuer la séance", style: "cancel" },
+                  { text: "Terminer quand même", style: "destructive", onPress: () => handleComplete(true) },
+                ],
+              );
+            }}
+            disabled={completing}
+            style={s.forceCompleteBtn}
+          >
+            <Text style={[s.forceCompleteText, { fontFamily: FONTS.body }]}>
+              Terminer quand même
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      <Modal
+        visible={demoExercise != null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setDemoExercise(null)}
+      >
+        <View style={[s.modalContainer, { paddingTop: insets.top }]}>
+          <View style={s.modalHeader}>
+            <Text style={[s.modalTitle, { fontFamily: FONTS.mono }]} numberOfLines={1}>
+              {demoExercise?.exerciseName ?? ""}
+            </Text>
+            <TouchableOpacity onPress={() => setDemoExercise(null)} style={s.modalCloseBtn}>
+              <Feather name="x" size={20} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+          {demoExercise?.gifUrl != null && demoExercise.gifUrl.length > 0 ? (
+            <Image
+              source={{ uri: demoExercise.gifUrl }}
+              style={s.webView}
+              resizeMode="contain"
+            />
+          ) : demoExercise?.demoUrl != null && demoExercise.demoUrl.length > 0 ? (
+            <WebView
+              source={{ uri: demoExercise.demoUrl }}
+              style={s.webView}
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              startInLoadingState
+              renderLoading={() => (
+                <View style={s.webViewLoader}>
+                  <ActivityIndicator size="large" color={cfg.color} />
+                </View>
+              )}
+            />
+          ) : (
+            <View style={[s.webViewLoader, { flex: 1 }]}>
+              <Feather name="video-off" size={36} color={COLORS.textMuted} />
+              <Text style={{ color: COLORS.textMuted, marginTop: 8, fontFamily: FONTS.body }}>Pas de démonstration disponible</Text>
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -595,16 +791,6 @@ const s = StyleSheet.create({
   headerCenter: { flex: 1, gap: 1 },
   headerTitle: { fontSize: 17, letterSpacing: 1 },
   headerSub: { fontSize: 10, color: COLORS.textMuted, letterSpacing: 1 },
-  modePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  modePillText: { fontSize: 9, letterSpacing: 1 },
   blockBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -626,22 +812,47 @@ const s = StyleSheet.create({
   },
   exHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingTop: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingBottom: 12,
+    gap: 10,
   },
   exHeaderLeft: { flex: 1, gap: 3 },
+  exHeaderRight: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
   exName: { fontSize: 15, marginBottom: 2 },
   exTarget: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.3 },
-  setsContainer: { paddingHorizontal: 0 },
+  exLastUsed: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 0.3, marginTop: 2 },
+  doneBadge: {
+    minWidth: 30,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doneBadgeText: { fontSize: 10, letterSpacing: 0.3 },
+  setsContainer: { paddingHorizontal: 0, borderTopWidth: 1, borderTopColor: COLORS.border },
+  demoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: "flex-start",
+    marginHorizontal: 12,
+    marginTop: 10,
+  },
+  demoBtnText: { fontSize: 12 },
   setsHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 6,
+    marginTop: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -650,19 +861,18 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     gap: 8,
   },
   setLabel: { fontSize: 11, textAlign: "center" },
-  colSerie: { width: 28, textAlign: "center" },
-  colPrev: { width: 68, justifyContent: "center" },
-  prevCell: { fontSize: 11, color: COLORS.textMuted, textAlign: "center" },
-  colLoad: { flex: 1 },
+  colSerie: { width: 24, textAlign: "center" },
+  colLoad: { flex: 1, alignItems: "center" },
   colReps: { flex: 1 },
   colRepsWide: { flex: 2 },
   colCheck: { width: 36, alignItems: "center" },
+  doneValueText: { fontSize: 14, textAlign: "center" },
   addSetBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -696,9 +906,9 @@ const s = StyleSheet.create({
   restRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderBottomWidth: 1,
   },
   restText: { flex: 1, fontSize: 11, letterSpacing: 1 },
@@ -725,6 +935,11 @@ const s = StyleSheet.create({
     paddingVertical: 18,
   },
   completeBtnText: { fontSize: 15, letterSpacing: 0.5 },
+  forceCompleteBtn: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  forceCompleteText: { fontSize: 13, color: COLORS.textMuted, textDecorationLine: "underline" },
   swipeDeleteAction: {
     backgroundColor: COLORS.red,
     justifyContent: "center",
@@ -741,5 +956,44 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 12,
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    letterSpacing: 1,
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.bgElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  webView: { flex: 1 },
+  webViewLoader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.bg,
   },
 });
