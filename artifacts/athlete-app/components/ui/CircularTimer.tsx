@@ -13,10 +13,7 @@ import { COLORS, FONTS } from "@/constants/theme";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const SIZE = 200;
-const STROKE = 8;
-const R = (SIZE - STROKE) / 2;
-const CIRC = 2 * Math.PI * R;
+const DEFAULT_SIZE = 200;
 
 export interface CircularTimerRef {
   start: () => void;
@@ -29,17 +26,24 @@ interface CircularTimerProps {
   onComplete?: () => void;
   autoStart?: boolean;
   label?: string;
+  // Compact variant for inline use (e.g. one per set row in a scrollable
+  // list) — defaults to the original full-screen 200px size.
+  size?: number;
   ref?: React.Ref<CircularTimerRef>;
 }
 
 export const CircularTimer = React.forwardRef<CircularTimerRef, CircularTimerProps>(
-  ({ durationSeconds, onComplete, autoStart = false, label = "REPOS" }, ref) => {
+  ({ durationSeconds, onComplete, autoStart = false, label = "REPOS", size = DEFAULT_SIZE }, ref) => {
     const [seconds, setSeconds] = useState(durationSeconds);
     const [running, setRunning] = useState(autoStart);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const secondsRef = useRef(durationSeconds);
 
     const progress = useSharedValue(1);
+
+    const STROKE = size <= 100 ? 5 : 8;
+    const R = (size - STROKE) / 2;
+    const CIRC = 2 * Math.PI * R;
 
     const isRed = seconds <= 10;
     const strokeColor = isRed ? COLORS.red : COLORS.cyan;
@@ -101,20 +105,22 @@ export const CircularTimer = React.forwardRef<CircularTimerRef, CircularTimerPro
       return m > 0 ? `${m}:${String(r).padStart(2, "0")}` : String(s);
     };
 
+    const compact = size <= 100;
+
     return (
-      <View style={styles.container}>
-        <Svg width={SIZE} height={SIZE}>
+      <View style={[styles.container, { width: size, height: size }]}>
+        <Svg width={size} height={size}>
           <Circle
-            cx={SIZE / 2}
-            cy={SIZE / 2}
+            cx={size / 2}
+            cy={size / 2}
             r={R}
             stroke={COLORS.bgElevated}
             strokeWidth={STROKE}
             fill="none"
           />
           <AnimatedCircle
-            cx={SIZE / 2}
-            cy={SIZE / 2}
+            cx={size / 2}
+            cy={size / 2}
             r={R}
             stroke={strokeColor}
             strokeWidth={STROKE}
@@ -123,7 +129,7 @@ export const CircularTimer = React.forwardRef<CircularTimerRef, CircularTimerPro
             animatedProps={animProps}
             strokeLinecap="round"
             rotation="-90"
-            origin={`${SIZE / 2}, ${SIZE / 2}`}
+            origin={`${size / 2}, ${size / 2}`}
           />
         </Svg>
         <View style={styles.center}>
@@ -131,11 +137,14 @@ export const CircularTimer = React.forwardRef<CircularTimerRef, CircularTimerPro
             style={[
               styles.time,
               { fontFamily: FONTS.mono, color: isRed ? COLORS.red : COLORS.textPrimary },
+              compact && { fontSize: 16, letterSpacing: 0.5 },
             ]}
           >
             {formatTime(seconds)}
           </Text>
-          <Text style={[styles.label, { fontFamily: FONTS.body }]}>{label}</Text>
+          {!compact && (
+            <Text style={[styles.label, { fontFamily: FONTS.body }]}>{label}</Text>
+          )}
         </View>
       </View>
     );
@@ -146,8 +155,6 @@ CircularTimer.displayName = "CircularTimer";
 
 const styles = StyleSheet.create({
   container: {
-    width: SIZE,
-    height: SIZE,
     alignItems: "center",
     justifyContent: "center",
   },

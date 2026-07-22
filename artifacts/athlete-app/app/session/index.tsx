@@ -15,7 +15,6 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   useGetTodaySession,
   useStartSession,
@@ -212,8 +211,6 @@ export default function SessionIntroScreen() {
   const [validatedSets, setValidatedSets] = React.useState<Record<string, boolean[]>>({});
   const [completing, setCompleting] = React.useState(false);
   const [presenceConfirmed, setPresenceConfirmed] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<"guided" | "board">("guided");
-  const [viewModeLoaded, setViewModeLoaded] = React.useState(false);
   const [detailExercise, setDetailExercise] = React.useState<SessionExerciseItem | null>(null);
   const [modalVisible, setModalVisible] = React.useState(false);
   const backdropOpacity = React.useRef(new Animated.Value(0)).current;
@@ -238,17 +235,6 @@ export default function SessionIntroScreen() {
       setModalVisible(false);
       setDetailExercise(null);
     });
-  };
-
-  React.useEffect(() => {
-    AsyncStorage.getItem("adapt_session_view_mode").then((v) => {
-      if (v === "guided" || v === "board") setViewMode(v);
-    }).catch(() => {}).finally(() => setViewModeLoaded(true));
-  }, []);
-
-  const changeViewMode = (mode: "guided" | "board") => {
-    setViewMode(mode);
-    AsyncStorage.setItem("adapt_session_view_mode", mode).catch(() => {});
   };
 
   useFocusEffect(
@@ -432,11 +418,7 @@ export default function SessionIntroScreen() {
     setStartError("");
     try {
       await startMutation.mutateAsync({ sessionId: session.sessionLogId });
-      if (viewMode === "board") {
-        router.push("/session/board");
-      } else {
-        router.push("/session/exercise");
-      }
+      router.push("/session/board");
     } catch (err: unknown) {
       setStartError(getGenericErrorMessage(err, "Impossible de démarrer la séance"));
     }
@@ -458,34 +440,7 @@ export default function SessionIntroScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={22} color={COLORS.white} />
           </TouchableOpacity>
-          {(session.exercises?.length ?? 0) > 0 && !validationMode && (
-            <View style={styles.modeToggleRow}>
-              <TouchableOpacity
-                onPress={() => changeViewMode("guided")}
-                style={[
-                  styles.modeToggleBtn,
-                  viewMode === "guided" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
-                ]}
-              >
-                <Feather name="play-circle" size={12} color={viewMode === "guided" ? cfg.color : COLORS.textMuted} />
-                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "guided" ? cfg.color : COLORS.textMuted }]}>
-                  GUIDÉ
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => changeViewMode("board")}
-                style={[
-                  styles.modeToggleBtn,
-                  viewMode === "board" && { backgroundColor: `${cfg.color}20`, borderColor: `${cfg.color}60` },
-                ]}
-              >
-                <Feather name="grid" size={12} color={viewMode === "board" ? cfg.color : COLORS.textMuted} />
-                <Text style={[styles.modeToggleBtnText, { fontFamily: FONTS.mono, color: viewMode === "board" ? cfg.color : COLORS.textMuted }]}>
-                  TABLEAU
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View style={{ flex: 1 }} />
           <ModeBadge mode={modeKey} size="sm" glow />
         </View>
 
@@ -955,22 +910,12 @@ export default function SessionIntroScreen() {
             </Text>
           </TouchableOpacity>
         ) : (
-          <>
-            <GradientButton
-              label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
-              onPress={handleStart}
-              loading={startMutation.isPending || !viewModeLoaded}
-              icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
-            />
-            {viewMode === "guided" && (
-              <TouchableOpacity onPress={enterValidationMode} style={styles.noChronoBtn}>
-                <Feather name="check-square" size={16} color={COLORS.textSecondary} />
-                <Text style={[styles.noChronoBtnText, { fontFamily: FONTS.bodyMedium }]}>
-                  Valider sans chrono
-                </Text>
-              </TouchableOpacity>
-            )}
-          </>
+          <GradientButton
+            label={startMutation.isPending ? "DÉMARRAGE…" : "DÉMARRER LA SÉANCE"}
+            onPress={handleStart}
+            loading={startMutation.isPending}
+            icon={<Feather name="play" size={18} color={COLORS.textInverse} />}
+          />
         )}
       </View>
     </View>

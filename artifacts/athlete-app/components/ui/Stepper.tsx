@@ -19,7 +19,16 @@ interface StepperProps {
   label?: string;
   style?: ViewStyle;
   decimals?: number;
+  // "sm" is a compact variant for dense contexts (e.g. one per table row,
+  // several per screen) — "md" (default) is the original full-size variant
+  // used by the full-screen exercise wizard.
+  size?: "md" | "sm";
 }
+
+const SIZES = {
+  md: { btn: 52, btnFont: 22, valueFont: 32, valueMinWidth: 100, unitFont: 14 },
+  sm: { btn: 36, btnFont: 18, valueFont: 20, valueMinWidth: 60, unitFont: 11 },
+};
 
 export function Stepper({
   value,
@@ -31,7 +40,9 @@ export function Stepper({
   label,
   style,
   decimals = 0,
+  size = "md",
 }: StepperProps) {
+  const dim = SIZES[size];
   const decrement = () => {
     const next = Math.max(min, parseFloat((value - step).toFixed(decimals)));
     if (next !== value) {
@@ -61,18 +72,18 @@ export function Stepper({
           disabled={value <= min}
           style={({ pressed }) => [
             styles.btn,
-            { opacity: pressed || value <= min ? 0.4 : 1 },
+            { width: dim.btn, height: dim.btn, opacity: pressed || value <= min ? 0.4 : 1 },
           ]}
         >
-          <Text style={[styles.btnText, { fontFamily: FONTS.bodyBold }]}>−</Text>
+          <Text style={[styles.btnText, { fontFamily: FONTS.bodyBold, fontSize: dim.btnFont, lineHeight: dim.btnFont + 4 }]}>−</Text>
         </Pressable>
 
-        <View style={styles.valueWrap}>
-          <Text style={[styles.value, { fontFamily: FONTS.monoBold }]}>
+        <View style={[styles.valueWrap, { minWidth: dim.valueMinWidth }]}>
+          <Text style={[styles.value, { fontFamily: FONTS.monoBold, fontSize: dim.valueFont }]}>
             {displayVal}
           </Text>
           {unit ? (
-            <Text style={[styles.unit, { fontFamily: FONTS.body }]}>{unit}</Text>
+            <Text style={[styles.unit, { fontFamily: FONTS.body, fontSize: dim.unitFont }]}>{unit}</Text>
           ) : null}
         </View>
 
@@ -81,10 +92,10 @@ export function Stepper({
           disabled={value >= max}
           style={({ pressed }) => [
             styles.btn,
-            { opacity: pressed || value >= max ? 0.4 : 1 },
+            { width: dim.btn, height: dim.btn, opacity: pressed || value >= max ? 0.4 : 1 },
           ]}
         >
-          <Text style={[styles.btnText, { fontFamily: FONTS.bodyBold }]}>+</Text>
+          <Text style={[styles.btnText, { fontFamily: FONTS.bodyBold, fontSize: dim.btnFont, lineHeight: dim.btnFont + 4 }]}>+</Text>
         </Pressable>
       </View>
     </View>

@@ -245,27 +245,12 @@ export default function LibraryScreen() {
       </View>
 
       <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>
-        {t("library_subtitle", "Exercices et routines à consulter ou démarrer librement.")}
+        {t("library_subtitle", "Exercices et routines à consulter.")}
       </Text>
 
-      <TouchableOpacity
-        onPress={() => router.push("/library/custom-session")}
-        style={styles.createSessionBtn}
-        activeOpacity={0.8}
-      >
-        <View style={styles.createSessionIcon}>
-          <Feather name="plus" size={18} color={COLORS.cyan} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.createSessionTitle, { fontFamily: FONTS.bodyBold }]}>
-            {t("create_free_session", "Créer une séance libre")}
-          </Text>
-          <Text style={[styles.createSessionSubtitle, { fontFamily: FONTS.body }]}>
-            {t("create_free_session_sub", "Choisis tes exercices, sets, reps et charge")}
-          </Text>
-        </View>
-        <Feather name="arrow-right" size={18} color={COLORS.cyan} />
-      </TouchableOpacity>
+      {/* "Créer une séance libre" (custom-session.tsx entry point) is hidden
+          for V1 — free/custom sessions are out of scope per the client-
+          validated spec. custom-session.tsx itself is left untouched. */}
 
       {athleteExercises.length > 0 && (
         <View style={styles.exercisesSection}>
@@ -325,7 +310,6 @@ export default function LibraryScreen() {
             </Text>
           </View>
           {userRoutines.map((r) => {
-            const isStarting = startingUserRoutineId === r.id;
             return (
               <View key={r.id} style={styles.userRoutineCard}>
                 <View style={{ flex: 1 }}>
@@ -343,21 +327,8 @@ export default function LibraryScreen() {
                 >
                   <Feather name="trash-2" size={15} color={COLORS.textMuted} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleStartUserRoutine(r)}
-                  disabled={!!startingUserRoutineId}
-                  style={[styles.startBtn, { backgroundColor: COLORS.amber, opacity: startingUserRoutineId ? 0.6 : 1 }]}
-                  activeOpacity={0.8}
-                >
-                  {isStarting ? (
-                    <ActivityIndicator size="small" color={COLORS.bg} />
-                  ) : (
-                    <Feather name="play" size={13} color={COLORS.bg} />
-                  )}
-                  <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                    {isStarting ? "..." : "Démarrer"}
-                  </Text>
-                </TouchableOpacity>
+                {/* "Démarrer" (free-session start) hidden for V1 — see
+                    handleStartUserRoutine, kept but unused, out of scope. */}
               </View>
             );
           })}
@@ -370,7 +341,6 @@ export default function LibraryScreen() {
             ⚡ {t("program_sessions_uc", "SÉANCES DU PROGRAMME")}
           </Text>
           {programSessions.map((s) => {
-            const isStarting = startingSessionId === s.sessionId;
             return (
               <View key={s.sessionId} style={styles.programCard}>
                 <View style={styles.programCardInfo}>
@@ -383,21 +353,8 @@ export default function LibraryScreen() {
                     </Text>
                   )}
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleStartFreeSession(s.sessionId, s.sessionName)}
-                  disabled={!!startingSessionId}
-                  style={[styles.startBtn, { backgroundColor: COLORS.violet, opacity: startingSessionId ? 0.6 : 1 }]}
-                  activeOpacity={0.8}
-                >
-                  {isStarting ? (
-                    <ActivityIndicator size="small" color={COLORS.bg} />
-                  ) : (
-                    <Feather name="play" size={13} color={COLORS.bg} />
-                  )}
-                  <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                    {isStarting ? "..." : t("start_btn", "Démarrer")}
-                  </Text>
-                </TouchableOpacity>
+                {/* "Démarrer" (free-session start) hidden for V1 — see
+                    handleStartFreeSession, kept but unused, out of scope. */}
               </View>
             );
           })}
@@ -449,14 +406,10 @@ export default function LibraryScreen() {
       )}
 
       {filtered.map((routine) => {
-        const isStarting = startingRoutineId === routine.id;
-        const catColor = activeCat?.color ?? COLORS.cyan;
         return (
-          <TouchableOpacity
+          <View
             key={routine.id}
             style={[styles.card, activeCat && { borderColor: `${activeCat.color}30` }]}
-            onPress={() => router.push(`/library/${routine.id}` as any)}
-            activeOpacity={0.8}
           >
             <View style={styles.cardTop}>
               <View style={styles.cardTitleRow}>
@@ -482,29 +435,10 @@ export default function LibraryScreen() {
               <Text style={[styles.exerciseCount, { fontFamily: FONTS.mono, color: COLORS.textMuted }]}>
                 {routine.exercises.length} exercice{routine.exercises.length !== 1 ? "s" : ""}
               </Text>
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleStartFree(routine);
-                }}
-                disabled={!!startingRoutineId}
-                style={[
-                  styles.startBtn,
-                  { backgroundColor: catColor, opacity: startingRoutineId ? 0.6 : 1 },
-                ]}
-                activeOpacity={0.8}
-              >
-                {isStarting ? (
-                  <ActivityIndicator size="small" color={COLORS.bg} />
-                ) : (
-                  <Feather name="play" size={13} color={COLORS.bg} />
-                )}
-                <Text style={[styles.startBtnText, { fontFamily: FONTS.bodyBold }]}>
-                  {isStarting ? "..." : t("start_btn", "Démarrer")}
-                </Text>
-              </TouchableOpacity>
+              {/* "Démarrer" (free-session start) hidden for V1 — see
+                  handleStartFree, kept but unused, out of scope. */}
             </View>
-          </TouchableOpacity>
+          </View>
         );
       })}
 
