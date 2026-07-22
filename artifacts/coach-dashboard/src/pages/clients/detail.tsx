@@ -14,7 +14,7 @@ import { ModeBadge, cn } from "@/components/ui/mode-badge";
 import {
   Loader2, ArrowLeft, MessageSquare, AlertTriangle, CheckCircle2, UserMinus,
   Pencil, Calendar, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Copy, Check,
-  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus, Trash2, Apple, Wallet
+  Dumbbell, ExternalLink, TrendingUp, TrendingDown, Minus, Plus, Trash2, Apple, Wallet, FlaskConical
 } from "lucide-react";
 import { CoachNutritionPanel } from "@/components/nutrition/CoachNutritionPanel";
 import { CoachClientCommercialPanel } from "@/components/clients/CoachClientCommercialPanel";
@@ -50,6 +50,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProgramGrid, SessionModal } from "@/components/program-editor";
+
+// `isTest` isn't projected onto the UpcomingSession API type yet (the
+// route handler / OpenAPI schema that build it need a matching additive
+// field — out of scope for this change). Read it defensively so the
+// calendar flag below lights up the moment the API starts sending it,
+// without breaking the current type.
+function sessionIsTest(s: UpcomingSession): boolean {
+  return (s as UpcomingSession & { isTest?: boolean }).isTest === true;
+}
 
 interface PerformanceTest {
   id: string;
@@ -928,27 +937,34 @@ export default function ClientDetail() {
                                         {day.getDate()}
                                       </div>
                                       <div className="space-y-0.5">
-                                        {daySessions.map(s => (
+                                        {daySessions.map(s => {
+                                          const isTestSession = sessionIsTest(s);
+                                          return (
                                           <div
                                             key={s.sessionId}
                                             onClick={e => { e.stopPropagation(); setSelectedCalSession(s); }}
                                             className={cn(
                                               "text-[9px] px-1 py-0.5 rounded font-medium leading-tight cursor-pointer hover:opacity-80 transition-opacity",
+                                              isTestSession ? "bg-orange-400/15 text-orange-400 border border-dashed border-orange-400/40" :
                                               s.isCompleted ? "bg-primary/20 text-primary" :
                                               dateStr < todayStr ? "bg-destructive/20 text-destructive" :
                                               dateStr === todayStr ? "bg-primary/30 text-primary" :
                                               "bg-white/10 text-white"
                                             )}
-                                            title={`${s.sessionName}${s.sessionType ? ` · ${sessionTypeLabel(s.sessionType)}` : ""}`}
+                                            title={`${s.sessionName}${isTestSession ? " · Séance test" : ""}${s.sessionType ? ` · ${sessionTypeLabel(s.sessionType)}` : ""}`}
                                           >
-                                            <div className="truncate">{s.isCompleted ? "✓ " : ""}{s.sessionName}</div>
+                                            <div className="flex items-center gap-0.5 truncate">
+                                              {isTestSession && <FlaskConical className="w-2 h-2 shrink-0" />}
+                                              {s.isCompleted ? "✓ " : ""}{s.sessionName}
+                                            </div>
                                             {s.sessionType && (
                                               <div className="text-[8px] opacity-60 font-mono truncate">
                                                 {sessionTypeLabel(s.sessionType)}
                                               </div>
                                             )}
                                           </div>
-                                        ))}
+                                          );
+                                        })}
                                         {canAdd && daySessions.length === 0 && (
                                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Plus className="w-3 h-3 text-primary mx-auto" />
@@ -1342,6 +1358,12 @@ export default function ClientDetail() {
                          selectedCalSession.scheduledDate < new Date().toISOString().split("T")[0] ? t("clients.detail.session_missed") :
                          t("clients.detail.session_upcoming")}
                       </div>
+                      {sessionIsTest(selectedCalSession) && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-dashed border-orange-400/40 bg-orange-400/10 text-orange-400 text-sm font-medium">
+                          <FlaskConical className="w-3.5 h-3.5" />
+                          Séance test
+                        </div>
+                      )}
                     </div>
                   )}
                   <DialogFooter>

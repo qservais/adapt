@@ -39,6 +39,12 @@ export const sessionExercisesTable = pgTable("session_exercises", {
   tempo: varchar("tempo", { length: 10 }),
   supersetGroup: varchar("superset_group", { length: 5 }),
   supersetLabel: varchar("superset_label", { length: 5 }),
+  // Per-import-line video link ("lien vidéo" in the session-import
+  // grammar) — distinct from exercises.demoUrl/demoGifUrl, which are one
+  // fixed demo video per CATALOG exercise. This is per session_exercises
+  // row since a coach may paste a different link for the same exercise
+  // across different sessions.
+  videoUrl: varchar("video_url", { length: 500 }),
 });
 
 export const athleteExercisePreferencesTable = pgTable("athlete_exercise_preferences", {
