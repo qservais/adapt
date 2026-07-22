@@ -426,7 +426,6 @@ export default function ClientDetail() {
     { name: t("clients.detail.metric_sleep"), value: client.todayCheckin?.sleep },
     { name: t("clients.detail.metric_energy"), value: client.todayCheckin?.energy },
     { name: t("clients.detail.metric_stress"), value: client.todayCheckin?.stress },
-    { name: t("clients.detail.metric_soreness"), value: client.todayCheckin?.soreness },
     { name: t("clients.detail.metric_motivation"), value: client.todayCheckin?.motivation },
   ];
 

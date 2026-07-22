@@ -13,7 +13,8 @@
     "test:booking": "tsx tests/booking.test.ts",
     "test:invoicing": "tsx tests/invoicing.test.ts",
     "test:date-utils": "tsx tests/date-utils.test.ts",
-    "test:pr-math": "tsx tests/pr-math.test.ts"
+    "test:pr-math": "tsx tests/pr-math.test.ts",
+    "test:adapt-engine": "tsx tests/adapt-engine.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

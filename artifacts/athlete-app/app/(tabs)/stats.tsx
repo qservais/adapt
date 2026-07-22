@@ -48,7 +48,6 @@ interface CheckinItem {
   sleep: number;
   energy: number;
   stress: number;
-  soreness: number;
   motivation: number;
   sessionMode: string;
 }
@@ -441,7 +440,7 @@ export default function StatsScreen() {
   const sessions = allSessions.filter((s) => s.completedAt != null && new Date(s.completedAt) >= cutoff);
   const scores = checkins.map((c) => c.adaptScore);
   const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-  const avg = (key: keyof Pick<CheckinItem, "sleep" | "energy" | "stress" | "soreness" | "motivation">) =>
+  const avg = (key: keyof Pick<CheckinItem, "sleep" | "energy" | "stress" | "motivation">) =>
     checkins.length > 0 ? checkins.reduce((a, c) => a + c[key], 0) / checkins.length : 0;
   const avgRpe =
     sessions.filter((s) => s.rpe != null).length > 0
@@ -567,7 +566,6 @@ export default function StatsScreen() {
           <ScoreBar value={avg("sleep")} max={5} color={COLORS.cyan} label="Sommeil" />
           <ScoreBar value={avg("energy")} max={5} color={COLORS.green} label="Énergie" />
           <ScoreBar value={avg("stress")} max={5} color={COLORS.amber} label="Stress" />
-          <ScoreBar value={avg("soreness")} max={5} color={COLORS.red} label="Courbat." />
           <ScoreBar value={avg("motivation")} max={5} color={COLORS.violet} label="Motivat." />
         </View>
       </GlowCard>

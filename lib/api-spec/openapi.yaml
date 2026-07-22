@@ -3981,16 +3981,21 @@ components:
           type: integer
           minimum: 1
           maximum: 5
-        soreness:
-          type: integer
-          minimum: 1
-          maximum: 5
         motivation:
           type: integer
           minimum: 1
           maximum: 5
         hasPain:
           type: boolean
+        painZone:
+          type: string
+          nullable: true
+          enum: [epaule, dos, hanche, genou, cheville, autre]
+        painIntensity:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
         painNotes:
           type: string
           nullable: true
@@ -4002,7 +4007,6 @@ components:
         - sleep
         - energy
         - stress
-        - soreness
         - motivation
 
     CheckinData:
@@ -4021,14 +4025,17 @@ components:
         stress:
           type: integer
           nullable: true
-        soreness:
-          type: integer
-          nullable: true
         motivation:
           type: integer
           nullable: true
         hasPain:
           type: boolean
+        painZone:
+          type: string
+          nullable: true
+        painIntensity:
+          type: integer
+          nullable: true
         painNotes:
           type: string
           nullable: true

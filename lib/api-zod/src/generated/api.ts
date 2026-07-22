@@ -974,17 +974,24 @@ export const submitCheckinBodyEnergyMax = 5;
 
 export const submitCheckinBodyStressMax = 5;
 
-export const submitCheckinBodySorenessMax = 5;
-
 export const submitCheckinBodyMotivationMax = 5;
+
+export const submitCheckinBodyPainIntensityMax = 5;
 
 export const SubmitCheckinBody = zod.object({
   sleep: zod.number().min(1).max(submitCheckinBodySleepMax),
   energy: zod.number().min(1).max(submitCheckinBodyEnergyMax),
   stress: zod.number().min(1).max(submitCheckinBodyStressMax),
-  soreness: zod.number().min(1).max(submitCheckinBodySorenessMax),
   motivation: zod.number().min(1).max(submitCheckinBodyMotivationMax),
   hasPain: zod.boolean().optional(),
+  painZone: zod
+    .enum(["epaule", "dos", "hanche", "genou", "cheville", "autre"])
+    .nullish(),
+  painIntensity: zod
+    .number()
+    .min(1)
+    .max(submitCheckinBodyPainIntensityMax)
+    .nullish(),
   painNotes: zod.string().nullish(),
   cyclePhase: zod
     .enum(["menstrual", "follicular", "ovulatory", "luteal"])
@@ -1000,9 +1007,10 @@ export const GetTodayCheckinResponse = zod.object({
   sleep: zod.number().nullish(),
   energy: zod.number().nullish(),
   stress: zod.number().nullish(),
-  soreness: zod.number().nullish(),
   motivation: zod.number().nullish(),
   hasPain: zod.boolean().optional(),
+  painZone: zod.string().nullish(),
+  painIntensity: zod.number().nullish(),
   painNotes: zod.string().nullish(),
   cyclePhase: zod.string().nullish(),
   adaptScore: zod.number(),
@@ -1019,9 +1027,10 @@ export const GetCheckinHistoryResponseItem = zod.object({
   sleep: zod.number().nullish(),
   energy: zod.number().nullish(),
   stress: zod.number().nullish(),
-  soreness: zod.number().nullish(),
   motivation: zod.number().nullish(),
   hasPain: zod.boolean().optional(),
+  painZone: zod.string().nullish(),
+  painIntensity: zod.number().nullish(),
   painNotes: zod.string().nullish(),
   cyclePhase: zod.string().nullish(),
   adaptScore: zod.number(),
@@ -1986,9 +1995,10 @@ export const GetClientsResponseItem = zod.object({
       sleep: zod.number().nullish(),
       energy: zod.number().nullish(),
       stress: zod.number().nullish(),
-      soreness: zod.number().nullish(),
       motivation: zod.number().nullish(),
       hasPain: zod.boolean().optional(),
+      painZone: zod.string().nullish(),
+      painIntensity: zod.number().nullish(),
       painNotes: zod.string().nullish(),
       cyclePhase: zod.string().nullish(),
       adaptScore: zod.number(),
@@ -2030,9 +2040,10 @@ export const GetClientDetailResponse = zod.object({
       sleep: zod.number().nullish(),
       energy: zod.number().nullish(),
       stress: zod.number().nullish(),
-      soreness: zod.number().nullish(),
       motivation: zod.number().nullish(),
       hasPain: zod.boolean().optional(),
+      painZone: zod.string().nullish(),
+      painIntensity: zod.number().nullish(),
       painNotes: zod.string().nullish(),
       cyclePhase: zod.string().nullish(),
       adaptScore: zod.number(),
@@ -2047,9 +2058,10 @@ export const GetClientDetailResponse = zod.object({
       sleep: zod.number().nullish(),
       energy: zod.number().nullish(),
       stress: zod.number().nullish(),
-      soreness: zod.number().nullish(),
       motivation: zod.number().nullish(),
       hasPain: zod.boolean().optional(),
+      painZone: zod.string().nullish(),
+      painIntensity: zod.number().nullish(),
       painNotes: zod.string().nullish(),
       cyclePhase: zod.string().nullish(),
       adaptScore: zod.number(),
@@ -2180,9 +2192,10 @@ export const GetClientCheckinsResponseItem = zod.object({
   sleep: zod.number().nullish(),
   energy: zod.number().nullish(),
   stress: zod.number().nullish(),
-  soreness: zod.number().nullish(),
   motivation: zod.number().nullish(),
   hasPain: zod.boolean().optional(),
+  painZone: zod.string().nullish(),
+  painIntensity: zod.number().nullish(),
   painNotes: zod.string().nullish(),
   cyclePhase: zod.string().nullish(),
   adaptScore: zod.number(),

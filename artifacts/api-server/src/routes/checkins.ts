@@ -17,9 +17,10 @@ const checkinSchema = z.object({
   sleep: z.number().int().min(1).max(5),
   energy: z.number().int().min(1).max(5),
   stress: z.number().int().min(1).max(5),
-  soreness: z.number().int().min(1).max(5),
   motivation: z.number().int().min(1).max(5),
   hasPain: z.boolean().optional().default(false),
+  painZone: z.enum(["epaule", "dos", "hanche", "genou", "cheville", "autre"]).nullable().optional(),
+  painIntensity: z.number().int().min(1).max(5).nullable().optional(),
   painNotes: z.string().nullable().optional(),
   cyclePhase: z.enum(["menstrual", "follicular", "ovulatory", "luteal"]).nullable().optional(),
 });
@@ -60,7 +61,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
     .orderBy(desc(sessionLogsTable.createdAt))
     .limit(1);
 
-  const { sleep, energy, stress, soreness, motivation, hasPain, painNotes, cyclePhase } = parsed.data;
+  const { sleep, energy, stress, motivation, hasPain, painZone, painIntensity, painNotes, cyclePhase } = parsed.data;
 
   // Auto-compute cycle phase from athlete's profile if cycleTracking is enabled
   let activeCyclePhase: string | null = cyclePhase ?? null;
@@ -83,7 +84,7 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
 
   // Force recovery if pain
   let { adaptScore, sessionMode } = calculateAdaptScore({
-    sleep, energy, stress, soreness, motivation,
+    sleep, energy, stress, motivation,
     rpeYesterday: yesterdayLog?.rpe ?? null,
     cyclePhase: activeCyclePhase,
   });
@@ -100,9 +101,10 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
         sleep,
         energy,
         stress,
-        soreness,
         motivation,
         hasPain: hasPain ?? false,
+        painZone: hasPain ? (painZone ?? null) : null,
+        painIntensity: hasPain ? (painIntensity ?? null) : null,
         painNotes: painNotes ?? null,
         cyclePhase: cyclePhase ?? null,
         adaptScore,
@@ -126,9 +128,10 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
       sleep,
       energy,
       stress,
-      soreness,
       motivation,
       hasPain: hasPain ?? false,
+      painZone: hasPain ? (painZone ?? null) : null,
+      painIntensity: hasPain ? (painIntensity ?? null) : null,
       painNotes: painNotes ?? null,
       cyclePhase: cyclePhase ?? null,
       adaptScore,
@@ -242,9 +245,10 @@ router.post("/checkins", authenticate, requireRole("athlete"), async (req, res) 
       sleep: checkin.sleep,
       energy: checkin.energy,
       stress: checkin.stress,
-      soreness: checkin.soreness,
       motivation: checkin.motivation,
       hasPain: checkin.hasPain,
+      painZone: checkin.painZone,
+      painIntensity: checkin.painIntensity,
       painNotes: checkin.painNotes,
       cyclePhase: checkin.cyclePhase,
       adaptScore: checkin.adaptScore,

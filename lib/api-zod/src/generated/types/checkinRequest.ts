@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CheckinRequestCyclePhase } from "./checkinRequestCyclePhase";
+import type { CheckinRequestPainZone } from "./checkinRequestPainZone";
 
 export interface CheckinRequest {
   /**
@@ -27,13 +28,14 @@ export interface CheckinRequest {
    * @minimum 1
    * @maximum 5
    */
-  soreness: number;
+  motivation: number;
+  hasPain?: boolean;
+  painZone?: CheckinRequestPainZone;
   /**
    * @minimum 1
    * @maximum 5
    */
-  motivation: number;
-  hasPain?: boolean;
+  painIntensity?: number | null;
   painNotes?: string | null;
   cyclePhase?: CheckinRequestCyclePhase;
 }

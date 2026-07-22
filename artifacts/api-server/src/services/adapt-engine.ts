@@ -8,7 +8,6 @@ export interface AdaptScoreInput {
   sleep: number;
   energy: number;
   stress: number;
-  soreness: number;
   motivation: number;
   rpeYesterday?: number | null;
   cyclePhase?: string | null;
@@ -20,22 +19,24 @@ export interface AdaptScoreResult {
 }
 
 export function calculateAdaptScore(input: AdaptScoreInput): AdaptScoreResult {
-  const { sleep, energy, stress, soreness, motivation, rpeYesterday = null, cyclePhase = null } = input;
+  const { sleep, energy, stress, motivation, rpeYesterday = null, cyclePhase = null } = input;
 
   // Step 1 — Normalize (0.0 to 1.0)
   const sleep_n = (sleep - 1) / 4;
   const energy_n = (energy - 1) / 4;
   const stress_n = (stress - 1) / 4;
-  const soreness_n = (soreness - 1) / 4;
   const motivation_n = (motivation - 1) / 4;
 
-  // Step 2 — Weighted base score
+  // Step 2 — Weighted base score. Soreness dropped (V1 check-in has no equivalent
+  // metric — replaced by the structured injury block, which never fed the score
+  // even before this change, only the sessionMode override below). Remaining
+  // weights renormalized from the original 5-term set (sleep .25/energy .20/
+  // stress .15/motivation .20 of an .80 total) so they still sum to 1.0.
   let score_base =
-    sleep_n * 0.25 +
-    energy_n * 0.20 +
-    (1 - stress_n) * 0.15 +
-    (1 - soreness_n) * 0.20 +
-    motivation_n * 0.20;
+    sleep_n * 0.3125 +
+    energy_n * 0.25 +
+    (1 - stress_n) * 0.1875 +
+    motivation_n * 0.25;
 
   // Step 3 — Previous RPE modifier
   if (rpeYesterday !== null && rpeYesterday !== undefined) {

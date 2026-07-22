@@ -529,6 +529,19 @@ export interface UpdateProfileRequest {
   avgCycleDays?: number | null;
 }
 
+export type CheckinRequestPainZone =
+  | (typeof CheckinRequestPainZone)[keyof typeof CheckinRequestPainZone]
+  | null;
+
+export const CheckinRequestPainZone = {
+  epaule: "epaule",
+  dos: "dos",
+  hanche: "hanche",
+  genou: "genou",
+  cheville: "cheville",
+  autre: "autre",
+} as const;
+
 export type CheckinRequestCyclePhase =
   | (typeof CheckinRequestCyclePhase)[keyof typeof CheckinRequestCyclePhase]
   | null;
@@ -560,13 +573,14 @@ export interface CheckinRequest {
    * @minimum 1
    * @maximum 5
    */
-  soreness: number;
+  motivation: number;
+  hasPain?: boolean;
+  painZone?: CheckinRequestPainZone;
   /**
    * @minimum 1
    * @maximum 5
    */
-  motivation: number;
-  hasPain?: boolean;
+  painIntensity?: number | null;
   painNotes?: string | null;
   cyclePhase?: CheckinRequestCyclePhase;
 }
@@ -577,9 +591,10 @@ export interface CheckinData {
   sleep?: number | null;
   energy?: number | null;
   stress?: number | null;
-  soreness?: number | null;
   motivation?: number | null;
   hasPain?: boolean;
+  painZone?: string | null;
+  painIntensity?: number | null;
   painNotes?: string | null;
   cyclePhase?: string | null;
   adaptScore: number;

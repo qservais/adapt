@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -9,330 +8,265 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useSubmitCheckin, useGetMe } from "@workspace/api-client-react";
+import { useSubmitCheckin } from "@workspace/api-client-react";
 import { COLORS, FONTS } from "@/constants/theme";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { useT } from "@/context/PreferencesContext";
 
-type IconName = "sun" | "zap" | "activity" | "thermometer" | "target" | "alert-triangle";
+/**
+ * Single-screen check-in matching the validated V1 mockup: 4 metrics
+ * (Sommeil/Fatigue/Stress/Motivation) with contextual word-ladders, plus a
+ * structured injury block (Oui/Non → zone → intensité → note). Replaces the
+ * old 5-metric step-wizard (Sommeil/Énergie/Stress/Courbatures/Motivation +
+ * separate cycle step) — cycle tracking is hidden from the check-in per V1
+ * scope (still auto-derived server-side from the athlete's profile), and
+ * Courbatures is dropped (see adapt-engine.ts).
+ *
+ * "Fatigue" here is the mockup's tiredness axis (1=fresh…5=exhausted) — the
+ * opposite polarity of the API's `energy` field (1=exhausted…5=top-shape), so
+ * it's inverted on submit: energy = 6 - fatigue. Stress/Sleep/Motivation map
+ * straight through — their word-ladder polarity already matches the API.
+ */
 
-interface SliderStep {
-  kind: "slider";
-  key: "sleep" | "energy" | "stress" | "soreness" | "motivation";
-  title: string;
+type MetricKey = "sleep" | "fatigue" | "stress" | "motivation";
+type FeatherIcon = keyof typeof Feather.glyphMap;
+
+interface MetricDef {
+  key: MetricKey;
+  icon: FeatherIcon;
+  label: string;
   subtitle: string;
-  icon: IconName;
   color: string;
-  labels: [string, string, string, string, string];
+  tone: "positive" | "negative"; // positive: 1=worst…5=best. negative: 1=best…5=worst.
+  words: [string, string, string, string, string];
+  anchors: [string, string];
 }
 
-interface PainStep {
-  kind: "pain";
-  key: "pain";
-  title: string;
-  subtitle: string;
-  icon: IconName;
-}
-
-interface CycleStep {
-  kind: "cycle";
-  key: "cycle";
-  title: string;
-  subtitle: string;
-  icon: IconName;
-}
-
-interface WelcomeStep {
-  kind: "welcome";
-  key: "welcome";
-  title: string;
-  subtitle: string;
-  icon: IconName;
-}
-
-type Step = WelcomeStep | SliderStep | CycleStep | PainStep;
-
-const ALL_STEPS: Step[] = [
+const METRICS: MetricDef[] = [
   {
-    kind: "welcome",
-    key: "welcome",
-    title: "BONJOUR",
-    subtitle: "Calibrons ta séance d'aujourd'hui. Ça prend moins d'une minute.",
-    icon: "sun",
-  },
-  {
-    kind: "slider",
     key: "sleep",
-    title: "SOMMEIL",
+    icon: "moon",
+    label: "Sommeil",
     subtitle: "Comment as-tu dormi cette nuit ?",
-    icon: "sun",
     color: COLORS.cyan,
-    labels: ["Très mal", "Mal", "Correct", "Bien", "Excellent"],
+    tone: "positive",
+    words: ["Très mauvais 😵", "Mauvais", "Correct", "Bon", "Réparateur 😴✨"],
+    anchors: ["Très mauvaise nuit", "Nuit réparatrice"],
   },
   {
-    kind: "slider",
-    key: "energy",
-    title: "ÉNERGIE",
-    subtitle: "Quel est ton niveau d'énergie en ce moment ?",
-    icon: "zap",
+    key: "fatigue",
+    icon: "battery",
+    label: "Fatigue",
+    subtitle: "Quel est ton niveau de fraîcheur ?",
     color: COLORS.green,
-    labels: ["Épuisé", "Fatigué", "Neutre", "Bien", "Au top"],
+    tone: "negative",
+    words: ["Frais·che ⚡", "En forme", "Un peu fatigué·e", "Fatigué·e", "Épuisé·e 🪫"],
+    anchors: ["Frais·che", "Épuisé·e"],
   },
   {
-    kind: "slider",
     key: "stress",
-    title: "STRESS",
+    icon: "activity",
+    label: "Stress",
     subtitle: "Quel est ton niveau de stress actuel ?",
-    icon: "activity",
     color: COLORS.amber,
-    labels: ["Très stressé", "Stressé", "Neutre", "Calme", "Très calme"],
+    tone: "negative",
+    words: ["Détendu·e 😌", "Calme", "Un peu tendu·e", "Stressé·e", "Très stressé·e 😰"],
+    anchors: ["Détendu·e", "Très stressé·e"],
   },
   {
-    kind: "slider",
-    key: "soreness",
-    title: "COURBATURES",
-    subtitle: "As-tu des douleurs ou courbatures musculaires ?",
-    icon: "thermometer",
-    color: COLORS.red,
-    labels: ["Très douloureux", "Douloureux", "Moyen", "Peu", "Aucun"],
-  },
-  {
-    kind: "slider",
     key: "motivation",
-    title: "MOTIVATION",
-    subtitle: "À quel point es-tu motivé(e) pour t'entraîner ?",
     icon: "target",
+    label: "Motivation",
+    subtitle: "À quel point es-tu motivé(e) pour t'entraîner ?",
     color: COLORS.violet,
-    labels: ["Aucune", "Faible", "Correcte", "Élevée", "Extrême"],
-  },
-  {
-    kind: "cycle",
-    key: "cycle",
-    title: "CYCLE",
-    subtitle: "Où en es-tu dans ton cycle ? (optionnel)",
-    icon: "activity",
-  },
-  {
-    kind: "pain",
-    key: "pain",
-    title: "DOULEUR",
-    subtitle: "As-tu une douleur ou gêne particulière aujourd'hui ?",
-    icon: "alert-triangle",
+    tone: "positive",
+    words: ["Aucune envie 😮‍💨", "Peu motivé·e", "Ça va", "Motivé·e", "À fond 🔥"],
+    anchors: ["Aucune envie", "À fond"],
   },
 ];
 
-const CYCLE_PHASES = [
-  { key: "menstrual", label: "Menstruelle", desc: "Jours 1–5", color: COLORS.red },
-  { key: "follicular", label: "Folliculaire", desc: "Jours 6–13", color: COLORS.cyan },
-  { key: "ovulatory", label: "Ovulation", desc: "Jour 14", color: COLORS.green },
-  { key: "luteal", label: "Lutéale", desc: "Jours 15–28", color: COLORS.amber },
-] as const;
-
-type CyclePhase = (typeof CYCLE_PHASES)[number]["key"] | null;
-
-const CHECKIN_DRAFT_KEY = "@adapt_checkin_draft";
-
-const WELCOME_ITEMS = [
-  { key: "sleep", label: "Sommeil", icon: "sun" as const, color: COLORS.cyan },
-  { key: "energy", label: "Énergie", icon: "zap" as const, color: COLORS.green },
-  { key: "stress", label: "Stress", icon: "activity" as const, color: COLORS.amber },
-  { key: "soreness", label: "Courbatures", icon: "thermometer" as const, color: COLORS.red },
-  { key: "motivation", label: "Motivation", icon: "target" as const, color: COLORS.violet },
+const BODY_ZONES: Array<{ key: "epaule" | "dos" | "hanche" | "genou" | "cheville" | "autre"; label: string }> = [
+  { key: "epaule", label: "Épaule" },
+  { key: "dos", label: "Dos" },
+  { key: "hanche", label: "Hanche" },
+  { key: "genou", label: "Genou" },
+  { key: "cheville", label: "Cheville" },
+  { key: "autre", label: "Autre" },
 ];
+
+const INJURY_WORDS = ["Légère gêne", "Gêne présente", "Douleur modérée", "Douleur marquée 😣", "Douleur forte 😖"];
+
+function pillColor(n: number, value: number, tone: "positive" | "negative", color: string): string {
+  if (n > value) return "transparent";
+  if (tone === "positive") return color;
+  // negative tone: color shifts toward red as the selected value worsens (higher = worse)
+  if (value >= 4) return COLORS.red;
+  if (value >= 3) return "#E8C547";
+  return color;
+}
+
+function wordColor(value: number, tone: "positive" | "negative", color: string): string {
+  if (tone === "positive") {
+    if (value >= 4) return color;
+    if (value >= 3) return "#E8C547";
+    return COLORS.red;
+  }
+  if (value >= 4) return COLORS.red;
+  if (value >= 3) return "#E8C547";
+  return color;
+}
+
+function MetricSelector({
+  metric,
+  value,
+  onChange,
+}: {
+  metric: MetricDef;
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <View style={styles.metricBlock}>
+      <View style={styles.metricHeader}>
+        <View style={styles.metricTitleRow}>
+          <Feather name={metric.icon} size={15} color={metric.color} />
+          <Text style={[styles.metricLabel, { fontFamily: FONTS.bodyBold }]}>{metric.label}</Text>
+        </View>
+        <Text style={[styles.metricWord, { fontFamily: FONTS.bodyBold, color: wordColor(value, metric.tone, metric.color) }]}>
+          {metric.words[value - 1]}
+        </Text>
+      </View>
+      <Text style={[styles.metricSubtitle, { fontFamily: FONTS.body }]}>{metric.subtitle}</Text>
+      <View style={styles.pillRow}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <Pressable
+            key={n}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onChange(n);
+            }}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: n === value }}
+            accessibilityLabel={`${metric.label} : ${metric.words[n - 1]}`}
+            style={[
+              styles.pill,
+              {
+                backgroundColor: pillColor(n, value, metric.tone, metric.color),
+                borderColor: n <= value ? "transparent" : COLORS.border,
+              },
+            ]}
+          />
+        ))}
+      </View>
+      <View style={styles.anchorRow}>
+        <Text style={[styles.anchorText, { fontFamily: FONTS.body }]}>{metric.anchors[0]}</Text>
+        <Text style={[styles.anchorText, { fontFamily: FONTS.body }]}>{metric.anchors[1]}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function CheckinScreen() {
   const insets = useSafeAreaInsets();
   const t = useT();
-  const meQuery = useGetMe();
   const submitMutation = useSubmitCheckin();
 
   const params = useLocalSearchParams<{
     sleep?: string;
-    energy?: string;
+    fatigue?: string;
     stress?: string;
-    soreness?: string;
     motivation?: string;
     hasPain?: string;
+    painZone?: string;
+    painIntensity?: string;
     painNotes?: string;
-    cyclePhase?: string;
     edit?: string;
   }>();
-
   const isEditMode = params.edit === "1";
-
-  const gender = meQuery.data?.gender;
-  const hasCycleTracking =
-    meQuery.data?.cycleTracking === true && gender !== "homme";
-  const allSteps = hasCycleTracking
-    ? ALL_STEPS
-    : ALL_STEPS.filter((s) => s.kind !== "cycle");
-  const steps = isEditMode ? allSteps.filter((s) => s.kind !== "welcome") : allSteps;
 
   const parseNum = (v: string | undefined, fallback: number) => {
     const n = parseInt(v ?? "", 10);
     return isNaN(n) ? fallback : n;
   };
 
-  const [stepIndex, setStepIndex] = useState(0);
-  const [values, setValues] = useState({
+  const [values, setValues] = useState<Record<MetricKey, number>>({
     sleep: parseNum(params.sleep, 3),
-    energy: parseNum(params.energy, 3),
+    fatigue: parseNum(params.fatigue, 3),
     stress: parseNum(params.stress, 3),
-    soreness: parseNum(params.soreness, 3),
     motivation: parseNum(params.motivation, 3),
   });
-  const [hasPain, setHasPain] = useState(params.hasPain === "1");
-  const [painNotes, setPainNotes] = useState(params.painNotes ?? "");
-  const [cyclePhase, setCyclePhase] = useState<CyclePhase>(
-    (params.cyclePhase || null) as CyclePhase
-  );
 
-  const [draftHydrated, setDraftHydrated] = useState(isEditMode);
+  const [hasInjury, setHasInjury] = useState(params.hasPain === "1");
+  const [injuryZone, setInjuryZone] = useState<string | null>(params.painZone ?? null);
+  const [injuryLevel, setInjuryLevel] = useState(parseNum(params.painIntensity, 2));
+  const [injuryNote, setInjuryNote] = useState(params.painNotes ?? "");
 
-  useEffect(() => {
-    if (isEditMode) return;
-    AsyncStorage.getItem(CHECKIN_DRAFT_KEY)
-      .then((raw) => {
-        if (!raw) {
-          setDraftHydrated(true);
-          return;
-        }
-        try {
-          const draft = JSON.parse(raw);
-          if (draft?.stepIndex == null) {
-            setDraftHydrated(true);
-            return;
-          }
-          Alert.alert(
-            "Check-in en cours",
-            "Tu as commencé un check-in. Veux-tu reprendre là où tu t'es arrêté(e) ?",
-            [
-              {
-                text: "Recommencer",
-                style: "destructive",
-                onPress: () => {
-                  AsyncStorage.removeItem(CHECKIN_DRAFT_KEY).catch(() => {});
-                  setStepIndex(0);
-                  setValues({ sleep: 3, energy: 3, stress: 3, soreness: 3, motivation: 3 });
-                  setHasPain(false);
-                  setPainNotes("");
-                  setCyclePhase(null);
-                  setDraftHydrated(true);
-                },
-              },
-              {
-                text: "Reprendre",
-                onPress: () => {
-                  const safeIndex = Math.min(Math.max(0, draft.stepIndex ?? 0), steps.length - 1);
-                  setStepIndex(safeIndex);
-                  if (draft.values) setValues(draft.values);
-                  if (draft.hasPain != null) setHasPain(draft.hasPain);
-                  if (draft.painNotes != null) setPainNotes(draft.painNotes);
-                  if (draft.cyclePhase !== undefined) setCyclePhase(draft.cyclePhase);
-                  setDraftHydrated(true);
-                },
-              },
-            ]
-          );
-        } catch {
-          setDraftHydrated(true);
-        }
-      })
-      .catch(() => setDraftHydrated(true));
-  }, [isEditMode]);
+  const setMetric = (key: MetricKey) => (n: number) => setValues((v) => ({ ...v, [key]: n }));
 
-  useEffect(() => {
-    if (!draftHydrated || isEditMode) return;
-    AsyncStorage.setItem(
-      CHECKIN_DRAFT_KEY,
-      JSON.stringify({ stepIndex, values, hasPain, painNotes, cyclePhase })
-    ).catch(() => {});
-  }, [draftHydrated, isEditMode, stepIndex, values, hasPain, painNotes, cyclePhase]);
-
-  const isLastStep = stepIndex === steps.length - 1;
-  const currentStep = steps[stepIndex];
-  const currentColor = currentStep.kind === "slider" ? currentStep.color : COLORS.cyan;
-
-  const handleNext = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (isLastStep) {
-      try {
-        const result = await submitMutation.mutateAsync({
-          data: {
-            ...values,
-            hasPain,
-            painNotes: hasPain ? painNotes : null,
-            cyclePhase: cyclePhase ?? undefined,
-          },
-        });
-        await AsyncStorage.removeItem(CHECKIN_DRAFT_KEY).catch(() => {});
-        const badges = result.newBadges ?? [];
-        router.replace({
-          pathname: "/checkin/result",
-          params: {
-            score: String(result.checkin.adaptScore),
-            mode: result.checkin.sessionMode,
-            badges: badges.length > 0 ? JSON.stringify(badges) : "",
-            createdAt: result.checkin.createdAt ?? new Date().toISOString(),
-            sleep: String(values.sleep),
-            energy: String(values.energy),
-            stress: String(values.stress),
-            soreness: String(values.soreness),
-            motivation: String(values.motivation),
-            hasPainParam: hasPain ? "1" : "0",
-            painNotes: hasPain ? painNotes : "",
-            cyclePhase: cyclePhase ?? undefined,
-          },
-        });
-      } catch (err: unknown) {
-        const anyErr = err as Record<string, unknown>;
-        const errBody = anyErr?.data as Record<string, unknown> | null | undefined;
-        const errObj = errBody?.error as Record<string, unknown> | null | undefined;
-        const code = typeof errObj?.code === "string" ? errObj.code : "";
-        const apiMsg = typeof errObj?.message === "string" ? errObj.message : "";
-        const status = typeof anyErr?.status === "number" ? anyErr.status : 0;
-        if (code === "CHECKIN_ALREADY_EXISTS" || code === "CHECKIN_CONFLICT") {
-          router.replace("/checkin/result");
-          return;
-        }
-        if (code === "CHECKIN_WINDOW_CLOSED") {
-          const msg = apiMsg || "La fenêtre de check-in est fermée pour aujourd'hui.";
-          Alert.alert("Check-in fermé", msg, [{ text: "OK", onPress: () => router.back() }]);
-          return;
-        }
-        if (status === 401) {
-          Alert.alert(
-            "Session expirée",
-            "Ta session a expiré. Reconnecte-toi.",
-            [{ text: "OK", onPress: () => router.replace("/auth/login") }]
-          );
-          return;
-        }
-        Alert.alert(
-          "Erreur",
-          "Une erreur est survenue. Réessaie.",
-          [{ text: "OK" }]
-        );
+  const submit = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const result = await submitMutation.mutateAsync({
+        data: {
+          sleep: values.sleep,
+          energy: 6 - values.fatigue, // Fatigue (1=fresh…5=exhausted) inverted to the API's energy polarity
+          stress: values.stress,
+          motivation: values.motivation,
+          hasPain: hasInjury,
+          painZone: hasInjury ? (injuryZone as never) : null,
+          painIntensity: hasInjury ? injuryLevel : null,
+          painNotes: hasInjury ? (injuryNote || null) : null,
+        },
+      });
+      const badges = result.newBadges ?? [];
+      router.replace({
+        pathname: "/checkin/result",
+        params: {
+          score: String(result.checkin.adaptScore),
+          mode: result.checkin.sessionMode,
+          badges: badges.length > 0 ? JSON.stringify(badges) : "",
+          createdAt: result.checkin.createdAt ?? new Date().toISOString(),
+          sleep: String(values.sleep),
+          fatigue: String(values.fatigue),
+          stress: String(values.stress),
+          motivation: String(values.motivation),
+          hasPainParam: hasInjury ? "1" : "0",
+          painZone: hasInjury ? (injuryZone ?? "") : "",
+          painIntensity: hasInjury ? String(injuryLevel) : "",
+          painNotes: hasInjury ? injuryNote : "",
+        },
+      });
+    } catch (err: unknown) {
+      const anyErr = err as Record<string, unknown>;
+      const errBody = anyErr?.data as Record<string, unknown> | null | undefined;
+      const errObj = errBody?.error as Record<string, unknown> | null | undefined;
+      const code = typeof errObj?.code === "string" ? errObj.code : "";
+      const apiMsg = typeof errObj?.message === "string" ? errObj.message : "";
+      const status = typeof anyErr?.status === "number" ? anyErr.status : 0;
+      if (code === "CHECKIN_ALREADY_EXISTS" || code === "CHECKIN_CONFLICT") {
+        router.replace("/checkin/result");
+        return;
       }
-      return;
+      if (code === "CHECKIN_WINDOW_CLOSED") {
+        Alert.alert("Check-in fermé", apiMsg || "La fenêtre de check-in est fermée pour aujourd'hui.", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+        return;
+      }
+      if (status === 401) {
+        Alert.alert("Session expirée", "Ta session a expiré. Reconnecte-toi.", [
+          { text: "OK", onPress: () => router.replace("/auth/login") },
+        ]);
+        return;
+      }
+      Alert.alert("Erreur", "Une erreur est survenue. Réessaie.", [{ text: "OK" }]);
     }
-    setStepIndex((s) => s + 1);
-  };
-
-  const handleBack = () => {
-    if (stepIndex === 0) {
-      router.back();
-      return;
-    }
-    setStepIndex((s) => s - 1);
   };
 
   return (
@@ -341,19 +275,11 @@ export default function CheckinScreen() {
       style={[styles.flex, { backgroundColor: COLORS.bg }]}
     >
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Pressable onPress={handleBack} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={COLORS.white} />
         </Pressable>
-        <View style={{ flex: 1 }}>
-          <ProgressBar
-            progress={stepIndex + 1}
-            total={steps.length}
-            color={currentColor}
-            height={3}
-          />
-        </View>
-        <Text style={[styles.stepCount, { fontFamily: FONTS.mono }]}>
-          {stepIndex + 1}/{steps.length}
+        <Text style={[styles.headerTitle, { fontFamily: FONTS.title }]}>
+          {t("checkin_title", "Comment tu te sens ?")}
         </Text>
       </View>
 
@@ -362,140 +288,45 @@ export default function CheckinScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.iconWrap}>
-          <View
-            style={[
-              styles.iconCircle,
-              { borderColor: currentColor, backgroundColor: `${currentColor}15` },
-            ]}
-          >
-            <Feather name={currentStep.icon} size={40} color={currentColor} />
-          </View>
-        </View>
+        <Text style={[styles.headerSubtitle, { fontFamily: FONTS.body }]}>
+          {t("checkin_subtitle", "30 secondes pour ajuster ta séance du jour")}
+        </Text>
 
-        <Text style={[styles.title, { fontFamily: FONTS.title }]}>{currentStep.title}</Text>
-        <Text style={[styles.subtitle, { fontFamily: FONTS.body }]}>{currentStep.subtitle}</Text>
+        {METRICS.map((metric) => (
+          <MetricSelector key={metric.key} metric={metric} value={values[metric.key]} onChange={setMetric(metric.key)} />
+        ))}
 
-        {currentStep.kind === "welcome" && (
-          <View style={styles.welcomeSection}>
-            {WELCOME_ITEMS.map((item) => (
-              <View key={item.key} style={styles.welcomeItem}>
-                <View style={[styles.welcomeIconWrap, { backgroundColor: `${item.color}15` }]}>
-                  <Feather name={item.icon} size={18} color={item.color} />
-                </View>
-                <Text style={[styles.welcomeLabel, { fontFamily: FONTS.bodyMedium }]}>
-                  {item.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {currentStep.kind === "slider" && (
-          <View style={styles.ratingSection}>
-            {currentStep.labels.map((label, idx) => {
-              const val = idx + 1;
-              const isSelected = values[currentStep.key] === val;
-              return (
+        {/* Blessure / gêne physique */}
+        <View
+          style={[
+            styles.injuryCard,
+            { borderColor: hasInjury ? `${COLORS.red}55` : COLORS.border },
+          ]}
+        >
+          <View style={styles.injuryHeader}>
+            <View style={styles.metricTitleRow}>
+              <Feather name="alert-triangle" size={15} color={hasInjury ? COLORS.red : COLORS.cyan} />
+              <Text style={[styles.metricLabel, { fontFamily: FONTS.bodyBold }]}>Blessure ou gêne ?</Text>
+            </View>
+            <View style={styles.injuryToggleRow}>
+              {[{ v: false, label: "Non" }, { v: true, label: "Oui" }].map((opt) => (
                 <Pressable
-                  key={val}
+                  key={String(opt.v)}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setValues((prev) => ({ ...prev, [(currentStep as { key: string }).key]: val }));
+                    setHasInjury(opt.v);
                   }}
                   style={[
-                    styles.ratingCard,
-                    isSelected && {
-                      borderColor: currentStep.color,
-                      backgroundColor: `${currentStep.color}15`,
+                    styles.injuryToggleBtn,
+                    {
+                      backgroundColor: hasInjury === opt.v ? (opt.v ? COLORS.red : COLORS.cyan) : COLORS.bgInput,
                     },
                   ]}
                 >
-                  <View style={[
-                    styles.ratingNum,
-                    { borderColor: isSelected ? currentStep.color : COLORS.border },
-                    isSelected && { backgroundColor: currentStep.color },
-                  ]}>
-                    <Text style={[
-                      styles.ratingNumText,
-                      { fontFamily: FONTS.mono, color: isSelected ? COLORS.bg : COLORS.textMuted },
-                    ]}>
-                      {val}
-                    </Text>
-                  </View>
-                  <Text style={[
-                    styles.ratingLabel,
-                    { fontFamily: FONTS.bodyMedium },
-                    isSelected ? { color: currentStep.color } : { color: COLORS.textSecondary },
-                  ]}>
-                    {label}
-                  </Text>
-                  {isSelected && (
-                    <Feather name="check" size={18} color={currentStep.color} />
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-
-        {currentStep.kind === "cycle" && (
-          <View style={styles.cycleSection}>
-            {CYCLE_PHASES.map((phase) => {
-              const isActive = cyclePhase === phase.key;
-              return (
-                <TouchableOpacity
-                  key={phase.key}
-                  onPress={() => setCyclePhase((prev) => (prev === phase.key ? null : phase.key))}
-                  style={[
-                    styles.cycleBtn,
-                    isActive && { borderColor: phase.color, backgroundColor: `${phase.color}15` },
-                  ]}
-                >
-                  <View style={[styles.cycleDot, { backgroundColor: isActive ? phase.color : COLORS.border }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.cycleLabel, { fontFamily: FONTS.bodyMedium }, isActive && { color: phase.color }]}>
-                      {phase.label}
-                    </Text>
-                    <Text style={[styles.cycleDesc, { fontFamily: FONTS.mono }]}>{phase.desc}</Text>
-                  </View>
-                  {isActive && <Feather name="check" size={18} color={phase.color} />}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {currentStep.kind === "pain" && (
-          <View style={styles.painSection}>
-            <View style={styles.painOptions}>
-              {(
-                [
-                  { label: "Aucune douleur", value: false, icon: "check-circle" as const, color: COLORS.green },
-                  { label: "J'ai une douleur", value: true, icon: "alert-circle" as const, color: COLORS.red },
-                ] as const
-              ).map((opt) => (
-                <Pressable
-                  key={String(opt.value)}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setHasPain(opt.value);
-                  }}
-                  style={[
-                    styles.painOpt,
-                    hasPain === opt.value && { borderColor: opt.color, backgroundColor: `${opt.color}15` },
-                  ]}
-                >
-                  <Feather
-                    name={opt.icon}
-                    size={28}
-                    color={hasPain === opt.value ? opt.color : COLORS.textMuted}
-                  />
                   <Text
                     style={[
-                      styles.painOptLabel,
-                      { fontFamily: FONTS.bodyMedium },
-                      hasPain === opt.value && { color: opt.color },
+                      styles.injuryToggleText,
+                      { fontFamily: FONTS.bodyBold, color: hasInjury === opt.v ? COLORS.textInverse : COLORS.textSecondary },
                     ]}
                   >
                     {opt.label}
@@ -503,27 +334,77 @@ export default function CheckinScreen() {
                 </Pressable>
               ))}
             </View>
-            {hasPain && (
+          </View>
+
+          {hasInjury && (
+            <View style={styles.injuryDetail}>
+              <Text style={[styles.injurySectionLabel, { fontFamily: FONTS.mono }]}>OÙ ?</Text>
+              <View style={styles.zoneRow}>
+                {BODY_ZONES.map((zone) => {
+                  const selected = injuryZone === zone.key;
+                  return (
+                    <Pressable
+                      key={zone.key}
+                      onPress={() => setInjuryZone(zone.key)}
+                      style={[
+                        styles.zoneChip,
+                        { backgroundColor: selected ? COLORS.red : COLORS.bgInput, borderColor: selected ? "transparent" : COLORS.border },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.zoneChipText,
+                          { fontFamily: FONTS.bodyBold, color: selected ? COLORS.textInverse : COLORS.textSecondary },
+                        ]}
+                      >
+                        {zone.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.metricLabel, { fontFamily: FONTS.bodyBold, marginTop: 14 }]}>Intensité</Text>
+              <Text style={[styles.metricWord, { fontFamily: FONTS.bodyBold, color: wordColor(injuryLevel, "negative", COLORS.cyan), marginBottom: 8 }]}>
+                {INJURY_WORDS[injuryLevel - 1]}
+              </Text>
+              <View style={styles.pillRow}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Pressable
+                    key={n}
+                    onPress={() => setInjuryLevel(n)}
+                    style={[
+                      styles.pill,
+                      {
+                        backgroundColor: pillColor(n, injuryLevel, "negative", COLORS.cyan),
+                        borderColor: n <= injuryLevel ? "transparent" : COLORS.border,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+
               <TextInput
-                style={[styles.painInput, { fontFamily: FONTS.body }]}
-                value={painNotes}
-                onChangeText={setPainNotes}
-                placeholder="Décris la zone douloureuse et l'intensité..."
+                style={[styles.injuryInput, { fontFamily: FONTS.body }]}
+                value={injuryNote}
+                onChangeText={setInjuryNote}
+                placeholder="Précise si tu veux : depuis quand, quel mouvement fait mal..."
                 placeholderTextColor={COLORS.textMuted}
                 multiline
-                numberOfLines={3}
+                numberOfLines={2}
               />
-            )}
-          </View>
-        )}
+              <Text style={[styles.injuryHint, { fontFamily: FONTS.body }]}>
+                Ton coach est prévenu immédiatement et ta séance est adaptée pour protéger la zone.
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
         <GradientButton
-          label={isLastStep
-            ? (isEditMode ? t("update_my_checkin", "Mettre à jour mon check-in") : t("submit_checkin", "Valider mon check-in"))
-            : t("next_label", "Suivant")}
-          onPress={handleNext}
+          label={isEditMode ? t("update_my_checkin", "Mettre à jour mon check-in") : t("submit_checkin", "Valider mon check-in")}
+          onPress={submit}
           loading={submitMutation.isPending}
         />
       </View>
@@ -537,119 +418,55 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 8,
     gap: 12,
   },
   backBtn: { padding: 4 },
-  stepCount: { fontSize: 11, color: COLORS.textMuted, minWidth: 30, textAlign: "right" },
+  headerTitle: { fontSize: 22, color: COLORS.white, flexShrink: 1 },
   content: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 8,
   },
-  iconWrap: { marginTop: 40, marginBottom: 28 },
-  iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 52,
-    color: COLORS.white,
-    letterSpacing: 6,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 40,
-  },
-  welcomeSection: { width: "100%", gap: 10 },
-  welcomeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  welcomeIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  welcomeLabel: { fontSize: 15, color: COLORS.textSecondary },
-  ratingSection: { width: "100%", gap: 10 },
-  ratingCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  ratingNum: {
-    width: 32,
-    height: 32,
+  headerSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 20 },
+  metricBlock: { marginBottom: 22 },
+  metricHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  metricTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  metricLabel: { fontSize: 14, color: COLORS.textPrimary },
+  metricWord: { fontSize: 12 },
+  metricSubtitle: { fontSize: 11, color: COLORS.textMuted, marginBottom: 10 },
+  pillRow: { flexDirection: "row", gap: 6 },
+  pill: { flex: 1, height: 30, borderRadius: 15, borderWidth: 1 },
+  anchorRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+  anchorText: { fontSize: 10, color: COLORS.textMuted },
+  injuryCard: {
     borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ratingNumText: { fontSize: 14 },
-  ratingLabel: { flex: 1, fontSize: 15 },
-  cycleSection: { width: "100%", gap: 10 },
-  cycleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 14,
+    borderWidth: 1,
     padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  cycleDot: { width: 12, height: 12, borderRadius: 6 },
-  cycleLabel: { fontSize: 15, color: COLORS.white, marginBottom: 2 },
-  cycleDesc: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1 },
-  painSection: { width: "100%", gap: 16 },
-  painOptions: { flexDirection: "row", gap: 12 },
-  painOpt: {
-    flex: 1,
-    alignItems: "center",
-    gap: 10,
     backgroundColor: COLORS.bgCard,
-    borderRadius: 14,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    marginBottom: 8,
   },
-  painOptLabel: { fontSize: 13, color: COLORS.textSecondary, textAlign: "center" },
-  painInput: {
+  injuryHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  injuryToggleRow: { flexDirection: "row", gap: 6 },
+  injuryToggleBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
+  injuryToggleText: { fontSize: 11 },
+  injuryDetail: { marginTop: 14 },
+  injurySectionLabel: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 1, marginBottom: 6 },
+  zoneRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  zoneChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
+  zoneChipText: { fontSize: 11 },
+  injuryInput: {
     backgroundColor: COLORS.bgInput,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 14,
+    padding: 12,
     color: COLORS.textPrimary,
-    fontSize: 15,
-    minHeight: 80,
+    fontSize: 13,
+    minHeight: 64,
     textAlignVertical: "top",
-    width: "100%",
+    marginTop: 10,
   },
+  injuryHint: { fontSize: 10, color: COLORS.textMuted, marginTop: 8, lineHeight: 15 },
   footer: {
     position: "absolute",
     bottom: 0,

@@ -265,17 +265,20 @@ export default function SessionIntroScreen() {
       : false;
 
   const handleEditCheckin = () => {
+    // checkin.energy is stored in the API's polarity (1=exhausted…5=top-shape);
+    // the check-in form asks for "Fatigue" in the opposite polarity, so invert back.
+    const storedEnergy = checkin?.energy ?? 3;
     router.push({
       pathname: "/checkin",
       params: {
         sleep: String(checkin?.sleep ?? 3),
-        energy: String(checkin?.energy ?? 3),
+        fatigue: String(6 - storedEnergy),
         stress: String(checkin?.stress ?? 3),
-        soreness: String(checkin?.soreness ?? 3),
         motivation: String(checkin?.motivation ?? 3),
         hasPain: checkin?.hasPain ? "1" : "0",
+        painZone: checkin?.painZone ?? "",
+        painIntensity: String(checkin?.painIntensity ?? 2),
         painNotes: checkin?.painNotes ?? "",
-        cyclePhase: checkin?.cyclePhase ?? undefined,
         edit: "1",
       },
     });

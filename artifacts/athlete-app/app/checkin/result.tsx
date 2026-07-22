@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,7 +23,8 @@ import { ScoreCircle } from "@/components/ui/ScoreCircle";
 import { ModeBadge } from "@/components/ui/ModeBadge";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { BadgeToast } from "@/components/ui/BadgeToast";
-import { useGetTodaySession } from "@workspace/api-client-react";
+import { FormTrendChart } from "@/components/ui/FormTrendChart";
+import { useGetTodaySession, useGetCheckinHistory } from "@workspace/api-client-react";
 import { useT } from "@/context/PreferencesContext";
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
@@ -36,13 +38,13 @@ export default function CheckinResultScreen() {
     badges?: string;
     createdAt?: string;
     sleep?: string;
-    energy?: string;
+    fatigue?: string;
     stress?: string;
-    soreness?: string;
     motivation?: string;
     hasPainParam?: string;
+    painZone?: string;
+    painIntensity?: string;
     painNotes?: string;
-    cyclePhase?: string;
   }>();
 
   const { score, mode, badges, createdAt } = params;
@@ -57,6 +59,7 @@ export default function CheckinResultScreen() {
   const sessionQuery = useGetTodaySession();
   const sessionLoaded = !sessionQuery.isLoading;
   const hasSession = sessionQuery.data != null;
+  const historyQuery = useGetCheckinHistory();
 
   const parsedBadges: Array<{ code: string; name: string; icon: string }> =
     badges ? JSON.parse(badges) : [];
@@ -122,13 +125,13 @@ export default function CheckinResultScreen() {
       pathname: "/checkin",
       params: {
         sleep: params.sleep ?? "3",
-        energy: params.energy ?? "3",
+        fatigue: params.fatigue ?? "3",
         stress: params.stress ?? "3",
-        soreness: params.soreness ?? "3",
         motivation: params.motivation ?? "3",
         hasPain: params.hasPainParam ?? "0",
+        painZone: params.painZone ?? "",
+        painIntensity: params.painIntensity ?? "2",
         painNotes: params.painNotes ?? "",
-        cyclePhase: params.cyclePhase || undefined,
         edit: "1",
       },
     });
@@ -138,7 +141,10 @@ export default function CheckinResultScreen() {
     <View style={[styles.container, { backgroundColor: COLORS.bg }]}>
       <BadgeToast badge={currentToast} onDismiss={() => setToastIndex((i) => i + 1)} />
 
-      <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Animated.View style={[styles.topSection, topStyle]}>
           <Text style={[styles.topLabel, { fontFamily: FONTS.mono }]}>{t("checkin_done_uppercase", "CHECK-IN TERMINÉ")}</Text>
           <ModeBadge mode={modeKey} size="md" glow />
@@ -154,6 +160,12 @@ export default function CheckinResultScreen() {
             <Text style={[styles.message, { fontFamily: FONTS.body }]}>{getMessage()}</Text>
           </View>
         </Animated.View>
+
+        {historyQuery.data && historyQuery.data.length > 0 && (
+          <Animated.View style={[styles.messageWrap, msgStyle]}>
+            <FormTrendChart history={historyQuery.data} />
+          </Animated.View>
+        )}
 
         <Animated.View style={[styles.actions, actionsStyle]}>
           {!sessionLoaded ? (
@@ -191,7 +203,7 @@ export default function CheckinResultScreen() {
             </TouchableOpacity>
           )}
         </Animated.View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -199,7 +211,7 @@ export default function CheckinResultScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 28,
     alignItems: "center",
     justifyContent: "space-around",

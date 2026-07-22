@@ -193,8 +193,10 @@ async function runAlertChecks(): Promise<void> {
     }
   }
 
-  // ─── ALC-02: Fatigue/Soreness — ≥4/5 courbatures OR hasPain, for 2+ strictly consecutive days ──
-  // Fetch last 3 check-ins ordered by date descending; verify the top 2 are exactly 1 day apart
+  // ─── ALC-02: Fatigue/Pain — hasPain (structured injury block), for 2+ strictly consecutive days ──
+  // Fetch last 3 check-ins ordered by date descending; verify the top 2 are exactly 1 day apart.
+  // Soreness (courbatures) was dropped from the V1 check-in (see adapt-engine.ts) — this
+  // alert now keys purely off the injury block, plus low energy for the reason text.
   const threeDaysAgoDate = new Date(now.getTime() - 3 * 86400000).toISOString().split("T")[0];
 
   for (const athlete of athletes) {
@@ -203,7 +205,6 @@ async function runAlertChecks(): Promise<void> {
 
     const recentCheckins = await db.select({
       date: checkinsTable.date,
-      soreness: checkinsTable.soreness,
       energy: checkinsTable.energy,
       hasPain: checkinsTable.hasPain,
     })
@@ -228,13 +229,11 @@ async function runAlertChecks(): Promise<void> {
         const areConsecutive = diffDays === 1;
 
         if (areConsecutive) {
-          const isFatiguedOrSore = (c: typeof c1) =>
-            (c.soreness !== null && c.soreness >= 4) || c.hasPain === true;
+          const isFatiguedOrSore = (c: typeof c1) => c.hasPain === true;
 
           if (isFatiguedOrSore(c1) && isFatiguedOrSore(c2)) {
             shouldFire = true;
             const reasons: string[] = [];
-            if (c1.soreness !== null && c1.soreness >= 4) reasons.push(`courbatures ${c1.soreness}/5`);
             if (c1.hasPain) reasons.push("douleur signalée");
             if (c1.energy !== null && c1.energy <= 2) reasons.push(`énergie basse ${c1.energy}/5`);
 

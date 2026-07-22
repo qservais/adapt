@@ -28,6 +28,7 @@ export * from "./challengeAssignment";
 export * from "./checkinData";
 export * from "./checkinRequest";
 export * from "./checkinRequestCyclePhase";
+export * from "./checkinRequestPainZone";
 export * from "./checkinResponse";
 export * from "./checkinResponseSessionPreview";
 export * from "./checkoutSessionResponse";

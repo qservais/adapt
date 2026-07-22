@@ -11,9 +11,13 @@ export const checkinsTable = pgTable("checkins", {
   sleep: smallint("sleep"),
   energy: smallint("energy"),
   stress: smallint("stress"),
+  // Retained for historical rows only — dropped from the V1 check-in and no
+  // longer written or read by the ADAPT score (see adapt-engine.ts).
   soreness: smallint("soreness"),
   motivation: smallint("motivation"),
   hasPain: boolean("has_pain").default(false),
+  painZone: varchar("pain_zone", { length: 20 }),
+  painIntensity: smallint("pain_intensity"),
   painNotes: text("pain_notes"),
   cyclePhase: varchar("cycle_phase", { length: 20 }),
   adaptScore: smallint("adapt_score").notNull(),

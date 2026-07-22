@@ -65,7 +65,6 @@ interface CheckinContext {
   sleep?: number | null;
   energy?: number | null;
   stress?: number | null;
-  soreness?: number | null;
   motivation?: number | null;
   hasPain?: boolean | null;
   painNotes?: string | null;
@@ -1101,7 +1100,6 @@ router.post("/sessions/:sessionId/start-coached", authenticate, requireRole("ath
       sleep: null,
       energy: null,
       stress: null,
-      soreness: null,
       motivation: null,
       hasPain: false,
       painNotes: null,
@@ -1188,7 +1186,6 @@ router.post("/sessions/:sessionId/start-free", authenticate, requireRole("athlet
       sleep: null,
       energy: null,
       stress: null,
-      soreness: null,
       motivation: null,
       hasPain: false,
       painNotes: null,

@@ -17,18 +17,18 @@ import {
 import { isNotNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
-// Inline ADAPT score calculation (to avoid cross-artifact import)
+// Inline ADAPT score calculation (to avoid cross-artifact import) — kept in sync
+// with artifacts/api-server/src/services/adapt-engine.ts (soreness dropped, V1).
 function calculateAdaptScore(input: {
   sleep: number; energy: number; stress: number;
-  soreness: number; motivation: number;
+  motivation: number;
 }) {
-  const { sleep, energy, stress, soreness, motivation } = input;
+  const { sleep, energy, stress, motivation } = input;
   const sleep_n = (sleep - 1) / 4;
   const energy_n = (energy - 1) / 4;
   const stress_n = (stress - 1) / 4;
-  const soreness_n = (soreness - 1) / 4;
   const motivation_n = (motivation - 1) / 4;
-  const score_base = sleep_n * 0.25 + energy_n * 0.20 + (1 - stress_n) * 0.15 + (1 - soreness_n) * 0.20 + motivation_n * 0.20;
+  const score_base = sleep_n * 0.3125 + energy_n * 0.25 + (1 - stress_n) * 0.1875 + motivation_n * 0.25;
   const adaptScore = Math.round(Math.min(100, Math.max(0, score_base * 100)));
   let sessionMode: string;
   if (adaptScore >= 80) sessionMode = "performance";
@@ -310,7 +310,7 @@ async function seed() {
 
   type CheckinConfig = {
     sleep: number; energy: number; stress: number;
-    soreness: number; motivation: number;
+    motivation: number;
     hasPain?: boolean; painNotes?: string;
   };
 
@@ -318,49 +318,49 @@ async function seed() {
     {
       athlete: julien,
       configs: [
-        { sleep: 3, energy: 3, stress: 3, soreness: 3, motivation: 3 },
-        { sleep: 4, energy: 3, stress: 2, soreness: 3, motivation: 4 },
-        { sleep: 4, energy: 4, stress: 2, soreness: 2, motivation: 4 },
-        { sleep: 5, energy: 4, stress: 2, soreness: 2, motivation: 5 },
-        { sleep: 4, energy: 4, stress: 2, soreness: 2, motivation: 4 },
-        { sleep: 3, energy: 4, stress: 2, soreness: 2, motivation: 3 },
-        { sleep: 4, energy: 3, stress: 3, soreness: 3, motivation: 4 },
-        { sleep: 5, energy: 5, stress: 1, soreness: 1, motivation: 5 },
-        { sleep: 4, energy: 4, stress: 2, soreness: 2, motivation: 4 },
-        { sleep: 4, energy: 4, stress: 2, soreness: 2, motivation: 4 },
+        { sleep: 3, energy: 3, stress: 3, motivation: 3 },
+        { sleep: 4, energy: 3, stress: 2, motivation: 4 },
+        { sleep: 4, energy: 4, stress: 2, motivation: 4 },
+        { sleep: 5, energy: 4, stress: 2, motivation: 5 },
+        { sleep: 4, energy: 4, stress: 2, motivation: 4 },
+        { sleep: 3, energy: 4, stress: 2, motivation: 3 },
+        { sleep: 4, energy: 3, stress: 3, motivation: 4 },
+        { sleep: 5, energy: 5, stress: 1, motivation: 5 },
+        { sleep: 4, energy: 4, stress: 2, motivation: 4 },
+        { sleep: 4, energy: 4, stress: 2, motivation: 4 },
       ],
     },
     {
       athlete: sara,
       configs: [
-        { sleep: 4, energy: 4, stress: 2, soreness: 2, motivation: 4 },
-        { sleep: 5, energy: 4, stress: 2, soreness: 1, motivation: 4 },
-        { sleep: 5, energy: 5, stress: 1, soreness: 1, motivation: 5 },
-        { sleep: 4, energy: 5, stress: 1, soreness: 2, motivation: 5 },
-        { sleep: 5, energy: 4, stress: 2, soreness: 1, motivation: 4 },
-        { sleep: 4, energy: 4, stress: 2, soreness: 2, motivation: 5 },
-        { sleep: 5, energy: 5, stress: 1, soreness: 1, motivation: 5 },
-        { sleep: 4, energy: 5, stress: 1, soreness: 2, motivation: 4 },
+        { sleep: 4, energy: 4, stress: 2, motivation: 4 },
+        { sleep: 5, energy: 4, stress: 2, motivation: 4 },
+        { sleep: 5, energy: 5, stress: 1, motivation: 5 },
+        { sleep: 4, energy: 5, stress: 1, motivation: 5 },
+        { sleep: 5, energy: 4, stress: 2, motivation: 4 },
+        { sleep: 4, energy: 4, stress: 2, motivation: 5 },
+        { sleep: 5, energy: 5, stress: 1, motivation: 5 },
+        { sleep: 4, energy: 5, stress: 1, motivation: 4 },
       ],
     },
     {
       athlete: tom,
       configs: [
-        { sleep: 3, energy: 2, stress: 4, soreness: 4, motivation: 2 },
-        { sleep: 2, energy: 2, stress: 4, soreness: 4, motivation: 2, hasPain: true, painNotes: "Douleur genou droit, 6/10" },
-        { sleep: 3, energy: 2, stress: 4, soreness: 4, motivation: 2 },
-        { sleep: 2, energy: 2, stress: 5, soreness: 5, motivation: 1 },
-        { sleep: 3, energy: 2, stress: 4, soreness: 4, motivation: 2 },
+        { sleep: 3, energy: 2, stress: 4, motivation: 2 },
+        { sleep: 2, energy: 2, stress: 4, motivation: 2, hasPain: true, painNotes: "Douleur genou droit, 6/10" },
+        { sleep: 3, energy: 2, stress: 4, motivation: 2 },
+        { sleep: 2, energy: 2, stress: 5, motivation: 1 },
+        { sleep: 3, energy: 2, stress: 4, motivation: 2 },
       ],
     },
     {
       athlete: marie,
       configs: [
         // 4 check-ins then stops → triggers inactivity alert
-        { sleep: 4, energy: 3, stress: 3, soreness: 2, motivation: 3 },
-        { sleep: 3, energy: 3, stress: 3, soreness: 3, motivation: 3 },
-        { sleep: 4, energy: 4, stress: 2, soreness: 2, motivation: 4 },
-        { sleep: 3, energy: 3, stress: 3, soreness: 3, motivation: 3 },
+        { sleep: 4, energy: 3, stress: 3, motivation: 3 },
+        { sleep: 3, energy: 3, stress: 3, motivation: 3 },
+        { sleep: 4, energy: 4, stress: 2, motivation: 4 },
+        { sleep: 3, energy: 3, stress: 3, motivation: 3 },
       ],
     },
   ];
@@ -387,7 +387,6 @@ async function seed() {
         sleep:       config.sleep,
         energy:      config.energy,
         stress:      config.stress,
-        soreness:    config.soreness,
         motivation:  config.motivation,
         hasPain:     config.hasPain ?? false,
         painNotes:   config.painNotes ?? null,

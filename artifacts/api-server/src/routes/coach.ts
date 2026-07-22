@@ -483,7 +483,6 @@ router.get("/coach/clients", authenticate, requireRole("coach"), async (req, res
         sleep: todayCheckin.sleep,
         energy: todayCheckin.energy,
         stress: todayCheckin.stress,
-        soreness: todayCheckin.soreness,
         motivation: todayCheckin.motivation,
         createdAt: todayCheckin.createdAt,
       } : null;

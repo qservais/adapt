@@ -12,9 +12,10 @@ export interface CheckinData {
   sleep?: number | null;
   energy?: number | null;
   stress?: number | null;
-  soreness?: number | null;
   motivation?: number | null;
   hasPain?: boolean;
+  painZone?: string | null;
+  painIntensity?: number | null;
   painNotes?: string | null;
   cyclePhase?: string | null;
   adaptScore: number;
