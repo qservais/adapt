@@ -195,6 +195,12 @@
     "item_messages_subtitle": "Échanges avec les athlètes",
     "item_settings_title": "Paramètres",
     "item_settings_subtitle": "Profil et préférences",
+    "item_create_title": "Créer",
+    "item_create_subtitle": "Construire un programme",
+    "item_notifs_title": "Notifs",
+    "item_notifs_subtitle": "Rappels et motivation",
+    "item_profile_title": "Profil",
+    "item_profile_subtitle": "Compte et facturation",
     "logout": "Se déconnecter"
   },
   "dashboard": {

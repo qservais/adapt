@@ -7,7 +7,7 @@ import {
   type CoachJoinRequestItem,
 } from "@workspace/api-client-react";
 import { ModeBadge, cn } from "@/components/ui/mode-badge";
-import { Loader2, Search, UserPlus, CheckCircle, Copy, Check, UserCheck, X, Bell } from "lucide-react";
+import { Loader2, Search, UserPlus, CheckCircle, Copy, Check, UserCheck, X, Bell, CalendarRange } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -229,6 +229,16 @@ export default function ClientsOverview() {
             <span className="hidden sm:inline">{t("clients.btn_link_code")}</span>
             <span className="sm:hidden">{t("clients.btn_link_short")}</span>
           </Button>
+          <Link href="/coach-ops">
+            <Button
+              className="flex items-center gap-2 border-border hover:bg-white/5 shrink-0"
+              variant="outline"
+            >
+              <CalendarRange className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("clients.btn_coach_ops", { defaultValue: "Cours, RDV & Boutique" })}</span>
+              <span className="sm:hidden">{t("clients.btn_coach_ops_short", { defaultValue: "Cours & Boutique" })}</span>
+            </Button>
+          </Link>
         </div>
       </div>
 

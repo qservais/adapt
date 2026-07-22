@@ -29,6 +29,8 @@ import NotificationsPage from "./pages/notifications/index";
 import NotFound from "@/pages/not-found";
 import PrivacyPage from "./pages/privacy";
 import SettingsPage from "./pages/settings/index";
+import ProfilePage from "./pages/profile/index";
+import CoachOpsPage from "./pages/coach-ops/index";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +101,8 @@ function AppRouter() {
         <Route path="/messages" component={MessagesList} />
         <Route path="/messages/:id" component={ChatView} />
         <Route path="/settings" component={SettingsPage} />
+        <Route path="/profile" component={ProfilePage} />
+        <Route path="/coach-ops" component={CoachOpsPage} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

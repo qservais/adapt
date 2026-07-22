@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Users, Dumbbell, Library, BookCopy, Bell, MessageSquare, LogOut, Trophy, BellRing, Settings, CalendarRange, ShoppingBag, UsersRound, Handshake, Receipt } from "lucide-react";
+import { Users, PlusCircle, BellRing, UserCircle2, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,27 +13,22 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth-context";
-import { useGetAlerts, useGetMessageThreads } from "@workspace/api-client-react";
 
+/**
+ * Client-validated mockup locks the coach nav down to exactly 4 top-level
+ * destinations: Athlètes / Créer / Notifs / Profil. Everything else (Tableau
+ * de bord, Agenda, Cours collectifs, Rendez-vous 1:1, Boutique, Factures,
+ * Bibliothèque, Contenu, Challenges, Alertes, Messages, Paramètres) is hidden
+ * from nav but NOT deleted — routes/components/data are all still intact and
+ * reachable by URL (some are also reachable by drilling in, e.g. Cours &
+ * Boutique from the Athlètes page).
+ */
 export function AppSidebar() {
   const [location] = useLocation();
   const { t } = useTranslation();
   const { logout, user } = useAuth();
-  
-  const { data: alerts } = useGetAlerts({ query: { queryKey: ['/api/coach/alerts'], refetchInterval: 30000 }});
-  const { data: threads } = useGetMessageThreads({ query: { queryKey: ['/api/messages/threads'], refetchInterval: 10000 }});
-
-  const unresolvedAlertsCount = alerts?.filter(a => !a.isResolved).length || 0;
-  const unreadMessagesCount = threads?.reduce((acc, t) => acc + t.unreadCount, 0) || 0;
 
   const items = [
-    {
-      title: t("sidebar.item_dashboard_title"),
-      subtitle: t("sidebar.item_dashboard_subtitle"),
-      url: "/",
-      icon: LayoutDashboard,
-      exactMatch: true,
-    },
     {
       title: t("sidebar.item_athletes_title"),
       subtitle: t("sidebar.item_athletes_subtitle"),
@@ -42,97 +37,24 @@ export function AppSidebar() {
       exactMatch: false,
     },
     {
-      title: t("sidebar.item_agenda_title"),
-      subtitle: t("sidebar.item_agenda_subtitle"),
-      url: "/agenda",
-      icon: CalendarRange,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_classes_title"),
-      subtitle: t("sidebar.item_classes_subtitle"),
-      url: "/classes",
-      icon: UsersRound,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_one_on_one_title"),
-      subtitle: t("sidebar.item_one_on_one_subtitle"),
-      url: "/one-on-one",
-      icon: Handshake,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_shop_title"),
-      subtitle: t("sidebar.item_shop_subtitle"),
-      url: "/shop",
-      icon: ShoppingBag,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_invoices_title"),
-      subtitle: t("sidebar.item_invoices_subtitle"),
-      url: "/invoices",
-      icon: Receipt,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_programs_title"),
-      subtitle: t("sidebar.item_programs_subtitle"),
+      title: t("sidebar.item_create_title"),
+      subtitle: t("sidebar.item_create_subtitle"),
       url: "/programs",
-      icon: Dumbbell,
+      icon: PlusCircle,
       exactMatch: false,
     },
     {
-      title: t("sidebar.item_library_title"),
-      subtitle: t("sidebar.item_library_subtitle"),
-      url: "/library",
-      icon: Library,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_content_title"),
-      subtitle: t("sidebar.item_content_subtitle"),
-      url: "/content",
-      icon: BookCopy,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_challenges_title"),
-      subtitle: t("sidebar.item_challenges_subtitle"),
-      url: "/challenges",
-      icon: Trophy,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_notifications_title"),
-      subtitle: t("sidebar.item_notifications_subtitle"),
+      title: t("sidebar.item_notifs_title"),
+      subtitle: t("sidebar.item_notifs_subtitle"),
       url: "/notifications",
       icon: BellRing,
       exactMatch: false,
     },
     {
-      title: t("sidebar.item_alerts_title"),
-      subtitle: t("sidebar.item_alerts_subtitle"),
-      url: "/alerts",
-      icon: Bell,
-      badge: unresolvedAlertsCount > 0 ? unresolvedAlertsCount : null,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_messages_title"),
-      subtitle: t("sidebar.item_messages_subtitle"),
-      url: "/messages",
-      icon: MessageSquare,
-      badge: unreadMessagesCount > 0 ? unreadMessagesCount : null,
-      exactMatch: false,
-    },
-    {
-      title: t("sidebar.item_settings_title"),
-      subtitle: t("sidebar.item_settings_subtitle"),
-      url: "/settings",
-      icon: Settings,
-      badge: null,
+      title: t("sidebar.item_profile_title"),
+      subtitle: t("sidebar.item_profile_subtitle"),
+      url: "/profile",
+      icon: UserCircle2,
       exactMatch: false,
     },
   ];
@@ -169,11 +91,6 @@ export function AppSidebar() {
                           <span className="text-[10px] text-muted-foreground leading-tight font-normal truncate">{item.subtitle}</span>
                         </div>
                       </div>
-                      {item.badge !== null && item.badge !== undefined && (
-                        <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-full font-mono ml-2 shrink-0">
-                          {item.badge}
-                        </span>
-                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
